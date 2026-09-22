@@ -29,6 +29,7 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const ride=captureGame(player,variant,npcs,world,true);assert.equal(ride.player.x,STATION.x);assert.equal(ride.player.z,STATION.z-8);
  assert.throws(()=>parseSave(JSON.stringify({...save,fruits:[]})));
  assert.throws(()=>parseSave('broken'));
+ const nightSave=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,undefined,true)));assert.equal(nightSave.night,true);assert.throws(()=>parseSave(JSON.stringify({...save,night:'yes'})));
  assert.throws(()=>parseSave(JSON.stringify({...save,mazeStar:'yes'})));
  const legacy={...save};delete legacy.mazeStar;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);
 });

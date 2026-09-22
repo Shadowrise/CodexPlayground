@@ -6,17 +6,17 @@ import { STATION } from './coaster';
 import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
 type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;fruitsEaten:number};
-export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean};
-export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined):GameSave {
+export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;night?:boolean};
+export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false):GameSave {
   const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitsEaten:c.fruitsEaten};};
   const savedPlayer=actor(player,variant[0]);
   if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
-  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed};
+  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,night};
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
   const actor=(a:ActorSave)=>a && KIRBY_VARIANTS.some(v=>v[0]===a.variant) && [a.x,a.z,a.yaw,a.size,a.fruitsEaten].every(Number.isFinite) && a.size>0 && Number.isInteger(a.fruitsEaten) && a.fruitsEaten>=0;
-  if(data?.version!==1 || (data.mazeStar!==undefined && typeof data.mazeStar!=='boolean') || !actor(data.player) || !Array.isArray(data.npcs) || data.npcs.length!==14 || !data.npcs.every(actor)
+  if(data?.version!==1 || (data.night!==undefined && typeof data.night!=='boolean') || (data.mazeStar!==undefined && typeof data.mazeStar!=='boolean') || !actor(data.player) || !Array.isArray(data.npcs) || data.npcs.length!==14 || !data.npcs.every(actor)
     || new Set([data.player.variant,...data.npcs.map(n=>n.variant)]).size!==15
     || !Array.isArray(data.fruits) || data.fruits.length!==70 || !data.fruits.every(f=>typeof f==='boolean'))throw Error('Сохранение повреждено или несовместимо.');
   return data;

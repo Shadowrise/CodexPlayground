@@ -78,7 +78,7 @@ export class CharacterController {
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
-    this.active?.fadeOut(.12);
+    if(this.active!==next)this.active?.fadeOut(.12);
     this.active = next;
     this.state = name;
   }
