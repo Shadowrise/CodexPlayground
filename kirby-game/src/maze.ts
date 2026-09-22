@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type { CharacterController } from './controller';
-import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell } from './maze-layout';
+import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
 import { makeFruitMist } from './fruit-mist';
 type Wall={x:number;z:number;hx:number;hz:number};
 export class HedgeMaze {
@@ -18,25 +18,34 @@ export class HedgeMaze {
   constructor(){
     const root=this.group;root.name='Hedge maze and golden star';root.position.set(MAZE_SITE.x,0,MAZE_SITE.z);
     const box=new T.BoxGeometry(1,1,1),leaf=new T.IcosahedronGeometry(1,1);
-    const parts=new Map<string,{geo:T.BufferGeometry;color:string;matrices:T.Matrix4[]}>();
+    const parts=new Map<string,{geo:T.BufferGeometry;colors:T.Color[];matrices:T.Matrix4[]}>();
     const put=(geo:T.BufferGeometry,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,ry=0)=>{
-      const key=geo.uuid+color;if(!parts.has(key))parts.set(key,{geo,color,matrices:[]});this.dummy.position.set(x,y,z);this.dummy.scale.set(sx,sy,sz);this.dummy.rotation.set(0,ry,0);this.dummy.updateMatrix();parts.get(key)!.matrices.push(this.dummy.matrix.clone());
+      const key=geo.uuid;if(!parts.has(key))parts.set(key,{geo,colors:[],matrices:[]});this.dummy.position.set(x,y,z);this.dummy.scale.set(sx,sy,sz);this.dummy.rotation.set(0,ry,0);this.dummy.updateMatrix();parts.get(key)!.matrices.push(this.dummy.matrix.clone());parts.get(key)!.colors.push(new T.Color(color));
+    };
+    const distances=mazeDistances(this.layout),maxDistance=Math.max(...distances);
+    const rainbow=['#9444d2','#424bc6','#36b7e5','#46a548','#e6cc39','#eb8a2d','#d94048'].map(c=>new T.Color(c));
+    const cellColor=(cell:number,shade=1)=>{
+      const progress=distances[cell]/maxDistance*6,index=Math.min(5,Math.floor(progress));
+      return '#'+rainbow[index].clone().lerp(rainbow[index+1],progress-index).multiplyScalar(shade).getHexString();
     };
     put(box,'#a9ac70',0,.015,0,70,.035,70);
-    const wall=(x:number,z:number,hx:number,hz:number)=>{
-      this.walls.push({x,z,hx,hz});put(box,'#26472e',x,2.45,z,hx*2,4.9,hz*2);
+    const wall=(x:number,z:number,hx:number,hz:number,cell:number,neighbor:number)=>{
+      this.walls.push({x,z,hx,hz});put(box,cellColor(cell,.38),x,2.45,z,hx*2,4.9,hz*2);
       const horizontal=hx>hz,length=Math.max(hx,hz)*2;
+      // Each face follows its own passage, even when a late corridor borders the entrance.
+      const face=(side:number)=>side<0 && neighbor>=0?neighbor:cell;
       for(let i=0;i<Math.ceil(length/.7);i++)for(let row=0;row<4;row++){
         const offset=-length/2+.35+i*.7,y=.65+row*1.25;
-        for(const side of [-1,1])put(leaf,['#365d37','#416c3b','#2f5534'][(i+row)%3],x+(horizontal?offset:side*.65),y,z+(horizontal?side*.65:offset),.59,.85,.59,i*.7);
+        for(const side of [-1,1])put(leaf,cellColor(face(side),[.72,.9,.62][(i+row)%3]),x+(horizontal?offset:side*.65),y,z+(horizontal?side*.65:offset),.59,.85,.59,i*.7);
       }
-      for(let i=0;i<Math.ceil(length/.75);i++)put(leaf,'#4b7540',x+(horizontal?-length/2+.37+i*.75:0),5,z+(horizontal?0:-length/2+.37+i*.75),.8,.5,.8,i);
+      for(let i=0;i<Math.ceil(length/.75);i++)for(const side of [-1,1])put(leaf,cellColor(face(side),1.08),x+(horizontal?-length/2+.37+i*.75:side*.4),5,z+(horizontal?side*.4:-length/2+.37+i*.75),horizontal?.8:.45,.5,horizontal?.45:.8,i);
       put(box,'#7d8157',x,.13,z,hx*2+.16,.26,hz*2+.16);
     };
     for(let z=0;z<7;z++)for(let x=0;x<7;x++){
       const cx=-30+x*10,cz=-30+z*10,w=this.layout[z*7+x];
-      if(w[0])wall(cx,cz-5,5,.7);if(w[3])wall(cx-5,cz,.7,5);
-      if(x===6&&w[1])wall(cx+5,cz,.7,5);if(z===6&&w[2])wall(cx,cz+5,5,.7);
+      const cell=z*7+x;
+      if(w[0])wall(cx,cz-5,5,.7,cell,z>0?cell-7:-1);if(w[3])wall(cx-5,cz,.7,5,cell,x>0?cell-1:-1);
+      if(x===6&&w[1])wall(cx+5,cz,.7,5,cell,-1);if(z===6&&w[2])wall(cx,cz+5,5,.7,cell,-1);
     }
     // Clear entrance framed with stone pillars, golden caps, lanterns and flowers.
     for(const x of [-5,5]){put(box,'#969780',x,1.8,37,1.1,3.6,1.1);put(box,'#d6bf7b',x,3.65,37,1.3,.25,1.3);put(leaf,'#f1d68e',x,4.1,37,.25,.4,.25);}
@@ -64,7 +73,7 @@ export class HedgeMaze {
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.fillText('ЗВЁЗДНЫЙ ЛАБИРИНТ',384,76);ctx.font='28px sans-serif';ctx.fillText('ВХОД ↓ • найди звезду в глубине лабиринта',384,137);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }
-    for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:p.color,roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
+    for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:'#ffffff',roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
   }
   contains(p:T.Vector3,padding=0){return Math.abs(p.x-MAZE_SITE.x)<MAZE_HALF+padding && Math.abs(p.z-MAZE_SITE.z)<MAZE_HALF+padding;}
   private clear(x:number,z:number,r:number){return !this.walls.some(w=>Math.abs(x-w.x)<w.hx+r && Math.abs(z-w.z)<w.hz+r);}
