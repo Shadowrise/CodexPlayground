@@ -1,5 +1,12 @@
 export const MAZE_SITE={x:-94,z:94,radius:54};
 export const MAZE_CELLS=7,MAZE_CELL=10,MAZE_HALF=35;
+export function farthestMazeCell(walls:boolean[][]){
+  const distances=Array(walls.length).fill(-1) as number[],queue=[45];distances[45]=0;
+  for(let i=0;i<queue.length;i++){const cell=queue[i];for(const [direction,offset] of [-7,1,7,-1].entries()){
+    const next=cell+offset;if(!walls[cell][direction] && next>=0 && next<walls.length && distances[next]===-1){distances[next]=distances[cell]+1;queue.push(next);}
+  }}
+  return distances.indexOf(Math.max(...distances));
+}
 /** Seeded depth-first maze: one entrance, connected passages and real dead ends. */
 export function mazeLayout(){
   const walls=Array.from({length:49},()=>[true,true,true,true]);

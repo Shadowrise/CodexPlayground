@@ -1,12 +1,14 @@
 import * as T from 'three';
 import type { CharacterController } from './controller';
-import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout } from './maze-layout';
+import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell } from './maze-layout';
 import { makeFruitMist } from './fruit-mist';
 type Wall={x:number;z:number;hx:number;hz:number};
 export class HedgeMaze {
   readonly group=new T.Group();
   readonly walls:Wall[]=[];
   readonly layout=mazeLayout();
+  readonly rewardCell=farthestMazeCell(this.layout);
+  readonly rewardPosition=new T.Vector3(-30+(this.rewardCell%7)*10,0,-30+Math.floor(this.rewardCell/7)*10);
   private star=new T.Group();
   private aura?:T.Group;
   private sparkles?:T.InstancedMesh;
@@ -40,13 +42,27 @@ export class HedgeMaze {
     for(const x of [-5,5]){put(box,'#969780',x,1.8,37,1.1,3.6,1.1);put(box,'#d6bf7b',x,3.65,37,1.3,.25,1.3);put(leaf,'#f1d68e',x,4.1,37,.25,.4,.25);}
     for(let i=0;i<8;i++)put(box,'#baaf82',0,.045,36+i*.75,4,.09,.65);
     for(let i=0;i<40;i++){const side=i%2?-1:1,x=side*(6+(i%5)*.6),z=37+Math.floor(i/5)*.5;put(leaf,i%3?'#e1bd54':'#cf87a6',x,.4,z,.2,.3,.2);}
-    const pedestal=new T.Mesh(new T.CylinderGeometry(2.1,2.4,.3,32),new T.MeshStandardMaterial({color:'#d1bd85',roughness:.8}));pedestal.position.y=.15;pedestal.receiveShadow=true;root.add(pedestal);
+    for(const x of [-5,5])put(box,'#826743',x,5.9,37,.22,4.7,.22);
+    const arrowShape=new T.Shape();arrowShape.moveTo(-2.7,-.25);arrowShape.lineTo(.8,-.25);arrowShape.lineTo(.8,-.75);arrowShape.lineTo(2.5,0);arrowShape.lineTo(.8,.75);arrowShape.lineTo(.8,.25);arrowShape.lineTo(-2.7,.25);arrowShape.closePath();
+    const arrowGeometry=new T.ShapeGeometry(arrowShape),arrowMaterial=new T.MeshBasicMaterial({color:'#ffe291'});
+    // Each arrow follows the perimeter toward the south entrance, never through a hedge.
+    for(const [x,z,yaw,direction] of [[0,-37,Math.PI,-1],[37,0,Math.PI/2,-1],[-37,0,-Math.PI/2,1],[-18,37,0,1],[18,37,0,-1]]){
+      const marker=new T.Group();marker.name='Entrance direction';marker.position.set(x,3.4,z);marker.rotation.y=yaw;
+      const plaque=new T.Mesh(new T.BoxGeometry(7,2.8,.16),new T.MeshStandardMaterial({color:'#294c38',roughness:.85}));marker.add(plaque);
+      const arrow=new T.Mesh(arrowGeometry,arrowMaterial);arrow.position.set(0,-.5,.1);arrow.rotation.z=direction<0?Math.PI:0;marker.add(arrow);
+      if(typeof document!=='undefined'){
+        const canvas=document.createElement('canvas');canvas.width=384;canvas.height=96;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,384,96);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 66px sans-serif';ctx.fillText('ВХОД',192,73);const label=new T.Mesh(new T.PlaneGeometry(3.6,.9),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));label.position.set(0,.75,.1);marker.add(label);}
+      }
+      root.add(marker);
+    }
+    const pedestal=new T.Mesh(new T.CylinderGeometry(2.1,2.4,.3,32),new T.MeshStandardMaterial({color:'#d1bd85',roughness:.8}));pedestal.position.copy(this.rewardPosition);pedestal.position.y=.15;pedestal.receiveShadow=true;root.add(pedestal);
+    this.star.position.copy(this.rewardPosition);
     const shape=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.62:1.4,x=Math.cos(a)*r,y=Math.sin(a)*r;if(i===0)shape.moveTo(x,y);else shape.lineTo(x,y);}shape.closePath();
     const starGeometry=new T.ExtrudeGeometry(shape,{depth:.32,bevelEnabled:true,bevelSize:.12,bevelThickness:.1,bevelSegments:3,steps:1});starGeometry.center();
     const starMesh=new T.Mesh(starGeometry,new T.MeshStandardMaterial({color:'#ffd35a',metalness:.55,roughness:.22,emissive:'#ffb52e',emissiveIntensity:.65}));this.star.add(starMesh);
     const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.set('#ffdf7c');halo.material.opacity=.45;halo.position.set(0,0,-.2);halo.scale.set(5,5,1);this.star.add(halo);root.add(this.star);
     if(typeof document!=='undefined'){
-      const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.fillText('ЗВЁЗДНЫЙ ЛАБИРИНТ',384,76);ctx.font='28px sans-serif';ctx.fillText('Найди звезду в центре • здесь только пешком',384,137);const sign=new T.Mesh(new T.PlaneGeometry(9,2.25),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,5.4,37);root.add(sign);}
+      const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.fillText('ЗВЁЗДНЫЙ ЛАБИРИНТ',384,76);ctx.font='28px sans-serif';ctx.fillText('ВХОД ↓ • найди звезду в глубине лабиринта',384,137);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }
     for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:p.color,roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
   }
@@ -75,7 +91,7 @@ export class HedgeMaze {
   update(dt:number,player?:CharacterController,available=true){
     this.clock+=dt;this.star.position.y=2.25+Math.sin(this.clock*1.7)*.25;this.star.rotation.y=this.clock*.65;
     if(!player)return false;let collected=false;
-    if(!player.starBlessed && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x,player.actor.position.z-MAZE_SITE.z)<2){player.starBlessed=true;collected=true;}
+    if(!player.starBlessed && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x-this.rewardPosition.x,player.actor.position.z-MAZE_SITE.z-this.rewardPosition.z)<2){player.starBlessed=true;collected=true;}
     this.star.visible=!player.starBlessed;
     if(player.starBlessed){
       if(!this.aura)this.bless(player);
