@@ -1,6 +1,6 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Color, Group, LoopOnce, LoopRepeat, Mesh, MeshStandardMaterial, Object3D, PropertyBinding, Vector3 } from 'three';
 import { cloneVariant, KIRBY_VARIANTS, remainingVariants, type KirbyVariant } from './variants';
-import { Flight, flightClip, flightCloud } from './flight';
+import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
 import { constrainToMeadow, insideMeadow, worldLimit, MEADOW_HALF_SIZE } from './world-bounds';
 export { NPC_COLORS } from './variants';
 
@@ -206,7 +206,7 @@ export class KirbyNpc {
       this.actor.position.x+=Math.sin(this.yaw)*1.5*this.actor.scale.x*dt;
       this.actor.position.z+=Math.cos(this.yaw)*1.5*this.actor.scale.x*dt;
       constrainToMeadow(this.actor.position,this.actor.scale.x);
-      this.cloud.visible=this.flight.atTop;this.mixer.update(dt);
+      updateFlightCloud(this.cloud,this.flight);this.mixer.update(dt);
       if(!this.flight.active){this.cloud.visible=false;this.start('Walk');}
       return;
     }

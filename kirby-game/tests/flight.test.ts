@@ -6,6 +6,22 @@ import { CharacterController } from '../src/controller';
 import { createNpcs } from '../src/npcs';
 import { Flight, FLIGHT_HEIGHT } from '../src/flight';
 const idle={forward:false,left:false,right:false};
+test('flight rises sharply, hovers for two seconds and accelerates downward at any FPS',()=>{
+  const flight=new Flight();flight.press();
+  flight.update(.1);const firstRise=flight.height;
+  flight.update(.1);assert(firstRise>flight.height-firstRise);
+  flight.update(.15);assert.equal(flight.height,FLIGHT_HEIGHT/2);
+  flight.update(1.98);assert.equal(flight.height,FLIGHT_HEIGHT/2);
+  flight.update(.07);const fallStart=flight.height;
+  flight.update(.1);const fallStep=fallStart-flight.height;
+  const before=flight.height;flight.update(.1);assert(before-flight.height>fallStep);
+  flight.update(.2);assert(!flight.active);assert.equal(flight.height,0);
+  for(const fps of [30,60,144]){
+    const stepped=new Flight(),single=new Flight();stepped.press();single.press();
+    for(let i=0;i<fps*2.5;i++)stepped.update(1/fps);
+    single.update(2.5);assert(Math.abs(stepped.height-single.height)<1e-8);
+  }
+});
 async function model(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}
 test('flight has two height levels, repeated top presses glide without climbing, then lands',()=>{
   const flight=new Flight();flight.press();
@@ -18,10 +34,13 @@ test('flight has two height levels, repeated top presses glide without climbing,
   assert(!flight.active);assert.equal(flight.height,0);
   flight.press();flight.update(.5);assert.equal(flight.height,FLIGHT_HEIGHT/2);
 });
-test('player flaps both arms, shows cloud only at top, glides forward and lands cleanly',async()=>{
+test('player flaps both arms, fades cloud in during ascent, glides forward and lands cleanly',async()=>{
   const gltf=await model(),c=new CharacterController(gltf.scene,gltf.animations);
   const tick=(count:number,jump=false)=>{for(let i=0;i<count;i++)c.update(1/60,{...idle,jump});};
-  tick(1,true);tick(30);assert(!c.cloud.visible);
+  tick(1,true);assert(c.cloud.visible);
+  const puff=c.cloud.children[0] as import('three').Sprite;
+  const earlyOpacity=puff.material.opacity;assert(earlyOpacity>0 && earlyOpacity<.1);
+  tick(30);assert(c.cloud.visible);assert(puff.material.opacity>earlyOpacity);
   const left=c.actor.getObjectByName('Left_shoulder')!,right=c.actor.getObjectByName('Right_shoulder')!;
   const before=left.quaternion.clone();tick(6);assert(left.quaternion.angleTo(before)>.01);
   assert(left.rotation.z<0 && right.rotation.z>0);

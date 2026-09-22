@@ -1,7 +1,9 @@
-import { AnimationClip, Euler, Object3D, Quaternion, QuaternionKeyframeTrack, VectorKeyframeTrack } from 'three';
+import { AnimationClip, Euler, Group, Object3D, Quaternion, QuaternionKeyframeTrack, Sprite, VectorKeyframeTrack } from 'three';
 import { makeFruitMist } from './fruit-mist';
 
 export const FLIGHT_HEIGHT=2.9;
+const FLIGHT_GRAVITY=24;
+const FLIGHT_HOVER_SECONDS=2;
 export class Flight {
   height=0;
   active=false;
@@ -9,20 +11,41 @@ export class Flight {
   private target=0;
   private hold=0;
   private dash=0;
+  private velocity=0;
+  private rising=false;
   get gliding() {return this.dash>0;}
   get atTop() {return this.height>=FLIGHT_HEIGHT-.08;}
   press() {
     this.active=true;
-    if(this.level<2){this.level++;this.target=this.level*FLIGHT_HEIGHT/2;this.hold=.65;}
-    else {this.target=FLIGHT_HEIGHT;this.hold=.8;this.dash=.8;}
+    if(this.level<2){this.level++;this.target=this.level*FLIGHT_HEIGHT/2;}
+    else {this.target=FLIGHT_HEIGHT;this.dash=.8;}
+    this.hold=FLIGHT_HOVER_SECONDS;
+    this.velocity=Math.sqrt(2*FLIGHT_GRAVITY*Math.max(0,this.target-this.height));
+    this.rising=this.velocity>0;
   }
-  reset() {this.height=this.level=this.target=this.hold=this.dash=0;this.active=false;}
+  reset() {this.height=this.level=this.target=this.hold=this.dash=this.velocity=0;this.active=this.rising=false;}
   update(dt:number) {
     if(!this.active)return;
     this.dash=Math.max(0,this.dash-dt);
-    if(this.height<this.target) this.height=Math.min(this.target,this.height+3.7*dt);
-    else if(this.hold>0)this.hold=Math.max(0,this.hold-dt);
-    else {this.target=0;this.height=Math.max(0,this.height-1.8*dt);if(this.height===0)this.reset();}
+    // Consume each phase separately so the arc and hover duration do not depend on FPS.
+    let remaining=dt;
+    while(remaining>0 && this.active) {
+      if(this.rising) {
+        const toApex=this.velocity/FLIGHT_GRAVITY;
+        const step=Math.min(remaining,toApex);
+        this.height+=this.velocity*step-.5*FLIGHT_GRAVITY*step*step;
+        this.velocity-=FLIGHT_GRAVITY*step;
+        remaining-=step;
+        if(step===toApex){this.height=this.target;this.velocity=0;this.rising=false;}
+      } else if(this.hold>0) {
+        const step=Math.min(remaining,this.hold);
+        this.hold-=step;remaining-=step;
+      } else {
+        this.height=Math.max(0,this.height+this.velocity*remaining-.5*FLIGHT_GRAVITY*remaining*remaining);
+        this.velocity-=FLIGHT_GRAVITY*remaining;remaining=0;
+        if(this.height===0)this.reset();
+      }
+    }
   }
 }
 
@@ -55,7 +78,25 @@ export function flightClip(idle:AnimationClip,model:Object3D,name='Fly') {
 }
 
 export function flightCloud() {
-  const cloud=makeFruitMist(0);cloud.material=cloud.material.clone();cloud.material.color.set('#ffffff');cloud.material.opacity=1;
-  cloud.name='Flight cloud';cloud.position.set(0,.28,-.25);cloud.scale.set(5,1.7,1);cloud.visible=false;
+  const cloud=new Group();
+  cloud.name='Flight cloud';cloud.position.set(0,.05,-.25);cloud.visible=false;
+  // Overlapping puffs occupy real depth rather than a single flat billboard.
+  const puffs=[
+    [0,-.3,0,3.8,2.4],[-.95,-.3,0,2.5,2], [.95,-.35,.15,2.6,2.1],
+    [0,-.4,.9,2.7,2.2],[.1,-.5,-.9,2.8,2.3],
+    [-.35,-1.05,.2,2.6,2.4],[.35,-1.6,-.15,1.9,1.9],
+  ];
+  for(const [x,y,z,width,height] of puffs) {
+    const puff=makeFruitMist(0);puff.material=puff.material.clone();
+    puff.material.color.set('#ffffff');puff.material.opacity=0;
+    puff.position.set(x,y,z);puff.scale.set(width,height,1);cloud.add(puff);
+  }
   return cloud;
+}
+
+export function updateFlightCloud(cloud:Group,flight:Flight) {
+  const progress=Math.min(1,Math.max(0,flight.height/(FLIGHT_HEIGHT/2)));
+  const density=progress*progress*(3-2*progress);
+  cloud.visible=flight.active && density>0;
+  for(const puff of cloud.children as Sprite[])puff.material.opacity=.7*density;
 }

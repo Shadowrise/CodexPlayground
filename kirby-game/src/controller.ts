@@ -1,6 +1,6 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
 import { constrainToMeadow } from './world-bounds';
-import { Flight, flightClip, flightCloud } from './flight';
+import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
@@ -157,7 +157,7 @@ export class CharacterController {
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x;
-      this.cloud.visible=this.flight.atTop;
+      updateFlightCloud(this.cloud,this.flight);
       this.mixer.update(dt);
       if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
     } else if (this.turn) {
