@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { Vector3 } from 'three';
+import { HedgeMaze } from '../src/maze';
+import { MAZE_SITE,mazeLayout } from '../src/maze-layout';
+import { CharacterController } from '../src/controller';
+const center=(i:number)=>new Vector3(MAZE_SITE.x-30+(i%7)*10,0,MAZE_SITE.z-30+Math.floor(i/7)*10);
+function route(){const walls=mazeLayout(),queue=[45],parent=new Map<number,number>([[45,-1]]);for(let i=0;i<queue.length;i++){const cell=queue[i];for(const [d,offset] of [-7,1,7,-1].entries()){const next=cell+offset;if(!walls[cell][d] && next>=0&&next<49&&!parent.has(next)){parent.set(next,cell);queue.push(next);}}}const path=[24];while(path[path.length-1]!==45)path.push(parent.get(path[path.length-1])!);return {path:path.reverse(),count:parent.size};}
+test('maze has a winding route to the central star, dead ends and connected cells',()=>{
+  const {path,count}=route();assert.equal(count,49);assert(path.length>=12 && path.length<=40,`route length ${path.length}`);
+  assert(mazeLayout().filter(w=>w.filter(Boolean).length===3).length>=4);
+});
+test('route works for normal and 400% Kirby, while high-speed airborne wall crossing is blocked',()=>{
+  const maze=new HedgeMaze(),{path}=route();
+  for(const size of [1,4])for(let i=1;i<path.length;i++){const from=center(path[i-1]),to=center(path[i]);maze.constrain(to,size,from);assert(to.distanceTo(center(path[i]))<1e-6);}
+  const start=new Vector3(MAZE_SITE.x-45,40,MAZE_SITE.z-30),end=new Vector3(MAZE_SITE.x+45,40,MAZE_SITE.z-30);
+  maze.constrain(end,1,start);assert(end.x<MAZE_SITE.x-35);assert.equal(end.y,40);
+});
+test('star is awarded only at the centre on foot and a restored blessing is not awarded twice',async()=>{
+  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  const c=new CharacterController(gltf.scene,gltf.animations),maze=new HedgeMaze();c.actor.position.copy(center(45));assert(!maze.update(.1,c));
+  c.actor.position.copy(center(24));c.actor.position.y=20;assert(!maze.update(.1,c));c.actor.position.y=0;assert(!maze.update(.1,c,false));
+  assert(maze.update(.1,c));assert(c.starBlessed);assert(!maze.update(.1,c));assert(c.actor.getObjectByName('Golden star blessing'));
+  const restored=new HedgeMaze();assert(!restored.update(.1,c));assert(c.starBlessed);
+});

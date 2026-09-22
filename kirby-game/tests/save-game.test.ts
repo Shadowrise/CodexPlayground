@@ -14,12 +14,14 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const variant=KIRBY_VARIANTS[4],player=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const npcs=createNpcs(model.scene,model.animations,variant),world=new FruitWorld();
  player.actor.position.set(12,0,33);player.yaw=.8;player.grow();player.grow();
+ player.starBlessed=true;
  npcs[3].actor.position.set(-15,0,90);npcs[3].grow();
  world.restore(world.fruits.map((_,i)=>i<3),1);
  const save=parseSave(JSON.stringify(captureGame(player,variant,npcs,world)));
  const restored=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const friends=createNpcs(model.scene,model.animations,variant),fruits=new FruitWorld();
  restoreGame(save,restored,friends,fruits);
+ assert(restored.starBlessed);
  assert.equal(save.player.variant,variant[0]);assert.equal(restored.actor.position.x,12);assert.equal(restored.actor.position.z,33);
  assert.equal(restored.yaw,.8);assert(Math.abs(restored.actor.scale.x-1.2)<1e-9);assert.equal(restored.fruitsEaten,2);
  assert.equal(friends[3].actor.position.z,90);assert.equal(friends[3].actor.scale.x,1.1);assert.equal(friends[3].fruitsEaten,1);
@@ -27,4 +29,6 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const ride=captureGame(player,variant,npcs,world,true);assert.equal(ride.player.x,STATION.x);assert.equal(ride.player.z,STATION.z-8);
  assert.throws(()=>parseSave(JSON.stringify({...save,fruits:[]})));
  assert.throws(()=>parseSave('broken'));
+ assert.throws(()=>parseSave(JSON.stringify({...save,mazeStar:'yes'})));
+ const legacy={...save};delete legacy.mazeStar;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);
 });

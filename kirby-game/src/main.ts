@@ -10,6 +10,8 @@ import { Watermill, MILL_LEVER } from './watermill';
 import { Treehouse, TREEHOUSE_SITE } from './treehouse';
 import { Benches } from './benches';
 import { Balloons } from './balloons';
+import { HedgeMaze } from './maze';
+import { MAZE_SITE } from './maze-layout';
 import { randomSpawn } from './spawn';
 import { createSky, SUN_DIRECTION } from './sky';
 import { BackgroundMusic } from './music';
@@ -137,10 +139,11 @@ const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
 const benches=new Benches();
+const maze=new HedgeMaze();scene.add(maze.group);
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}});scene.add(balloons.group);
 const rideHint=document.createElement('div');rideHint.className='panel ride-hint';document.body.appendChild(rideHint);
 const fruits = new FruitWorld();
-for(const fruit of fruits.fruits){watermill.constrain(fruit.object.position,.15);treehouse.constrain(fruit.object.position,.15);}
+for(const fruit of fruits.fruits){watermill.constrain(fruit.object.position,.15);treehouse.constrain(fruit.object.position,.15);maze.moveFruitOutside(fruit.object.position);}
 scene.add(fruits.group);
 setupShadowMaterials();
 
@@ -239,6 +242,8 @@ startButton.addEventListener('click', () => {
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);pendingSave=undefined;}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
+  maze.constrain(character.actor.position,character.actor.scale.x);
+  for(const npc of npcs)maze.constrain(npc.actor.position,npc.actor.scale.x);
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -328,11 +333,15 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,npcs,character);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && pad.pressed.has(0)));
-    if(!coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
     if(!coaster.riding && !treehouse.active && !balloons.riding){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);}
+    if(!coaster.riding && !treehouse.active && !balloons.riding){
+      maze.constrain(character.actor.position,character.actor.scale.x,new THREE.Vector3(previousX,0,previousZ));
+      if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
+    }
     const interaction=balloons.prompt(character.actor.position) || (!coaster.riding && (((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)) || treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : `Воздушные шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starBlessed?'★ Звезда найдена! Твоё сияние сохранится.':'Найди звезду в центре · лабиринт проходится пешком') : `Лабиринт ${Math.round(Math.hypot(character.actor.position.x-MAZE_SITE.x,character.actor.position.z-MAZE_SITE.z))} м | Шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
     followCamera.update(dt, character.yaw, movingOrTurning,
       usingPad && !settingsOpen ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
@@ -351,7 +360,7 @@ renderer.setAnimationLoop((time: number) => {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    for (const npc of npcs) {if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);}}
+    for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     const hit = resolveAttack(character, npcs);
     const eaten = fruits.update(dt, character, npcs, coaster.riding || treehouse.active || benches.active || balloons.riding);
@@ -370,10 +379,13 @@ renderer.setAnimationLoop((time: number) => {
       message.textContent = `${eaten.type} съеден! Размер +10% · ${Math.round(character.actor.scale.x * 100)}%`;
       hitMessageRemaining = 2.5;
     }
+    if(maze.update(dt,character,!coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
+      sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Кирби сияет золотом!';hitMessageRemaining=5;
+    }
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
-  else {coaster.update(dt);treehouse.update(dt);balloons.update(dt);}
+  else {coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
   constrainToMeadow(camera.position, .5);

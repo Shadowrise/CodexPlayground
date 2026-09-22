@@ -24,6 +24,7 @@ export class CharacterController {
   private eatElapsed: number | undefined;
   private eatWasHeld = false;
   fruitsEaten = 0;
+  starBlessed = false;
   private growth?: { from: number; to: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   grow() {
