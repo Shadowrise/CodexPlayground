@@ -35,6 +35,7 @@ settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
   audioPanel.hidden = controlsPanel.hidden = !open;
+  if(open)audioPanel.querySelector<HTMLElement>('select, button, input')?.focus();
 });
 const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
@@ -248,9 +249,10 @@ let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
-  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera'));
+  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera')).filter(element=>element.getClientRects().length>0);
+  if(!elements.length)return;
   let index=elements.indexOf(document.activeElement as HTMLElement);
-  if(direction || index<0) {index=(index+direction+elements.length)%elements.length;elements[index].focus();}
+  if(direction || index<0) {index=index<0?0:(index+direction+elements.length)%elements.length;elements[index].focus();}
   const element=elements[index];
   if(adjust && element instanceof HTMLSelectElement) {
     element.selectedIndex=(element.selectedIndex+adjust+element.options.length)%element.options.length;

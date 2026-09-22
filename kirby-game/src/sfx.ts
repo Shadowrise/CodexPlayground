@@ -2,6 +2,7 @@ import { SoundEvents, type SoundActor, type SoundKind } from './sound-events';
 import { readAudioSettings, saveAudioSettings } from './audio-settings';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
+import { footstepProfile } from './footsteps';
 
 function T_smoothstep(value: number) {
   const t=Math.max(0,Math.min(1,value));
@@ -161,7 +162,7 @@ export class SoundEffects {
       } else {
         phase += 2 * Math.PI * freq / rate;
         // Rounded, low-pass grass rustle: no pitched thump or sharp transient.
-        if (kind === 'step') value = softNoise * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.5) * .18;
+        if (kind === 'step') value = (softNoise*.7 + Math.sin(2*Math.PI*115*t)*.075) * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.5);
         else if (kind === 'attack') value = (.65 * lowNoise + .25 * Math.sin(phase)) * Math.exp(-u * 5) * .6;
         else if (kind === 'jump') value = (Math.sin(phase) + .12 * Math.sin(phase * 2)) * Math.exp(-u * 2) * .3;
         else if (kind === 'death') value = (Math.sin(phase) + .16 * Math.sin(phase * 2)) * (1 - u) * .23;
@@ -192,17 +193,24 @@ export class SoundEffects {
       if (!event.actor.player && distance > 18) continue;
       if (event.kind === 'voice' && ctx.currentTime < this.voiceAfter) continue;
       if (!event.actor.player && event.kind !== 'voice' && event.kind !== 'step' && ctx.currentTime < this.npcEffectAfter) continue;
-      if (event.kind === 'step' && this.active.size >= 3) continue;
+      if (event.kind === 'step' && !event.actor.player && this.active.size >= 3) continue;
       if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = this.active.values().next().value; oldest?.stop(); if (oldest) this.active.delete(oldest); }
       const source = ctx.createBufferSource(), gain = ctx.createGain(), pan = ctx.createStereoPanner();
       source.buffer = this.buffers.get(event.kind === 'voice' ? `voice${Math.floor(Math.random() * 4)}` : event.kind)!;
       source.playbackRate.value = event.kind === 'voice' || event.kind === 'step' ? .94 + Math.random() * .12 : 1;
       gain.gain.value = event.actor.player ? .8 : .36 * (1 - distance / 18);
-      if (event.kind === 'step') gain.gain.value = event.actor.player ? .38 : .18 * Math.max(0, 1 - distance / 9);
+      let stepFilter: BiquadFilterNode | undefined;
+      if (event.kind === 'step') {
+        const profile=footstepProfile(event.actor.size);
+        source.playbackRate.value=profile.rate*(.98+Math.random()*.04);
+        gain.gain.value=profile.gain*(event.actor.player?1:.47*Math.max(0,1-distance/9));
+        stepFilter=ctx.createBiquadFilter();stepFilter.type='lowpass';stepFilter.frequency.value=profile.cutoff;stepFilter.Q.value=.5;
+      }
       pan.pan.value = event.actor.player ? 0 : Math.max(-.8, Math.min(.8, (-Math.cos(cameraAzimuth) * dx + Math.sin(cameraAzimuth) * dz) / 12));
-      source.connect(gain); gain.connect(pan); pan.connect(this.master!);
+      if(stepFilter){source.connect(stepFilter);stepFilter.connect(gain);}else source.connect(gain);
+      gain.connect(pan); pan.connect(this.master!);
       this.active.add(source);
-      source.onended = () => { this.active.delete(source); source.disconnect(); gain.disconnect(); pan.disconnect(); };
+      source.onended = () => { this.active.delete(source); source.disconnect(); stepFilter?.disconnect(); gain.disconnect(); pan.disconnect(); };
       source.start();
       if (event.kind === 'voice') this.voiceAfter = ctx.currentTime + 1.5;
       else if (!event.actor.player && event.kind !== 'step') this.npcEffectAfter = ctx.currentTime + .4;

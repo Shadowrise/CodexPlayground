@@ -86,3 +86,9 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
 .selection-card[hidden] {display:none;}
 #new-game {width:100%;padding:14px;border-radius:12px;border:0;background:#579644;color:white;font:inherit;font-weight:700;cursor:pointer;}
 #startup-menu {width:min(460px,100%);}
+#audio-panel button:focus, #audio-panel input:focus, #audio-panel select:focus, #reset-camera:focus {
+  outline: 3px solid #e5a12b;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 7px #fff6d9;
+  border-radius: 8px;
+}
