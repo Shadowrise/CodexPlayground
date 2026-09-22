@@ -199,7 +199,7 @@ const cameraTarget = new THREE.Vector3(0, .9, 0);
 document.querySelector('#reset-camera')!.addEventListener('click', () => followCamera.reset(character?.yaw ?? 0));
 let character: CharacterController | undefined;
 let npcs: KirbyNpc[] = [];
-const labels: Record<string, string> = { Idle: 'Отдыхаем', Run: 'Бежим', WalkBackward: 'Пятимся назад', Jump: 'Прыжок', Attack: 'Атака', Eat: 'Кушаем', RotateLeft: 'Поворот налево', RotateRight: 'Поворот направо' };
+const labels: Record<string, string> = { Idle: 'Отдыхаем', Run: 'Бежим', WalkBackward: 'Пятимся назад', Jump: 'Парим', Attack: 'Атака', Eat: 'Кушаем', RotateLeft: 'Поворот налево', RotateRight: 'Поворот направо' };
 
 async function loadCharacter() {
   try {
@@ -208,7 +208,7 @@ async function loadCharacter() {
     startButton.disabled = false;
     loadButton.disabled = false;
     startButton.textContent = 'На поляну →';
-    document.querySelector('#selection-message')!.textContent = 'W / S — движение · A / D — поворот · Пробел — прыжок · Q — атака · E — сесть в тележку';
+    document.querySelector('#selection-message')!.textContent = 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
   } catch (error) {
     console.error(error);
     status.textContent = 'Не удалось загрузить Кирби. Обновите страницу.';

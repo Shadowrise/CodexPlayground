@@ -1,5 +1,6 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Color, Group, LoopOnce, LoopRepeat, Mesh, MeshStandardMaterial, Object3D, PropertyBinding, Vector3 } from 'three';
 import { cloneVariant, KIRBY_VARIANTS, remainingVariants, type KirbyVariant } from './variants';
+import { Flight, flightClip, flightCloud } from './flight';
 import { constrainToMeadow, insideMeadow, worldLimit, MEADOW_HALF_SIZE } from './world-bounds';
 export { NPC_COLORS } from './variants';
 
@@ -8,6 +9,9 @@ const loops = new Set(['Idle', 'Walk', 'Run', 'WalkBackward']);
 
 export class KirbyNpc {
   readonly actor = new Group();
+  readonly flight = new Flight();
+  readonly cloud = flightCloud();
+  private flightTime=0;
   readonly mixer: AnimationMixer;
   readonly actions = new Map<string, AnimationAction>();
   readonly model: Object3D;
@@ -78,6 +82,7 @@ export class KirbyNpc {
     });
     this.actor.name = `NPC ${index + 1} · ${variant[0]}`;
     this.actor.add(this.model);
+    this.actor.add(this.cloud);
     this.mixer = new AnimationMixer(this.model);
     const rootTrack = clips.find(c => c.name === 'RotateLeft')!.tracks.find(track => {
       const binding = PropertyBinding.parseTrackName(track.name);
@@ -90,6 +95,7 @@ export class KirbyNpc {
       if (clip.name.startsWith('Rotate')) clip.tracks = clip.tracks.filter(t => t.name !== rootTrack.name);
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
+    this.actions.set('Fly',this.mixer.clipAction(flightClip(clips.find(c=>c.name==='Idle')!,this.model)));
     for (const name of [...repertoire, 'Death']) if (!this.actions.has(name)) throw new Error(`NPC: отсутствует ${name}`);
     // Separate starting sectors leave space between neighbours and around the player.
     const cells = [0, 1, 2, 3, 4, 6, 7, 8, 9, 11, 12, 13, 14, 15];
@@ -109,6 +115,7 @@ export class KirbyNpc {
 
   takeHit(): boolean {
     if (this.isDown) return false;
+    if(this.flight.active){this.flight.reset();this.actor.position.y=0;this.cloud.visible=false;this.start('Idle');}
     this.greeting=undefined;
     this.health--;
     this.flashRemaining = .28;
@@ -155,7 +162,11 @@ export class KirbyNpc {
         [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
       }
     }
-    this.start(this.deck.pop()!);
+    const next=this.deck.pop()!;
+    if(next==='Jump' && this.random()<.55) {
+      this.start('Fly');this.flight.press();this.flightTime=0;
+      this.actions.get('Fly')!.setLoop(LoopRepeat,Infinity);
+    } else this.start(next);
   }
 
   update(dt: number, neighbors: readonly Vector3[]) {
@@ -187,6 +198,18 @@ export class KirbyNpc {
       return;
     }
     this.model.position.y *= Math.exp(-14 * dt);
+    if(this.flight.active) {
+      const before=this.flightTime;this.flightTime+=dt;
+      if(before<.5 && this.flightTime>=.5)this.flight.press();
+      if(before<1.3 && this.flightTime>=1.3)this.flight.press();
+      this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x;
+      this.actor.position.x+=Math.sin(this.yaw)*1.5*this.actor.scale.x*dt;
+      this.actor.position.z+=Math.cos(this.yaw)*1.5*this.actor.scale.x*dt;
+      constrainToMeadow(this.actor.position,this.actor.scale.x);
+      this.cloud.visible=this.flight.atTop;this.mixer.update(dt);
+      if(!this.flight.active){this.cloud.visible=false;this.start('Walk');}
+      return;
+    }
     if(this.greeting) {
       const greeting=this.greeting,previous=greeting.elapsed;
       greeting.elapsed+=dt;

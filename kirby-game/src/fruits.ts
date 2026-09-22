@@ -106,7 +106,7 @@ export class FruitWorld {
     for (const eater of [player, ...npcs]) {
       const isPlayer = eater === player;
       if ((isPlayer && riding) || ('isDown' in eater && eater.isDown)
-        || ['Jump', 'Death'].includes(eater.state)
+        || ['Jump', 'Fly', 'Death'].includes(eater.state)
         || this.time < (this.pickupAfter.get(eater.actor) ?? 0)) continue;
       let nearest: Fruit | undefined;
       let distance = .9 * eater.actor.scale.x + .65;

@@ -1,5 +1,6 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
 import { constrainToMeadow } from './world-bounds';
+import { Flight, flightClip, flightCloud } from './flight';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
@@ -12,7 +13,8 @@ export class CharacterController {
   yaw = 0;
   private active?: AnimationAction;
   private turn?: Turn;
-  private jumpRemaining = 0;
+  readonly flight = new Flight();
+  readonly cloud = flightCloud();
   private jumpWasHeld = false;
   private attackElapsed: number | undefined;
   private attackWasHeld = false;
@@ -38,6 +40,7 @@ export class CharacterController {
 
   constructor(model: Object3D, clips: AnimationClip[]) {
     this.actor.add(model);
+    this.actor.add(this.cloud);
     this.mixer = new AnimationMixer(model);
     // Scene and root share a GLB name; GLTFLoader renames the animated node Kirby_1.
     // Find the actual target via animation bindings instead of a display name.
@@ -51,7 +54,7 @@ export class CharacterController {
     if (!(root instanceof Object3D)) throw new Error('Некорректный корень персонажа');
     this.animationRoot = root;
     for (const source of clips) {
-      const clip = source.clone();
+      const clip = source.name==='Jump' ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
       // Heading belongs to the game actor. Strip the GLB root yaw from ALL clips
       // so returning to Run/Idle never undoes a completed 90-degree turn.
       clip.tracks = clip.tracks.filter(track => {
@@ -70,7 +73,7 @@ export class CharacterController {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
     next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
-    const turning = name === 'Jump' || name === 'Attack' || name === 'Eat';
+    const turning = name === 'Attack' || name === 'Eat';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
@@ -110,7 +113,8 @@ export class CharacterController {
     this.attackWasHeld = !!input.attack;
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
-    if (!this.turn && this.jumpRemaining <= 0 && this.attackElapsed === undefined && this.eatElapsed === undefined) {
+    if(jumpPressed && this.flight.active)this.flight.press();
+    if (!this.turn && !this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
       if (eatPressed) {
         this.play('Eat');
@@ -120,7 +124,7 @@ export class CharacterController {
         this.attackElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
-        this.jumpRemaining = this.actions.get('Jump')!.getClip().duration;
+        this.flight.press();
       } else if (direction) {
         this.turn = { direction, startYaw: this.yaw, elapsed: 0, duration: this.turnDuration };
       } else if(input.steer===undefined) {
@@ -148,11 +152,14 @@ export class CharacterController {
         this.attackElapsed = undefined;
         this.play(this.locomotion(input));
       }
-    } else if (this.jumpRemaining > 0) {
-      this.move(dt, input, .8);
+    } else if (this.flight.active) {
+      this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
+      this.actor.rotation.y=this.yaw;
+      this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
+      this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x;
+      this.cloud.visible=this.flight.atTop;
       this.mixer.update(dt);
-      this.jumpRemaining = Math.max(0, this.jumpRemaining - dt);
-      if (this.jumpRemaining < 1e-6) { this.jumpRemaining = 0; this.play(this.locomotion(input)); }
+      if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
     } else if (this.turn) {
       const t = this.turn;
       const locomotion=this.locomotion(input);
