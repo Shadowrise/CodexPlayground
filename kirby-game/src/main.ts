@@ -6,6 +6,7 @@ import { resolveAttack } from './combat';
 import { FruitWorld } from './fruits';
 import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
+import { Watermill, MILL_LEVER } from './watermill';
 import { randomSpawn } from './spawn';
 import { createSky, SUN_DIRECTION } from './sky';
 import { BackgroundMusic } from './music';
@@ -127,8 +128,10 @@ ground.receiveShadow = true;
 scene.add(ground);
 addEnvironment(scene);
 const coaster=new Coaster();scene.add(coaster.group);
+const watermill=new Watermill();scene.add(watermill.group);
 const rideHint=document.createElement('div');rideHint.className='panel ride-hint';document.body.appendChild(rideHint);
 const fruits = new FruitWorld();
+for(const fruit of fruits.fruits)watermill.constrain(fruit.object.position,.15);
 scene.add(fruits.group);
 setupShadowMaterials();
 
@@ -225,6 +228,7 @@ startButton.addEventListener('click', () => {
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);pendingSave=undefined;}
+  watermill.constrain(character.actor.position,character.actor.scale.x);
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -300,10 +304,15 @@ renderer.setAnimationLoop((time: number) => {
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
     const atStation=!!coaster.prompt(character);
-    if(pendingBoard && atStation && !coaster.riding)coaster.board(character);
+    if(pendingBoard && !coaster.riding) {
+      if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
+      else if(atStation)coaster.board(character);
+    }
     if(!coaster.riding)character.update(dt, { sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
-    rideHint.textContent=coaster.prompt(character) || `Американские горки · депо ${Math.round(character.actor.position.distanceTo(STATION))} м · южный край поляны`;
+    if(!coaster.riding)watermill.constrain(character.actor.position,character.actor.scale.x);
+    const interaction=(!coaster.riding && watermill.prompt(character.actor.position)) || coaster.prompt(character);
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —') : `Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м · у центрального пруда | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
     followCamera.update(dt, character.yaw, movingOrTurning,
       usingPad && !settingsOpen ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
@@ -322,7 +331,7 @@ renderer.setAnimationLoop((time: number) => {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    for (const npc of npcs) npc.update(dt, neighbors);
+    for (const npc of npcs) {npc.update(dt, neighbors);watermill.constrain(npc.actor.position,npc.actor.scale.x);}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     const hit = resolveAttack(character, npcs);
     const eaten = fruits.update(dt, character, npcs, coaster.riding);
@@ -352,6 +361,7 @@ renderer.setAnimationLoop((time: number) => {
   camera.updateMatrixWorld();
   shadows.update();
   updateSky(dt,camera);
+  watermill.update(dt);
   renderer.render(scene, camera);
 });
 window.addEventListener('resize', () => {
