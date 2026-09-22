@@ -13,7 +13,7 @@ test('player boards smoothly, travels above the trees, lands elsewhere and regai
   c.actor.scale.setScalar(2);c.actor.position.copy(world.balloons[0].group.position).add(new Vector3(0,-.28,4));
   const start=c.actor.position.clone();assert(world.board(c));world.update(.01,[],c);assert(c.actor.position.distanceTo(start)<.01);
   world.update(1,[],c);const saved=world.savePosition(c)!;assert.equal(saved.y,0);assert(saved.distanceTo(start)<3);
-  for(let i=0;i<700;i++)world.update(.05,[],c);
+  for(let i=0;i<350;i++)world.update(.05,[],c);
   assert(world.riding);assert(c.actor.position.y>60);assert.equal(c.state,'Balloon');assert(!world.board(c));
   for(let i=0;i<520;i++)world.update(.05,[],c);
   assert(!world.riding);assert.equal(c.actor.position.y,0);assert.equal(c.state,'Idle');assert.equal(c.actor.scale.x,2);
@@ -37,4 +37,15 @@ test('three ports are clear of trees and detailed balloons have distinct random 
   const colors=world.balloons.map(b=>{const cloth=b.group.children.find(o=>o instanceof Mesh && o.geometry.getAttribute('color')) as Mesh;const c=cloth.geometry.getAttribute('color');return [c.getX(0),c.getY(0),c.getZ(0)].join(',');});
   assert.equal(new Set(colors).size,3);
   let batches=0,parts=0;world.group.traverse(o=>{if(o instanceof InstancedMesh){batches++;parts+=o.count;}});assert(parts>1000);assert(batches<100);
+});
+test('cruise takes twenty seconds while ascent and descent still take nine each',async()=>{
+  const gltf=await model(),c=new CharacterController(gltf.scene,gltf.animations),world=new Balloons(()=>{},()=>.2);
+  const balloon=world.balloons[0];c.actor.position.copy(balloon.group.position);assert(world.board(c));
+  world.update(1,[],c);world.update(9,[],c);
+  assert(Math.abs(balloon.group.position.y-64.28)<1e-8);
+  assert.equal(balloon.group.position.x,balloon.start.x);
+  world.update(10,[],c);
+  assert(Math.abs(balloon.group.position.x-(balloon.start.x+balloon.end.x)/2)<1e-8);
+  world.update(10,[],c);assert.equal(balloon.group.position.x,balloon.end.x);assert(balloon.group.position.y>64);
+  world.update(9,[],c);assert.equal(balloon.phase,'exiting');assert.equal(balloon.group.position.y,.28);
 });

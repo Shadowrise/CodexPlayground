@@ -7,7 +7,9 @@ type Passenger=CharacterController|KirbyNpc;
 export type BalloonSound='burner'|'arrival'|'departure';
 type Balloon={group:T.Group;flame:T.Group;station:number;destination:number;time:number;phase:'parked'|'boarding'|'flying'|'exiting';passenger?:Passenger;from:T.Vector3;start:T.Vector3;end:T.Vector3;wait:number;nextSound:number;scale:number};
 const smooth=(u:number)=>{u=T.MathUtils.clamp(u,0,1);return u*u*(3-2*u);};
-export const BALLOON_TRIP_SECONDS=58;
+const ASCENT_SECONDS=9;
+const CRUISE_SECONDS=20;
+export const BALLOON_TRIP_SECONDS=ASCENT_SECONDS*2+CRUISE_SECONDS;
 
 export class Balloons {
   readonly group=new T.Group();
@@ -123,7 +125,7 @@ export class Balloons {
       }else if(b.phase==='boarding'){
         if(b.time>=1)this.launch(b,index);
       }else if(b.phase==='flying'){
-        const t=b.time,travel=smooth((t-9)/40),height=(64+index*24)*smooth(t/9)*(1-smooth((t-49)/9));
+        const t=b.time,travel=smooth((t-ASCENT_SECONDS)/CRUISE_SECONDS),height=(64+index*24)*smooth(t/ASCENT_SECONDS)*(1-smooth((t-ASCENT_SECONDS-CRUISE_SECONDS)/ASCENT_SECONDS));
         b.group.position.lerpVectors(b.start,b.end,travel);b.group.position.y=.28+height;
         b.group.rotation.set(Math.sin(this.clock*.7+index)*.014,0,Math.sin(this.clock*.55)*.018);
         if(t>=BALLOON_TRIP_SECONDS){b.station=b.destination;b.group.position.copy(b.end);b.group.rotation.set(0,0,0);b.time=0;b.wait=0;b.phase=b.passenger?'exiting':'parked';this.sound('arrival',b.group.position);}

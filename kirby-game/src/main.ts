@@ -96,7 +96,8 @@ for (const variant of KIRBY_VARIANTS) {
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#b3d9ef');
 scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
-const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, .1, 1200);
+// A less extreme depth range keeps distant ground overlays from fighting at altitude.
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, .75, 1200);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
@@ -109,10 +110,11 @@ mount.appendChild(renderer.domElement);
 scene.add(new THREE.HemisphereLight('#ffffff', '#779455', 2.4));
 const shadows = new CSM({camera,parent:scene,cascades:2,maxFar:300,mode:'practical',
   shadowMapSize:1024,lightDirection:SUN_DIRECTION.clone().negate(),lightIntensity:3.2,
-  lightNear:1,lightFar:1400,lightMargin:250,shadowBias:-.000001});
+  lightNear:1,lightFar:1400,lightMargin:250,shadowBias:-.00003});
 shadows.fade=true;
 shadows.updateFrustums();
-for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.025;}
+// Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
+for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
 const shadowMaterials=new WeakSet<THREE.Material>();
 function setupShadowMaterials() {
   scene.traverse(object=>{
