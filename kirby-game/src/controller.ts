@@ -87,6 +87,13 @@ export class CharacterController {
     return input.forward ? 'Run' : 'WalkBackward';
   }
 
+  setActivity(name:string) {
+    this.flight.reset();this.cloud.visible=false;this.turn=undefined;
+    this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;
+    this.play('Idle');this.state=name;
+    this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
+  }
+
   private move(dt: number, input: Input, factor = 1) {
     const direction = Number(input.forward) - Number(!!input.backward);
     const speed = direction > 0 ? this.speed * (input.sprint ? 2 : 1) : this.backwardSpeed;

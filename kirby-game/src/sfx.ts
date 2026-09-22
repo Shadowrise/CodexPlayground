@@ -83,6 +83,30 @@ export class SoundEffects {
     this.voiceAfter=ctx.currentTime+1.5;
   }
 
+  playTreehouse(kind:'ladder'|'creak'|'leaves'|'cheer') {
+    const ctx=this.context;
+    if(!ctx || !this.enabled || document.hidden || ctx.state!=='running' || this.active.size>=8)return;
+    const key=`tree-${kind}`;
+    if(!this.buffers.has(key)){
+      const duration=kind==='leaves'?1.1:kind==='creak'?.5:.15,rate=22050;
+      if(kind==='cheer')this.buffers.set(key,this.buffers.get('cheer')!);
+      else {
+        const buffer=ctx.createBuffer(1,Math.ceil(duration*rate),rate),data=buffer.getChannelData(0);let noise=0,phase=0;
+        for(let i=0;i<data.length;i++){
+          const t=i/rate,u=t/duration;noise=noise*.7+(Math.random()*2-1)*.3;
+          phase+=2*Math.PI*(kind==='creak'?190+50*Math.sin(u*Math.PI):125)/rate;
+          const envelope=Math.sin(Math.PI*u)**.7*Math.exp(-u*(kind==='ladder'?5:1.5));
+          data[i]=(kind==='leaves'?noise*(.6+.4*Math.sin(t*37)):kind==='creak'?Math.sin(phase)*.2+noise*.08:noise*.2+Math.sin(phase)*.22)*envelope;
+        }
+        this.buffers.set(key,buffer);
+      }
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;
+    gain.gain.value=kind==='leaves'?.65:kind==='cheer'?.45:.25;
+    source.connect(gain);gain.connect(this.master!);this.active.add(source);
+    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
+
   private rideBuffer(cheer:boolean) {
     const rate=22050,duration=cheer?.9:.16;
     const buffer=this.context!.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);

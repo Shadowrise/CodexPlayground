@@ -7,6 +7,7 @@ import { FruitWorld } from './fruits';
 import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
 import { Watermill, MILL_LEVER } from './watermill';
+import { Treehouse, TREEHOUSE_SITE } from './treehouse';
 import { randomSpawn } from './spawn';
 import { createSky, SUN_DIRECTION } from './sky';
 import { BackgroundMusic } from './music';
@@ -130,9 +131,10 @@ scene.add(ground);
 addEnvironment(scene);
 const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
+const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
 const rideHint=document.createElement('div');rideHint.className='panel ride-hint';document.body.appendChild(rideHint);
 const fruits = new FruitWorld();
-for(const fruit of fruits.fruits)watermill.constrain(fruit.object.position,.15);
+for(const fruit of fruits.fruits){watermill.constrain(fruit.object.position,.15);treehouse.constrain(fruit.object.position,.15);}
 scene.add(fruits.group);
 setupShadowMaterials();
 
@@ -230,6 +232,7 @@ startButton.addEventListener('click', () => {
   character.actor.position.set(spawn.x,0,spawn.z);
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);pendingSave=undefined;}
   watermill.constrain(character.actor.position,character.actor.scale.x);
+  treehouse.constrain(character.actor.position,character.actor.scale.x);
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -307,14 +310,17 @@ renderer.setAnimationLoop((time: number) => {
     const atStation=!!coaster.prompt(character);
     if(pendingBoard) {
       if(coaster.riding)coaster.disembark();
+      else if(treehouse.active || treehouse.prompt(character.actor.position))treehouse.interact(character);
       else if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
       else if(atStation)coaster.board(character);
     }
-    if(!coaster.riding)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    const treehouseWasActive=treehouse.active;
+    treehouse.update(dt,{steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && pad.pressed.has(0)));
+    if(!coaster.riding && !treehouseWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
-    if(!coaster.riding)watermill.constrain(character.actor.position,character.actor.scale.x);
-    const interaction=(!coaster.riding && watermill.prompt(character.actor.position)) || coaster.prompt(character);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —') : `Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м · у центрального пруда | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
+    if(!coaster.riding && !treehouse.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);}
+    const interaction=(!coaster.riding && (treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character);
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : `Домик на дереве ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
     followCamera.update(dt, character.yaw, movingOrTurning,
       usingPad && !settingsOpen ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
@@ -326,17 +332,17 @@ renderer.setAnimationLoop((time: number) => {
     const position = character.actor.position;
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
-    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : labels[character.state] || character.state;
+    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if(!coaster.riding && greetingCooldown===0) {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    for (const npc of npcs) {npc.update(dt, neighbors);watermill.constrain(npc.actor.position,npc.actor.scale.x);}
+    for (const npc of npcs) {npc.update(dt, neighbors);watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     const hit = resolveAttack(character, npcs);
-    const eaten = fruits.update(dt, character, npcs, coaster.riding);
+    const eaten = fruits.update(dt, character, npcs, coaster.riding || treehouse.active);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;
@@ -355,7 +361,7 @@ renderer.setAnimationLoop((time: number) => {
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
-  else coaster.update(dt);
+  else {coaster.update(dt);treehouse.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
   constrainToMeadow(camera.position, .5);
