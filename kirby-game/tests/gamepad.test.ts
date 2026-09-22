@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deadZone, devices, GamepadInput, INPUT_STORAGE } from '../src/gamepad';
+import { deadZone, devices, GamepadInput, INPUT_STORAGE, stickSteering } from '../src/gamepad';
+
+test('forward corridor ignores sideways drift but intentional tilt steers proportionally',()=>{
+  for(const y of [-1,1])for(const x of [-.5,-.3,0,.3,.5])assert.equal(Math.abs(stickSteering(deadZone(x),deadZone(y))),0);
+  const diagonal=stickSteering(deadZone(.71),deadZone(-.71));
+  assert(diagonal<0 && diagonal>-1);
+  assert.equal(stickSteering(1,0),-1);assert.equal(stickSteering(-1,0),1);
+  assert(Math.abs(stickSteering(.51,-1))<.01);
+  assert(Math.abs(stickSteering(.8,-1))>Math.abs(stickSteering(.6,-1)));
+});
 const pad=(index=0,id='Xbox')=>({index,id,connected:true,mapping:'standard' as const,axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,touched:false,value:0}))});
 test('selection persists, disconnect falls back and reconnect restores controller',()=>{
   const values=new Map<string,string>(),storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v);}};

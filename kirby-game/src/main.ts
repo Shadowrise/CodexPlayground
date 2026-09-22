@@ -18,7 +18,7 @@ import { cloneVariant, KIRBY_VARIANTS, type KirbyVariant } from './variants';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
-import { createGamepadInput } from './gamepad';
+import { createGamepadInput, stickSteering } from './gamepad';
 const gamepad = createGamepadInput();
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
@@ -294,7 +294,6 @@ renderer.setAnimationLoop((time: number) => {
   const padKeys=new Set<string>();
   if(usingPad && !settingsOpen && !wasChoosing) {
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
-    if(pad.x<-.05)padKeys.add('KeyA');if(pad.x>.05)padKeys.add('KeyD');
     if(pad.held.has(7))padKeys.add('ShiftLeft');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;
@@ -310,7 +309,7 @@ renderer.setAnimationLoop((time: number) => {
       if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
       else if(atStation)coaster.board(character);
     }
-    if(!coaster.riding)character.update(dt, { sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!coaster.riding)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
     if(!coaster.riding)watermill.constrain(character.actor.position,character.actor.scale.x);
     const interaction=(!coaster.riding && watermill.prompt(character.actor.position)) || coaster.prompt(character);

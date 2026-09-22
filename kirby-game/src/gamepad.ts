@@ -3,6 +3,12 @@ export const INPUT_STORAGE = 'kirby-input-device-v1';
 export function deadZone(value: number, threshold = .2) {
   return Math.abs(value) <= threshold ? 0 : Math.sign(value) * Math.min(1, (Math.abs(value)-threshold)/(1-threshold));
 }
+/** Wider straight-ahead corridor while moving; output ramps up without a jump. */
+export function stickSteering(x:number,y:number) {
+  const threshold=Math.max(.35,Math.abs(y)*.5);
+  const amount=Math.max(0,Math.min(1,(Math.abs(x)-threshold)/(1-threshold)));
+  return -Math.sign(x)*amount*amount*(3-2*amount);
+}
 export function devices(pads: readonly (Pad | null)[]) {
   return pads.filter((p): p is Pad => !!p?.connected && p.mapping === 'standard').map(pad => {
     return {pad, key: JSON.stringify([pad.id, pad.index]), label: `Геймпад ${pad.index+1} · ${pad.id}`};

@@ -1,7 +1,7 @@
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
 import { constrainToMeadow } from './world-bounds';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean };
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
 
 export class CharacterController {
@@ -92,6 +92,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    if(input.steer!==undefined)this.turn=undefined;
     if (this.growth) {
       const g=this.growth;
       g.elapsed+=dt;
@@ -110,7 +111,7 @@ export class CharacterController {
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if (!this.turn && this.jumpRemaining <= 0 && this.attackElapsed === undefined && this.eatElapsed === undefined) {
-      const direction = Number(input.left) - Number(input.right);
+      const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
       if (eatPressed) {
         this.play('Eat');
         this.eatElapsed = 0;
@@ -122,7 +123,7 @@ export class CharacterController {
         this.jumpRemaining = this.actions.get('Jump')!.getClip().duration;
       } else if (direction) {
         this.turn = { direction, startYaw: this.yaw, elapsed: 0, duration: this.turnDuration };
-      } else {
+      } else if(input.steer===undefined) {
         this.play(this.locomotion(input));
       }
     }
@@ -172,6 +173,14 @@ export class CharacterController {
         if (heldDirection !== t.direction) this.play(this.locomotion(input));
       }
     } else {
+      if(input.steer!==undefined) {
+        const steering=Math.max(-1,Math.min(1,input.steer));
+        this.yaw+=steering*Math.PI*.55*dt;
+        this.actor.rotation.y=this.yaw;
+        const motion=this.locomotion(input);
+        this.play(motion==='Idle' && steering!==0 ? (steering>0?'RotateLeft':'RotateRight') : motion);
+        if(this.state.startsWith('Rotate'))this.actions.get(this.state)!.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(Math.max(.35,Math.abs(steering))*this.actions.get(this.state)!.getClip().duration/.4);
+      }
       this.move(dt, input);
       this.mixer.update(dt);
     }

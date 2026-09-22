@@ -7,6 +7,18 @@ import { CharacterController, type Input } from '../src/controller';
 
 const idle: Input = { forward: false, left: false, right: false };
 
+test('analog steering runs continuously, stops immediately and scales with stick strength',async()=>{
+  const c=await create();
+  for(let i=0;i<60;i++)c.update(1/60,{...idle,forward:true,steer:.5});
+  assert(Math.abs(c.yaw-Math.PI*.275)<1e-6);assert.equal(c.state,'Run');
+  const yaw=c.yaw;
+  c.update(1/60,{...idle,forward:true,steer:0});assert.equal(c.yaw,yaw);
+  c.update(1/60,{...idle,steer:-1});assert.equal(c.state,'RotateRight');
+  assert(Math.abs(c.yaw-(yaw-Math.PI*.55/60))<1e-6);
+  for(let i=0;i<90;i++)c.update(1/60,{...idle,steer:-1});
+  assert.equal(c.state,'RotateRight');assert(c.actions.get('RotateRight')!.isRunning());
+});
+
 test('running, sprinting and backing turn without losing movement or animation cadence',async()=>{
   for(const mode of ['run','sprint','backward']) {
     const c=await create();
