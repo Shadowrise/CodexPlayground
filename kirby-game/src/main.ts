@@ -305,8 +305,9 @@ renderer.setAnimationLoop((time: number) => {
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
     const atStation=!!coaster.prompt(character);
-    if(pendingBoard && !coaster.riding) {
-      if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
+    if(pendingBoard) {
+      if(coaster.riding)coaster.disembark();
+      else if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
       else if(atStation)coaster.board(character);
     }
     if(!coaster.riding)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });

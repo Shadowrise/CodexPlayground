@@ -6,10 +6,19 @@ import type { CharacterController } from './controller';
 
 export const STATION = new T.Vector3(0,0,222);
 export function createCoasterCurve() {
-  const p=[new T.Vector3(0,2,232),new T.Vector3(35,2,232),new T.Vector3(85,20,232),new T.Vector3(130,38,232),new T.Vector3(178,7,232),new T.Vector3(220,13,220),new T.Vector3(228,17,170),new T.Vector3(220,12,115),new T.Vector3(220,12,90)];
+  const p=[[0,2,232],[25,3,232],[50,28,232],[76,72,232],[88,82,232],[94,79,232],[103,48,232],[114,13,232],[140,7,232],[165,27,232],[188,9,232],[220,15,220],[230,32,178],[223,8,145],[220,12,115],[220,12,90]].map(v=>new T.Vector3(...v as [number,number,number]));
   // Separate entrance and exit sideways so the returning rail cannot cross riders' heads.
   for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(220+18*u,12+24*(1-Math.cos(a)),70-24*Math.sin(a)-14*u));}
-  p.push(...[[238,12,35],[230,24,-35],[232,40,-100],[228,10,-185],[213,8,-220],[155,22,-232],[80,10,-232],[0,30,-232],[-90,9,-232],[-185,19,-230],[-225,8,-210],[-232,28,-145],[-230,10,-65],[-232,34,25],[-232,9,125],[-225,18,207],[-192,12,231],[-125,25,232],[-65,5,232],[-28,2,232]].map(v=>new T.Vector3(...v as [number,number,number])));
+  const add=(points:number[][])=>p.push(...points.map(v=>new T.Vector3(...v as [number,number,number])));
+  add([[238,12,35],[226,39,-10],[236,8,-50],[222,46,-100],[231,12,-145],[213,28,-210],[165,8,-220],[140,8,-220]]);
+  // North-side loop, with separated entry and exit lanes.
+  for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(110-24*Math.sin(a)-14*u,8+24*(1-Math.cos(a)),-220-18*u));}
+  add([[65,8,-238],[25,35,-229],[-15,10,-237],[-60,42,-224],[-105,9,-235],[-145,22,-232]]);
+  // One and a half climbing spiral turns; the pitch leaves headroom between coils.
+  for(let i=0;i<=84;i++){const u=i/84,a=u*Math.PI*3;p.push(new T.Vector3(-189+24*Math.cos(a),28+36*u,-207+24*Math.sin(a)));}
+  add([[-215,65,-223],[-231,61,-226],[-242,51,-210],[-238,20,-171],[-228,9,-142],[-218,9,-125]]);
+  for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(-218-18*u,9+22*(1-Math.cos(a)),-95+22*Math.sin(a)+14*u));}
+  add([[-236,9,-45],[-225,39,-10],[-237,8,35],[-221,43,80],[-235,10,130],[-225,32,178],[-205,9,221],[-160,30,232],[-115,8,225],[-75,23,234],[-40,5,232],[-20,2,232]]);
   const curve=new T.CatmullRomCurve3(p,true,'centripetal');
   curve.arcLengthDivisions=6000;
   return curve;
@@ -29,7 +38,7 @@ export class Coaster {
   private riderParent?:T.Object3D;
   private sampleCount=2400;
   get riding(){return !!this.rider;}
-  readonly rideMotion={speed:0,slope:0,inverted:false};
+  readonly rideMotion={speed:0,slope:0,inverted:false,turn:0};
   constructor() {
     this.group.name='Mountain circuit roller coaster';
     let right=new T.Vector3(0,0,-1);
@@ -62,7 +71,8 @@ export class Coaster {
     for(let d=0;d<this.length;d+=15) {
       const {p}=this.pose(d);
       // The loop uses exterior portal supports, never columns through its interior.
-      if(p.x>210 && p.z>25 && p.z<120)continue;
+      if((p.x>210 && p.z>25 && p.z<120) || (p.z<-210 && p.x>55 && p.x<145)
+        || (p.x<-205 && p.z>-130 && p.z<-45) || (p.x<-155 && p.z<-175))continue;
       for(const sign of [-1,1]) {const base=new T.Vector3(p.x+sign*2.2,.1,p.z);
         add(box,'#a1a39a',base,new T.Vector3(2,.3,2));beam(base,p.clone().add(new T.Vector3(sign*.9,-.2,0)),.18,'#426a70');}
       if(p.y>8)beam(new T.Vector3(p.x-2.2,1,p.z),new T.Vector3(p.x+1,p.y*.72,p.z),.1,'#577e7f');
@@ -73,6 +83,21 @@ export class Coaster {
         beam(new T.Vector3(x,0,z),new T.Vector3(x,69,z),.35,'#426a70');
       }
       beam(new T.Vector3(208,69,z),new T.Vector3(248,69,z),.35,'#426a70');
+    }
+    // Portal frames span the extra loops, with columns outside their swept volume.
+    for(const x of [70,128]) {
+      for(const z of [-251,-205])beam(new T.Vector3(x,.1,z),new T.Vector3(x,73,z),.3,'#426a70');
+      beam(new T.Vector3(x,73,-251),new T.Vector3(x,73,-205),.3,'#426a70');
+    }
+    for(const z of [-118,-63]) {
+      for(const x of [-250,-204])beam(new T.Vector3(x,.1,z),new T.Vector3(x,71,z),.3,'#426a70');
+      beam(new T.Vector3(-250,71,z),new T.Vector3(-204,71,z),.3,'#426a70');
+    }
+    // The spiral is carried by an inner tower; arms sit below each coil.
+    for(const x of [-195,-183])for(const z of [-213,-201])beam(new T.Vector3(x,0,z),new T.Vector3(x,65,z),.3,'#426a70');
+    for(let i=0;i<12;i++) {
+      const u=i/12,a=u*Math.PI*3;
+      beam(new T.Vector3(-189,20+36*u,-207),new T.Vector3(-189+24*Math.cos(a),27.6+36*u,-207+24*Math.sin(a)),.18,'#577e7f');
     }
     // Open boarding platform: no canopy obscures the rider or follow camera.
     add(box,'#b9a582',new T.Vector3(0,.35,224),new T.Vector3(24,.7,10));
@@ -141,7 +166,7 @@ export class Coaster {
     return {p:this.curve.getPointAt(u),q:this.frames[i].clone().slerp(this.frames[i+1],f-i)};
   }
   prompt(player:CharacterController) {
-    if(this.riding)return 'Поездка на горках · выход после круга';
+    if(this.riding)return 'E — выйти из тележки в депо';
     if(player.actor.position.distanceTo(STATION)>12* Math.min(player.actor.scale.x,2))return '';
     return this.carts.some(c=>c.wait>0 && !c.occupied)?'E — сесть в тележку':'Депо · ожидаем свободную тележку';
   }
@@ -152,7 +177,7 @@ export class Coaster {
     this.rider=player;this.ridden=cart;this.riderParent=player.actor.parent!;
     cart.wait=1.2;cart.speed=0;cart.group.scale.setScalar(Math.max(1,player.actor.scale.x));return true;
   }
-  private disembark() {
+  disembark() {
     if(!this.rider || !this.ridden)return;
     const player=this.rider;this.riderParent!.add(player.actor);
     player.actor.position.set(0,0,214);player.actor.quaternion.identity();player.yaw=0;
@@ -162,7 +187,7 @@ export class Coaster {
   update(dt:number) {
     if(this.luigi)updateLuigiIdle(this.luigi,dt);
     for(const mixer of this.passengerMixers)mixer.update(dt);
-    this.rideMotion.speed=0;this.rideMotion.slope=0;this.rideMotion.inverted=false;
+    this.rideMotion.speed=0;this.rideMotion.slope=0;this.rideMotion.inverted=false;this.rideMotion.turn=0;
     for(const cart of this.carts) {
       if(cart.wait>0){cart.wait=Math.max(0,cart.wait-dt);cart.speed=0;}
       else {
@@ -183,15 +208,14 @@ export class Coaster {
         cart.distance+=travel;
         if(cart===this.ridden)this.rideMotion.speed=dt>0?travel/dt:0;
         for(const wheel of cart.wheels)wheel.rotateY(travel/.32);
-        if(cart===this.ridden && remaining<70 && gap<spacing+3 && cart.speed<1)this.disembark();
         if(cart.distance>=this.length-.02) {
-          cart.distance=0;cart.wait=cart.occupied?.4:2.5;cart.speed=0;
-          if(cart===this.ridden)this.disembark();
+          cart.distance=0;cart.wait=(cart.occupied || cart===this.ridden) ? .4 : 2.5;cart.speed=0;
         }
       }
       const pose=this.pose(cart.distance);cart.group.position.copy(pose.p);cart.group.quaternion.copy(pose.q);
       if(cart===this.ridden && this.rider) {
         this.rideMotion.slope=this.curve.getTangentAt(cart.distance/this.length).y;
+        this.rideMotion.turn=this.curve.getTangentAt(cart.distance/this.length).angleTo(this.curve.getTangentAt(((cart.distance+3)%this.length)/this.length))/3;
         this.rideMotion.inverted=new T.Vector3(0,1,0).applyQuaternion(pose.q).y<0;
         const player=this.rider;
         player.actor.position.copy(new T.Vector3(0,1.3,0).multiplyScalar(cart.group.scale.x).applyQuaternion(pose.q).add(pose.p));

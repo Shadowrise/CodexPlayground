@@ -11,7 +11,7 @@ test('short station stops keep all twelve carts circulating without overlap',()=
   const c=new Coaster();
   const carts=(c as unknown as {carts:{distance:number;wait:number;occupied:boolean}[]}).carts;
   const laps=carts.map(()=>0);
-  for(let frame=0;frame<60*180;frame++){
+  for(let frame=0;frame<60*300;frame++){
     const before=carts.map(cart=>cart.distance);c.update(1/60);
     carts.forEach((cart,i)=>{
       if(cart.distance<before[i]){
@@ -41,7 +41,7 @@ test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject 
   passengers.forEach((p,i)=>assert.equal(p.parent,parents[i]));
 });
 
-test('departure accelerates gradually; returning rider exits a stopped station queue',()=>{
+test('departure accelerates gradually; returning rider stays seated in the station queue',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);actor.position.copy(STATION);
   const player={actor,state:'Idle',yaw:0,mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
   assert(coaster.board(player));
@@ -58,9 +58,9 @@ test('departure accelerates gradually; returning rider exits a stopped station q
   carts[0].distance=coaster.length-20;carts[0].speed=8;carts[0].wait=0;
   carts[1].distance=0;carts[1].wait=100;
   for(let i=0;i<600 && coaster.riding;i++)coaster.update(1/60);
-  assert(!coaster.riding,'Queue arrival must disembark without crossing the lap seam');
+  assert(coaster.riding,'Queue arrival must keep the player seated');
   assert(carts[0].distance<coaster.length && carts[0].distance>coaster.length-22);
-  assert.equal(actor.position.y,0);assert.equal(actor.position.z,214);
+  coaster.disembark();assert.equal(actor.position.y,0);assert.equal(actor.position.z,214);
 });
 
 test('loop rails and cross ties leave clearance around rider head, including growth',()=>{
@@ -71,7 +71,7 @@ test('loop rails and cross ties leave clearance around rider head, including gro
   for(const scale of [1,2,3]) {
     let clearance=Infinity;
     for(const p of poses) {
-      if(p.p.x<210 || p.p.z<25 || p.p.z>120)continue;
+      if(!((p.p.x>210 && p.p.z>25 && p.p.z<120) || (p.p.z<-210 && p.p.x>55 && p.p.x<145) || (p.p.x<-205 && p.p.z>-130 && p.p.z<-45) || (p.p.x<-155 && p.p.z<-175)))continue;
       const head=new Vector3(0,2.47*scale,0).applyQuaternion(p.q).add(p.p);
       for(const rail of rails)clearance=Math.min(clearance,head.distanceToSquared(rail));
     }
@@ -87,11 +87,11 @@ test('closed mountain circuit has height changes, inverted loop and continuous f
     min=Math.min(min,pose.p.y);max=Math.max(max,pose.p.y);
     if(new Vector3(0,1,0).applyQuaternion(pose.q).y<-.8)inverted=true;
   }
-  assert(max-min>35);assert(inverted);
+  assert(max-min>78);assert(inverted);
   assert(c.pose(0).q.angleTo(c.pose(c.length-.001).q)<.01);
 });
 
-test('station boarding completes a full circuit and restores player to ground',()=>{
+test('player stays seated over multiple laps and can exit anywhere to the depot',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);
   const player={actor,state:'Idle',yaw:0,mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
   assert.equal(coaster.board(player),false);
@@ -102,7 +102,9 @@ test('station boarding completes a full circuit and restores player to ground',(
     coaster.update(1/60);high=Math.max(high,actor.position.y);
     inverted ||= new Vector3(0,1,0).applyQuaternion(actor.quaternion).y<-.8;
   }
-  assert(high>35);assert(inverted);assert(!coaster.riding);
+  assert(high>75);assert(inverted);assert(coaster.riding);
+  coaster.disembark();assert(!coaster.riding);
   assert.equal(actor.position.y,0);assert.equal(actor.parent,scene);
   assert(actor.quaternion.angleTo(new Group().quaternion)<1e-8);
+  coaster.disembark();assert.equal(actor.position.z,214);
 });

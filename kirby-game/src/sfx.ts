@@ -99,7 +99,7 @@ export class SoundEffects {
     return buffer;
   }
 
-  updateRide(riding:boolean,motion:{speed:number;slope:number;inverted:boolean}) {
+  updateRide(riding:boolean,motion:{speed:number;slope:number;inverted:boolean;turn?:number}) {
     const ctx=this.context;
     if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
     if(!riding){this.wheelAfter=0;return;}
@@ -114,8 +114,8 @@ export class SoundEffects {
       play('wheel',.56,.92+Math.random()*.16);
       this.wheelAfter=ctx.currentTime+Math.max(.09,Math.min(.32,4.8/motion.speed));
     }
-    if(motion.speed>8 && (motion.slope<-.38 || motion.inverted) && ctx.currentTime>=this.cheerAfter) {
-      play('cheer',.65,.95+Math.random()*.12);this.cheerAfter=ctx.currentTime+7;
+    if(motion.speed>8 && (motion.slope<-.38 || motion.inverted || (motion.turn??0)>.035) && ctx.currentTime>=this.cheerAfter) {
+      play('cheer',.65,.95+Math.random()*.12);this.cheerAfter=ctx.currentTime+4.5;
     }
   }
 
