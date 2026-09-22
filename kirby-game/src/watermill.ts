@@ -4,6 +4,28 @@ import * as T from 'three';
 export const MILL_SITE = new T.Vector3(32, 0, 34);
 export const MILL_LEVER = MILL_SITE.clone().add(new T.Vector3(17, 0, 6.5));
 
+/** Water follows the outside of the rotating scoops, never a sheet through the axle. */
+export function createWheelWaterGeometry() {
+  const radius=3.43,entry=-Math.asin(1.65/radius),exit=-Math.PI+.12;
+  const points=[new T.Vector3(0,7.05,-2.65)];
+  for(let i=0;i<=64;i++) {
+    const angle=T.MathUtils.lerp(entry,exit,i/64);
+    points.push(new T.Vector3(0,3.65+radius*Math.cos(angle),-1+radius*Math.sin(angle)));
+  }
+  points.push(new T.Vector3(0,.11,points[points.length-1].z));
+  const lengths=[0];
+  for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+points[i].distanceTo(points[i-1]));
+  const positions:number[]=[],uvs:number[]=[],indices:number[]=[];
+  points.forEach((p,i)=>{
+    for(const side of [-1,1]){positions.push(side*.8,p.y,p.z);uvs.push((side+1)/2,1-lengths[i]/lengths[lengths.length-1]);}
+    if(i<points.length-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
+  });
+  const geometry=new T.BufferGeometry();
+  geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));
+  geometry.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));geometry.setIndex(indices);geometry.computeVertexNormals();
+  return geometry;
+}
+
 export class Watermill {
   readonly group = new T.Group();
   readonly wheel = new T.Group();
@@ -167,11 +189,11 @@ export class Watermill {
     this.water=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,
       uniforms:{time:{value:0},flow:{value:0}},
       vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader:'varying vec2 vUv; uniform float time; uniform float flow; void main(){float ripple=sin(vUv.y*85.0-time*(2.0+flow*9.0)+sin(vUv.x*19.0)*1.5);float foam=pow(max(0.0,ripple),14.0)*.35;float edge=smoothstep(0.0,.09,vUv.x)*smoothstep(0.0,.09,1.0-vUv.x);gl_FragColor=vec4(vec3(.14,.61,.65)+foam,(.62+foam)*edge);}'
+      fragmentShader:'varying vec2 vUv; uniform float time; uniform float flow; void main(){float ripple=sin(vUv.y*85.0+time*flow*11.0+sin(vUv.x*19.0)*1.5);float foam=pow(max(0.0,ripple),14.0)*.35;float edge=smoothstep(0.0,.09,vUv.x)*smoothstep(0.0,.09,1.0-vUv.x);gl_FragColor=vec4(vec3(.14,.61,.65)+foam,(.62+foam)*edge);}'
     });
     const race=new T.Mesh(new T.PlaneGeometry(1.9,8.3),this.water);race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.9);root.add(race);
     const lip=new T.Mesh(new T.PlaneGeometry(1.9,2.2),this.water);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
-    this.waterfall=new T.Mesh(new T.PlaneGeometry(1.7,6.9),this.water);this.waterfall.position.set(10.8,3.58,-2.65);root.add(this.waterfall);this.waterfall.visible=false;
+    this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);
     this.splashes.frustumCulled=false;this.splashes.visible=false;root.add(this.splashes);
   }
@@ -193,7 +215,7 @@ export class Watermill {
     this.waterfall.scale.x=this.openness;
     for(let i=0;i<36;i++) {
       const t=(this.elapsed*(.5+(i%4)*.08)+i*.137)%1;
-      this.dummy.position.set(10.8+Math.sin(i*9)*(.3+t*.9),.14+Math.sin(t*Math.PI)*.8,-2.65+Math.cos(i*7)*t*1.2);
+      this.dummy.position.set(10.8+Math.sin(i*9)*(.3+t*.9),.14+Math.sin(t*Math.PI)*.8,-1-3.43*Math.sin(.12)+Math.cos(i*7)*t*1.2);
       this.dummy.scale.setScalar((1-t)*.1*this.openness);this.dummy.updateMatrix();this.splashes.setMatrixAt(i,this.dummy.matrix);
     }
     this.splashes.instanceMatrix.needsUpdate=true;

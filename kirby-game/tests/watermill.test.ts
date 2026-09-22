@@ -1,7 +1,23 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { InstancedMesh, Mesh, Vector3 } from 'three';
-import { Watermill, MILL_SITE, MILL_LEVER } from '../src/watermill';
+import { Watermill, MILL_SITE, MILL_LEVER, createWheelWaterGeometry } from '../src/watermill';
+
+test('water descends continuously and follows the outer scoops without crossing the wheel',()=>{
+  const geometry=createWheelWaterGeometry(),positions=geometry.getAttribute('position'),uvs=geometry.getAttribute('uv');
+  for(let i=2;i<positions.count;i+=2) {
+    assert(positions.getY(i)<positions.getY(i-2));
+    assert(uvs.getY(i)<uvs.getY(i-2),'positive shader time carries ripples downstream');
+  }
+  for(let i=2;i<positions.count-2;i+=2) {
+    const radius=Math.hypot(positions.getY(i)-3.65,positions.getZ(i)+1);
+    assert(Math.abs(radius-3.43)<1e-5);
+    if(i>2){const y=(positions.getY(i)+positions.getY(i-2))*.5,z=(positions.getZ(i)+positions.getZ(i-2))*.5;
+      assert(Math.hypot(y-3.65,z+1)>3.4,'segments also clear rotating paddle corners');}
+  }
+  assert(Math.abs(positions.getY(0)-7.05)<1e-5);
+  assert(Math.abs(positions.getY(positions.count-1)-.11)<1e-5);
+});
 
 test('mill requires proximity; gate and wheel accelerate and settle when stopped',()=>{
   const mill=new Watermill();
