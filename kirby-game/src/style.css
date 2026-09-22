@@ -79,3 +79,10 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
 
 .controls { max-width: calc(100% - 40px); flex-wrap: wrap; white-space: normal; justify-content: center; }
 .controls > p { font-size: 12px; line-height: 1.7; margin: 0; }
+
+#load-game {width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid #9fbc90;background:#e7f2dd;color:#35582c;cursor:pointer;font-weight:600;}
+#save-game {padding:9px;border:1px solid #b5c8a9;border-radius:10px;background:#e7f2dd;color:#35582c;cursor:pointer;}
+
+.selection-card[hidden] {display:none;}
+#new-game {width:100%;padding:14px;border-radius:12px;border:0;background:#579644;color:white;font:inherit;font-weight:700;cursor:pointer;}
+#startup-menu {width:min(460px,100%);}

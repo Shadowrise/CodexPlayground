@@ -46,6 +46,7 @@ export class KirbyNpc {
   private readonly contactCenter = new Vector3();
   fruitsEaten = 0;
   private growth?: { from: number; to: number; elapsed: number };
+  get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   grow() {
     this.fruitsEaten++;
     this.growth={from:this.actor.scale.x,to:(this.growth?.to ?? this.actor.scale.x)+.1,elapsed:0};

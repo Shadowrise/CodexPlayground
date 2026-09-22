@@ -23,6 +23,7 @@ export class CharacterController {
   private eatWasHeld = false;
   fruitsEaten = 0;
   private growth?: { from: number; to: number; elapsed: number };
+  get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   grow() {
     this.growth = { from: this.actor.scale.x, to: (this.growth?.to ?? this.actor.scale.x) + .1, elapsed: 0 };
     this.fruitsEaten++;

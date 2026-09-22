@@ -16,6 +16,7 @@ import { createNpcs, type KirbyNpc } from './npcs';
 import { cloneVariant, KIRBY_VARIANTS, type KirbyVariant } from './variants';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
+import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
 import { createGamepadInput } from './gamepad';
 const gamepad = createGamepadInput();
 
@@ -39,6 +40,35 @@ const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#soun
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
+let pendingSave: GameSave | undefined;
+const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent='Загрузить сохранение';loadButton.disabled=true;
+const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
+const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=true;
+startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>С возвращением!</h2><p class="selection-description">Продолжить приключение или начать заново?</p>';
+const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
+startupCard.append(newGameButton,loadButton);
+const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.textContent='Геймпад: A — новая игра · X — загрузить сохранение';startupCard.append(startupMessage);
+selectionCard.before(startupCard);
+newGameButton.addEventListener('click',()=>{pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent='Сохранить игру';audioPanel.append(saveButton);
+const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
+try {startupCard.hidden=localStorage.getItem(SAVE_KEY)===null;}catch {startupCard.hidden=true;}
+selectionCard.hidden=!startupCard.hidden;
+loadButton.addEventListener('click',()=>{
+  try {
+    const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
+    pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
+    startButton.click();
+  }catch(error){pendingSave=undefined;startupMessage.textContent=error instanceof Error?error.message:'Не удалось загрузить сохранение.';}
+});
+saveButton.addEventListener('click',()=>{
+  if(!character)return;
+  try {
+    if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding)));
+    saveMessage.textContent='Игра сохранена.';loadButton.hidden=false;
+  }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
+});
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
 const spawnNearDepot = document.querySelector<HTMLInputElement>('#spawn-near-depot')!;
 spawnNearDepot.checked = false;
@@ -172,6 +202,7 @@ async function loadCharacter() {
     const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`);
     loadedModel = gltf;
     startButton.disabled = false;
+    loadButton.disabled = false;
     startButton.textContent = 'На поляну →';
     document.querySelector('#selection-message')!.textContent = 'W / S — движение · A / D — поворот · Пробел — прыжок · Q — атака · E — сесть в тележку';
   } catch (error) {
@@ -193,7 +224,10 @@ startButton.addEventListener('click', () => {
   character = new CharacterController(cloneVariant(template, selected, false), animations);
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
-  cameraTarget.set(spawn.x,.9,spawn.z);
+  if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);pendingSave=undefined;}
+  viewScale=character.actor.scale.x;
+  cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
+  followCamera.reset(character.yaw);
   scene.add(character.actor, ...npcs.map(npc => npc.actor));
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
@@ -239,7 +273,10 @@ renderer.setAnimationLoop((time: number) => {
     const repeat=(horizontal!==0 || vertical!==0) && menuRepeat===0;
     if(repeat)menuRepeat=.22;
     if(!horizontal && !vertical)menuRepeat=0;
-    if(!playing) {
+    if(!playing && !startupCard.hidden) {
+      if(pad.pressed.has(2))loadButton.click();
+      else if(pad.pressed.has(0))newGameButton.click();
+    } else if(!playing) {
       if(repeat){const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*5+15)%15;(variantGrid.children[i] as HTMLButtonElement).click();}
       if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
       if(pad.pressed.has(0))startButton.click();

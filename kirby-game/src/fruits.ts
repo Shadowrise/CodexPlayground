@@ -87,6 +87,10 @@ export class FruitWorld {
       this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false });
     }
   }
+  restore(eaten:readonly boolean[],npcEaten:number) {
+    this.fruits.forEach((fruit,i)=>{fruit.eaten=eaten[i];fruit.object.visible=!fruit.eaten;});
+    this.npcEaten=npcEaten;this.pickupAfter=new WeakMap();
+  }
   get remaining() { return this.onMap; }
   update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], riding = false) {
     this.time += dt;
