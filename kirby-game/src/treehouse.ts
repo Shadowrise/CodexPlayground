@@ -22,6 +22,7 @@ export class Treehouse {
   private dummy=new T.Object3D();
   private swingAngle=0;
   get active(){return !!this.rider;}
+  get canSit(){return !!this.rider && this.activity==='deck';}
   constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
     const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
     const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,16,10),pole:new T.CylinderGeometry(1,1,1,12),leaf:new T.SphereGeometry(1,6,4)};
@@ -48,12 +49,14 @@ export class Treehouse {
       beam([0,12+i%3,0],[x,18+i%3,z],.55,'#65432e');
       for(let j=0;j<4;j++)part(root,'ball',['#315d35','#40713c','#4f7b40'][j%3],x+Math.sin(j*3+i)*2.5,19+i%3+Math.cos(j)*1.5,z+Math.cos(j*3+i)*2.2,3.3,2.5,3.1);
     }
+    // The oak stands behind the cabin, with clearance for its back wall and roof.
+    for(const treePart of root.children)treePart.position.z-=6;
     // Wide plank deck, underfloor joists, diagonal braces and brass nail heads.
     for(let i=0;i<30;i++){
       const x=-5.8+i*.4;box(i%3?'#b68a50':'#c79b60',x,DECK-.13,2, .37,.26,12);
       for(const z of [-3.6,1.8,7.6])part(root,'ball','#675044',x,DECK+.006,z,.036,.016,.036);
     }
-    for(const x of [-5,0,5]){box('#684b32',x,8.55,2,.3,.55,12.4);beam([x,8.5,6],[0,4,0],.18,'#805c37');}
+    for(const x of [-5,0,5]){box('#684b32',x,8.55,2,.3,.55,12.4);beam([x,8.5,6],[0,4,-6],.18,'#805c37');}
     for(const x of [-6,6])for(let i=0;i<13;i++){
       box('#86633e',x,9.8,-4+i, .12,1.6,.12);
       if(i<12)box('#c99d62',x,10.65,-3.5+i,.22,.18,1.1);
@@ -102,7 +105,15 @@ export class Treehouse {
       for(const x of [-4.9,-3.1])for(let j=0;j<3;j++)box('#d7c493',x,y-.05+j*.05,z,.25,.024,.25);
     }
     // Branch-mounted rope swing, with a broad rounded wooden seat.
-    beam([-1,13,0],[-11,8.3,3],.4,'#6b4b31');
+    // Route the supporting bough around the cabin, then across both rope anchors.
+    beam([-1,13,-6],[-7,10,-4.8],.5,'#6b4b31');
+    beam([-7,10,-4.8],[-9,7.9,3],.43,'#6b4b31');
+    beam([-9,7.9,3],[-13,7.9,3],.4,'#6b4b31');
+    for(const x of [-12.45,-9.55]){
+      const collar=new T.Mesh(new T.TorusGeometry(.44,.055,8,24),new T.MeshStandardMaterial({color:'#655b43',roughness:.6}));
+      collar.position.set(x,7.9,3);collar.rotation.y=Math.PI/2;root.add(collar);
+      beam([x,7.43,3],[x,7.56,3],.065,'#655b43');
+    }
     this.swing.position.set(-11,7.5,3);root.add(this.swing);
     for(const x of [-1.45,1.45])beam([x,0,0],[x,-5.7,0],.043,'#d2ba83',this.swing);
     for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,-5.7,-.65+i*.32,3.3,.18,.28);
@@ -144,7 +155,7 @@ export class Treehouse {
   }
   private dive(){this.activity='dive';this.elapsed=0;this.from.copy(this.rider!.actor.position);this.rider!.setActivity('LeafDive');this.sound('cheer');}
   private finish(){const c=this.rider!;c.actor.position.copy(TREEHOUSE_SITE).add(new T.Vector3(this.activity==='swing'?-11:8,0,this.activity==='swing'?9:18));c.actor.rotation.set(0,0,0);c.yaw=0;c.setActivity('Idle');this.rider=undefined;}
-  constrain(position:T.Vector3,size:number){const dx=position.x-TREEHOUSE_SITE.x,dz=position.z-TREEHOUSE_SITE.z,r=2.4+.65*size,d=Math.hypot(dx,dz);if(d<r){position.x=TREEHOUSE_SITE.x+(d>.001?dx/d:1)*r;position.z=TREEHOUSE_SITE.z+(d>.001?dz/d:0)*r;}}
+  constrain(position:T.Vector3,size:number){const dx=position.x-TREEHOUSE_SITE.x,dz=position.z-(TREEHOUSE_SITE.z-6),r=2.4+.65*size,d=Math.hypot(dx,dz);if(d<r){position.x=TREEHOUSE_SITE.x+(d>.001?dx/d:1)*r;position.z=TREEHOUSE_SITE.z-6+(d>.001?dz/d:0)*r;}}
   update(dt:number,input:Input=idle,jump=false) {
     this.clock+=dt;this.burstTime+=dt;this.elapsed+=dt;
     const swinging=this.rider && this.activity==='swing';

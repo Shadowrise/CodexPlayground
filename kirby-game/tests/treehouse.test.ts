@@ -31,8 +31,8 @@ test('swing mounts smoothly, moves with the ropes and can be left using interact
   assert(sounds.includes('creak'));house.interact(c);assert(!house.active);assert.equal(c.actor.position.y,0);assert.equal(c.actor.rotation.x,0);
 });
 test('treehouse clearing and trunk collision keep scenery clear; detail is batched',()=>{
-  const house=new Treehouse(),p=TREEHOUSE_SITE.clone();house.constrain(p,1);
-  assert(p.distanceTo(TREEHOUSE_SITE)>=3);assert(!sceneryClearance(TREEHOUSE_SITE.x,TREEHOUSE_SITE.z));
+  const house=new Treehouse(),trunk=TREEHOUSE_SITE.clone().add(new Vector3(0,0,-6)),p=trunk.clone();house.constrain(p,1);
+  assert(p.distanceTo(trunk)>=3);assert(!sceneryClearance(TREEHOUSE_SITE.x,TREEHOUSE_SITE.z));
   let batches=0,parts=0;house.group.traverse(node=>{if(node instanceof InstancedMesh){batches++;parts+=node.count;}});
   assert(parts>1000);assert(batches<85);
 });
