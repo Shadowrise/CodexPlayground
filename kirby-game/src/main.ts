@@ -16,6 +16,8 @@ import { createNpcs, type KirbyNpc } from './npcs';
 import { cloneVariant, KIRBY_VARIANTS, type KirbyVariant } from './variants';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
+import { createGamepadInput } from './gamepad';
+const gamepad = createGamepadInput();
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
 const status = document.querySelector<HTMLSpanElement>('#status')!;
@@ -108,7 +110,7 @@ let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
-  if (!playing) return;
+  if (!playing || gamepad.input.active !== 'keyboard') return;
   if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
   if (controls.has(event.code)) {
     event.preventDefault(); keys.add(event.code);
@@ -133,7 +135,7 @@ const stopDragging = () => {
 };
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
-  if (!playing || event.button !== 0 || event.pointerType !== 'mouse') return;
+  if (!playing || gamepad.input.active !== 'keyboard' || event.button !== 0 || event.pointerType !== 'mouse') return;
   event.preventDefault();
   dragPointer = event.pointerId;
   dragX = event.clientX; dragY = event.clientY;
@@ -141,6 +143,7 @@ canvas.addEventListener('pointerdown', event => {
   canvas.style.cursor = 'grabbing';
 });
 canvas.addEventListener('pointermove', event => {
+  if (gamepad.input.active !== 'keyboard') { stopDragging(); return; }
   if (event.pointerId !== dragPointer) return;
   if (!(event.buttons & 1)) { stopDragging(); return; }
   followCamera.orbit(event.clientX - dragX, event.clientY - dragY);
@@ -205,22 +208,69 @@ startButton.addEventListener('click', () => {
 
 let previousTime = performance.now();
 let greetingCooldown=0;
+let menuRepeat=0;
+function navigateSettings(direction:number, adjust:number, confirm:boolean) {
+  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera'));
+  let index=elements.indexOf(document.activeElement as HTMLElement);
+  if(direction || index<0) {index=(index+direction+elements.length)%elements.length;elements[index].focus();}
+  const element=elements[index];
+  if(adjust && element instanceof HTMLSelectElement) {
+    element.selectedIndex=(element.selectedIndex+adjust+element.options.length)%element.options.length;
+    element.dispatchEvent(new Event('change'));
+  } else if(adjust && element instanceof HTMLInputElement) {
+    element.value=String(Math.max(0,Math.min(100,Number(element.value)+adjust*5)));
+    element.dispatchEvent(new Event('input'));
+  }
+  if(confirm && element instanceof HTMLButtonElement)element.click();
+}
 renderer.setAnimationLoop((time: number) => {
   const dt = Math.min((time - previousTime) / 1000, .05);
   previousTime = time;
+  const pad=gamepad.poll();
+  if(pad.changed){keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
+  const usingPad=gamepad.input.active!=='keyboard';
+  if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
+  const settingsOpen=!audioPanel.hidden;
+  const wasChoosing=!playing;
+  menuRepeat=Math.max(0,menuRepeat-dt);
+  const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
+  const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
+  if(usingPad && (!playing || settingsOpen)) {
+    const repeat=(horizontal!==0 || vertical!==0) && menuRepeat===0;
+    if(repeat)menuRepeat=.22;
+    if(!horizontal && !vertical)menuRepeat=0;
+    if(!playing) {
+      if(repeat){const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*5+15)%15;(variantGrid.children[i] as HTMLButtonElement).click();}
+      if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
+      if(pad.pressed.has(0))startButton.click();
+    } else {
+      if(pad.pressed.has(1))settingsToggle.click();
+      else if(repeat || pad.pressed.has(0))navigateSettings(repeat?vertical:0,repeat?horizontal:0,pad.pressed.has(0));
+    }
+  }
+  const padKeys=new Set<string>();
+  if(usingPad && !settingsOpen && !wasChoosing) {
+    if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
+    if(pad.x<-.05)padKeys.add('KeyA');if(pad.x>.05)padKeys.add('KeyD');
+    if(pad.held.has(7))padKeys.add('ShiftLeft');
+    if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
+    if(pad.pressed.has(3))pendingBoard=true;
+    followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
+  }
+  const held=(key:string)=>usingPad?padKeys.has(key):keys.has(key);
   if (character) {
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
     const atStation=!!coaster.prompt(character);
     if(pendingBoard && atStation && !coaster.riding)coaster.board(character);
-    if(!coaster.riding)character.update(dt, { sprint: keys.has('ShiftLeft') || keys.has('ShiftRight'), attack: keys.has('KeyQ') || pendingAttack, forward: keys.has('KeyW'), backward: keys.has('KeyS'), jump: keys.has('Space') || pendingJump, left: keys.has('KeyA') || pendingTurn === 'KeyA', right: keys.has('KeyD') || pendingTurn === 'KeyD' });
+    if(!coaster.riding)character.update(dt, { sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: held('Space') || pendingJump, left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
     rideHint.textContent=coaster.prompt(character) || `Американские горки · депо ${Math.round(character.actor.position.distanceTo(STATION))} м · южный край поляны`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
     followCamera.update(dt, character.yaw, movingOrTurning,
-      Number(keys.has('ArrowRight')) - Number(keys.has('ArrowLeft')),
-      Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown')), dragPointer !== undefined);
+      usingPad && !settingsOpen ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
+      usingPad && !settingsOpen ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined);
     pendingBoard = false;
     pendingAttack = false;
     pendingTurn = undefined;
@@ -228,7 +278,7 @@ renderer.setAnimationLoop((time: number) => {
     const position = character.actor.position;
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
-    status.textContent = character.state === 'Run' && (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 'Спринт' : labels[character.state] || character.state;
+    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : labels[character.state] || character.state;
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if(!coaster.riding && greetingCooldown===0) {

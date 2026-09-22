@@ -71,3 +71,11 @@ button { font: inherit; font-size: 11px; padding: 10px 13px; border: 1px solid #
 button:hover { background: #e8efdf; } button:focus-visible { outline: 2px solid #76945f; outline-offset: 3px; }
 @media (max-width: 760px) { .title { top: 16px; left: 16px; padding: 17px 20px; } h1 { font-size: 20px; } .status { top: auto; bottom: 150px; right: 16px; } .controls { bottom: 16px; gap: 12px; padding: 15px; flex-wrap: wrap; width: calc(100% - 32px); justify-content: center; } .controls button { display: none; } }
 .track-navigation { display: flex; align-items: center; gap: 8px; max-width: 280px; } .track-navigation button { flex: 0 0 34px; padding: 8px; font-size: 16px; } .track-navigation #music-track { flex: 1; text-align: center; min-width: 130px; }
+
+.input-device { display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0;color:#41563b;font-size:13px; }
+.input-device select { max-width:100%;min-width:180px;border:1px solid #bdcdb5;border-radius:10px;padding:8px;background:#f4f8ef;color:#294522; }
+.gamepad-hint {font-size:11px;color:#6a7861;margin:4px 0 12px;}
+select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid #6aa957;outline-offset:3px;}
+
+.controls { max-width: calc(100% - 40px); flex-wrap: wrap; white-space: normal; justify-content: center; }
+.controls > p { font-size: 12px; line-height: 1.7; margin: 0; }
