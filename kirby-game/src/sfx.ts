@@ -107,6 +107,26 @@ export class SoundEffects {
     source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
 
+  playBalloon(kind:'burner'|'arrival'|'departure',volume:number) {
+    const ctx=this.context;
+    if(!ctx || !this.enabled || document.hidden || ctx.state!=='running' || this.active.size>=8)return;
+    const key=`balloon-${kind}`;
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=kind==='burner'?1.1:.65,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);
+      let noise=0,phase=0;
+      for(let i=0;i<data.length;i++){
+        const t=i/rate,u=t/duration;noise=noise*.92+(Math.random()*2-1)*.08;
+        phase+=2*Math.PI*(kind==='departure'?480+240*u:kind==='arrival'?440+220*Math.floor(u*3):75)/rate;
+        const env=Math.sin(Math.PI*u)**1.2;
+        data[i]=(kind==='burner'?noise*.8+Math.sin(phase)*.025:Math.sin(phase)*.12+Math.sin(phase*2)*.025)*env;
+      }
+      this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=volume*(kind==='burner'?.48:.45);
+    source.connect(gain);gain.connect(this.master!);this.active.add(source);
+    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
+
   private rideBuffer(cheer:boolean) {
     const rate=22050,duration=cheer?.9:.16;
     const buffer=this.context!.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);

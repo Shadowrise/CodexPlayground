@@ -30,6 +30,9 @@ export class KirbyNpc {
   private flashRemaining = 0;
   private readonly originalColors = new Map<MeshStandardMaterial, { color: Color; emissive: Color; intensity: number }>();
   get isDown() { return this.health === 0; }
+  get canBoardBalloon(){return !this.isDown && !this.greeting && !this.flight.active && this.flashRemaining<=0 && ['Idle','Walk','Run','WalkBackward'].includes(this.state);}
+  beginBalloon(walking=false){this.start(walking?'Walk':'Idle');this.state=walking?'BalloonWalk':'Balloon';this.hello=false;}
+  endBalloon(){this.actor.rotation.set(0,this.yaw,0);this.start('Walk');}
   eatBite = false;
   eatPull = false;
   private appetite = 0;
@@ -114,7 +117,7 @@ export class KirbyNpc {
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
 
   takeHit(): boolean {
-    if (this.isDown) return false;
+    if (this.isDown || this.state==='Balloon') return false;
     if(this.flight.active){this.flight.reset();this.actor.position.y=0;this.cloud.visible=false;this.start('Idle');}
     this.greeting=undefined;
     this.health--;

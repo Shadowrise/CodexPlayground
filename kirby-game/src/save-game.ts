@@ -3,11 +3,12 @@ import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import type { FruitWorld } from './fruits';
 import { STATION } from './coaster';
+import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
 type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;fruitsEaten:number};
 export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[]};
-export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false):GameSave {
-  const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>({variant:name,x:c.actor.position.x,z:c.actor.position.z,yaw:c.yaw,size:c.savedSize,fruitsEaten:c.fruitsEaten});
+export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined):GameSave {
+  const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitsEaten:c.fruitsEaten};};
   const savedPlayer=actor(player,variant[0]);
   if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
   return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten)};

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { BALLOON_SITES } from './balloon-sites';
 
 export const LANDMARKS = Array.from({length:25},(_,i) => ({
   x: i===12 ? 32 : (i%5-2)*94 + Math.sin(i*8)*9,
@@ -6,10 +7,10 @@ export const LANDMARKS = Array.from({length:25},(_,i) => ({
   kind: (i===12 ? 0 : i%6), radius: (i===12 || i%6===0) ? 25 : 15,
 }));
 export function sceneryClearance(x:number,z:number,padding=0) {
-  return Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
+  return BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
-  for(const p of [...LANDMARKS,{x:135,z:45,radius:25}]) {
+  for(const p of [...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22}))]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }
