@@ -1,10 +1,10 @@
 import { TaskList } from './tasks';
-import { awardFirst, scoreOf, placeOf } from './score';
+import { awardFirst, scoreOf } from './score';
 import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
 import { FpsCounter } from './fps';
 import { EMOTES, EmoteWheel, type Emote } from './emotes';
 import { Wayfinder, type Destination } from './navigation';
-import { LANDMARKS } from './landmark-sites';
+import { LANDMARKS, POND_SCALE } from './landmark-sites';
 import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
 import * as THREE from 'three';
@@ -190,7 +190,7 @@ const destinations:Destination[]=[
  {id:'depot',name:'Американские горки — депо',x:STATION.x,z:STATION.z-7},
  {id:'maze',name:'Радужный лабиринт',x:MAZE_SITE.x,z:MAZE_SITE.z+39},
  ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
- ...LANDMARKS.flatMap((p,i)=>p.kind===0 || p.kind===4 ? [{id:`landmark-${i}`,name:`${p.kind===0?'Озеро с мостиком':'Пикник и лавочки'} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13:0),z:p.z,radius:6,group:'Места на поляне'}] : []),
+ ...LANDMARKS.flatMap((p,i)=>p.kind===0 || p.kind===4 ? [{id:`landmark-${i}`,name:`${p.kind===0?'Озеро с мостиком':'Пикник и лавочки'} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13*POND_SCALE:0),z:p.z,radius:6,group:'Места на поляне'}] : []),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
 const fruits = new FruitWorld();
@@ -467,10 +467,12 @@ renderer.setAnimationLoop((time: number) => {
     if(maze.update(dt,character,!coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
     }
-    if(character.achievements.size>achievementsBefore){message.textContent=`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`;hitMessageRemaining=3;}
+    if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);message.textContent=`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`;hitMessageRemaining=3;}
     taskList.update(character.achievements);
     fruitValue.textContent=String(scoreOf(character));
-    document.querySelector<HTMLElement>('#player-place')!.textContent=`${placeOf(character,[character,...npcs])}.`;
+    const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
+    document.querySelector<HTMLElement>('#player-place')!.textContent=`${teamPoints>playerPoints?2:1}.`;
+    document.querySelector<HTMLElement>('#npc-place')!.textContent=`${playerPoints>teamPoints?2:1}.`;
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }

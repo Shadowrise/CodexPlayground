@@ -1,6 +1,7 @@
+import { POND_SCALE } from './landmark-sites';
 import { awardFirst } from './score';
 import * as T from 'three';
-import { PONDS, WATER_Y, deckHeight, inPond, pondOutline } from './pond-layout';
+import { WATER_Y, deckHeight, inWater, waterShapes, WATER_REGIONS, BRIDGES } from './pond-layout';
 import type { CharacterController } from './controller';
 
 export function makeSwimRing(){
@@ -40,41 +41,39 @@ export class Ponds {
   }
   this.texture=new T.DataTexture(data,128,128);this.texture.colorSpace=T.SRGBColorSpace;this.texture.wrapS=this.texture.wrapT=T.RepeatWrapping;this.texture.repeat.set(.18,.18);this.texture.needsUpdate=true;
   const water=new T.MeshStandardMaterial({map:this.texture,roughness:.2,metalness:.22});
-  const outline=pondOutline();
-  for(const site of PONDS){
-   const g=new T.Group();g.position.set(site.x,0,site.z);this.group.add(g);
-   const shape=new T.Shape(outline.map(p=>new T.Vector2(p.x,-p.y)));
-   const surface=new T.Mesh(new T.ShapeGeometry(shape),water);surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;g.add(surface);
-   const vertices:number[]=[],indices:number[]=[];
-   outline.forEach(p=>vertices.push(p.x,-.012,p.y,p.x*.87,-1.25,p.y*.87));
-   for(let i=0;i<outline.length;i++){const a=i*2,b=((i+1)%outline.length)*2;indices.push(a,b,a+1,b,b+1,a+1);}
-   const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-   const bank=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#b4a379',roughness:1,side:T.DoubleSide}));bank.receiveShadow=true;g.add(bank);
+  const surface=new T.Mesh(new T.ShapeGeometry(waterShapes()),water);surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;this.group.add(surface);
+  const vertices:number[]=[],indices:number[]=[];
+  for(const region of WATER_REGIONS)for(const ring of region){
+   for(let i=0;i<ring.length-1;i++){
+    const a=ring[i],b=ring[i+1],n=vertices.length/3;
+    vertices.push(a[0],-.012,a[1],b[0],-.012,b[1],a[0],-1.3,a[1],b[0],-1.3,b[1]);indices.push(n,n+1,n+2,n+1,n+3,n+2);
+   }
   }
+  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
+  const bank=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#b4a379',roughness:1,side:T.DoubleSide}));bank.receiveShadow=true;this.group.add(bank);
+
  }
  update(dt:number){this.time+=dt;this.texture.offset.set(this.time*.015,this.time*.009);}
  apply(c:CharacterController,previous:T.Vector3,enabled=true){
   if(!this.ring){this.ring=makeSwimRing();c.actor.add(this.ring);}
   if(!enabled){this.ring.visible=false;c.swimming=false;c.surfaceY=0;this.base=0;this.onBridge=false;return;}
   const p=c.actor.position,size=c.actor.scale.x;
-  const site=PONDS.find(s=>Math.abs(p.x-s.x)<14 && p.z-s.z>-9 && p.z-s.z<22);
+  const site=BRIDGES.find(s=>Math.hypot(p.x-s.x,p.z-s.z)<8.7);
   let height=0,wet=false,bridge=false;
   if(site){
-   let x=p.x-site.x,z=p.z-site.z;const oldX=previous.x-site.x,oldZ=previous.z-site.z;
-   const deck=Math.abs(x)<=5 && Math.abs(z-12)<1.3;
-   // Enter from either ramp, retain support, or land from above; never snap up from beneath.
-   bridge=deck && (this.onBridge || (Math.abs(oldX)>=4.8 && Math.abs(oldZ-12)<1.3) || (c.flight.active && p.y>=deckHeight(x)-.12));
+   const cos=Math.cos(site.yaw),sin=Math.sin(site.yaw);
+   const local=(v:T.Vector3)=>({x:((v.x-site.x)*cos-(v.z-site.z)*sin)/POND_SCALE,z:((v.x-site.x)*sin+(v.z-site.z)*cos)/POND_SCALE});
+   let {x,z}=local(p);const old=local(previous);
+   const deck=Math.abs(x)<=5 && Math.abs(z)<1.3;
+   bridge=deck && (this.onBridge || (Math.abs(old.x)>=4.8 && Math.abs(old.z)<1.3) || (c.flight.active && p.y>=deckHeight(x)-.12));
    if(bridge){
-    const edge=Math.max(.1,1.28-Math.min(.8,size*.4));
-    z=T.MathUtils.clamp(z,12-edge,12+edge);p.z=site.z+z;height=deckHeight(x);
-   }else{
-    // A swimmer cannot pass through the low underside of the ramps.
-    if(Math.abs(x)<5 && Math.abs(z-12)<1.45 && p.y+size*1.85>deckHeight(x)-.18 && p.y<deckHeight(x)){
-     p.x=previous.x;p.z=previous.z;x=p.x-site.x;z=p.z-site.z;
-    }
-    wet=inPond(x,z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):0;
+    const edge=Math.max(.1,1.28-Math.min(.8,size*.4/POND_SCALE));z=T.MathUtils.clamp(z,-edge,edge);
+    p.x=site.x+(x*cos+z*sin)*POND_SCALE;p.z=site.z+(-x*sin+z*cos)*POND_SCALE;height=deckHeight(x);
+   }else if(Math.abs(x)<5 && Math.abs(z)<1.45 && p.y+size*1.85>deckHeight(x)-.18 && p.y<deckHeight(x)){
+    p.x=previous.x;p.z=previous.z;
    }
   }
+  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):0;}
   this.onBridge=bridge;
   c.swimming=wet&&!c.flight.active;
   if(c.swimming)awardFirst(c,'swim');

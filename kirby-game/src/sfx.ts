@@ -24,6 +24,7 @@ export class SoundEffects {
   private voiceAfter = 0;
   private wheelAfter = 0;
   private cheerAfter = 0;
+  private rewardAfter = 0;
   private buzz?: {source: AudioBufferSourceNode;gain: GainNode};
   constructor(private button: HTMLButtonElement, slider: HTMLInputElement) {
     const saved = readAudioSettings('sounds', .45);
@@ -72,7 +73,7 @@ export class SoundEffects {
     this.button.setAttribute('aria-pressed', String(this.enabled));
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }
-  private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); this.buzz=undefined; }
+  private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); this.buzz=undefined; this.rewardAfter=0; }
 
   updateWater(dt:number,swimming:boolean,moving:boolean,available=true){
     const kind=this.waterEvents.update(dt,swimming,moving,available),ctx=this.context;
@@ -113,6 +114,33 @@ export class SoundEffects {
       source.start();
     }
     this.buzz?.gain.gain.setTargetAtTime(volume,ctx.currentTime,.18);
+  }
+
+  playTaskComplete(count=1){
+    const ctx=this.context;
+    if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
+    const key='task-complete';
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=1.25,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate);
+      const data=buffer.getChannelData(0),notes=[523.25,659.25,783.99,1046.5];
+      for(let i=0;i<data.length;i++){
+        const t=i/rate;let value=0;
+        notes.forEach((frequency,n)=>{
+          const age=t-n*.14;if(age<0)return;
+          const envelope=T_smoothstep(age/.025)*Math.exp(-age*(n===3?4:7))*T_smoothstep((duration-t)/.2);
+          const phase=2*Math.PI*frequency*age;
+          value+=(Math.sin(phase)+.16*Math.sin(phase*2)*Math.exp(-age*5))*envelope*.18;
+        });
+        data[i]=value;
+      }
+      this.buffers.set(key,buffer);
+    }
+    for(let i=0;i<count;i++){
+      const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.55;
+      source.connect(gain);gain.connect(this.master!);this.active.add(source);
+      source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};
+      const start=Math.max(ctx.currentTime,this.rewardAfter);source.start(start);this.rewardAfter=start+1.25;
+    }
   }
 
   playEmote(kind:Emote){

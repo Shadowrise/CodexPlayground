@@ -4,18 +4,18 @@ import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
 import { HOME_SITE } from './home-site';
 
-import { LANDMARKS } from './landmark-sites';
+import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
-import { WATER_Y, deckHeight } from './pond-layout';
+import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline } from './pond-layout';
 export function sceneryClearance(x:number,z:number,padding=0) {
-  return Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
+  return riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
   for(const p of [...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }
-  return {x,z};
+  return outsideRivers(x,z,padding);
 }
 
 /** Shared primitive meshes are batched into instances after composing each scene. */
@@ -50,21 +50,25 @@ export function createLandmarks() {
     put(g,'box','#ad8458',x,1.65,z+.48,3,.4,.12);
     for(const side of [-1,1]) put(g,'box','#6e513b',x+side,1.15,z+.48,.13,1.4,.13);
   }
-  for(const site of LANDMARKS) {
-    const g=new T.Group();g.position.set(site.x,0,site.z);root.add(g);
-    if(site.kind===0) {
-      for(let i=0;i<36;i++) {const a=i*Math.PI*2/36;rock(g,Math.cos(a)*11.8,Math.sin(a)*8.2,.4+(i%4)*.12);}
+  for(const site of BRIDGES){const g=new T.Group();g.position.set(site.x,0,site.z);g.rotation.y=site.yaw;g.scale.set(POND_SCALE,1,POND_SCALE);root.add(g);
       for(let i=0;i<50;i++) {
         const x=(i-24.5)*.2,y=deckHeight(x);
-        put(g,'box',i%3?'#a37a4c':'#be9662',x,y-.08,12,.19,.16,2.6,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
-        for(const z of [10.58,13.42])put(g,'box','#bd935f',x,y+1.08,z,.22,.1,.1,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
+        put(g,'box',i%3?'#a37a4c':'#be9662',x,y-.08,0,.19,.16,2.6,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
+        for(const z of [-1.42,1.42])put(g,'box','#bd935f',x,y+1.08,z,.22,.1,.1,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
       }
-      for(const z of [10.58,13.42])for(let i=0;i<=10;i++){
+      for(const z of [-1.42,1.42])for(let i=0;i<=10;i++){
         const x=i-5,y=deckHeight(x);
         put(g,'pole','#77553b',x,y+.45,z,.075,1.2,.075);
         put(g,'ball','#d8b77a',x,y+1.13,z,.12,.08,.12);
         if(i%2===0)put(g,'pole','#634d38',x,(y-.8)/2,z,.1,y+.8,.1);
       }
+  }
+  for(const site of LANDMARKS) {
+    const g=new T.Group();g.position.set(site.x,0,site.z);root.add(g);
+    if(site.kind===0) {
+      g.scale.set(POND_SCALE,1,POND_SCALE);
+      const contour=pondOutline(LANDMARKS.filter(s=>s.kind===0).indexOf(site));
+      for(let i=0;i<36;i++){const p=contour[Math.floor(i*80/35)];rock(g,p.x/POND_SCALE*1.045,p.y/POND_SCALE*1.045,.4+(i%4)*.12);}
       for(let i=0;i<8;i++) {
         const a=i*2.4,x=Math.cos(a)*7,z=Math.sin(a)*4;
         put(g,'ball','#4b8c53',x,WATER_Y+.025,z,.7,.055,.55);

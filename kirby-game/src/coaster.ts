@@ -11,7 +11,7 @@ export function createCoasterCurve() {
   // Separate entrance and exit sideways so the returning rail cannot cross riders' heads.
   for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(220+18*u,12+24*(1-Math.cos(a)),70-24*Math.sin(a)-14*u));}
   const add=(points:number[][])=>p.push(...points.map(v=>new T.Vector3(...v as [number,number,number])));
-  add([[238,12,35],[226,39,-10],[236,8,-50],[222,46,-100],[231,12,-145],[213,28,-210],[165,8,-220],[140,8,-220]]);
+  add([[238,12,35],[226,39,-10],[236,18,-50],[222,46,-100],[231,12,-145],[213,28,-210],[165,8,-220],[140,8,-220]]);
   // North-side loop, with separated entry and exit lanes.
   for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(110-24*Math.sin(a)-14*u,8+24*(1-Math.cos(a)),-220-18*u));}
   add([[65,8,-238],[25,35,-229],[-15,10,-237],[-60,42,-224],[-105,9,-235],[-145,22,-232]]);
@@ -19,7 +19,7 @@ export function createCoasterCurve() {
   for(let i=0;i<=84;i++){const u=i/84,a=u*Math.PI*3;p.push(new T.Vector3(-189+24*Math.cos(a),28+36*u,-207+24*Math.sin(a)));}
   add([[-215,65,-223],[-231,61,-226],[-242,51,-210],[-238,20,-171],[-228,9,-142],[-218,9,-125]]);
   for(let i=0;i<=56;i++){const u=i/56,a=u*Math.PI*2;p.push(new T.Vector3(-218-18*u,9+22*(1-Math.cos(a)),-95+22*Math.sin(a)+14*u));}
-  add([[-236,9,-45],[-225,39,-10],[-237,8,35],[-221,43,80],[-235,10,130],[-225,32,178],[-205,9,221],[-160,30,232],[-115,8,225],[-75,23,234],[-40,5,232],[-20,2,232]]);
+  add([[-236,9,-45],[-225,39,-10],[-237,18,35],[-221,43,80],[-235,10,130],[-225,32,178],[-205,9,221],[-160,30,232],[-115,8,225],[-75,23,234],[-40,5,232],[-20,2,232]]);
   const curve=new T.CatmullRomCurve3(p,true,'centripetal');
   curve.arcLengthDivisions=6000;
   return curve;
@@ -53,6 +53,13 @@ export class Coaster {
     const end=this.frames[this.sampleCount],start=this.frames[0];
     const correction=end.clone().invert().multiply(start);
     for(let i=1;i<=this.sampleCount;i++)this.frames[i].multiply(new T.Quaternion().slerp(correction,i/this.sampleCount));
+    // A full local roll twists both rails and passengers together, with zero speed at either end.
+    for(const [from,to] of [[new T.Vector3(238,12,35),new T.Vector3(222,46,-100)],
+      [new T.Vector3(-236,9,-45),new T.Vector3(-221,43,80)]]) {
+      const nearest=(p:T.Vector3)=>{let best=0,d=Infinity;for(let i=0;i<=this.sampleCount;i++){const n=this.curve.getPointAt(i/this.sampleCount).distanceToSquared(p);if(n<d){d=n;best=i;}}return best;};
+      const a=nearest(from),b=nearest(to);
+      for(let i=a;i<=b;i++){const u=(i-a)/(b-a),ease=u*u*u*(10+u*(-15+6*u));this.frames[i].multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),ease*Math.PI*2));}
+    }
     const colors=new Map<string,T.MeshStandardMaterial>();
     const box=new T.BoxGeometry(1,1,1),pole=new T.CylinderGeometry(1,1,1,8);
     const material=(c:string)=>{if(!colors.has(c))colors.set(c,new T.MeshStandardMaterial({color:c,roughness:.65,metalness:c==='#becbd0'?.7:.15}));return colors.get(c)!;};
@@ -70,29 +77,13 @@ export class Coaster {
       for(const x of [-1.2,1.2])add(box,'#596671',pose.p.clone().add(new T.Vector3(x,.15,0).applyQuaternion(pose.q)),new T.Vector3(.25,.15,.4),pose.q);
     }
     for(let d=0;d<this.length;d+=15) {
-      const {p}=this.pose(d);
-      // The loop uses exterior portal supports, never columns through its interior.
-      if((p.x>210 && p.z>25 && p.z<120) || (p.z<-210 && p.x>55 && p.x<145)
+      const {p,q}=this.pose(d);
+      // Leave the swept interior of loops and corkscrews clear.
+      if((p.x>210 && p.z<35 && p.z>-100) || (p.x<-210 && p.z>-45 && p.z<80) || (p.x>210 && p.z>25 && p.z<120) || (p.z<-210 && p.x>55 && p.x<145)
         || (p.x<-205 && p.z>-130 && p.z<-45) || (p.x<-155 && p.z<-175))continue;
       for(const sign of [-1,1]) {const base=new T.Vector3(p.x+sign*2.2,.1,p.z);
-        add(box,'#a1a39a',base,new T.Vector3(2,.3,2));beam(base,p.clone().add(new T.Vector3(sign*.9,-.2,0)),.18,'#426a70');}
-      if(p.y>8)beam(new T.Vector3(p.x-2.2,1,p.z),new T.Vector3(p.x+1,p.y*.72,p.z),.1,'#577e7f');
-    }
-    for(const z of [36,90]) {
-      for(const x of [208,248]) {
-        add(box,'#a1a39a',new T.Vector3(x,.15,z),new T.Vector3(3,.3,3));
-        beam(new T.Vector3(x,0,z),new T.Vector3(x,69,z),.35,'#426a70');
-      }
-      beam(new T.Vector3(208,69,z),new T.Vector3(248,69,z),.35,'#426a70');
-    }
-    // Portal frames span the extra loops, with columns outside their swept volume.
-    for(const x of [70,128]) {
-      for(const z of [-251,-205])beam(new T.Vector3(x,.1,z),new T.Vector3(x,73,z),.3,'#426a70');
-      beam(new T.Vector3(x,73,-251),new T.Vector3(x,73,-205),.3,'#426a70');
-    }
-    for(const z of [-118,-63]) {
-      for(const x of [-250,-204])beam(new T.Vector3(x,.1,z),new T.Vector3(x,71,z),.3,'#426a70');
-      beam(new T.Vector3(-250,71,z),new T.Vector3(-204,71,z),.3,'#426a70');
+        add(box,'#a1a39a',base,new T.Vector3(2,.3,2));beam(base,p.clone().add(new T.Vector3(sign*1.45,-.12,0).applyQuaternion(q)),.18,'#426a70');}
+      if(p.y>8){const rightBase=new T.Vector3(p.x+2.2,.1,p.z),rightTop=p.clone().add(new T.Vector3(1.45,-.12,0).applyQuaternion(q));beam(new T.Vector3(p.x-2.2,.1,p.z),rightBase.lerp(rightTop,.72),.1,'#577e7f');}
     }
     // The spiral is carried by an inner tower; arms sit below each coil.
     for(const x of [-195,-183])for(const z of [-213,-201])beam(new T.Vector3(x,0,z),new T.Vector3(x,65,z),.3,'#426a70');

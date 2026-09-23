@@ -108,3 +108,15 @@ test('player stays seated over multiple laps and can exit anywhere to the depot'
   assert(actor.quaternion.angleTo(new Group().quaternion)<1e-8);
   coaster.disembark();assert.equal(actor.position.z,214);
 });
+
+test('east and west corkscrews invert riders smoothly outside the vertical loops',()=>{
+ const c=new Coaster();
+ for(const east of [true,false]){let inverted=false;for(let i=1;i<2400;i++){
+  const a=c.pose(c.length*(i-1)/2400),b=c.pose(c.length*i/2400),p=b.p;
+  if(east?p.x>210&&p.z<35&&p.z>-100:p.x<-210&&p.z>-45&&p.z<80){
+   inverted ||= new Vector3(0,1,0).applyQuaternion(b.q).y<-.8;
+   assert(a.q.angleTo(b.q)<.2,'No abrupt frame changes in corkscrew');
+   const head=new Vector3(0,7.41,0).applyQuaternion(b.q).add(p);assert(head.y>3,'Ground clearance for grown rider');
+  }
+ }assert(inverted);}
+});
