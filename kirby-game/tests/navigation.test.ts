@@ -15,3 +15,8 @@ test('flying above a destination does not clear it; cancellation and switching d
  route.select('',places);assert.equal(route.update(new Vector3()),undefined);
  route.select('north',places);assert.equal(route.target?.id,'north');route.select('invalid',places);assert.equal(route.target,undefined);
 });
+
+test('route clears exactly at ten metres even when destination has a smaller interaction radius',()=>{
+ const route=new Route();const target={...places[0],radius:3};route.select(target.id,[target]);
+ assert(route.update(new Vector3(89.9,0,0)));assert.equal(route.update(new Vector3(90,0,0)),undefined);assert.equal(route.target,undefined);
+});

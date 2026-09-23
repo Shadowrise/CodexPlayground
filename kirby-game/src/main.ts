@@ -388,6 +388,8 @@ renderer.setAnimationLoop((time: number) => {
   }
   const padKeys=new Set<string>();
   if(usingPad && !settingsOpen && !wasChoosing && !wheelUsed) {
+    if(pad.pressed.has(14))wayfinder.cycle(-1);
+    else if(pad.pressed.has(15))wayfinder.cycle(1);
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.held.has(7))padKeys.add('ShiftLeft');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');

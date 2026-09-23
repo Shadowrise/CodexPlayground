@@ -6,7 +6,7 @@ export class Route {
  update(position:T.Vector3){
   const target=this.target;if(!target)return undefined;
   const dx=target.x-position.x,dz=target.z-position.z,distance=Math.hypot(dx,dz);
-  if(distance<=(target.radius??5) && Math.abs(position.y-(target.y??0))<4){this.target=undefined;return undefined;}
+  if(distance<=10 && Math.abs(position.y-(target.y??0))<4){this.target=undefined;return undefined;}
   return {distance,yaw:Math.atan2(dx,dz)};
  }
 }
@@ -22,6 +22,7 @@ export class Wayfinder {
   const groups=new Map<string,HTMLOptGroupElement>();
   for(const place of places){const name=place.group??'Приключения';if(!groups.has(name)){const group=document.createElement('optgroup');group.label=name;this.select.append(group);groups.set(name,group);}groups.get(name)!.append(new Option(place.name,place.id));}
   const field=document.createElement('label');field.textContent='Куда пойдём?';field.append(this.select);panel.prepend(field);
+  const hint=document.createElement('small');hint.dataset.controls='gamepad';hint.hidden=true;hint.textContent='← / → на крестовине — выбрать место';panel.append(hint);
   this.select.addEventListener('change',()=>this.route.select(this.select.value,places));
   this.label.className='route-distance';this.label.hidden=true;document.body.append(this.label);
   const shape=new T.Shape();shape.moveTo(-.15,-.8);shape.lineTo(.15,-.8);shape.lineTo(.15,.25);shape.lineTo(.55,.25);shape.lineTo(0,1.1);shape.lineTo(-.55,.25);shape.lineTo(-.15,.25);shape.closePath();
@@ -29,6 +30,10 @@ export class Wayfinder {
   const outline=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#fffbea'}));outline.rotation.x=Math.PI/2;outline.scale.set(1.17,1.12,.9);outline.position.y=-.03;
   const mesh=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#ffbf35'}));mesh.rotation.x=Math.PI/2;mesh.position.y=.04;
   this.arrow.add(outline,mesh);this.arrow.name='Destination arrow';this.arrow.visible=false;scene.add(this.arrow);
+ }
+ cycle(direction:number){
+  this.select.selectedIndex=(this.select.selectedIndex+direction+this.select.options.length)%this.select.options.length;
+  this.select.dispatchEvent(new Event('change'));
  }
  update(position:T.Vector3,size:number,camera:T.Camera){
   const direction=this.route.update(position);this.arrow.visible=!!direction;this.label.hidden=!direction;
