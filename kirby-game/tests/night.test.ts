@@ -1,3 +1,4 @@
+import { scoreOf } from '../src/score';
 import { FruitWorld } from '../src/fruits';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -86,5 +87,15 @@ test('landing a mounted firefly collects fruit under the mount, but flying does 
   assert(world.fruitPickupPosition);assert.equal(collect(),fruit);assert.equal(c.fruitsEaten,1);assert.equal(fruits.onMap,0);assert(!fruit.object.visible);assert.equal(c.actor.scale.x,size,'Growth must remain smooth');
   for(let i=0;i<30;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);collect();}
   assert(Math.abs(c.actor.scale.x-(size+.1))<1e-6);assert.equal(c.fruitsEaten,1);assert(world.riding);
+ }
+});
+
+test('first firefly flight earns three points once; sitting and repeated rides do not',async()=>{
+ const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations);
+ world.update(.01,false,world.bugs[0].home);c.actor.position.copy(world.bugs[0].carrier.position).setY(0);
+ for(let ride=0;ride<2;ride++){
+  assert(world.board(c));world.moveRider(.1,{forward:false,left:false,right:false});world.syncRider(.1);assert.equal(scoreOf(c),ride===0?0:3);
+  for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false});world.syncRider(1/60);}
+  assert.equal(scoreOf(c),3);assert(c.achievements.has('firefly'));world.disembark();
  }
 });

@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { CharacterController, Input } from './controller';
@@ -51,6 +52,7 @@ export class NightFireflies {
     if(!inWater(c.actor.position.x,c.actor.position.z)&&sceneryClearance(c.actor.position.x,c.actor.position.z,c.actor.scale.x))this.safeGround.set(c.actor.position.x,0,c.actor.position.z);
     const overWater=inWater(c.actor.position.x,c.actor.position.z),target=this.moving?2.4*c.actor.scale.x:overWater?.5:0;
     this.altitude=T.MathUtils.damp(this.altitude,target,4,dt);if(this.altitude<.015)this.altitude=0;
+    if(this.moving && this.altitude>.15)awardFirst(c,'firefly');
     bug.carrier.position.set(c.actor.position.x,this.altitude,c.actor.position.z);bug.carrier.rotation.y=c.yaw;
     const flying=this.moving||this.altitude>.05;bug.land=!flying;bug.firefly.setMode(flying?'Fly':'Sit');
     bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,c.actor.scale.x*1.8,5,dt));

@@ -1,4 +1,4 @@
-export const SCORE_ACTIONS=['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','swim'] as const;
+export const SCORE_ACTIONS=['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','swim','firefly'] as const;
 export type ScoreAction=typeof SCORE_ACTIONS[number];
 export type ScoredActor={fruitsEaten:number;achievements:Set<ScoreAction>};
 export function awardFirst(actor:ScoredActor,action:ScoreAction){if(actor.achievements.has(action))return false;actor.achievements.add(action);return true;}

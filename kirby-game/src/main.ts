@@ -246,10 +246,12 @@ let dragPointer: number | undefined;
 let dragX = 0, dragY = 0;
 let dragMode:'camera'|'character'='camera';
 let mouseTurn=0;
+let pointerLocked=false;
 const stopDragging = () => {
-  if (dragPointer !== undefined && canvas.hasPointerCapture(dragPointer)) canvas.releasePointerCapture(dragPointer);
-  dragPointer = undefined;mouseTurn=0;
-  canvas.style.cursor = 'grab';
+  const pointer=dragPointer;dragPointer=undefined;mouseTurn=0;
+  if(pointer!==undefined && canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);
+  if(document.pointerLockElement===canvas)document.exitPointerLock();
+  canvas.style.cursor='grab';
 };
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
@@ -259,10 +261,13 @@ canvas.addEventListener('pointerdown', event => {
   dragMode=event.button===2?'character':'camera';mouseTurn=0;
   dragPointer = event.pointerId;
   dragX = event.clientX; dragY = event.clientY;
-  canvas.setPointerCapture(event.pointerId);
-  canvas.style.cursor = 'grabbing';
+  if(dragMode==='character'){
+    try{Promise.resolve(canvas.requestPointerLock()).catch(stopDragging);}catch{stopDragging();}
+  }else canvas.setPointerCapture(event.pointerId);
+  canvas.style.cursor='grabbing';
 });
 canvas.addEventListener('pointermove', event => {
+  if(document.pointerLockElement===canvas)return;
   if (gamepad.input.active !== 'keyboard') { stopDragging(); return; }
   if (event.pointerId !== dragPointer) return;
   if (!(event.buttons & (dragMode==='character'?2:1))) { stopDragging(); return; }
@@ -271,7 +276,19 @@ canvas.addEventListener('pointermove', event => {
   dragX = event.clientX; dragY = event.clientY;
 });
 canvas.addEventListener('contextmenu',event=>{if(playing && gamepad.input.active==='keyboard')event.preventDefault();});
-canvas.addEventListener('pointerup', stopDragging);
+document.addEventListener('pointerup',event=>{if(event.button===(dragMode==='character'?2:0))stopDragging();});
+document.addEventListener('mouseup',event=>{if(event.button===2 && dragMode==='character')stopDragging();});
+document.addEventListener('mousemove',event=>{
+  if(document.pointerLockElement!==canvas || dragMode!=='character')return;
+  if(!(event.buttons&2) || gamepad.input.active!=='keyboard' || !audioPanel.hidden){stopDragging();return;}
+  mouseTurn=THREE.MathUtils.clamp(mouseTurn-event.movementX*.006,-.5,.5);
+});
+document.addEventListener('pointerlockchange',()=>{
+  const locked=document.pointerLockElement===canvas;
+  if(locked && (dragPointer===undefined || dragMode!=='character')){document.exitPointerLock();return;}
+  const released=pointerLocked&&!locked;pointerLocked=locked;if(released)stopDragging();
+});
+document.addEventListener('pointerlockerror',stopDragging);
 canvas.addEventListener('pointercancel', stopDragging);
 canvas.addEventListener('lostpointercapture', stopDragging);
 window.addEventListener('blur', stopDragging);
