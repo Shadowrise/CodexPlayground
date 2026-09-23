@@ -7,7 +7,7 @@ import { TREEHOUSE_SITE, TREEHOUSE_HEIGHT_SCALE } from './treehouse';
 export type BenchSeat={position:Vector3;yaw:number;floor:number};
 export const BENCH_SEATS:BenchSeat[]=[
   ...LANDMARKS.filter(site=>site.kind===4).flatMap(site=>[[0,4],[-5,-2]].map(([x,z])=>({position:new Vector3(site.x+x,1.07,site.z+z),yaw:Math.PI,floor:0}))),
-  {position:TREEHOUSE_SITE.clone().add(new Vector3(-2,9.72*TREEHOUSE_HEIGHT_SCALE,1.36)),yaw:0,floor:9*TREEHOUSE_HEIGHT_SCALE},
+  {position:TREEHOUSE_SITE.clone().add(new Vector3(-2,9*TREEHOUSE_HEIGHT_SCALE+.72,1.36)),yaw:0,floor:9*TREEHOUSE_HEIGHT_SCALE},
 ];
 
 export class Benches {

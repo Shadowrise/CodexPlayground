@@ -1,3 +1,4 @@
+import {createCanopyGeometry,createLeafSurface} from './canopy';
 import { LeafPile } from './leaf-pile';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -25,12 +26,13 @@ export class Treehouse {
   get active(){return !!this.rider;}
   get canSit(){return !!this.rider && this.activity==='deck';}
   constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
-    const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);root.scale.y=TREEHOUSE_HEIGHT_SCALE;
+    const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
     const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,16,10),pole:new T.CylinderGeometry(1,1,1,12),leaf:new T.SphereGeometry(1,6,4)};
+    let raised=false;
     const mats=new Map<string,T.MeshStandardMaterial>();
     const part=(parent:T.Group,kind:keyof typeof geo,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>{
       if(!mats.has(color))mats.set(color,new T.MeshStandardMaterial({color,roughness:.85}));
-      const mesh=new T.Mesh(geo[kind],mats.get(color));mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.set(rx,ry,rz);parent.add(mesh);return mesh;
+      const mesh=new T.Mesh(geo[kind],mats.get(color));mesh.position.set(x,y+(raised&&parent===root?9:0),z);mesh.scale.set(sx,sy,sz);mesh.rotation.set(rx,ry,rz);parent.add(mesh);return mesh;
     };
     const box=(color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>part(root,'box',color,x,y,z,sx,sy,sz,rx,ry,rz);
     const beam=(a:number[],b:number[],radius:number,color:string,parent=root)=>{
@@ -38,20 +40,22 @@ export class Treehouse {
       const p=part(parent,'pole',color,...start.clone().add(end).multiplyScalar(.5).toArray(),radius,delta.length(),radius);
       p.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return p;
     };
-    // Buttress roots, ribbed bark, forks and an irregular multilayered crown.
-    part(root,'pole','#65432e',0,8,0,2.1,16,1.85);
+    // Mature oak: properly tapered trunk, branching scaffold and a single leafy canopy.
+    part(root,'pole','#65432e',0,15,-6,1.85,30,1.65);
     for(let i=0;i<18;i++){
       const a=i*Math.PI*2/18;
-      beam([Math.cos(a)*1.9,.3,Math.sin(a)*1.8],[Math.cos(a)*5.5,.12,Math.sin(a)*5.5],.33,'#70503a');
-      beam([Math.cos(a)*2,1,Math.sin(a)*1.85],[Math.cos(a)*1.85,15,Math.sin(a)*1.7],.09,i%2?'#805b3e':'#503a2c');
+      beam([Math.cos(a)*1.8,.5,-6+Math.sin(a)*1.6],[Math.cos(a)*5.5,.12,-6+Math.sin(a)*5.5],.33,'#70503a');
+      beam([Math.cos(a)*1.8,1,-6+Math.sin(a)*1.6],[Math.cos(a)*1.65,27,-6+Math.sin(a)*1.45],.07,i%2?'#805b3e':'#503a2c');
     }
-    for(let i=0;i<9;i++){
-      const a=i*2.4,x=Math.cos(a)*7,z=Math.sin(a)*7;
-      beam([0,12+i%3,0],[x,18+i%3,z],.55,'#65432e');
-      for(let j=0;j<4;j++)part(root,'ball',['#315d35','#40713c','#4f7b40'][j%3],x+Math.sin(j*3+i)*2.5,19+i%3+Math.cos(j)*1.5,z+Math.cos(j*3+i)*2.2,3.3,2.5,3.1);
+    for(let i=0;i<12;i++){
+      const a=i*2.4,x=Math.cos(a)*7,z=-6+Math.sin(a)*7,y=30+i%3;
+      beam([0,20+i%4,-6],[x*.48,27,-6+(z+6)*.48],.62,'#65432e');
+      beam([x*.48,27,-6+(z+6)*.48],[x,y,z],.38,'#70503a');
+      for(let j=0;j<3;j++)beam([x,y,z],[x+Math.cos(a+j*.6)*2,y+2+j*.45,z+Math.sin(a+j*.6)*2],.12,'#70503a');
     }
-    // The oak stands behind the cabin, with clearance for its back wall and roof.
-    for(const treePart of root.children)treePart.position.z-=6;
+    const crown=new T.Mesh(createCanopyGeometry('oak'),new T.MeshStandardMaterial({color:'#518245',vertexColors:true,map:createLeafSurface(),side:T.DoubleSide,roughness:.95}));
+    crown.name='Oak leaf canopy';crown.position.set(0,34,-6);crown.scale.set(12,7.2,11);crown.castShadow=crown.receiveShadow=true;root.add(crown);
+    raised=true;
     // Wide plank deck, underfloor joists, diagonal braces and brass nail heads.
     for(let i=0;i<30;i++){
       const x=-5.8+i*.4;box(i%3?'#b68a50':'#c79b60',x,DECK-.13,2, .37,.26,12);
@@ -98,17 +102,18 @@ export class Treehouse {
       beam([x,y,.6],[x+.48,12.65-.35*Math.sin((i+1)/14*Math.PI),.6],.015,'#d5c396');
       box(['#d98169','#e8c86d','#689d9a'][i%3],x,y-.17,.6,.23,.3,.035,0,0,.18);
     }
-    // Leaning ladder with rope lashings and visible rung grain.
-    for(const x of [-4.9,-3.1])beam([x,0,11],[x,9.8,7.3],.11,'#8c6238');
-    for(let i=0;i<25;i++){
-      const y=.3+i*.37,z=11-y*3.7/9.8;
+    raised=false;
+    // Longer ladder, with normal rung spacing and thickness.
+    for(const x of [-4.9,-3.1])beam([x,0,11],[x,18.8,7.3],.11,'#8c6238');
+    for(let i=0;i<50;i++){
+      const y=.3+i*.37,z=11-y*3.7/18.8;
       beam([-4.95,y,z],[-3.05,y,z],.095,'#c29a60');
       for(const x of [-4.9,-3.1])for(let j=0;j<3;j++)box('#d7c493',x,y-.05+j*.05,z,.25,.024,.25);
     }
     // Branch-mounted rope swing, with a broad rounded wooden seat.
     // Route the supporting bough around the cabin, then across both rope anchors.
-    beam([-1,13,-6],[-7,10,-4.8],.5,'#6b4b31');
-    beam([-7,10,-4.8],[-9,7.9,3],.43,'#6b4b31');
+    beam([-1,26,-6],[-7,20,-4.8],.5,'#6b4b31');
+    beam([-7,20,-4.8],[-9,7.9,3],.43,'#6b4b31');
     beam([-9,7.9,3],[-13,7.9,3],.4,'#6b4b31');
     for(const x of [-12.45,-9.55]){
       const collar=new T.Mesh(new T.TorusGeometry(.44,.055,8,24),new T.MeshStandardMaterial({color:'#655b43',roughness:.6}));
@@ -120,17 +125,16 @@ export class Treehouse {
     for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,-5.7,-.65+i*.32,3.3,.18,.28);
     for(const x of [-1.45,1.45])part(this.swing,'ball','#dec997',x,-5.68,0,.12,.12,.12);
     this.leafPile.group.position.set(8,0,13);
-    this.leafPile.group.scale.y=1/TREEHOUSE_HEIGHT_SCALE;
     root.add(this.leafPile.group);
     for(let i=0;i<16;i++)part(root,'ball','#adab91',-4+Math.sin(i*.7)*.3,.045,12+i*.42,.85,.07,.3);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');
       if(ctx){ctx.fillStyle='#365f51';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e8c58a';ctx.lineWidth=10;ctx.strokeRect(8,8,752,176);ctx.textAlign='center';ctx.fillStyle='#fff1cb';ctx.font='bold 62px sans-serif';ctx.fillText('ДОМИК НА ДЕРЕВЕ',384,85);ctx.font='30px sans-serif';ctx.fillText('Выше облаков • мягче листьев',384,143);
-        const sign=new T.Mesh(new T.PlaneGeometry(6.4,1.6),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,11.45,.65);root.add(sign);}
+        const sign=new T.Mesh(new T.PlaneGeometry(6.4,1.6),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,20.45,.65);root.add(sign);}
     }
     for(const parent of [root,this.swing]){
       const batches=new Map<string,T.Mesh[]>();
-      for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
+      for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial && p!==crown){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
       for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}
     }
 

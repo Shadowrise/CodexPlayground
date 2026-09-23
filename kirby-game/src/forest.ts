@@ -1,3 +1,4 @@
+import {createCanopyGeometry,createLeafSurface} from './canopy';
 import { createCoasterCurve } from './coaster';
 import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
@@ -22,27 +23,26 @@ export function createForest() {
   const geometries = {
     wood: new THREE.CylinderGeometry(.7, 1, 1, 9),
     bark: new THREE.CylinderGeometry(1, 1, 1, 9, 1, true, 0, Math.PI * 1.2),
-    leaves: new THREE.IcosahedronGeometry(1, 2),
-    birchLeaves: new THREE.IcosahedronGeometry(1, 2),
+    leaves: createCanopyGeometry('broadleaf'),
+    birchLeaves: createCanopyGeometry('birch'),
     needles: new THREE.ConeGeometry(1, 1, 12, 3),
     fruit: new THREE.SphereGeometry(1, 10, 8),
   };
   type Part = keyof typeof geometries;
   const batches = new Map<Part, { matrix: THREE.Matrix4; color: THREE.Color }[]>();
   const dummy = new THREE.Object3D();
-  const heightScale=new THREE.Matrix4().makeScale(1,2,1);
   const track=createCoasterCurve().getPoints(1800);
   function part(kind: Part, x: number, y: number, z: number, sx: number, sy: number, sz: number, color: THREE.ColorRepresentation, yaw = 0) {
     dummy.position.set(x,y,z); dummy.scale.set(sx,sy,sz); dummy.rotation.set(0,yaw,0); dummy.updateMatrix();
     if (!batches.has(kind)) batches.set(kind, []);
-    batches.get(kind)!.push({ matrix: dummy.matrix.clone().premultiply(heightScale), color: new THREE.Color(color) });
+    batches.get(kind)!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
   }
   function branch(from: THREE.Vector3, to: THREE.Vector3, radius: number, color: string) {
     dummy.position.copy(from).add(to).multiplyScalar(.5);
     dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), to.clone().sub(from).normalize());
     dummy.scale.set(radius, from.distanceTo(to), radius); dummy.updateMatrix();
     if (!batches.has('wood')) batches.set('wood', []);
-    batches.get('wood')!.push({ matrix: dummy.matrix.clone().premultiply(heightScale), color: new THREE.Color(color) });
+    batches.get('wood')!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
   }
   for (let i=0; i<800; i++) {
     // Keep all four species visible near the starting clearing as well as across the map.
@@ -58,7 +58,7 @@ export function createForest() {
     if(treePositions.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+p.crownRadius+1.2))continue;
     if(track.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+5))continue;
     treePositions.push({x,z,crownRadius:crownRadiusLimit});
-    const h=(biome==='spruce'?7.5:biome==='birch'?6.3:4.8)*s;
+    const h=(biome==='spruce'?7.5:biome==='birch'?10.2:8.3)*s;
     const trunk=biome==='birch'?'#eee9d5':biome==='spruce'?'#69513b':'#866044';
     const thickness=(biome==='birch'?.16:.25)*s;
     part('wood',x,h*.38,z,thickness,h*.76,thickness,trunk,yaw);
@@ -87,17 +87,21 @@ export function createForest() {
     const fruitKind=i%3;
     const pink=biome==='autumn' && i%4===3;
     const hue=biome==='autumn'?[.035,.09,.14,.96][i%4]:biome==='birch'?.24+random()*.035:.29+random()*.035;
-    const crownRadius=(biome==='birch'?1.15:1.7)*s;
-    for (let limb=0;limb<7;limb++) {
+    const crownRadius=(biome==='birch'?2.0:2.85)*s;
+    const crownY=h*.73;
+    part(biome==='birch'?'birchLeaves':'leaves',x,crownY,z,crownRadius,(biome==='birch'?3.25:2.5)*s,crownRadius,
+      new THREE.Color().setHSL(hue,biome==='autumn'?.6:.48,pink?.48:.36,THREE.SRGBColorSpace),yaw);
+    // Crooked forks split into tapered boughs and finer twigs underneath one crown.
+    for (let limb=0;limb<9;limb++) {
       const a=yaw+limb*2.4;
-      const cx=x+Math.cos(a)*crownRadius*.85, cz=z+Math.sin(a)*crownRadius*.85;
-      const cy=h*(.58+limb*.045);
-      branch(new THREE.Vector3(x,h*.36,z),new THREE.Vector3(cx,cy,cz),.09*s,trunk);
-      for (let cluster=0;cluster<4;cluster++) {
-        const ca=a+cluster*1.9, cr=crownRadius*(.45+random()*.23);
-        part(biome==='birch'?'birchLeaves':'leaves',cx+Math.cos(ca)*cr*.5,cy+(random()-.25)*s,cz+Math.sin(ca)*cr*.5,
-          cr,cr*(biome==='birch'?1.35:.85),cr,new THREE.Color().setHSL(hue+(random()-.5)*.035,biome==='autumn'?.6:.48,
-            pink ? .32+random()*.15 : .25+random()*.11, pink ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace),ca);
+      const cx=x+Math.cos(a)*crownRadius*.67,cz=z+Math.sin(a)*crownRadius*.67;
+      const cy=crownY+Math.sin(limb*3.1)*s;
+      const fork=new THREE.Vector3(x+Math.cos(a)*.55*s,h*(.38+limb%3*.08),z+Math.sin(a)*.55*s);
+      branch(new THREE.Vector3(x,h*.28,z),fork,.13*s,trunk);
+      branch(fork,new THREE.Vector3(cx,cy,cz),.08*s,trunk);
+      for(let twig=0;twig<3;twig++){
+        const angle=a+(twig-1)*.6;
+        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(cx+Math.cos(angle)*.65*s,cy+.65*s,cz+Math.sin(angle)*.65*s),.025*s,trunk);
       }
       if (biome==='orchard') for (let f=0;f<3;f++) {
         const fa=a+f*2.1, fx=cx+Math.cos(fa)*crownRadius*.55, fz=cz+Math.sin(fa)*crownRadius*.55;
@@ -106,13 +110,12 @@ export function createForest() {
         part('fruit',fx,fy,fz,fs,fs*(fruitKind===2?1.35:.95),fs,fc);
         if(fruitKind===2) part('fruit',fx,fy+fs*.8,fz,fs*.58,fs*.65,fs*.58,fc);
         part('wood',fx,fy+fs*1.3,fz,.018*s,.17*s,.018*s,'#69503a');
-        part('leaves',fx+.07*s,fy+fs*1.55,fz,.12*s,.035*s,.065*s,'#43833b',fa);
       }
     }
   }
-  const foliageMaps={leaves:createFoliageTexture('broadleaf'),birchLeaves:createFoliageTexture('birch'),needles:createFoliageTexture('spruce')};
+  const foliageMaps={leaves:createLeafSurface(),birchLeaves:createLeafSurface(),needles:createFoliageTexture('spruce')};
   for (const [kind, instances] of batches) {
-    const mesh=new THREE.InstancedMesh(geometries[kind],new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null}),instances.length);
+    const mesh=new THREE.InstancedMesh(geometries[kind],new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,vertexColors:kind==='leaves'||kind==='birchLeaves',side:kind==='leaves'||kind==='birchLeaves'?THREE.DoubleSide:THREE.FrontSide,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null}),instances.length);
     mesh.name=`Decorative forest ${kind}`;
     instances.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);mesh.setColorAt(i,p.color);});
     mesh.castShadow=true;mesh.receiveShadow=true;
