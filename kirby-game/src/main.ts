@@ -1,9 +1,9 @@
+import { FpsCounter } from './fps';
 import { EMOTES, EmoteWheel, type Emote } from './emotes';
 import { Wayfinder, type Destination } from './navigation';
 import { LANDMARKS } from './landmark-sites';
 import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
-import { meadowGeometry } from './pond-layout';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
@@ -138,7 +138,10 @@ function setupShadowMaterials() {
 }
 const updateSky = createSky(scene);
 
-const ground = new THREE.Mesh(meadowGeometry(MEADOW_HALF_SIZE + MOUNTAIN_WIDTH), new THREE.MeshStandardMaterial({ color: '#80b654', roughness: 1 }));
+const outer=MEADOW_HALF_SIZE+MOUNTAIN_WIDTH,inner=MEADOW_HALF_SIZE;
+const border=new THREE.Shape([new THREE.Vector2(-outer,-outer),new THREE.Vector2(outer,-outer),new THREE.Vector2(outer,outer),new THREE.Vector2(-outer,outer)]);
+border.holes.push(new THREE.Path([new THREE.Vector2(-inner,-inner),new THREE.Vector2(-inner,inner),new THREE.Vector2(inner,inner),new THREE.Vector2(inner,-inner)]));
+const ground = new THREE.Mesh(new THREE.ShapeGeometry(border), new THREE.MeshStandardMaterial({ color: '#80b654', roughness: 1 }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -.02;
 ground.receiveShadow = true;
@@ -295,6 +298,9 @@ startButton.addEventListener('click', () => {
   renderer.domElement.focus();
 });
 
+const fpsCounter=new FpsCounter();
+document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});
+const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel.textContent='—';fpsLabel.title='Кадров в секунду';fpsLabel.setAttribute('aria-label','Кадров в секунду');document.body.append(fpsLabel);
 let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
@@ -316,6 +322,7 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
 renderer.setAnimationLoop((time: number) => {
   const dt = Math.min((time - previousTime) / 1000, .05);
   previousTime = time;
+  const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=gamepad.input.active!=='keyboard';

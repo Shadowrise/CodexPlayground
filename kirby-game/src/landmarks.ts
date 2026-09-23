@@ -1,3 +1,4 @@
+import { spatialInstances } from './spatial-instances';
 import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
@@ -112,6 +113,6 @@ export function createLandmarks() {
     if(!batches.has(key))batches.set(key,{geometry:o.geometry,material:o.material as T.Material,matrices:[]});
     batches.get(key)!.matrices.push(o.matrixWorld.clone());}});
   root.clear();
-  for(const b of batches.values()){const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>m.setMatrixAt(i,v));m.castShadow=true;m.receiveShadow=true;root.add(m);}
+  for(const b of batches.values()){const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>m.setMatrixAt(i,v));m.castShadow=true;m.receiveShadow=true;root.add(spatialInstances(m));}
   return root;
 }

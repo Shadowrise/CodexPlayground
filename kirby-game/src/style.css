@@ -121,3 +121,5 @@ body:has(#settings-toggle[aria-expanded="true"]) .route-panel { bottom:240px; }
 .emote-choice {position:absolute;transform:translate(-50%,-50%);padding:14px 10px;border-radius:18px;background:#f6fbe9;color:#3b5233;font-size:13px;white-space:nowrap;border:3px solid transparent;}
 .emote-choice.selected {background:#ffe884;border-color:white;box-shadow:0 0 24px #ffec8e88;transform:translate(-50%,-50%) scale(1.12);}
 .emote-wheel>p {position:absolute;top:100%;left:50%;transform:translateX(-50%);width:110%;text-align:center;background:#243923ed;color:white;padding:10px;border-radius:12px;font-size:12px;}
+
+#fps-counter { position:fixed;left:9px;top:5px;z-index:11;pointer-events:none;font:600 11px/1.2 monospace;color:#fff;text-shadow:0 1px 3px #000,0 0 2px #000; font-variant-numeric:tabular-nums; }
