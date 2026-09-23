@@ -198,3 +198,11 @@ button:disabled { cursor:default; }
 }
 #startup-menu #new-game {border-color:transparent;}
 @media(max-width:520px){#startup-menu #new-game,#startup-menu #load-game,#startup-menu .network-entry button{height:100px;}}
+
+.right-hud {bottom:16px;max-height:none;overflow:hidden;}
+.right-hud .tasks-panel {display:flex;flex-direction:column;flex:1 1 auto;min-height:0;}
+.right-hud .tasks-panel:has(#task-list[hidden]) {flex:0 0 auto;}
+#tasks-toggle {flex-shrink:0;}
+#task-list {flex:1 1 auto;min-height:0;max-height:none;overflow-anchor:none;}
+.task {position:relative;background:var(--ui-bg);}
+@media(max-width:760px){.right-hud{bottom:16px;max-height:none;}#task-list{max-height:none;}}

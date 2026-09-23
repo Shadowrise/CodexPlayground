@@ -122,7 +122,7 @@ test('east and west corkscrews invert riders smoothly outside the vertical loops
 });
 
 test('every track support joins an actual rail to a ground footing, including banking',()=>{
- const c=new Coaster();assert(c.supports.length>100);let unequalPair=false;
+ const c=new Coaster();assert(c.supports.length>=20 && c.supports.length<80);let unequalPair=false;
  for(const support of c.supports){
   const pose=c.pose(support.distance),rail=new Vector3(support.side*1.2,0,0).applyQuaternion(pose.q).add(pose.p);
   assert(support.rail.distanceTo(rail)<1e-8);assert.equal(support.base.y,-.02);
@@ -142,4 +142,12 @@ test('ordinary track alternates mild banking with level stretches and keeps a sm
   if(Math.abs(bank)<.01)level++;if(Math.abs(bank)>.06)banked++;
  }
  assert(level>300);assert(banked>100);assert(c.pose(0).q.angleTo(c.pose(c.length-.001).q)<.01);
+});
+
+test('sparse support assemblies keep spacing even where track loops back nearby',()=>{
+ const c=new Coaster();const stations=[...new Set(c.supports.map(s=>s.distance))].sort((a,b)=>a-b);
+ for(let i=1;i<stations.length;i++)assert(stations[i]-stations[i-1]>=72-1e-6);
+ for(let i=0;i<c.supports.length;i++)for(const b of c.supports.slice(i+1)){
+  const a=c.supports[i];assert(Math.hypot(a.base.x-b.base.x,a.base.z-b.base.z)>=(a.distance===b.distance?3:12)-1e-6);
+ }
 });

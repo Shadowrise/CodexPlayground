@@ -100,7 +100,7 @@ export class Coaster {
     const passengerHeads=Array.from({length:1200},(_,i)=>{const pose=this.pose(this.length*i/1200);return new T.Vector3(0,7.41,0).applyQuaternion(pose.q).add(pose.p);});
     const segment=new T.Line3(),closest=new T.Vector3();
     const clear=(a:T.Vector3,b:T.Vector3)=>{segment.set(a,b);return passengerHeads.every(p=>segment.closestPointToPoint(p,true,closest).distanceToSquared(p)>3.4**2);};
-    for(let d=0;d<this.length;d+=14.4){
+    for(let d=0;d<this.length;d+=72){
       const {p,q}=this.pose(d);
       for(const side of [-1,1]){
         const rail=p.clone().add(new T.Vector3(side*1.2,0,0).applyQuaternion(q));
@@ -108,6 +108,9 @@ export class Coaster {
           const elbow=p.clone().add(new T.Vector3(side*reach,0,0).applyQuaternion(q));
           if(elbow.y<.4)continue;
           const base=new T.Vector3(elbow.x,-.02,elbow.z);
+          // Nearby turns can be far apart along the track but share the same ground.
+          // Keep separate assemblies apart, while allowing the two legs of one pair.
+          if(this.supports.some(s=>Math.hypot(s.base.x-base.x,s.base.z-base.z)<(s.distance===d?3:12)))continue;
           if(!clear(rail,elbow)||!clear(elbow,base))continue;
           this.supports.push({rail,elbow,base,distance:d,side});
           add(box,'#a1a39a',base.clone().setY(.12),new T.Vector3(1.7,.24,1.7));

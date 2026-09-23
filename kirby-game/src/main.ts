@@ -244,16 +244,19 @@ const followCamera = new FollowCamera();
 const canvas = renderer.domElement;
 let dragPointer: number | undefined;
 let dragX = 0, dragY = 0;
+let dragMode:'camera'|'character'='camera';
+let mouseTurn=0;
 const stopDragging = () => {
   if (dragPointer !== undefined && canvas.hasPointerCapture(dragPointer)) canvas.releasePointerCapture(dragPointer);
-  dragPointer = undefined;
+  dragPointer = undefined;mouseTurn=0;
   canvas.style.cursor = 'grab';
 };
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
-  if (!playing || gamepad.input.active !== 'keyboard' || event.button !== 0 || event.pointerType !== 'mouse') return;
+  if (!playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || (event.button !== 0 && event.button !== 2) || event.pointerType !== 'mouse') return;
   event.preventDefault();
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+  dragMode=event.button===2?'character':'camera';mouseTurn=0;
   dragPointer = event.pointerId;
   dragX = event.clientX; dragY = event.clientY;
   canvas.setPointerCapture(event.pointerId);
@@ -262,10 +265,12 @@ canvas.addEventListener('pointerdown', event => {
 canvas.addEventListener('pointermove', event => {
   if (gamepad.input.active !== 'keyboard') { stopDragging(); return; }
   if (event.pointerId !== dragPointer) return;
-  if (!(event.buttons & 1)) { stopDragging(); return; }
-  followCamera.orbit(event.clientX - dragX, event.clientY - dragY);
+  if (!(event.buttons & (dragMode==='character'?2:1))) { stopDragging(); return; }
+  if(dragMode==='character')mouseTurn=THREE.MathUtils.clamp(mouseTurn-(event.clientX-dragX)*.006,-.5,.5);
+  else followCamera.orbit(event.clientX - dragX, event.clientY - dragY);
   dragX = event.clientX; dragY = event.clientY;
 });
+canvas.addEventListener('contextmenu',event=>{if(playing && gamepad.input.active==='keyboard')event.preventDefault();});
 canvas.addEventListener('pointerup', stopDragging);
 canvas.addEventListener('pointercancel', stopDragging);
 canvas.addEventListener('lostpointercapture', stopDragging);
@@ -405,6 +410,9 @@ renderer.setAnimationLoop((time: number) => {
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const held=(key:string)=>settingsOpen || wheelUsed || (!usingPad && editingUi)?false:usingPad?padKeys.has(key):keys.has(key);
+  const mouseTurning=!usingPad && dragPointer!==undefined && dragMode==='character' && !settingsOpen;
+  const mouseSteer=mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
+  if(mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character) {
     const achievementsBefore=character.achievements.size;
     const previousX = character.actor.position.x;
@@ -435,9 +443,9 @@ renderer.setAnimationLoop((time: number) => {
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,npcs,character);
     const benchWasActive=benches.active;benches.update(dt);
-    if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : undefined,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
-    if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):undefined});
+    if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt);
     if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){
@@ -453,7 +461,7 @@ renderer.setAnimationLoop((time: number) => {
 
     followCamera.update(dt, character.yaw, movingOrTurning,
       usingPad && !settingsOpen && !wheelUsed ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
-      usingPad && !settingsOpen && !wheelUsed ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined);
+      usingPad && !settingsOpen && !wheelUsed ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined && dragMode==='camera');
     pendingBoard = false;
     pendingAttack = false;
     pendingTurn = undefined;
