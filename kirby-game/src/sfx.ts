@@ -1,3 +1,4 @@
+import { WaterSoundEvents, waterSamples } from './water-sounds';
 import type { Emote } from './emotes';
 import { SoundEvents, type SoundActor, type SoundKind } from './sound-events';
 import { readAudioSettings, saveAudioSettings } from './audio-settings';
@@ -16,6 +17,7 @@ export class SoundEffects {
   private buffers = new Map<string, AudioBuffer>();
   private active = new Set<AudioBufferSourceNode>();
   private events = new SoundEvents();
+  private waterEvents=new WaterSoundEvents();
   private enabled = true;
   private volume = .45;
   private npcEffectAfter = 0;
@@ -71,6 +73,21 @@ export class SoundEffects {
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }
   private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); this.buzz=undefined; }
+
+  updateWater(dt:number,swimming:boolean,moving:boolean,available=true){
+    const kind=this.waterEvents.update(dt,swimming,moving,available),ctx=this.context;
+    if(!kind || !ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
+    const key=`water-${kind}`;
+    if(!this.buffers.has(key)){
+      const samples=waterSamples(kind),buffer=ctx.createBuffer(1,samples.length,22050);
+      buffer.getChannelData(0).set(samples);this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;
+    source.playbackRate.value=.96+Math.random()*.08;
+    gain.gain.value=kind==='enter'?.85:kind==='exit'?.6:kind==='paddle'?.38:.15;
+    source.connect(gain);gain.connect(this.master!);this.active.add(source);
+    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
 
   updateFireflyBuzz(level:number) {
     const ctx=this.context;
