@@ -1,3 +1,7 @@
+import { createHostBadge } from './host-badge';
+import { NetworkSession } from './network';
+import { actorState, applyActor, RemotePlayers } from './network-actors';
+import type { WorldState, ActorState } from './network-protocol';
 import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
 import { TaskList } from './tasks';
@@ -19,7 +23,7 @@ import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
 import { Watermill, MILL_LEVER } from './watermill';
 import { Treehouse, TREEHOUSE_SITE, TREEHOUSE_HEIGHT_SCALE } from './treehouse';
-import { Benches } from './benches';
+import { Benches, BENCH_SEATS } from './benches';
 import { Balloons } from './balloons';
 import { HedgeMaze } from './maze';
 import { MAZE_SITE } from './maze-layout';
@@ -47,6 +51,7 @@ const sizeValue = document.querySelector<HTMLElement>('#player-size')!;
 const fruitValue = document.querySelector<HTMLElement>('#player-fruits')!;
 const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
 const playerStatsRow=document.querySelector<HTMLElement>('#player-avatar')!;
+const playerHostBadge=createHostBadge();playerHostBadge.id='player-host-badge';playerHostBadge.hidden=true;playerStatsRow.prepend(playerHostBadge);
 const npcStatsRow=document.querySelector<HTMLElement>('.npc-avatar')!;
 const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-fruits')!;
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
@@ -85,16 +90,28 @@ function requirePlayerName(){
   return true;
 }
 
+let networkIntent=false,network:NetworkSession|undefined,remotePlayers:RemotePlayers|undefined;
+let worldRevision=-1,knownFruits=new Set<number>(),heldResource:string|undefined,acquiring=false;
+let lastStarRequest=0;
+const appliedRides=new Map<string,ActorState>();
+let rosterSignature='';
+const serverUrl=import.meta.env.VITE_GAME_SERVER_URL || (import.meta.env.DEV?'http://127.0.0.1:8787':'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=false;
 startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>Добро пожаловать!</h2>';
 const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
 const soloSection=document.createElement('section');soloSection.className='startup-section';soloSection.innerHTML='<h3>Одиночная игра</h3>';soloSection.append(newGameButton,loadButton);
-const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<div class="network-heading"><h3>Сетевая игра</h3><span id="online-players" aria-live="polite">… игроков</span></div><div class="network-entry"><button type="button" disabled title="Подключение появится позже">Подключиться к сетевой игре</button></div>';
+const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<div class="network-heading"><h3>Сетевая игра</h3><span id="online-players" aria-live="polite">… игроков</span></div><div class="network-entry"><button type="button" id="network-join">Подключиться к сетевой игре</button></div>';
 startupCard.append(nameField,soloSection,networkSection);
-watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,import.meta.env.VITE_GAME_SERVER_URL || 'https://kirby-game-server.kirby-game-server.workers.dev');
+watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,serverUrl);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
-newGameButton.addEventListener('click',()=>{pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+newGameButton.addEventListener('click',()=>{networkIntent=false;mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
+const leaveOnline=document.createElement('button');leaveOnline.textContent='Выйти из сетевой игры';leaveOnline.hidden=true;audioPanel.append(leaveOnline);
+leaveOnline.addEventListener('click',()=>{network?.close();location.reload();});
+window.addEventListener('pagehide',()=>network?.close());
+document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
+const onlineRoster=document.createElement('div');onlineRoster.className='online-roster';onlineRoster.hidden=true;document.body.append(onlineRoster);
 const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent='Сохранить игру';audioPanel.append(saveButton);
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
@@ -102,7 +119,7 @@ try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
 selectionCard.hidden=true;
 loadButton.title=hasSave?'Загрузить сохранение':'Сохранений пока нет';
 loadButton.addEventListener('click',()=>{
-  if(!requirePlayerName())return;
+  if(!requirePlayerName())return;networkIntent=false;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
@@ -110,7 +127,7 @@ loadButton.addEventListener('click',()=>{
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=error instanceof Error?error.message:'Не удалось загрузить сохранение.';}
 });
 saveButton.addEventListener('click',()=>{
-  if(!character)return;
+  if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
     localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??(c instanceof CharacterController?fireflies?.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
@@ -194,7 +211,8 @@ const home=new KirbyHome();scene.add(home.group);
 let fireflies:NightFireflies|undefined;
 const maze=new HedgeMaze();scene.add(maze.group);
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
-const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}});scene.add(balloons.group);
+let balloonSeed=6173;
+const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}},()=>{balloonSeed=(Math.imul(balloonSeed,1664525)+1013904223)>>>0;return balloonSeed/4294967296;});scene.add(balloons.group);
 const routePanel=document.createElement('div');routePanel.className='panel ride-hint route-panel';document.body.appendChild(routePanel);
 const rideHint=document.createElement('div');rideHint.className='interaction-hint';routePanel.append(rideHint);
 const destinations:Destination[]=[
@@ -352,17 +370,23 @@ async function loadCharacter() {
   }
 }
 void loadCharacter();
-startButton.addEventListener('click', () => {
+startButton.addEventListener('click', async () => {
   if (!loadedModel || playing || !requirePlayerName()) return;
   music.start();
   sounds.start();
+  if(networkIntent){
+    startButton.disabled=true;startButton.textContent='Подключаемся…';
+    const session=new NetworkSession();
+    try{await session.connect(serverUrl);network=session;}
+    catch(error){session.close();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
+  }
   const { scene: template, animations } = loadedModel;
-  npcs = createNpcs(template, animations, selected);
-  coaster.addKirbyPassengers(template,animations,selected);
+  npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
+  coaster.addKirbyPassengers(template,animations,network?KIRBY_VARIANTS[0]:selected);
   character = new CharacterController(cloneVariant(template, selected, false), animations);
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
-  home.night=mapMode.value==='night';
+  home.night=!network && mapMode.value==='night';
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);home.night=pendingSave.night===true;pendingSave=undefined;}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
@@ -375,12 +399,20 @@ startButton.addEventListener('click', () => {
   scene.add(character.actor, ...npcs.map(npc => npc.actor));
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
-  playing = true;
+  playing = true;startupCard.hidden=true;
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
   statusDot.classList.add('ready');
   document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
+  if(network){
+    remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=false;
+    knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
+    fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
+    network.onDisconnect=reason=>{playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onStar=()=>{if(character){awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
+    network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
+  }
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
 });
@@ -456,11 +488,12 @@ renderer.setAnimationLoop((time: number) => {
   const mouseSteer=mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
   if(mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character) {
+    syncNetworkWorld(dt);
     const achievementsBefore=character.achievements.size;
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
-    if(pendingBoard)resolveInteraction(character)?.run();
+    if(pendingBoard)void interactOnline();
     if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote))sounds.playEmote(pendingEmote);
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
@@ -468,7 +501,7 @@ renderer.setAnimationLoop((time: number) => {
     const homeWasActive=home.active;home.update(dt);
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
-    balloons.update(dt,npcs,character);
+    balloons.update(dt,!network||network.host?npcs:[],character);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
@@ -483,8 +516,10 @@ renderer.setAnimationLoop((time: number) => {
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
     fireflies?.syncRider(dt);
     const availableInteraction=resolveInteraction(character);
-    const interaction=availableInteraction?.text;
-    interactionOutline.update(playing && !settingsOpen && !wheelUsed ? availableInteraction?.target : undefined);
+    const candidate=network?resourceKey(character):undefined;
+    const occupied=!!(candidate&&network?.room.locks[candidate]&&network.room.locks[candidate]!==network.id);
+    const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
+    interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
     rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
@@ -502,15 +537,16 @@ renderer.setAnimationLoop((time: number) => {
     if(character.starRemaining>0)status.textContent+=` · ★ ×2: ${Math.ceil(character.starRemaining)} с`;
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
-    if(!coaster.riding && greetingCooldown===0) {
+    if((!network||network.host) && !coaster.riding && greetingCooldown===0) {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
+    if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
-    const hit = resolveAttack(character, npcs);
+    if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
+    const hit = network?undefined:resolveAttack(character, npcs);
     const fireflyPickup=fireflies?.fruitPickupPosition;
-    const eaten = fruits.update(dt, character, npcs, coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
+    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;
@@ -525,15 +561,16 @@ renderer.setAnimationLoop((time: number) => {
       message.textContent = `${eaten.type} съеден! Размер +10% · ${Math.round(character.actor.scale.x * 100)}%`;
       hitMessageRemaining = 2.5;
     }
-    if(maze.update(dt,character,!coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
+    if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
+    if(maze.update(dt,character,!network && !coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
     }
     if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);message.textContent=`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`;hitMessageRemaining=3;}
     taskList.update(character.achievements);
     fruitValue.textContent=String(scoreOf(character));
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
-    document.querySelector<HTMLElement>('#player-place')!.textContent=`${teamPoints>playerPoints?2:1}.`;
-    document.querySelector<HTMLElement>('#npc-place')!.textContent=`${playerPoints>teamPoints?2:1}.`;
+    document.querySelector<HTMLElement>('#player-place')!.textContent=`${1+Number(teamPoints>playerPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>playerPoints).length:0)}.`;
+    document.querySelector<HTMLElement>('#npc-place')!.textContent=`${1+Number(playerPoints>teamPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>teamPoints).length:0)}.`;
     const [leader,runnerUp]=teamPoints>playerPoints?[npcStatsRow,playerStatsRow]:[playerStatsRow,npcStatsRow];
     if(leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
@@ -556,6 +593,7 @@ renderer.setAnimationLoop((time: number) => {
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   ponds.update(dt);
   watermill.update(dt);
+  updateNetwork(dt);
   renderer.render(scene, camera);
 });
 window.addEventListener('resize', () => {
@@ -599,4 +637,72 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
   const bug=fireflies?.outlineBug(c);
   if(bug)return result(fireflies!.prompt(c),()=>fireflies!.board(c),object(bug));
+}
+
+function captureWorld():WorldState{
+ const round=(rows:number[][])=>rows.map(row=>row.map(v=>Math.round(v*1000)/1000));
+ return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState())};
+}
+function applyRide(a:ActorState){
+ if(!a.ride)return;const [kind,index]=a.ride.key.split(':'),i=Number(index);
+ if(kind==='tree')treehouse.networkSwing(a.ride.data[0] as number);
+ if(kind==='cart'){const rows=coaster.networkState();rows[i]=a.ride.data as number[];coaster.networkApply(rows);}
+ if(kind==='balloon'){const rows=balloons.networkState();rows[i]=a.ride.data;balloons.networkApply(rows,npcs);}
+ if(kind==='bug'){const rows=fireflies!.networkState();rows[i]=a.ride.data as number[];fireflies!.networkApply(rows);}
+}
+function syncNetworkWorld(dt:number){
+ if(!network||!character)return;
+ const r=network.room;
+ const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
+ coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');
+ watermill.networkRunning(r.mill);
+ if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);applyActor(n,w.npcs[i],0,network!.host||worldRevision<0);});worldRevision=network.revision;}
+ if(!network.host&&network.world)npcs.forEach((n,i)=>applyActor(n,network!.world!.npcs[i],dt));
+ for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
+ r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id)character!.grow();else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.grow();});
+}
+function resourceKey(c:CharacterController){
+ if(coaster.riding)return coaster.networkKey(c);if(balloons.riding)return balloons.networkKey(c.actor.position);if(fireflies?.riding)return fireflies.networkKey(c);
+ if(home.active||home.prompt(c.actor.position))return 'home:0';
+ if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
+ const seat=benches.outlineSeat(c.actor.position);if(benches.active)return heldResource;if(seat&&(!treehouse.active||treehouse.canSit))return 'bench:'+BENCH_SEATS.indexOf(seat);
+ if(treehouse.active||treehouse.prompt(c.actor.position))return 'tree:0';
+ if(watermill.prompt(c.actor.position))return;
+ if(balloons.prompt(c.actor.position))return balloons.networkKey(c.actor.position);
+ if(coaster.prompt(c))return coaster.networkKey(c);
+ return fireflies?.networkKey(c);
+}
+async function interactOnline(){
+ if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
+ if(!network){action.run();return;}
+ if(watermill.prompt(character.actor.position)&&!heldResource&&!home.active&&!treehouse.active){network.event({type:'mill'});return;}
+ if(heldResource){action.run();return;}
+ const key=resourceKey(character);if(!key)return;
+ acquiring=true;const ok=await network.acquire(key);acquiring=false;
+ if(!ok){status.textContent='Этот объект уже занят';return;}
+ if(!character||resourceKey(character)!==key){network.event({type:'release',key});return;}
+ heldResource=key;resolveInteraction(character)?.run();
+}
+function updateNetwork(dt:number){
+ if(!network||!character||!playing)return;
+ if(!network.host&&network.world)npcs.forEach((n,i)=>applyActor(n,network!.world!.npcs[i],dt));
+ for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
+ const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
+ const active=coaster.riding||balloons.riding||fireflies?.riding||home.active||treehouse.active||benches.active||trampoline.active;
+ if(heldResource&&!active){network.event({type:'release',key:heldResource});heldResource=undefined;}
+ const a=actorState(character,nameInput.value,KIRBY_VARIANTS.indexOf(selected));
+ if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
+ network.tick(dt,a,captureWorld);
+ playerHostBadge.hidden=!network.host;
+ const entries=[{id:network.id,name:a.name,points:scoreOf(character)},...Array.from(network.actors,([id,a])=>({id,name:a.name,points:a.fruits+a.achievements.length*3}))].sort((a,b)=>b.points-a.points);
+ const signature=JSON.stringify([network.room.host,entries]);
+ if(rosterSignature!==signature){
+  rosterSignature=signature;onlineRoster.replaceChildren(document.createTextNode('Онлайн: '+entries.length+' · '));
+  entries.forEach((entry,i)=>{
+   if(i)onlineRoster.append(document.createTextNode(' · '));
+   const row=document.createElement('span');row.className='online-player';row.dataset.playerId=entry.id;
+   if(entry.id===network!.room.host)row.append(createHostBadge());
+   row.append(document.createTextNode(`${1+entries.filter(other=>other.points>entry.points).length}. ${entry.name}: ${entry.points}`));onlineRoster.append(row);
+  });
+ }
 }

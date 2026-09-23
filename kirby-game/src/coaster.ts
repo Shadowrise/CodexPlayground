@@ -186,15 +186,19 @@ export class Coaster {
     const u=((distance/this.length)%1+1)%1,f=u*this.sampleCount,i=Math.floor(f);
     return {p:this.curve.getPointAt(u),q:this.frames[i].clone().slerp(this.frames[i+1],f-i)};
   }
-  outlineCart(player:CharacterController){return !this.riding && ['Idle','Run','WalkBackward'].includes(player.state) && this.prompt(player).startsWith('E —') ? this.carts.find(c=>c.wait>0 && !c.occupied)?.group : undefined;}
+  outlineCart(player:CharacterController){return !this.riding && ['Idle','Run','WalkBackward'].includes(player.state) && this.prompt(player).startsWith('E —') ? this.carts.find(c=>c.wait>0 && !c.occupied && !this.networkBlocked.has(this.carts.indexOf(c)))?.group : undefined;}
+  networkBlocked=new Set<number>();
+  networkKey(player:CharacterController){const cart=this.ridden??this.carts.find(c=>c.wait>0&&!c.occupied&&!this.networkBlocked.has(this.carts.indexOf(c)));return cart?'cart:'+this.carts.indexOf(cart):undefined;}
+  networkState(){return this.carts.map(c=>[c.distance,c.wait,c.speed,c.group.scale.x]);}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const c=this.carts[i];if(!c||!v||c===this.ridden)return;[c.distance,c.wait,c.speed]=v;c.group.scale.setScalar(v[3]);});}
   prompt(player:CharacterController) {
     if(this.riding)return 'E — выйти из тележки в депо';
     if(player.actor.position.distanceTo(STATION)>12* Math.min(player.actor.scale.x,2))return '';
-    return this.carts.some(c=>c.wait>0 && !c.occupied)?'E — сесть в тележку':'Депо · ожидаем свободную тележку';
+    return this.carts.some(c=>c.wait>0 && !c.occupied && !this.networkBlocked.has(this.carts.indexOf(c)))?'E — сесть в тележку':'Депо · ожидаем свободную тележку';
   }
   board(player:CharacterController) {
     if(this.riding || !['Idle','Run','WalkBackward'].includes(player.state) || !this.prompt(player))return false;
-    const cart=this.carts.find(c=>c.wait>0 && !c.occupied);if(!cart)return false;
+    const cart=this.carts.find(c=>c.wait>0 && !c.occupied && !this.networkBlocked.has(this.carts.indexOf(c)));if(!cart)return false;
     player.update(0,{forward:false,left:false,right:false});
     this.rider=player;this.ridden=cart;this.riderParent=player.actor.parent!;
     cart.wait=1.2;cart.speed=0;cart.group.scale.setScalar(Math.max(1,player.actor.scale.x));return true;

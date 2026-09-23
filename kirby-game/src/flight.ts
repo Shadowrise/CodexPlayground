@@ -13,6 +13,8 @@ export class Flight {
   private dash=0;
   private velocity=0;
   private rising=false;
+  networkState(){return [this.height,Number(this.active),this.level,this.target,this.hold,this.dash,this.velocity,Number(this.rising)];}
+  networkApply(v:number[]){this.height=v[0];this.active=!!v[1];this.level=v[2];this.target=v[3];this.hold=v[4];this.dash=v[5];this.velocity=v[6];this.rising=!!v[7];}
   get gliding() {return this.dash>0;}
   get atTop() {return this.height>=FLIGHT_HEIGHT-.08;}
   press() {

@@ -15,7 +15,7 @@ export function watchPlayerCount(label:HTMLElement,menu:HTMLElement,base:string)
   catch{label.textContent='— игроков';label.title='Сервер пока недоступен';}
   finally{busy=false;}
  };
- void refresh();const timer=window.setInterval(()=>void refresh(),15000);
+ void refresh();const timer=window.setInterval(()=>void refresh(),60000);
  const onVisible=()=>void refresh();document.addEventListener('visibilitychange',onVisible);
  return ()=>{clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
 }

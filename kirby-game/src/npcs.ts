@@ -116,6 +116,11 @@ export class KirbyNpc {
     this.duration += index * .13;
   }
 
+  networkLife(){return [this.health,this.downRemaining,this.flashRemaining,this.elapsed,this.duration,this.seed,this.turnStart,...this.flight.networkState()];}
+  networkApplyLife(v:number[]){[this.health,this.downRemaining,this.flashRemaining,this.elapsed,this.duration,this.seed,this.turnStart]=v;this.flight.networkApply(v.slice(7));
+    for(const [material,original] of this.originalColors){if(this.flashRemaining>0){material.color.set('#ff1824');material.emissive.set('#ff0000');material.emissiveIntensity=.65;}else{material.color.copy(original.color);material.emissive.copy(original.emissive);material.emissiveIntensity=original.intensity;}}
+  }
+  networkAnimate(state:string,dt:number){if(this.state!==state){if(this.actions.has(state))this.start(state);else this.state=state;}this.mixer.update(dt);if(this.isDown)this.groundFallenBody();}
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
 
   takeHit(): boolean {

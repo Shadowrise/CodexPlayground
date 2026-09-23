@@ -59,6 +59,7 @@ function makeFruit(kind: number) {
 }
 
 export class FruitWorld {
+  claim?: (index:number,eater:CharacterController|KirbyNpc)=>void;
   readonly group = new Group();
   readonly fruits: Fruit[] = [];
   private npcEaten = 0;
@@ -108,6 +109,7 @@ export class FruitWorld {
         if (d < distance) { nearest = fruit; distance = d; }
       }
       if (!nearest) continue;
+      if(this.claim){this.claim(this.fruits.indexOf(nearest),eater);this.pickupAfter.set(eater.actor,this.time+.45);continue;}
       nearest.eaten = true;
       nearest.object.visible = false;
       eater.grow();

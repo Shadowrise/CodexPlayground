@@ -208,3 +208,14 @@ button:disabled { cursor:default; }
 #task-list {flex:1 1 auto;min-height:0;max-height:none;overflow-anchor:none;}
 .task {position:relative;background:var(--ui-bg);}
 @media(max-width:760px){.right-hud{bottom:16px;max-height:none;}#task-list{max-height:none;}}
+
+.online-roster {position:fixed;bottom:80px;left:16px;max-width:min(540px,70vw);padding:9px 13px;border:1px solid #64768a;background:#142132e8;color:#ecf4ff;border-radius:12px;font-size:13px;z-index:15;pointer-events:none;}
+
+.host-badge {display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;flex:none;color:#8cebdd;background:#173d47;border:1px solid #579a9b;border-radius:8px;vertical-align:middle;pointer-events:auto;}
+.host-badge[hidden] {display:none;}
+.host-badge svg {width:20px;height:20px;}
+#player-avatar {position:relative;}
+#player-host-badge {position:absolute;left:-36px;top:50%;transform:translateY(-50%);box-shadow:0 2px 8px #0005;}
+.online-player {display:inline-flex;align-items:center;gap:5px;}
+.online-player .host-badge {width:21px;height:21px;border-radius:6px;}
+.online-player .host-badge svg {width:17px;height:17px;}

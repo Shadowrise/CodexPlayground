@@ -105,8 +105,12 @@ export class Balloons {
       this.balloons.push({group,flame,station:index,destination:index,time:0,phase:'parked',from:new T.Vector3(),start:group.position.clone(),end:group.position.clone(),wait:0,nextSound:0,scale:1});
     }
   }
+  networkBlocked=new Set<number>();
+  networkKey(position:T.Vector3){const b=this.balloons.find(b=>b.passenger instanceof CharacterController)??this.nearby(position);return b?'balloon:'+this.balloons.indexOf(b):undefined;}
+  networkState():(number|string)[][]{return this.balloons.map(b=>[b.time,b.phase,b.station,b.destination,b.wait,b.scale,...b.start.toArray(),...b.end.toArray(),...b.group.position.toArray(),b.passenger && !(b.passenger instanceof CharacterController)?b.passenger.index:-1]);}
+  networkApply(rows:(number|string)[][],npcs:readonly KirbyNpc[]){rows.forEach((v,i)=>{const b=this.balloons[i];if(!b||!v||b.passenger instanceof CharacterController)return;b.time=v[0] as number;b.phase=v[1] as Balloon['phase'];b.station=v[2] as number;b.destination=v[3] as number;b.wait=v[4] as number;b.scale=v[5] as number;b.start.fromArray(v.slice(6,9) as number[]);b.end.fromArray(v.slice(9,12) as number[]);b.group.position.fromArray(v.slice(12,15) as number[]);b.group.scale.setScalar(b.scale);b.passenger=npcs.find(n=>n.index===v[15]);});}
   outlineBalloon(position:T.Vector3){return this.nearby(position)?.group;}
-  private nearby(position:T.Vector3){return this.balloons.find(b=>b.phase==='parked' && b!==this.approach?.balloon && position.distanceTo(b.group.position)<5.5);}
+  private nearby(position:T.Vector3){return this.balloons.find(b=>b.phase==='parked' && !this.networkBlocked.has(this.balloons.indexOf(b)) && b!==this.approach?.balloon && position.distanceTo(b.group.position)<5.5);}
   prompt(position:T.Vector3){const riding=this.balloons.find(b=>b.passenger instanceof CharacterController);if(riding)return `Летим: ${BALLOON_SITES[riding.destination].name} · посадка автоматически`;const b=this.nearby(position);return b?'E — отправиться на воздушном шаре':'';}
   board(character:CharacterController){const b=this.nearby(character.actor.position);if(!b || this.riding || character.flight.active)return false;this.boardPassenger(b,character);return true;}
   private boardPassenger(b:Balloon,passenger:Passenger){
@@ -148,7 +152,7 @@ export class Balloons {
     }
     if(this.approach){
       const {npc,balloon:b,health}=this.approach;this.approach.elapsed+=dt;
-      if(npc.health!==health || npc.isDown || this.approach.elapsed>65 || b.phase!=='parked'){if(npc.state==='BalloonWalk')npc.endBalloon();this.approach=undefined;}
+      if(this.networkBlocked.has(this.balloons.indexOf(b)) || npc.health!==health || npc.isDown || this.approach.elapsed>65 || b.phase!=='parked'){if(npc.state==='BalloonWalk')npc.endBalloon();this.approach=undefined;}
       else {
         const delta=b.group.position.clone().sub(npc.actor.position);delta.y=0;const distance=delta.length();
         if(distance<3){this.boardPassenger(b,npc);this.approach=undefined;}
@@ -157,7 +161,7 @@ export class Balloons {
     }
     if(!this.approach && this.npcAfter<=0 && !this.balloons.some(b=>b.passenger && !(b.passenger instanceof CharacterController))){
       this.npcAfter=35+this.random()*25;
-      const candidates=this.balloons.filter(b=>b.phase==='parked' && (!player || player.actor.position.distanceTo(b.group.position)>12));
+      const candidates=this.balloons.filter(b=>b.phase==='parked' && !this.networkBlocked.has(this.balloons.indexOf(b)) && (!player || player.actor.position.distanceTo(b.group.position)>12));
       for(const b of candidates){const npc=[...npcs].filter(n=>n.canBoardBalloon && !this.owns(n) && n.actor.position.distanceTo(b.group.position)<100).sort((a,c)=>a.actor.position.distanceToSquared(b.group.position)-c.actor.position.distanceToSquared(b.group.position))[0];
         if(npc){npc.beginBalloon(true);this.approach={npc,balloon:b,health:npc.health,elapsed:0};break;}}
     }

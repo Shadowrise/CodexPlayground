@@ -20,8 +20,12 @@ export class NightFireflies {
   private safeGround=new T.Vector3();
   get riding(){return !!this.rider;}
   get fruitPickupPosition(){return this.rider && this.mount?.land && !this.moving && this.altitude<=.05 ? this.mount.carrier.position : undefined;}
+  networkBlocked=new Set<number>();
+  networkKey(c:CharacterController){const b=this.mount??this.nearby(c);return b?'bug:'+this.bugs.indexOf(b):undefined;}
+  networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land)]);}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount)return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.setMode(b.land?'Sit':'Fly');});}
   outlineBug(c:CharacterController){return !c.flight.active && !c.swimming ? this.nearby(c)?.firefly.object : undefined;}
-  private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
+  private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
   prompt(c:CharacterController){return this.riding?'E — слезть со светлячка':this.nearby(c)?'E — прокатиться на светлячке':'';}
   board(c:CharacterController){
     if(this.riding || c.flight.active || c.swimming)return false;
@@ -94,7 +98,7 @@ export class NightFireflies {
     const nearest=[...this.bugs].sort((a,b)=>a.carrier.position.distanceToSquared(camera)-b.carrier.position.distanceToSquared(camera));
     const detailed=new Set(nearest.slice(0,5));
     for(const bug of this.bugs){
-      if(bug!==this.mount){
+      if(bug!==this.mount && !this.networkBlocked.has(this.bugs.indexOf(bug))){
       bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,.65,4,dt));
       const cycle=((this.time+bug.phase)%32+32)%32,flying=cycle<23;
       const t=cycle/23,fade=Math.sin(Math.PI*Math.min(1,t));

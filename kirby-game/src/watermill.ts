@@ -197,6 +197,7 @@ export class Watermill {
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);
     this.splashes.frustumCulled=false;this.splashes.visible=false;root.add(this.splashes);
   }
+  networkRunning(value:boolean){this.running=value;}
   prompt(position:T.Vector3) {
     return position.distanceTo(MILL_LEVER)<4 ? (this.running?'E — закрыть шлюз мельницы':'E — открыть шлюз мельницы') : '';
   }
