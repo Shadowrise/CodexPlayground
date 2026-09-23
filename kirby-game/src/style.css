@@ -99,7 +99,6 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
 .stat-row .mini-kirby { flex:0 0 70px; isolation:isolate; }
 .player-stats strong { margin:0; font-variant-numeric:tabular-nums; }
 .stat-row #player-size { font-size:20px; color:var(--ui-accent); margin-left:auto; }
-.npc-avatar { border-top:1px solid var(--ui-border); }
 .npc-avatar .mini-feet::before, .npc-avatar .mini-feet::after { background:#195b39; }
 .fruit-remaining { display:flex; align-items:center; gap:12px; padding:12px 0 6px; border-top:1px solid var(--ui-border); }
 .fruit-remaining span { font-size:14px; font-weight:700; color:var(--ui-text); }
