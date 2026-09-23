@@ -139,6 +139,7 @@ export class Treehouse {
     this.leaves=new T.InstancedMesh(geo.leaf,new T.MeshStandardMaterial({color:'#e8ac43',side:T.DoubleSide}),64);
     this.leaves.visible=false;this.leaves.frustumCulled=false;root.add(this.leaves);
   }
+  get outlineSwing(){return this.swing;}
   prompt(position:T.Vector3) {
     if(this.rider)return this.activity==='deck'?'E — прыгнуть в листья · W/S — гулять · A/D — повернуться':this.activity==='swing'?'E — слезть с качелей':this.activity==='climb'?'Поднимаемся к домику…':'Прыжок в мягкие листья!';
     const p=position.clone().sub(TREEHOUSE_SITE);

@@ -1,3 +1,4 @@
+import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
 import { TaskList } from './tasks';
 import { awardFirst, scoreOf } from './score';
@@ -137,6 +138,7 @@ for (const variant of KIRBY_VARIANTS) {
   variantGrid.appendChild(button);
 }
 const scene = new THREE.Scene();
+const interactionOutline=new InteractionOutline();scene.add(interactionOutline.group);
 scene.background = new THREE.Color('#b3d9ef');
 scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 // A less extreme depth range keeps distant ground overlays from fighting at altitude.
@@ -454,22 +456,7 @@ renderer.setAnimationLoop((time: number) => {
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
-    const atStation=!!coaster.prompt(character);
-    if(pendingBoard) {
-      if(fireflies?.riding)fireflies.disembark();
-      else if(home.active)home.wake();
-      else if(!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && !trampoline.active && home.prompt(character.actor.position))home.start(character);
-      else if(trampoline.active){ /* Finish the landing before another interaction. */ }
-      else if(!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && trampoline.prompt(character))trampoline.start(character);
-      else if(coaster.riding)coaster.disembark();
-      else if(balloons.riding){ /* Remain safely in the basket until landing. */ }
-      else if(benches.active || ((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)))benches.interact(character);
-      else if(treehouse.active || treehouse.prompt(character.actor.position))treehouse.interact(character);
-      else if(watermill.prompt(character.actor.position)){watermill.interact(character.actor.position);awardFirst(character,'mill');}
-      else if(balloons.prompt(character.actor.position))balloons.board(character);
-      else if(atStation)coaster.board(character);
-      else fireflies?.board(character);
-    }
+    if(pendingBoard)resolveInteraction(character)?.run();
     if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote))sounds.playEmote(pendingEmote);
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
@@ -491,7 +478,9 @@ renderer.setAnimationLoop((time: number) => {
     ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
     fireflies?.syncRider(dt);
-    const interaction=(fireflies?.riding?fireflies.prompt(character):'') || home.prompt(character.actor.position) || trampoline.prompt(character).replace('Пробел — тоже прыгнуть',usingPad?'A — тоже прыгнуть':'Пробел — тоже прыгнуть') || balloons.prompt(character.actor.position) || (!coaster.riding && (((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)) || treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character) || fireflies?.prompt(character);
+    const availableInteraction=resolveInteraction(character);
+    const interaction=availableInteraction?.text;
+    interactionOutline.update(playing && !settingsOpen && !wheelUsed ? availableInteraction?.target : undefined);
     rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
@@ -575,3 +564,35 @@ window.addEventListener('resize', () => {
 
 
 
+
+function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
+  const p=c.actor.position;
+  const result=(text:string,run:()=>unknown,target?:OutlineTarget)=>({text,run,target});
+  const region=(key:unknown,root:THREE.Object3D,center:THREE.Vector3,size:number[])=>outlineRegion(key,root,center,new THREE.Vector3(...size));
+  const object=(root?:THREE.Object3D):OutlineTarget|undefined=>root?{key:root,root}:undefined;
+  if(fireflies?.riding)return result(fireflies.prompt(c),()=>fireflies?.disembark());
+  if(home.active)return result(home.prompt(p),()=>home.wake());
+  const free=!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && !trampoline.active;
+  if(free && home.prompt(p))return c.flight.active?undefined:result(home.prompt(p),()=>home.start(c),region(home,home.group,home.group.position.clone().add(new THREE.Vector3(0,1,-.6)),[4,2.2,5]));
+  if(trampoline.active)return result(trampoline.prompt(c),()=>{});
+  if(free && trampoline.prompt(c))return p.y>.5?undefined:result(trampoline.prompt(c),()=>trampoline.start(c),region(trampoline,trampoline.group,trampoline.position.clone().add(new THREE.Vector3(0,.5,0)),[4,2,4]));
+  if(coaster.riding)return result(coaster.prompt(c),()=>coaster.disembark());
+  if(balloons.riding)return result(balloons.prompt(p),()=>{});
+  if(benches.active)return result(benches.prompt(p),()=>benches.interact(c));
+  if((!treehouse.active || treehouse.canSit) && benches.prompt(p)){
+    if(c.flight.active)return;
+    const seat=benches.outlineSeat(p)!;
+    return result(benches.prompt(p),()=>benches.interact(c),region(seat,seat.floor>0?treehouse.group:scene,seat.position,[3.6,2.2,1.6]));
+  }
+  if(treehouse.active)return result(treehouse.prompt(p),()=>treehouse.interact(c));
+  if(treehouse.prompt(p)){
+    if(c.flight.active)return;
+    const swing=p.x-TREEHOUSE_SITE.x<-7;
+    return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,4.9,9.15)),[2.3,10.2,4.2]));
+  }
+  if(watermill.prompt(p))return result(watermill.prompt(p),()=>{watermill.interact(p);awardFirst(c,'mill');},object(watermill.handle));
+  if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));
+  if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
+  const bug=fireflies?.outlineBug(c);
+  if(bug)return result(fireflies!.prompt(c),()=>fireflies!.board(c),object(bug));
+}

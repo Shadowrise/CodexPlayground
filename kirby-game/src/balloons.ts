@@ -105,6 +105,7 @@ export class Balloons {
       this.balloons.push({group,flame,station:index,destination:index,time:0,phase:'parked',from:new T.Vector3(),start:group.position.clone(),end:group.position.clone(),wait:0,nextSound:0,scale:1});
     }
   }
+  outlineBalloon(position:T.Vector3){return this.nearby(position)?.group;}
   private nearby(position:T.Vector3){return this.balloons.find(b=>b.phase==='parked' && b!==this.approach?.balloon && position.distanceTo(b.group.position)<5.5);}
   prompt(position:T.Vector3){const riding=this.balloons.find(b=>b.passenger instanceof CharacterController);if(riding)return `Летим: ${BALLOON_SITES[riding.destination].name} · посадка автоматически`;const b=this.nearby(position);return b?'E — отправиться на воздушном шаре':'';}
   board(character:CharacterController){const b=this.nearby(character.actor.position);if(!b || this.riding || character.flight.active)return false;this.boardPassenger(b,character);return true;}

@@ -22,6 +22,7 @@ export class Benches {
   private startBlend=0;
   private blend=0;
   get active(){return !!this.rider;}
+  outlineSeat(position:Vector3){return this.nearby(position);}
   private nearby(position:Vector3) {
     return BENCH_SEATS.filter(seat=>Math.abs(position.y-seat.floor)<.5 && Math.hypot(position.x-seat.position.x,position.z-seat.position.z)<3)
       .sort((a,b)=>a.position.distanceToSquared(position)-b.position.distanceToSquared(position))[0];

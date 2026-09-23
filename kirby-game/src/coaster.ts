@@ -186,6 +186,7 @@ export class Coaster {
     const u=((distance/this.length)%1+1)%1,f=u*this.sampleCount,i=Math.floor(f);
     return {p:this.curve.getPointAt(u),q:this.frames[i].clone().slerp(this.frames[i+1],f-i)};
   }
+  outlineCart(player:CharacterController){return !this.riding && ['Idle','Run','WalkBackward'].includes(player.state) && this.prompt(player).startsWith('E —') ? this.carts.find(c=>c.wait>0 && !c.occupied)?.group : undefined;}
   prompt(player:CharacterController) {
     if(this.riding)return 'E — выйти из тележки в депо';
     if(player.actor.position.distanceTo(STATION)>12* Math.min(player.actor.scale.x,2))return '';
