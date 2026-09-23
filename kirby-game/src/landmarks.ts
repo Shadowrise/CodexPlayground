@@ -3,11 +3,9 @@ import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
 import { HOME_SITE } from './home-site';
 
-export const LANDMARKS = Array.from({length:25},(_,i) => ({
-  x: i===16 ? -45 : i===12 ? 32 : (i%5-2)*94 + Math.sin(i*8)*9,
-  z: i===16 ? 0 : i===12 ? 34 : (Math.floor(i/5)-2)*94 + Math.cos(i*5)*9,
-  kind: (i===12 ? 0 : i%6), radius: (i===12 || i%6===0) ? 25 : 15,
-}));
+import { LANDMARKS } from './landmark-sites';
+export { LANDMARKS } from './landmark-sites';
+import { WATER_Y, deckHeight } from './pond-layout';
 export function sceneryClearance(x:number,z:number,padding=0) {
   return Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
@@ -54,28 +52,23 @@ export function createLandmarks() {
   for(const site of LANDMARKS) {
     const g=new T.Group();g.position.set(site.x,0,site.z);root.add(g);
     if(site.kind===0) {
-      // Shallow decorative pond, an enclosed stream and a low arched boardwalk.
-      put(g,'ball','#b5a982',0,-.18,0,12,.28,8.5);
-      put(g,'ball','#51b7cc',0,-.12,0,11.3,.22,7.8);
-      for(let i=0;i<11;i++) {
-        const z=6+i*1.35,x=Math.sin(i*.45)*1.2;
-        put(g,'ball','#b5a982',x,-.09,z,2.4,.16,1.5);
-        put(g,'ball','#51b7cc',x,-.05,z,1.8,.14,1.45);
-      }
       for(let i=0;i<36;i++) {const a=i*Math.PI*2/36;rock(g,Math.cos(a)*11.8,Math.sin(a)*8.2,.4+(i%4)*.12);}
-      for(let i=0;i<18;i++) {
-        const x=(i-8.5)*.36,y=.22+.28*Math.cos(x/3.5*Math.PI/2);
-        put(g,'box','#a37a4c',x,y,12,.33,.14,2.6);
+      for(let i=0;i<50;i++) {
+        const x=(i-24.5)*.2,y=deckHeight(x);
+        put(g,'box',i%3?'#a37a4c':'#be9662',x,y-.08,12,.19,.16,2.6,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
+        for(const z of [10.58,13.42])put(g,'box','#bd935f',x,y+1.08,z,.22,.1,.1,0,0,Math.atan((deckHeight(x+.02)-deckHeight(x-.02))/.04));
       }
-      for(const z of [10.55,13.45]) {
-        for(const x of [-3,-1.5,0,1.5,3]) put(g,'pole','#77553b',x,.9,z,.07,1.65,.07);
-        put(g,'box','#bd935f',0,1.65,z,6.5,.09,.09);
+      for(const z of [10.58,13.42])for(let i=0;i<=10;i++){
+        const x=i-5,y=deckHeight(x);
+        put(g,'pole','#77553b',x,y+.45,z,.075,1.2,.075);
+        put(g,'ball','#d8b77a',x,y+1.13,z,.12,.08,.12);
+        if(i%2===0)put(g,'pole','#634d38',x,(y-.8)/2,z,.1,y+.8,.1);
       }
       for(let i=0;i<8;i++) {
         const a=i*2.4,x=Math.cos(a)*7,z=Math.sin(a)*4;
-        put(g,'ball','#4b8c53',x,.12,z,.7,.055,.55);
-        for(let j=0;j<5;j++) {const b=j*1.256;put(g,'ball','#f4b6ca',x+Math.cos(b)*.16,.23,z+Math.sin(b)*.16,.2,.12,.1,0,-b);}
-        put(g,'ring','#95d8d6',x,.12,z,1.1,1.1,1.1,Math.PI/2);
+        put(g,'ball','#4b8c53',x,WATER_Y+.025,z,.7,.055,.55);
+        for(let j=0;j<5;j++) {const b=j*1.256;put(g,'ball','#f4b6ca',x+Math.cos(b)*.16,WATER_Y+.14,z+Math.sin(b)*.16,.2,.12,.1,0,-b);}
+        put(g,'ring','#95d8d6',x,WATER_Y+.015,z,1.1,1.1,1.1,Math.PI/2);
       }
       for(let i=0;i<24;i++) {const a=i*.8,x=Math.cos(a)*12.3,z=Math.sin(a)*8.6,h=1.1+i%4*.2;
         put(g,'pole','#5b7846',x,h/2,z,.035,h,.035);put(g,'pole','#795535',x,h,z,.09,.35,.09);}

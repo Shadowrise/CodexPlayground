@@ -60,7 +60,8 @@ function advance(c: CharacterController, seconds: number, input = idle) {
 }
 test('actual GLB loads and forward movement uses Run', async () => {
   const c = await create();
-  assert.equal(c.actions.size, 10);
+  assert.equal(c.actions.size, 11);
+  assert(c.actions.has('Swim'));
   advance(c, 1, { ...idle, forward: true });
   assert.equal(c.state, 'Run');
   assert(Math.abs(c.actor.position.z - c.speed) < 1e-6);

@@ -1,3 +1,5 @@
+import { meadowGeometry } from './pond-layout';
+import { TessellateModifier } from 'three/addons/modifiers/TessellateModifier.js';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H } from './world-bounds';
 import { outsideLandmarks } from './landmarks';
@@ -107,7 +109,7 @@ export function createForest() {
     forest.add(spatialInstances(mesh));
   }
   // Soft ground-color transitions make regions readable without square seams.
-  const ground=new THREE.PlaneGeometry(H*2,H*2,100,100); ground.rotateX(-Math.PI/2);
+  const ground=new TessellateModifier(14,8).modify(meadowGeometry(H)); ground.rotateX(-Math.PI/2);
   const pos=ground.getAttribute('position'), colors=[];
   const sw=new THREE.Color('#a9b95e'),se=new THREE.Color('#9fc767');
   const nw=new THREE.Color('#72976c'),ne=new THREE.Color('#b7ca79');

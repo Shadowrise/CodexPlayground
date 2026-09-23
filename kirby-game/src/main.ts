@@ -1,3 +1,5 @@
+import { Ponds } from './ponds';
+import { meadowGeometry } from './pond-layout';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
@@ -132,12 +134,13 @@ function setupShadowMaterials() {
 }
 const updateSky = createSky(scene);
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry((MEADOW_HALF_SIZE + MOUNTAIN_WIDTH) * 2, (MEADOW_HALF_SIZE + MOUNTAIN_WIDTH) * 2), new THREE.MeshStandardMaterial({ color: '#80b654', roughness: 1 }));
+const ground = new THREE.Mesh(meadowGeometry(MEADOW_HALF_SIZE + MOUNTAIN_WIDTH), new THREE.MeshStandardMaterial({ color: '#80b654', roughness: 1 }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -.02;
 ground.receiveShadow = true;
 scene.add(ground);
 addEnvironment(scene);
+const ponds=new Ponds();scene.add(ponds.group);
 const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
@@ -358,6 +361,7 @@ renderer.setAnimationLoop((time: number) => {
       maze.constrain(character.actor.position,character.actor.scale.x,new THREE.Vector3(previousX,0,previousZ));
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
     }
+    ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
     const interaction=home.prompt(character.actor.position) || trampoline.prompt(character).replace('Пробел — тоже прыгнуть',usingPad?'A — тоже прыгнуть':'Пробел — тоже прыгнуть') || balloons.prompt(character.actor.position) || (!coaster.riding && (((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)) || treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character);
     rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : `Лабиринт ${Math.round(Math.hypot(character.actor.position.x-MAZE_SITE.x,character.actor.position.z-MAZE_SITE.z))} м | Шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
@@ -372,7 +376,7 @@ renderer.setAnimationLoop((time: number) => {
     const position = character.actor.position;
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
-    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({Balloon:'Летим на воздушном шаре',Sitting:'Отдыхаем на лавочке',Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
+    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({Swim:'Плывём в круге',Balloon:'Летим на воздушном шаре',Sitting:'Отдыхаем на лавочке',Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
     if(character.starRemaining>0)status.textContent+=` · ★ ×2: ${Math.ceil(character.starRemaining)} с`;
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
@@ -419,6 +423,7 @@ renderer.setAnimationLoop((time: number) => {
   renderer.toneMappingExposure=night?1:1.2;
   updateSky(dt,camera,night);fireflies?.update(dt,night,camera.position);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
+  ponds.update(dt);
   watermill.update(dt);
   renderer.render(scene, camera);
 });

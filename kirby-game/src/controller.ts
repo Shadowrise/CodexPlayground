@@ -10,6 +10,8 @@ export class CharacterController {
   readonly mixer: AnimationMixer;
   readonly actions = new Map<string, AnimationAction>();
   state = 'Idle';
+  swimming = false;
+  surfaceY = 0;
   yaw = 0;
   private active?: AnimationAction;
   private turn?: Turn;
@@ -70,6 +72,9 @@ export class CharacterController {
     for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Attack', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
+    const swim=flightClip(clips.find(c=>c.name==='Idle')!,model,'Swim');
+    swim.duration*=3;for(const track of swim.tracks)for(let i=0;i<track.times.length;i++)track.times[i]*=3;
+    this.actions.set('Swim',this.mixer.clipAction(swim));
     this.play('Idle');
   }
 
@@ -87,6 +92,7 @@ export class CharacterController {
   }
 
   private locomotion(input: Input) {
+    if(this.swimming)return 'Swim';
     if (input.forward === !!input.backward) return 'Idle';
     return input.forward ? 'Run' : 'WalkBackward';
   }
@@ -99,6 +105,7 @@ export class CharacterController {
   }
 
   private move(dt: number, input: Input, factor = 1) {
+    if(this.swimming)factor*=.55;
     const direction = Number(input.forward) - Number(!!input.backward);
     const speed = direction > 0 ? this.speed * (input.sprint ? 2 : 1) : this.backwardSpeed;
     this.actor.position.x += Math.sin(this.yaw) * speed * direction * dt * factor;
@@ -168,7 +175,7 @@ export class CharacterController {
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
-      this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x*this.flightBoost;
+      this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x*this.flightBoost;
       updateFlightCloud(this.cloud,this.flight);
       this.mixer.update(dt);
       if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
