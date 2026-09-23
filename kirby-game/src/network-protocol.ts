@@ -1,7 +1,7 @@
 import {validAchievements} from './score';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-1';
+export const BUILD='meadow-network-2';
 export type ActorState={p:number[];q:number[];s:number;state:string;pose:number[][];fruits:number;achievements:string[];name:string;variant:number;star:number;ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][]};
 export type Event={type:'fruit';index:number;npc?:number}|{type:'mill'}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string}|{type:'hit'}|{type:'visible';value:boolean};
@@ -21,5 +21,5 @@ export function validWorld(v:unknown):v is WorldState{
  const w=v as WorldState;
  const rows=(a:unknown,count:number,length:number)=>Array.isArray(a)&&a.length===count&&a.every(r=>Array.isArray(r)&&r.length===length&&r.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e10));
  const balloons=Array.isArray(w?.balloons)&&w.balloons.length===3&&w.balloons.every(r=>Array.isArray(r)&&r.length===16&&['parked','boarding','flying','exiting'].includes(r[1] as string)&&r.every((x,i)=>i===1||typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e7));
- return !!w&&Array.isArray(w.npcs)&&w.npcs.length===14&&w.npcs.every(validActor)&&rows(w.npcLife,14,15)&&rows(w.carts,12,4)&&balloons&&rows(w.bugs,40,9)&&JSON.stringify(w).length<12500;
+ return !!w&&Array.isArray(w.npcs)&&w.npcs.length===14&&w.npcs.every(validActor)&&rows(w.npcLife,14,15)&&rows(w.carts,12,4)&&balloons&&rows(w.bugs,40,10)&&JSON.stringify(w).length<12500;
 }

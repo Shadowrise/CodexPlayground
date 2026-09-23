@@ -1,12 +1,12 @@
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
 const MAX_PLAYERS=14,ROOM_NAME='main';
-type Attachment={id:string;seen:number;visible:boolean;actor?:ActorState;room?:RoomState;lastHit?:number;lastFrame?:number;window?:number;count?:number};
+type Attachment={id:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;lastHit?:number;lastFrame?:number;window?:number;count?:number};
 export class GameRoom extends DurableObject<Env>{
  private room?:RoomState;
  constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN);}
- info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,protocolVersion:PROTOCOL};}
+ info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private send(s:WebSocket,v:unknown){try{s.send(JSON.stringify(v));}catch{}}
  private broadcast(v:unknown,except?:WebSocket){for(const s of this.players())if(s!==except)this.send(s,v);}
  private persist(){if(!this.room)return;for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a.id===this.room.host){a.room=this.room;s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}}
@@ -15,9 +15,12 @@ export class GameRoom extends DurableObject<Env>{
   if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
   const url=new URL(request.url);if(url.searchParams.get('build')!==BUILD)return new Response('Refresh game client',{status:409});
   if(this.players().length>=MAX_PLAYERS)return Response.json({error:'ROOM_FULL'},{status:503});
+  const variant=Number(url.searchParams.get('variant'));
+  if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=15)return new Response('Invalid variant',{status:400});
+  if(this.players().some(s=>(s.deserializeAttachment() as Attachment).variant===variant)){const [client,server]=Object.values(new WebSocketPair());server.accept();this.send(server,{type:'error',message:'Этот цвет уже занят. Выбери другого Кирби.'});server.close(1008,'Color occupied');return new Response(null,{status:101,webSocket:client});}
   const id=crypto.randomUUID(),first=this.players().length===0;
   if(first)this.room={id:crypto.randomUUID(),host:id,epoch:Date.now(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
-  const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);server.serializeAttachment({id,seen:Date.now(),visible:true} satisfies Attachment);
+  const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);server.serializeAttachment({id,seen:Date.now(),visible:true,variant} satisfies Attachment);
   this.persist();this.send(server,{type:'welcome',protocolVersion:PROTOCOL,playerId:id,room:this.room,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,actor:a.actor};})});
   if(first)await this.ctx.storage.setAlarm(Date.now()+30000);
   return new Response(null,{status:101,webSocket:client});
@@ -28,7 +31,7 @@ export class GameRoom extends DurableObject<Env>{
   const a=socket.deserializeAttachment() as Attachment,r=this.room;if(!r||m?.type!=='frame')return;
   const now=Date.now();if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined;
-  if(validActor(m.actor)){actor=m.actor as ActorState;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
+  if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){world=m.world;r.world=world;}
   socket.serializeAttachment(a);
   let changed=false;

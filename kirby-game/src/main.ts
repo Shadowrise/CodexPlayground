@@ -51,7 +51,7 @@ const sizeValue = document.querySelector<HTMLElement>('#player-size')!;
 const fruitValue = document.querySelector<HTMLElement>('#player-fruits')!;
 const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
 const playerStatsRow=document.querySelector<HTMLElement>('#player-avatar')!;
-const playerHostBadge=createHostBadge();playerHostBadge.id='player-host-badge';playerHostBadge.hidden=true;playerStatsRow.prepend(playerHostBadge);
+const playerHostBadge=createHostBadge();playerHostBadge.id='player-host-badge';playerHostBadge.hidden=true;playerStatsRow.append(playerHostBadge);
 const npcStatsRow=document.querySelector<HTMLElement>('.npc-avatar')!;
 const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-fruits')!;
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
@@ -95,6 +95,7 @@ let worldRevision=-1,knownFruits=new Set<number>(),heldResource:string|undefined
 let lastStarRequest=0;
 const appliedRides=new Map<string,ActorState>();
 let rosterSignature='';
+const remoteStatRows=new Map<string,HTMLElement>();
 const serverUrl=import.meta.env.VITE_GAME_SERVER_URL || (import.meta.env.DEV?'http://127.0.0.1:8787':'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=false;
 startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>Добро пожаловать!</h2>';
@@ -105,8 +106,8 @@ startupCard.append(nameField,soloSection,networkSection);
 watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,serverUrl);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
-newGameButton.addEventListener('click',()=>{networkIntent=false;mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
-networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
+newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
 const leaveOnline=document.createElement('button');leaveOnline.textContent='Выйти из сетевой игры';leaveOnline.hidden=true;audioPanel.append(leaveOnline);
 leaveOnline.addEventListener('click',()=>{network?.close();location.reload();});
 window.addEventListener('pagehide',()=>network?.close());
@@ -154,6 +155,17 @@ for (const variant of KIRBY_VARIANTS) {
   });
   variantGrid.appendChild(button);
 }
+function resetVariantAvailability(){variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach(b=>{b.disabled=false;b.title='';});}
+let checkingVariants=false;
+async function refreshVariantAvailability(){
+ if(!networkIntent||playing||selectionCard.hidden||checkingVariants)return;
+ checkingVariants=true;
+ try{const response=await fetch(`${serverUrl.replace(/\/$/,'')}/room`,{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const room=await response.json();if(!networkIntent||!Array.isArray(room.occupiedVariants))return;
+ const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.title=b.disabled?'Этот цвет уже занят':'';});
+ if(buttons[KIRBY_VARIANTS.indexOf(selected)].disabled)buttons.find(b=>!b.disabled)?.click();
+ }catch{}finally{checkingVariants=false;}
+}
+setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
 const scene = new THREE.Scene();
 const interactionOutline=new InteractionOutline();scene.add(interactionOutline.group);
 scene.background = new THREE.Color('#b3d9ef');
@@ -377,8 +389,8 @@ startButton.addEventListener('click', async () => {
   if(networkIntent){
     startButton.disabled=true;startButton.textContent='Подключаемся…';
     const session=new NetworkSession();
-    try{await session.connect(serverUrl);network=session;}
-    catch(error){session.close();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
+    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected));network=session;}
+    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
   }
   const { scene: template, animations } = loadedModel;
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
@@ -406,10 +418,10 @@ startButton.addEventListener('click', async () => {
   document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
-    remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=false;
+    remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
-    network.onDisconnect=reason=>{playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onDisconnect=reason=>{playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onStar=()=>{if(character){awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
     network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
   }
@@ -572,7 +584,7 @@ renderer.setAnimationLoop((time: number) => {
     document.querySelector<HTMLElement>('#player-place')!.textContent=`${1+Number(teamPoints>playerPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>playerPoints).length:0)}.`;
     document.querySelector<HTMLElement>('#npc-place')!.textContent=`${1+Number(playerPoints>teamPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>teamPoints).length:0)}.`;
     const [leader,runnerUp]=teamPoints>playerPoints?[npcStatsRow,playerStatsRow]:[playerStatsRow,npcStatsRow];
-    if(leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
+    if(!network && leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
@@ -694,15 +706,23 @@ function updateNetwork(dt:number){
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld);
  playerHostBadge.hidden=!network.host;
- const entries=[{id:network.id,name:a.name,points:scoreOf(character)},...Array.from(network.actors,([id,a])=>({id,name:a.name,points:a.fruits+a.achievements.length*3}))].sort((a,b)=>b.points-a.points);
- const signature=JSON.stringify([network.room.host,entries]);
+ const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+actor.achievements.length*3}))];
+ const teamPoints=npcs.reduce((sum,n)=>sum+scoreOf(n),0);
+ const signature=JSON.stringify([network.room.host,entries.map(e=>[e.id,e.actor.name,e.actor.variant,e.actor.s,e.points]),teamPoints]);
  if(rosterSignature!==signature){
-  rosterSignature=signature;onlineRoster.replaceChildren(document.createTextNode('Онлайн: '+entries.length+' · '));
-  entries.forEach((entry,i)=>{
-   if(i)onlineRoster.append(document.createTextNode(' · '));
-   const row=document.createElement('span');row.className='online-player';row.dataset.playerId=entry.id;
-   if(entry.id===network!.room.host)row.append(createHostBadge());
-   row.append(document.createTextNode(`${1+entries.filter(other=>other.points>entry.points).length}. ${entry.name}: ${entry.points}`));onlineRoster.append(row);
+  rosterSignature=signature;
+  for(const [id,row] of remoteStatRows)if(!network.actors.has(id)){row.remove();remoteStatRows.delete(id);}
+  const rows=entries.map(entry=>{
+   let row=entry.id===network!.id?playerStatsRow:remoteStatRows.get(entry.id);
+   if(!row){row=playerStatsRow.cloneNode(true) as HTMLElement;row.removeAttribute('id');row.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));row.classList.add('remote-stat-row');row.dataset.playerId=entry.id;remoteStatRows.set(entry.id,row);}
+   row.style.setProperty('--kirby-color',KIRBY_VARIANTS[entry.actor.variant][1]);
+   row.querySelector('.stat-name')!.textContent=entry.actor.name;
+   const values=row.querySelectorAll('strong');values[0].textContent=String(entry.points);values[1].textContent=`${Math.round(entry.actor.s*100)}%`;
+   row.querySelector<HTMLElement>('.host-badge')!.hidden=entry.id!==network!.room.host;
+   return {row,points:entry.points};
   });
+  rows.push({row:npcStatsRow,points:teamPoints});rows.sort((a,b)=>b.points-a.points);
+  const parent=playerStatsRow.parentElement!,anchor=parent.querySelector('.fruit-remaining');
+  for(const entry of rows){entry.row.querySelector('.score-place')!.textContent=`${1+rows.filter(r=>r.points>entry.points).length}.`;parent.insertBefore(entry.row,anchor);}
  }
 }

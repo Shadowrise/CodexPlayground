@@ -21,6 +21,7 @@ test('actual world fits the shared wire contract and attachment budget',async()=
  assert(!validWorld({...w,npcLife:[[]]}));assert(!validActor({...w.npcs[0],p:[Infinity,0,0]}));
  coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies.networkApply(w.bugs);
  assert.deepEqual(round(coaster.networkState()),w.carts);
+ w.bugs[0][9]=3.6;fireflies.networkApply(w.bugs);assert.equal(fireflies.networkState()[0][9],3.6);
 });
 
 test('malformed peer payloads fail validation without throwing',()=>{

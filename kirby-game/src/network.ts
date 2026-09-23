@@ -5,11 +5,12 @@ export class NetworkSession{
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
  get host(){return this.room?.host===this.id;}
- async connect(base:string){return new Promise<void>((resolve,reject)=>{
-  const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);
+ async connect(base:string,variant=0){return new Promise<void>((resolve,reject)=>{
+  const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);url.searchParams.set('variant',String(variant));
   const s=this.socket=new WebSocket(url),timeout=setTimeout(()=>{s.close();reject(Error('Сервер не ответил. Попробуй подключиться ещё раз.'));},12000);
   s.onmessage=e=>{if(e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
    if(m.type==='welcome'){if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.room=m.room;this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.actors.set(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
+   else if(m.type==='error'){clearTimeout(timeout);reject(Error(m.message));}
    else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.actors.set(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}}
    else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=m.room;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
    else if(m.type==='left')this.actors.delete(m.id);

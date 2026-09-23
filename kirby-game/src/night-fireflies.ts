@@ -22,8 +22,8 @@ export class NightFireflies {
   get fruitPickupPosition(){return this.rider && this.mount?.land && !this.moving && this.altitude<=.05 ? this.mount.carrier.position : undefined;}
   networkBlocked=new Set<number>();
   networkKey(c:CharacterController){const b=this.mount??this.nearby(c);return b?'bug:'+this.bugs.indexOf(b):undefined;}
-  networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land)]);}
-  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount)return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.setMode(b.land?'Sit':'Fly');});}
+  networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land),b.firefly.object.scale.x]);}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount)return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.object.scale.setScalar(v[9]??.65);b.firefly.setMode(b.land?'Sit':'Fly');});}
   outlineBug(c:CharacterController){return !c.flight.active && !c.swimming ? this.nearby(c)?.firefly.object : undefined;}
   private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
   prompt(c:CharacterController){return this.riding?'E — слезть со светлячка':this.nearby(c)?'E — прокатиться на светлячке':'';}
@@ -107,7 +107,7 @@ export class NightFireflies {
       if(bug.land===flying){bug.firefly.setMode(flying?'Fly':'Sit');bug.land=!flying;}
       }
       const flying=!bug.land;
-      const visible=bug===this.mount || detailed.has(bug)&&bug.carrier.position.distanceTo(camera)<42;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
+      const visible=bug===this.mount || this.networkBlocked.has(this.bugs.indexOf(bug)) || detailed.has(bug)&&bug.carrier.position.distanceTo(camera)<42;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
       // Keep the light on the luminous rear end even when the detailed mesh is culled.
       bug.carrier.updateWorldMatrix(true,false);bug.lightPosition.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65).applyMatrix4(bug.carrier.matrixWorld);
       bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.65+.15*Math.sin(this.time*2+bug.phase);

@@ -22,12 +22,12 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
  }else {c.networkAnimate(a.state,dt);updateFlightCloud(c.cloud,c.flight);}
 }
 export class RemotePlayers{
- readonly players=new Map<string,CharacterController>();private labels=new Map<string,T.Sprite>();
+ readonly players=new Map<string,CharacterController>();
  constructor(private scene:T.Scene,private model:GLTF){}
  update(actors:Map<string,ActorState>,dt:number){
-  for(const [id,c] of this.players)if(!actors.has(id)){this.scene.remove(c.actor);const label=this.labels.get(id);label?.material.map?.dispose();label?.material.dispose();c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});this.players.delete(id);this.labels.delete(id);}
+  for(const [id,c] of this.players)if(!actors.has(id)){this.scene.remove(c.actor);c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});this.players.delete(id);}
   for(const [id,a] of actors){let c=this.players.get(id);const fresh=!c;if(!c){c=new CharacterController(cloneVariant(this.model.scene,KIRBY_VARIANTS[a.variant],false),this.model.animations);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;ring.position.y=.55;c.actor.add(ring);
-   const canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;const ctx=canvas.getContext('2d')!;ctx.fillStyle='#101a28cc';ctx.fillRect(0,0,512,96);ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.fillStyle=KIRBY_VARIANTS[a.variant][1];ctx.fillText(a.name,256,63,490);const label=new T.Sprite(new T.SpriteMaterial({map:new T.CanvasTexture(canvas),depthWrite:false}));label.position.y=3;label.scale.set(3.4,.64,1);c.actor.add(label);this.labels.set(id,label);
+
   }applyActor(c,a,dt,fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}
  }
 }

@@ -219,3 +219,12 @@ button:disabled { cursor:default; }
 .online-player {display:inline-flex;align-items:center;gap:5px;}
 .online-player .host-badge {width:21px;height:21px;border-radius:6px;}
 .online-player .host-badge svg {width:17px;height:17px;}
+
+/* Shared standings: reserve a full column for the world host indicator. */
+.stat-row {grid-template-columns:3ch 90px 70px minmax(4ch,1fr) 6ch 28px;}
+.stat-row .host-badge,#player-host-badge {position:static;transform:none;grid-column:6;grid-row:1;}
+.remote-stat-row strong:last-of-type {font-size:20px;color:var(--ui-accent);}
+.remote-stat-row .stat-name {color:var(--kirby-color);}
+.player-stats {overflow-y:auto;max-height:48vh;}
+.variant-button:disabled {opacity:.35;cursor:not-allowed;}
+@media(max-width:520px){.stat-row{grid-template-columns:2ch 60px 54px minmax(3ch,1fr) 5ch 26px;gap:6px;}}
