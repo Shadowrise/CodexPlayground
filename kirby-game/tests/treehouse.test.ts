@@ -12,13 +12,14 @@ test('climb, explore, leap into leaves and recover normal controls without losin
   const sounds:TreehouseSound[]=[],house=new Treehouse(kind=>sounds.push(kind)),c=await character();
   c.actor.scale.setScalar(1.5);c.actor.position.copy(TREEHOUSE_SITE).add(new Vector3(-4,0,11));
   assert(house.prompt(c.actor.position));house.interact(c);assert(house.active);
-  for(let i=0;i<220;i++)house.update(1/60);
-  assert.equal(c.state,'Lookout');assert.equal(c.actor.position.y,9);
+  for(let i=0;i<320;i++)house.update(1/60);
+  assert.equal(c.state,'Lookout');assert.equal(c.actor.position.y,18);
   for(let i=0;i<600;i++)house.update(1/60,{...idle,forward:true});
   assert(c.actor.position.z>=TREEHOUSE_SITE.z+2.5 && c.actor.position.z<=TREEHOUSE_SITE.z+7);
   house.update(1/60,idle,true);assert.equal(c.state,'LeafDive');
-  for(let i=0;i<150;i++)house.update(1/60);
+  for(let i=0;i<180;i++)house.update(1/60);
   assert(!house.active);assert.equal(c.actor.position.y,0);assert.equal(c.actor.scale.x,1.5);
+  assert.equal(c.actor.position.x,TREEHOUSE_SITE.x+8);assert.equal(c.actor.position.z,TREEHOUSE_SITE.z+13);
   assert.equal(c.state,'Idle');assert.equal(c.animationRoot.scale.y,1);
   assert(sounds.includes('ladder') && sounds.includes('leaves') && sounds.includes('cheer'));
   const z=c.actor.position.z;c.update(.1,{...idle,forward:true});assert(c.actor.position.z>z);

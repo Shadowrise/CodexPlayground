@@ -18,7 +18,7 @@ import { FruitWorld } from './fruits';
 import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
 import { Watermill, MILL_LEVER } from './watermill';
-import { Treehouse, TREEHOUSE_SITE } from './treehouse';
+import { Treehouse, TREEHOUSE_SITE, TREEHOUSE_HEIGHT_SCALE } from './treehouse';
 import { Benches } from './benches';
 import { Balloons } from './balloons';
 import { HedgeMaze } from './maze';
@@ -586,13 +586,13 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if((!treehouse.active || treehouse.canSit) && benches.prompt(p)){
     if(c.flight.active)return;
     const seat=benches.outlineSeat(p)!;
-    return result(benches.prompt(p),()=>benches.interact(c),region(seat,seat.floor>0?treehouse.group:scene,seat.position,[3.6,2.2,1.6]));
+    return result(benches.prompt(p),()=>benches.interact(c),region(seat,seat.floor>0?treehouse.group:scene,seat.position,[3.6,seat.floor>0?2.2*TREEHOUSE_HEIGHT_SCALE:2.2,1.6]));
   }
   if(treehouse.active)return result(treehouse.prompt(p),()=>treehouse.interact(c));
   if(treehouse.prompt(p)){
     if(c.flight.active)return;
     const swing=p.x-TREEHOUSE_SITE.x<-7;
-    return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,4.9,9.15)),[2.3,10.2,4.2]));
+    return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,4.9*TREEHOUSE_HEIGHT_SCALE,9.15)),[2.3,10.2*TREEHOUSE_HEIGHT_SCALE,4.2]));
   }
   if(watermill.prompt(p))return result(watermill.prompt(p),()=>{watermill.interact(p);awardFirst(c,'mill');},object(watermill.handle));
   if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));

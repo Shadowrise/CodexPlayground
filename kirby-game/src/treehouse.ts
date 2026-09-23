@@ -1,3 +1,4 @@
+import { LeafPile } from './leaf-pile';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
@@ -5,6 +6,7 @@ import type { CharacterController, Input } from './controller';
 export const TREEHOUSE_SITE=new T.Vector3(135,0,45);
 export type TreehouseSound='ladder'|'creak'|'leaves'|'cheer';
 type Activity='climb'|'deck'|'dive'|'land'|'swing';
+export const TREEHOUSE_HEIGHT_SCALE=2;
 const DECK=9;
 const idle={forward:false,left:false,right:false};
 
@@ -18,14 +20,12 @@ export class Treehouse {
   private clock=0;
   private soundAfter=0;
   private from=new T.Vector3();
-  private leaves:T.InstancedMesh;
-  private burstTime=10;
-  private dummy=new T.Object3D();
+  private leafPile=new LeafPile();
   private swingAngle=0;
   get active(){return !!this.rider;}
   get canSit(){return !!this.rider && this.activity==='deck';}
   constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
-    const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
+    const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);root.scale.y=TREEHOUSE_HEIGHT_SCALE;
     const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,16,10),pole:new T.CylinderGeometry(1,1,1,12),leaf:new T.SphereGeometry(1,6,4)};
     const mats=new Map<string,T.MeshStandardMaterial>();
     const part=(parent:T.Group,kind:keyof typeof geo,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>{
@@ -119,12 +119,9 @@ export class Treehouse {
     for(const x of [-1.45,1.45])beam([x,0,0],[x,-5.7,0],.043,'#d2ba83',this.swing);
     for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,-5.7,-.65+i*.32,3.3,.18,.28);
     for(const x of [-1.45,1.45])part(this.swing,'ball','#dec997',x,-5.68,0,.12,.12,.12);
-    // Thick golden leaf bed and scattered individually coloured leaves.
-    part(root,'ball','#a87430',8,.35,13,4.5,.7,4);
-    for(let i=0;i<330;i++){
-      const a=i*2.399,r=Math.sqrt((i+.5)/330),x=8+Math.cos(a)*4.4*r,z=13+Math.sin(a)*3.9*r;
-      part(root,'leaf',['#d89f39','#b96431','#ebbc52','#bc8130','#8c7535'][i%5],x,.2+.8*(1-r*r),z,.27,.06,.14,Math.sin(i)*.4,i,.25);
-    }
+    this.leafPile.group.position.set(8,0,13);
+    this.leafPile.group.scale.y=1/TREEHOUSE_HEIGHT_SCALE;
+    root.add(this.leafPile.group);
     for(let i=0;i<16;i++)part(root,'ball','#adab91',-4+Math.sin(i*.7)*.3,.045,12+i*.42,.85,.07,.3);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');
@@ -136,8 +133,7 @@ export class Treehouse {
       for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
       for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}
     }
-    this.leaves=new T.InstancedMesh(geo.leaf,new T.MeshStandardMaterial({color:'#e8ac43',side:T.DoubleSide}),64);
-    this.leaves.visible=false;this.leaves.frustumCulled=false;root.add(this.leaves);
+
   }
   get outlineSwing(){return this.swing;}
   prompt(position:T.Vector3) {
@@ -156,28 +152,21 @@ export class Treehouse {
     character.setActivity(this.activity==='climb'?'Climb':'Swing');
   }
   private dive(){this.activity='dive';this.elapsed=0;this.from.copy(this.rider!.actor.position);this.rider!.setActivity('LeafDive');this.sound('cheer');}
-  private finish(){const c=this.rider!;c.actor.position.copy(TREEHOUSE_SITE).add(new T.Vector3(this.activity==='swing'?-11:8,0,this.activity==='swing'?9:18));c.actor.rotation.set(0,0,0);c.yaw=0;c.setActivity('Idle');this.rider=undefined;}
+  private finish(){const c=this.rider!;c.actor.position.copy(TREEHOUSE_SITE).add(new T.Vector3(this.activity==='swing'?-11:8,0,this.activity==='swing'?9:13));c.actor.rotation.set(0,0,0);c.yaw=0;c.setActivity('Idle');this.rider=undefined;}
   constrain(position:T.Vector3,size:number){const dx=position.x-TREEHOUSE_SITE.x,dz=position.z-(TREEHOUSE_SITE.z-6),r=2.4+.65*size,d=Math.hypot(dx,dz);if(d<r){position.x=TREEHOUSE_SITE.x+(d>.001?dx/d:1)*r;position.z=TREEHOUSE_SITE.z-6+(d>.001?dz/d:0)*r;}}
   update(dt:number,input:Input=idle,jump=false) {
-    this.clock+=dt;this.burstTime+=dt;this.elapsed+=dt;
+    this.clock+=dt;this.leafPile.update(dt);this.elapsed+=dt;
     const swinging=this.rider && this.activity==='swing';
     this.swingAngle=T.MathUtils.damp(this.swingAngle,Math.sin(this.clock*1.65)*(swinging?.55:.07),4,dt);this.swing.rotation.x=this.swingAngle;
-    this.leaves.visible=this.burstTime<2;
-    if(this.leaves.visible)for(let i=0;i<64;i++){
-      const t=this.burstTime,a=i*2.399,speed=1+i%5*.4;
-      this.dummy.position.set(8+Math.cos(a)*(1+t*speed),Math.max(.12,.8+(2+i%4*.5)*t-2.6*t*t),13+Math.sin(a)*(1+t*speed));
-      this.dummy.rotation.set(t*3+i,t*2+i,Math.sin(i+t*4));this.dummy.scale.set(.25*Math.min(1,(2-t)*2),.055,.13);this.dummy.updateMatrix();this.leaves.setMatrixAt(i,this.dummy.matrix);
-    }
-    this.leaves.instanceMatrix.needsUpdate=this.leaves.visible;
     const c=this.rider;if(!c)return;
     c.mixer.update(dt);const size=c.actor.scale.x;
     const armL=c.actor.getObjectByName('Left_shoulder'),armR=c.actor.getObjectByName('Right_shoulder');
     const footL=c.actor.getObjectByName('Left_foot_pivot'),footR=c.actor.getObjectByName('Right_foot_pivot');
     if(this.activity==='climb'){
-      const u=Math.min(1,this.elapsed/3.6),s=u*u*(3-2*u);
+      const u=Math.min(1,this.elapsed/5.2),s=u*u*(3-2*u);
       const base=TREEHOUSE_SITE.clone().add(new T.Vector3(-4,0,11));
       if(u<.12)c.actor.position.lerpVectors(this.from,base,u/.12);
-      else c.actor.position.copy(base).add(new T.Vector3(0,DECK*(s-.039744)/.960256,-4*(s-.039744)/.960256));
+      else c.actor.position.copy(base).add(new T.Vector3(0,DECK*TREEHOUSE_HEIGHT_SCALE*(s-.039744)/.960256,-4*(s-.039744)/.960256));
       c.yaw=Math.PI;c.actor.rotation.y=c.yaw;
       const step=Math.sin(this.elapsed*12);
       if(armL)armL.rotation.x=-1+step*.7;if(armR)armR.rotation.x=-1-step*.7;
@@ -192,14 +181,15 @@ export class Treehouse {
       c.actor.position.z=T.MathUtils.clamp(c.actor.position.z+Math.cos(c.yaw)*movement,TREEHOUSE_SITE.z+2.5,TREEHOUSE_SITE.z+7);
       if(footL)footL.rotation.x=movement?Math.sin(this.clock*10)*.3:0;if(footR)footR.rotation.x=movement?-Math.sin(this.clock*10)*.3:0;
     }else if(this.activity==='dive'){
-      const u=Math.min(1,this.elapsed/1.55),target=TREEHOUSE_SITE.clone().add(new T.Vector3(8,.35,13));
+      const u=Math.min(1,this.elapsed/2.0),target=TREEHOUSE_SITE.clone().add(new T.Vector3(8,.35,13));
       c.actor.position.lerpVectors(this.from,target,u);c.actor.position.y=this.from.y+(target.y-this.from.y)*u*u+5*Math.sin(Math.PI*u);
       c.yaw=Math.atan2(target.x-this.from.x,target.z-this.from.z);c.actor.rotation.y=c.yaw;
       if(armL)armL.rotation.z=-1.1;if(armR)armR.rotation.z=1.1;
       c.animationRoot.rotation.x=-.3*Math.sin(Math.PI*u);
-      if(u===1){awardFirst(c,'leaves');this.activity='land';this.elapsed=0;this.burstTime=0;this.sound('leaves');}
+      if(u===1){awardFirst(c,'leaves');this.activity='land';this.elapsed=0;this.leafPile.burst();this.sound('leaves');}
     }else if(this.activity==='land'){
       const u=Math.min(1,this.elapsed/.7),squash=Math.sin(u*Math.PI)*.28;
+      c.actor.position.y=.35*(1-u);
       c.animationRoot.scale.set(1+squash,1-squash,1+squash);c.animationRoot.rotation.x=0;
       if(u===1)this.finish();
     }else{
