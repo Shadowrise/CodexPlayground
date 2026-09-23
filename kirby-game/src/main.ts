@@ -187,7 +187,7 @@ const destinations:Destination[]=[
  {id:'depot',name:'Американские горки — депо',x:STATION.x,z:STATION.z-7},
  {id:'maze',name:'Радужный лабиринт',x:MAZE_SITE.x,z:MAZE_SITE.z+39},
  ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
- ...LANDMARKS.map((p,i)=>({id:`landmark-${i}`,name:`${['Озеро с мостиком','Цветочная поляна','Грибная роща','Сад камней','Пикник и лавочки','Древние руины'][p.kind]} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13:0),z:p.z,radius:6,group:'Места на поляне'})),
+ ...LANDMARKS.flatMap((p,i)=>p.kind===0 || p.kind===4 ? [{id:`landmark-${i}`,name:`${p.kind===0?'Озеро с мостиком':'Пикник и лавочки'} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13:0),z:p.z,radius:6,group:'Места на поляне'}] : []),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
 const fruits = new FruitWorld();
