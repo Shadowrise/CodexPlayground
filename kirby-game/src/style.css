@@ -228,3 +228,16 @@ button:disabled { cursor:default; }
 .player-stats {overflow-y:auto;max-height:48vh;}
 .variant-button:disabled {opacity:.35;cursor:not-allowed;}
 @media(max-width:520px){.stat-row{grid-template-columns:2ch 60px 54px minmax(3ch,1fr) 5ch 26px;gap:6px;}}
+
+#meadow-chat {position:fixed;left:16px;bottom:16px;width:min(440px,calc(100vw - 32px));z-index:12;padding:12px 16px;box-sizing:border-box;border:1px solid #70839a55;border-radius:14px;background:#111b2cdb;box-shadow:0 4px 22px #0003;pointer-events:none;font-family:"Segoe UI",system-ui,sans-serif;}
+.choosing #meadow-chat {display:none;}
+.chat-title {font-size:11px;font-weight:700;letter-spacing:.05em;color:#c3ccdb;margin-bottom:7px;}
+.chat-messages {max-height:min(260px,28dvh);overflow:hidden;overflow-anchor:none;}
+.chat-messages p {margin:5px 0;font-size:14px;font-weight:600;line-height:1.45;overflow-wrap:anywhere;text-shadow:0 1px 2px #000;}
+#meadow-chat.chat-scroll {pointer-events:auto;}
+.chat-scroll .chat-messages {overflow-y:auto;scrollbar-width:thin;scrollbar-color:#7991aa transparent;}
+#chat-composer {position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1000;width:min(480px,calc(100vw - 48px));box-sizing:border-box;padding:24px;border:1px solid #7c8fa8;border-radius:18px;background:#172233;box-shadow:0 16px 80px #0009;color:#edf4ff;font:600 16px "Segoe UI",system-ui,sans-serif;}
+#chat-composer[hidden] {display:none;}
+#chat-composer label,#chat-composer small {display:block;}
+#chat-input {box-sizing:border-box;width:100%;margin:14px 0;padding:12px;border:2px solid #9ce4c2;border-radius:10px;background:#0c1522;color:#fff;font:inherit;}
+#chat-composer small {font-size:12px;line-height:1.5;color:#c3ccdb;}

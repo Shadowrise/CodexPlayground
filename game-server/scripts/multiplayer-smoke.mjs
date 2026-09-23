@@ -16,7 +16,8 @@ try{
  assert.equal((await a.wait(m=>m.type==='frame'&&m.id===b.hello.playerId)).actor.variant,1);
  const duplicate=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-2&variant=0');const rejected=await new Promise(resolve=>duplicate.addEventListener('message',e=>resolve(JSON.parse(e.data)),{once:true}));assert.equal(rejected.type,'error');assert.equal((await (await fetch(base+'/room')).json()).occupiedVariants.length,2);duplicate.close();
  await pause(120);const world=JSON.parse(await readFile(tmpdir()+'/kirby-network-world.json','utf8'));a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world);
- const c=await join();clients.push(c);assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
+ for(let i=0;i<11;i++){await pause(720);const text='message '+i+' '+('я'.repeat(280));a.send({type:'frame',actor,events:[{type:'chat',text}]});const entry=(await b.wait(m=>m.type==='log'&&m.entry.text.startsWith('message '+i+' '))).entry;assert.equal(entry.text.length,255);assert.equal(entry.name,'Test');}
+ const c=await join();clients.push(c);assert.equal(c.hello.room.log.length,10);assert(c.hello.room.log.at(-1).text.startsWith('message 10 '));assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
  const room=a.hello.room.id;a.socket.close();await b.wait(m=>m.type==='room'&&m.room.host!==a.hello.playerId&&!m.room.locks['cart:0']);
  b.socket.close();c.socket.close();await pause(200);
  assert.equal((await (await fetch(base+'/players')).json()).players,0);

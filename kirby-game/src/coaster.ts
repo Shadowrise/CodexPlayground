@@ -190,7 +190,7 @@ export class Coaster {
   networkBlocked=new Set<number>();
   networkKey(player:CharacterController){const cart=this.ridden??this.carts.find(c=>c.wait>0&&!c.occupied&&!this.networkBlocked.has(this.carts.indexOf(c)));return cart?'cart:'+this.carts.indexOf(cart):undefined;}
   networkState(){return this.carts.map(c=>[c.distance,c.wait,c.speed,c.group.scale.x]);}
-  networkApply(rows:number[][]){rows.forEach((v,i)=>{const c=this.carts[i];if(!c||!v||c===this.ridden)return;[c.distance,c.wait,c.speed]=v;c.group.scale.setScalar(v[3]);});}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const c=this.carts[i];if(!c||!v||c===this.ridden)return;[c.distance,c.wait,c.speed]=v;c.distance=T.MathUtils.clamp(c.distance,0,this.length-.021);c.group.scale.setScalar(v[3]);});}
   prompt(player:CharacterController) {
     if(this.riding)return 'E — выйти из тележки в депо';
     if(player.actor.position.distanceTo(STATION)>12* Math.min(player.actor.scale.x,2))return '';

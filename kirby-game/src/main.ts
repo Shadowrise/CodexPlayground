@@ -1,3 +1,5 @@
+import {MeadowChat} from './chat';
+import {emoteMessage,type LogEntry} from './world-log';
 import {updateVisibility} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
@@ -69,6 +71,9 @@ settingsToggle.addEventListener('click', () => {
 });
 const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
+const localLog:LogEntry[]=[];
+const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
+function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
@@ -268,6 +273,10 @@ let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
   if(!playing)return;
+  if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
+    event.preventDefault();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
+  }
+  if(chat.open)return;
   if(event.code==='Escape'){
     event.preventDefault();
     if(!event.repeat)settingsToggle.click();
@@ -306,7 +315,7 @@ const stopDragging = () => {
 };
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
-  if (!playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
+  if (chat.open || !playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
   event.preventDefault();
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
   if(rightMouseHeld)return;
@@ -319,7 +328,7 @@ canvas.addEventListener('pointerdown', event => {
 // Use MouseEvents throughout the right-button gesture. Pointer capture cancellation
 // during pointer lock must not end the separate mouse-lock gesture.
 canvas.addEventListener('mousedown',event=>{
-  if(event.button!==2 || !playing || gamepad.input.active!=='keyboard' || !audioPanel.hidden)return;
+  if(chat.open || event.button!==2 || !playing || gamepad.input.active!=='keyboard' || !audioPanel.hidden)return;
   event.preventDefault();stopDragging();
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
   rightMouseHeld=true;dragMode='character';canvas.style.cursor='grabbing';
@@ -419,7 +428,7 @@ startButton.addEventListener('click', async () => {
   scene.add(character.actor, ...npcs.map(npc => npc.actor));
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
-  playing = true;startupCard.hidden=true;
+  playing = true;startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
   statusDot.classList.add('ready');
@@ -464,11 +473,11 @@ renderer.setAnimationLoop((time: number) => {
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
-  const usingPad=!document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
+  const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(usingPad?'gamepad':'keyboard'));
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'';}
   if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
-  const settingsOpen=!audioPanel.hidden;
+  const settingsOpen=!audioPanel.hidden || chat.open;
   const wasChoosing=!playing;
   const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
   if(usingPad && playing && !settingsOpen && !document.hidden && document.hasFocus()){const picked=emoteWheel.update(pad.held.has(4),pad.x,pad.y,pad.held.has(1));if(picked)pendingEmote=picked;}else emoteWheel.close();
@@ -514,7 +523,7 @@ renderer.setAnimationLoop((time: number) => {
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
     if(pendingBoard)void interactOnline();
-    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote))sounds.playEmote(pendingEmote);
+    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
@@ -614,6 +623,7 @@ renderer.setAnimationLoop((time: number) => {
   ponds.update(dt);
   watermill.update(dt);
   updateNetwork(dt);
+  chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten);
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);

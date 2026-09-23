@@ -1,7 +1,8 @@
+import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
 const MAX_PLAYERS=14,ROOM_NAME='main';
-type Attachment={id:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;lastHit?:number;lastFrame?:number;window?:number;count?:number};
+type Attachment={id:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;left?:boolean;lastFrame?:number;window?:number;count?:number};
 export class GameRoom extends DurableObject<Env>{
  private room?:RoomState;
  constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}}
@@ -10,6 +11,7 @@ export class GameRoom extends DurableObject<Env>{
  private send(s:WebSocket,v:unknown){try{s.send(JSON.stringify(v));}catch{}}
  private broadcast(v:unknown,except?:WebSocket){for(const s of this.players())if(s!==except)this.send(s,v);}
  private persist(){if(!this.room)return;for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a.id===this.room.host){a.room=this.room;s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}}
+ private log(a:Attachment,text:string,chat=false){if(!this.room||!a.actor)return;const entry:LogEntry={id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat};this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
  private changed(){this.persist();this.broadcast({type:'room',room:this.room});}
  async fetch(request:Request){
   if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
@@ -35,10 +37,13 @@ export class GameRoom extends DurableObject<Env>{
   if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){world=m.world;r.world=world;}
   socket.serializeAttachment(a);
+  if(a.actor&&!a.announced){a.announced=true;this.log(a,'зашёл на полянку.');}
   let changed=false;
   for(const e of (Array.isArray(m.events)?m.events.slice(0,16):[]) as Event[]){
    if(!e||typeof e!=='object')continue;
-   if(e.type==='fruit'&&Number.isInteger(e.index)&&e.index>=0&&e.index<70&&!r.fruits[e.index]&&a.actor){
+   if(e.type==='chat'&&a.actor&&now-(a.lastChat??0)>=700){const text=chatText(e.text);if(text){a.lastChat=now;this.log(a,text,true);}}
+   else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);}}
+   else if(e.type==='fruit'&&Number.isInteger(e.index)&&e.index>=0&&e.index<70&&!r.fruits[e.index]&&a.actor){
     if(e.npc===undefined){r.fruits[e.index]=a.id;changed=true;}
     else if(a.id===r.host&&Number.isInteger(e.npc)&&e.npc>=0&&e.npc<14){r.fruits[e.index]='npc:'+e.npc;changed=true;}
    }else if(e.type==='mill'){r.mill=!r.mill;changed=true;}
@@ -54,7 +59,7 @@ export class GameRoom extends DurableObject<Env>{
   if(actor||world)this.broadcast({type:'frame',id:a.id,actor,world},socket);
  }
  private async remove(socket:WebSocket){
-  const a=socket.deserializeAttachment() as Attachment;try{socket.close(1000,'Disconnected');}catch{}
+  const a=socket.deserializeAttachment() as Attachment;if(a.left)return;a.left=true;socket.serializeAttachment(a);if(a.announced)this.log(a,'покинул полянку.');try{socket.close(1000,'Disconnected');}catch{}
   const remaining=this.players().filter(s=>s!==socket);
   if(!remaining.length){this.room=undefined;await this.ctx.storage.deleteAlarm();await this.ctx.storage.deleteAll();return;}
   const r=this.room;if(!r)return;
