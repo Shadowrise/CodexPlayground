@@ -15,9 +15,10 @@
         <p class="selection-description">Выбери свой цвет. Остальные 14 друзей уже ждут на поляне.</p>
         <div id="player-name-field" class="name-field"><label for="player-name-input">Твоё имя <span aria-hidden="true">*</span></label><input id="player-name-input" name="nickname" type="text" required maxlength="24" autocomplete="nickname" placeholder="Как тебя зовут?" aria-describedby="player-name-hint" /><small id="player-name-hint">Обязательно · до 24 символов</small></div>
         <div id="variant-grid" aria-label="Варианты Кирби"></div>
+        <label class="map-mode">Режим карты <select id="map-mode"><option value="day">Дневной</option><option value="night">Ночной</option></select></label>
         <label class="spawn-option"><input id="spawn-near-depot" type="checkbox" autocomplete="off" /> Появиться возле депо</label>
         <div class="selection-bottom"><div><span class="label">ТВОЙ ПЕРСОНАЖ</span><strong id="selected-name">Классический</strong></div><button id="start-game" disabled>Загрузка…</button></div>
-        <p class="gamepad-hint" data-controls="gamepad" hidden>Геймпад: стик / крестовина — выбор Кирби · A — начать · Y — появиться у депо</p><p id="selection-message" role="status">Готовим поляну и загружаем персонажей…</p>
+        <p class="gamepad-hint" data-controls="gamepad" hidden>Геймпад: стик / крестовина — выбор Кирби · A — начать · X — день / ночь · Y — появиться у депо</p><p id="selection-message" role="status">Готовим поляну и загружаем персонажей…</p>
       </div>
     </section>
     <main id="game" aria-label="Игровая сцена с Кирби"></main>

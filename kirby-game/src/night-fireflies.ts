@@ -61,7 +61,7 @@ export class NightFireflies {
     }
   }
   constructor(gltf:GLTF){
-    this.group.name='Forty nocturnal fireflies';
+    this.group.name='Forty meadow fireflies';
     for(let i=0;i<40;i++){
       const object=gltf.scene.clone(true);const imported:T.Object3D[]=[];object.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
       const color=new T.Color().setHSL((i*.618)%1,1,.46),firefly=new Firefly({...gltf,scene:object},color);
@@ -83,7 +83,7 @@ export class NightFireflies {
     return level;
   }
   update(dt:number,night:boolean,camera:T.Vector3){
-    this.group.visible=night;if(!night){this.disembark();for(const l of this.lights)l.intensity=0;return;}
+    this.group.visible=true;
     this.time+=dt;
     const nearest=[...this.bugs].sort((a,b)=>a.carrier.position.distanceToSquared(camera)-b.carrier.position.distanceToSquared(camera));
     const detailed=new Set(nearest.slice(0,5));
@@ -103,6 +103,6 @@ export class NightFireflies {
       bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.65+.15*Math.sin(this.time*2+bug.phase);
     }
     const sources=[...this.bugs].sort((a,b)=>a.lightPosition.distanceToSquared(camera)-b.lightPosition.distanceToSquared(camera));
-    this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=9*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});
+    this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=(night?9:4)*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});
   }
 }

@@ -185,3 +185,6 @@ button:disabled { cursor:default; }
 .network-entry button {flex:1;padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-raised);color:var(--ui-muted);font:inherit;font-size:13px;}
 #online-players {flex:none;white-space:nowrap;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ui-accent);}
 #startup-menu button:disabled {cursor:not-allowed;opacity:.55;}
+
+.map-mode {display:flex;align-items:center;gap:12px;margin:14px 0;font-size:14px;font-weight:700;}
+.map-mode select {flex:1;padding:10px 12px;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-raised);color:var(--ui-text);font:inherit;}

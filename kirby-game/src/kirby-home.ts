@@ -6,7 +6,7 @@ export class KirbyHome {
   readonly group=new T.Group();
   readonly entrance=new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+6);
   night=false;
-  blackout=0;
+  private waking=false;
   private sleeper?:CharacterController;
   private elapsed=0;
   private from=new T.Vector3();
@@ -47,19 +47,26 @@ export class KirbyHome {
     // Merge repeated decoration into a small number of draws.
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
   }
-  prompt(position:T.Vector3){return this.active?'Сладких снов…':position.distanceTo(this.entrance)<6 && position.y<.6 ? `E — лечь в кровать · проснуться ${this.night?'днём':'ночью'}`:'';}
-  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;c.setActivity('Sleep');this.roof.visible=false;return true;}
+  prompt(position:T.Vector3){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6 && position.y<.6 ? 'E — лечь в кровать':'';}
+  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.roof.visible=false;return true;}
   savePosition(c:CharacterController){return this.sleeper===c?this.entrance.clone():undefined;}
+  wake(){
+    if(!this.sleeper || this.waking)return;
+    this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
+  }
   update(dt:number){
     this.windows.emissiveIntensity=this.night?1.5:.12;const c=this.sleeper;if(!c)return;
-    const before=this.elapsed;this.elapsed+=dt;const t=this.elapsed;
-    this.blackout=t<2?T.MathUtils.smoothstep(t,1,2):t<4?1:1-T.MathUtils.smoothstep(t,4,5.3);
-    if(before<2.2 && t>=2.2){this.night=!this.night;awardFirst(c,'sleep');}
-    c.mixer.update(dt);const bed=new T.Vector3(HOME_SITE.x,1.1,HOME_SITE.z+.7),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
-    if(t<1){const u=T.MathUtils.smoothstep(t,0,1);c.actor.position.lerpVectors(this.from,bed,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,sleepRotation,u);}
-    else if(t<3.2){c.actor.position.copy(bed);c.actor.quaternion.copy(sleepRotation);for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}
-    else {const u=T.MathUtils.smoothstep(t,3.2,4);c.actor.position.lerpVectors(bed,this.entrance,u);c.actor.quaternion.slerpQuaternions(sleepRotation,new T.Quaternion(),u);}
-    if(t>=5.3){c.actor.position.copy(this.entrance);c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;this.blackout=0;this.roof.visible=true;}
+    this.elapsed+=dt;const t=this.elapsed;c.mixer.update(dt);
+    if(this.waking){
+      const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.entrance,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);
+      c.animationRoot.scale.setScalar(1);
+      for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=1;}
+      if(t>=.65){c.actor.position.copy(this.entrance);c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;this.roof.visible=true;}
+      return;
+    }
+    const bed=new T.Vector3(HOME_SITE.x,1.1,HOME_SITE.z+.7),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
+    const u=T.MathUtils.smoothstep(t,0,1);c.actor.position.lerpVectors(this.from,bed,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,sleepRotation,u);
+    if(t>=1){awardFirst(c,'sleep');for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}
   }
   constrain(p:T.Vector3,size:number){
     const x=p.x-HOME_SITE.x,z=p.z-HOME_SITE.z,r=.6*size;

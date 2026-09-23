@@ -119,6 +119,7 @@ saveButton.addEventListener('click',()=>{
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
 const spawnNearDepot = document.querySelector<HTMLInputElement>('#spawn-near-depot')!;
 spawnNearDepot.checked = false;
+const mapMode=document.querySelector<HTMLSelectElement>('#map-mode')!;mapMode.value='day';
 const variantGrid = document.querySelector<HTMLDivElement>('#variant-grid')!;
 for (const variant of KIRBY_VARIANTS) {
   const button = document.createElement('button');
@@ -185,7 +186,6 @@ const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treeho
 const benches=new Benches();
 const home=new KirbyHome();scene.add(home.group);
 let fireflies:NightFireflies|undefined;
-const sleepFade=document.createElement('div');sleepFade.setAttribute('aria-hidden','true');Object.assign(sleepFade.style,{position:'fixed',inset:'0',background:'#05080f',opacity:'0',pointerEvents:'none',zIndex:'10000'});document.body.appendChild(sleepFade);
 const maze=new HedgeMaze();scene.add(maze.group);
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}});scene.add(balloons.group);
@@ -315,6 +315,7 @@ startButton.addEventListener('click', () => {
   character = new CharacterController(cloneVariant(template, selected, false), animations);
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
+  home.night=mapMode.value==='night';
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);home.night=pendingSave.night===true;pendingSave=undefined;}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
@@ -384,6 +385,7 @@ renderer.setAnimationLoop((time: number) => {
       else if(pad.pressed.has(0))newGameButton.click();
     } else if(!playing) {
       if(repeat){const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*5+15)%15;(variantGrid.children[i] as HTMLButtonElement).click();}
+      if(pad.pressed.has(2))mapMode.value=mapMode.value==='day'?'night':'day';
       if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
       if(pad.pressed.has(0))startButton.click();
     } else {
@@ -411,7 +413,7 @@ renderer.setAnimationLoop((time: number) => {
     const atStation=!!coaster.prompt(character);
     if(pendingBoard) {
       if(fireflies?.riding)fireflies.disembark();
-      else if(home.active){ /* Finish sleeping before another interaction. */ }
+      else if(home.active)home.wake();
       else if(!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && !trampoline.active && home.prompt(character.actor.position))home.start(character);
       else if(trampoline.active){ /* Finish the landing before another interaction. */ }
       else if(!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && trampoline.prompt(character))trampoline.start(character);
@@ -428,7 +430,7 @@ renderer.setAnimationLoop((time: number) => {
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
-    const homeWasActive=home.active;home.update(dt);sleepFade.style.opacity=String(home.blackout);
+    const homeWasActive=home.active;home.update(dt);
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,npcs,character);
