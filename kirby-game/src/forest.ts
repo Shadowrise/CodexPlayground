@@ -1,4 +1,4 @@
-import { createGroundTexture } from './ground-texture';
+import { createGroundMaterial } from './ground-texture';
 import { meadowGeometry } from './pond-layout';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H } from './world-bounds';
@@ -110,8 +110,7 @@ export function createForest() {
   }
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);
-  const map=createGroundTexture(H);
-  const floor=new THREE.Mesh(ground,new THREE.MeshStandardMaterial({map,roughness:1}));floor.name='Biome ground';
+  const floor=new THREE.Mesh(ground,createGroundMaterial(H));floor.name='Biome ground';
   floor.position.y=-.012;floor.receiveShadow=true;forest.add(floor);
   return forest;
 }

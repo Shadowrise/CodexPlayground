@@ -166,7 +166,11 @@ function setupShadowMaterials() {
     if(!(object instanceof THREE.Mesh))return;
     for(const material of Array.isArray(object.material)?object.material:[object.material]) {
       if(!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial || material instanceof THREE.MeshLambertMaterial) || shadowMaterials.has(material))continue;
-      shadows.setupMaterial(material);shadowMaterials.add(material);material.needsUpdate=true;
+      const surfaceShader=material.onBeforeCompile;
+      shadows.setupMaterial(material);
+      const shadowShader=material.onBeforeCompile;
+      material.onBeforeCompile=(shader,renderer)=>{shadowShader.call(material,shader,renderer);surfaceShader.call(material,shader,renderer);};
+      shadowMaterials.add(material);material.needsUpdate=true;
     }
   });
 }

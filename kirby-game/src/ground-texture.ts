@@ -1,7 +1,7 @@
 import * as T from 'three';
 
-/** A single static colour map: no extra meshes, lights, shader samples or frame updates. */
-export function createGroundTexture(half:number,resolution=2048){
+/** Low-frequency biome colour; fine grass is tiled independently below. */
+export function createGroundTexture(half:number,resolution=512){
   const data=new Uint8Array(resolution*resolution*4);
   let seed=91357;
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -26,39 +26,53 @@ export function createGroundTexture(half:number,resolution=2048){
     for(let ch=0;ch<3;ch++)data[i+ch]=Math.round(T.MathUtils.lerp(T.MathUtils.lerp(palette[a+ch],palette[a+3+ch],fx),T.MathUtils.lerp(palette[b+ch],palette[b+3+ch],fx),fy)+grain);
     data[i+3]=255;
   }
-  // Short, tapered painted blades. Sparse needles, fallen leaves and petals vary by biome.
-  const paint=(x:number,y:number,dx:number,dy:number,width:number,color:number[],opacity:number)=>{
-    const length=dx*dx+dy*dy;
-    for(let py=Math.floor(Math.min(y,y+dy)-width);py<=Math.ceil(Math.max(y,y+dy)+width);py++){
-      if(py<0 || py>=resolution)continue;
-      for(let px=Math.floor(Math.min(x,x+dx)-width);px<=Math.ceil(Math.max(x,x+dx)+width);px++){
-        if(px<0 || px>=resolution)continue;
-        const t=T.MathUtils.clamp(((px-x)*dx+(py-y)*dy)/length,0,1);
-        const distance=Math.hypot(px-x-dx*t,py-y-dy*t);
-        const alpha=T.MathUtils.clamp((width*(1-.65*t)+.4-distance),0,1)*opacity;
-        if(alpha===0)continue;
-        const i=(py*resolution+px)*4;
-        for(let ch=0;ch<3;ch++)data[i+ch]=Math.round(data[i+ch]*(1-alpha)+color[ch]*alpha);
-      }
-    }
-  };
-  const density=Math.round(resolution*resolution*.07);
-  for(let i=0;i<density;i++){
-    const x=random()*resolution,y=random()*resolution,angle=random()*Math.PI*2;
-    const {east,south}=weights((x/resolution-.5)*2*half,(.5-y/resolution)*2*half);
-    const accent=random()<.1;
-    let color:number[],width=.65,length=1.6+random()*2.3;
-    if(accent){
-      const eastern=random()<east,southern=random()<south;
-      if(!southern && !eastern){color=[112,100,61];width=.55;length=3.5;}
-      else if(southern && !eastern){color=random()<.5?[164,121,56]:[149,91,45];width=1.3;length=2.6;}
-      else if(southern){color=random()<.45?[189,148,146]:[146,161,84];width=1;length=1.5;}
-      else {color=[158,152,87];width=1;length=2;}
-    }else color=random()<.5?[78,108,52]:[145,163,92];
-    paint(x,y,Math.cos(angle)*length,Math.sin(angle)*length,width,color,accent?.48:.38);
-  }
-  const map=new T.DataTexture(data,resolution,resolution);map.name='Baked grass, needles, leaves and petals';
+  const map=new T.DataTexture(data,resolution,resolution);map.name='Smooth biome ground colours';
   map.colorSpace=T.SRGBColorSpace;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;
   map.repeat.set(1/(2*half),1/(2*half));map.offset.set(.5,.5);map.needsUpdate=true;
   return map;
+}
+
+/** Eight metres per tile gives each painted blade dozens of texels, not one or two. */
+export function createGrassDetail(){
+  const size=512,data=new Uint8Array(size*size*4);
+  let seed=8712;
+  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+  for(let i=0;i<size*size;i++){const v=112+Math.round(random()*14);data.set([v,v,v,255],i*4);}
+  const dab=(x:number,y:number,r:number,value:number)=>{
+    for(let py=Math.floor(y-r);py<=Math.ceil(y+r);py++)for(let px=Math.floor(x-r);px<=Math.ceil(x+r);px++){
+      const alpha=T.MathUtils.clamp(r+.35-Math.hypot(px-x,py-y),0,1)*.65;
+      if(!alpha)continue;
+      const index=(((py%size+size)%size)*size+(px%size+size)%size)*4;
+      const v=Math.round(data[index]*(1-alpha)+value*alpha);
+      data[index]=data[index+1]=data[index+2]=v;
+    }
+  };
+  for(let i=0;i<4700;i++){
+    const x=random()*size,y=random()*size,angle=random()*Math.PI*2;
+    const length=6+random()*18,bend=(random()-.5)*9,width=.7+random()*.8;
+    const light=random()<.5,value=light?180+random()*48:50+random()*35;
+    for(let step=0;step<=length;step++){
+      const t=step/length,curve=Math.sin(t*Math.PI)*bend;
+      dab(x+Math.cos(angle)*step-Math.sin(angle)*curve,y+Math.sin(angle)*step+Math.cos(angle)*curve,width*(1-t*.85),value);
+    }
+  }
+  const texture=new T.DataTexture(data,size,size);texture.name='Fine seamless curved grass blades';
+  texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.magFilter=T.LinearFilter;
+  texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.anisotropy=4;texture.needsUpdate=true;
+  return texture;
+}
+
+export function createGroundMaterial(half:number){
+  const material=new T.MeshStandardMaterial({map:createGroundTexture(half),roughness:1});
+  const detail=createGrassDetail();
+  material.onBeforeCompile=shader=>{
+    shader.uniforms.groundDetail={value:detail};
+    shader.vertexShader='varying vec2 vGroundDetail;\n'+shader.vertexShader;
+    shader.vertexShader=shader.vertexShader.replace('#include <uv_vertex>','#include <uv_vertex>\nvGroundDetail=uv/8.0;');
+    shader.fragmentShader='uniform sampler2D groundDetail;\nvarying vec2 vGroundDetail;\n'+shader.fragmentShader;
+    shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\ndiffuseColor.rgb *= .62 + texture2D(groundDetail,vGroundDetail).r * .82;');
+  };
+  material.customProgramCacheKey=()=> 'biome-ground-detail-v1';
+  material.addEventListener('dispose',()=>{detail.dispose();material.map?.dispose();});
+  return material;
 }
