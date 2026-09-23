@@ -1,3 +1,4 @@
+import {NpcSnapshots} from './npc-snapshots';
 import {MeadowChat} from './chat';
 import {emoteMessage,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
@@ -98,6 +99,7 @@ function requirePlayerName(){
 }
 
 let networkIntent=false,network:NetworkSession|undefined,remotePlayers:RemotePlayers|undefined;
+const npcSnapshots=new NpcSnapshots();let npcSnapshotHost='';
 let worldRevision=-1,knownFruits=new Set<number>(),heldResource:string|undefined,acquiring=false;
 let lastStarRequest=0;
 const appliedRides=new Map<string,ActorState>();
@@ -690,11 +692,12 @@ function applyRide(a:ActorState){
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
  const r=network.room;
+ if(npcSnapshotHost!==r.host){npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;}
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
  coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');
  watermill.networkRunning(r.mill);
- if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);applyActor(n,w.npcs[i],0,network!.host||worldRevision<0);});worldRevision=network.revision;}
- if(!network.host&&network.world)npcs.forEach((n,i)=>applyActor(n,network!.world!.npcs[i],dt));
+ if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);worldRevision=network.revision;}
+
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
  r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id)character!.grow();else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.grow();});
 }
@@ -722,7 +725,7 @@ async function interactOnline(){
 }
 function updateNetwork(dt:number){
  if(!network||!character||!playing)return;
- if(!network.host&&network.world)npcs.forEach((n,i)=>applyActor(n,network!.world!.npcs[i],dt));
+ if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));}
  for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
  const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
  for(const [id,state] of network.actors){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
