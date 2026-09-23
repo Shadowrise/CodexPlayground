@@ -35,3 +35,24 @@ test('sky replaces sun with moon and stars at night',()=>{
  update(.1,camera,true);assert(!scene.getObjectByName('Sun disc')!.visible);assert(scene.getObjectByName('Moon')!.visible);assert(scene.getObjectByName('Night stars')!.visible);
  update(.1,camera,false);assert(!scene.getObjectByName('Night stars')!.visible);
 });
+
+test('Kirby rides a nearby firefly at double speed, lands on stopping and keeps flight buzz',async()=>{
+ const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),bug=world.bugs[0];
+ c.actor.position.copy(bug.home);assert(!world.board(c),'No invisible daytime mounts');
+ world.update(.01,true,c.actor.position);c.actor.position.copy(bug.carrier.position).setY(0);
+ assert(world.prompt(c));assert(world.board(c));assert(!world.board(c));assert(world.riding);
+ const start=c.actor.position.clone(),speed=c.speed;
+ for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false});world.syncRider(1/60);world.update(1/60,true,c.actor.position);}
+ assert(Math.abs(c.actor.position.z-start.z-speed*2)<1e-6);assert(!bug.land);assert(bug.carrier.position.y>2);assert(world.buzzLevel(c.actor.position)>=.7);assert(bug.firefly.object.visible);assert.equal(c.state,'FireflyRide');
+ const stop=c.actor.position.clone();for(let i=0;i<150;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);world.update(.02,true,c.actor.position);}
+ assert.equal(c.actor.position.z,stop.z);assert(bug.land);assert.equal(bug.carrier.position.y,0);assert(world.savePosition(c));
+ world.disembark();assert(!world.riding);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);assert.equal(world.savePosition(c),undefined);
+ c.update(.1,{forward:true,left:false,right:false});assert(c.actor.position.z>stop.z);
+});
+test('mounted turning, growth and day transition preserve valid state',async()=>{
+ const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations);
+ world.update(.01,true,world.bugs[0].home);c.actor.position.copy(world.bugs[0].carrier.position).setY(0);assert(world.board(c));c.grow();
+ for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false,steer:.6});world.syncRider(1/60);world.update(1/60,true,c.actor.position);}
+ assert(c.yaw>.9);assert(Math.abs(c.actor.scale.x-1.1)<1e-6);assert(!c.flight.active);assert(!c.swimming);
+ world.update(.01,false,c.actor.position);assert(!world.riding);assert.equal(c.actor.position.y,0);assert.equal(world.buzzLevel(c.actor.position),0);
+});
