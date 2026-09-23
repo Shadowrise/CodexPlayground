@@ -84,7 +84,7 @@ export class SoundEffects {
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;
     source.playbackRate.value=.96+Math.random()*.08;
-    gain.gain.value=kind==='enter'?.85:kind==='exit'?.6:kind==='paddle'?.38:.15;
+    gain.gain.value=kind==='enter'?.85:kind==='exit'?.6:kind==='paddle'?.18:.08;
     source.connect(gain);gain.connect(this.master!);this.active.add(source);
     source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
