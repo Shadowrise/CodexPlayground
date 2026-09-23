@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import { BackgroundMusic, MUSIC_TRACKS } from '../src/music';
 import { readFileSync } from 'node:fs';
 
-test('all seven stereo tracks exist, main is triple length, audio has headroom', () => {
+test('all fourteen stereo tracks exist, main is triple length, audio has headroom', () => {
+  assert.equal(MUSIC_TRACKS.length,14);
   for (const [index, [file]] of MUSIC_TRACKS.entries()) {
     const wav = readFileSync(new URL(`../public/audio/${file}.wav`, import.meta.url));
     assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
@@ -17,7 +18,7 @@ test('all seven stereo tracks exist, main is triple length, audio has headroom',
   }
 });
 
-test('seven tracks advance and wrap in both directions while preserving mute and volume', async () => {
+test('fourteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
   class FakeElement extends EventTarget {
     value = ''; textContent = ''; title = ''; hidden = false;
     attributes = new Map<string, string>();
@@ -43,14 +44,14 @@ test('seven tracks advance and wrap in both directions while preserving mute and
     music.start(); await Promise.resolve(); assert(!audio!.paused);
     volume.value = '37'; volume.dispatchEvent(new Event('input'));
     const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.endsWith(`${file}.wav`));
-    assert(first >= 0);
-    for (let i = 0; i < 7; i++) {
-      assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + i) % 7][0]}.wav`));
+    assert(first >= 0);assert(label.textContent.includes('/ 14 ·'));
+    for (let i = 0; i < MUSIC_TRACKS.length; i++) {
+      assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       audio!.dispatchEvent(new Event('ended'));
     }
     assert(audio!.src.endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
     previous.dispatchEvent(new Event('click'));
-    assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + 6) % 7][0]}.wav`));
+    assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + MUSIC_TRACKS.length - 1) % MUSIC_TRACKS.length][0]}.wav`));
     next.dispatchEvent(new Event('click'));
     assert(audio!.src.endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
     button.dispatchEvent(new Event('click')); assert(audio!.paused);

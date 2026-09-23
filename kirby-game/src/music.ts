@@ -7,9 +7,16 @@ export const MUSIC_TRACKS = [
   ['cloud-picnic', 'Пикник на облаках'],
   ['sunny-path', 'Солнечная тропинка'],
   ['firefly-waltz', 'Огоньки светлячков'],
+  ['lagoon-bossa', 'Лазурная лагуна'],
+  ['carousel-waltz', 'Вальс карусели'],
+  ['button-swing', 'Пуговичный свинг'],
+  ['kite-festival', 'Праздник воздушных змеев'],
+  ['coconut-bay', 'Кокосовая бухта'],
+  ['roller-disco', 'Роликовое диско'],
+  ['wish-lanterns', 'Фонарики желаний'],
 ] as const;
 
-/** Seven sequential tracks, starting at a random position each session. */
+/** Fourteen sequential tracks, starting at a random position each session. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
   private enabled = true;
@@ -63,7 +70,7 @@ export class BackgroundMusic {
     this.audio.pause();
     this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${MUSIC_TRACKS[this.track][0]}.wav`;
     this.audio.loop = false;
-    this.trackLabel.textContent = `${this.track + 1} / 7 · ${MUSIC_TRACKS[this.track][1]}`;
+    this.trackLabel.textContent = `${this.track + 1} / ${MUSIC_TRACKS.length} · ${MUSIC_TRACKS[this.track][1]}`;
   }
 
   private async play() {
