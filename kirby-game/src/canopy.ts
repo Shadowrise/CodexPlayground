@@ -1,10 +1,10 @@
 import * as T from 'three';
 
 /** A whole crown made of folded pointed leaves, never intersecting foliage spheres. */
-export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf'){
+export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf',variation=0){
  const count=kind==='oak'?2600:kind==='birch'?820:1050;
  const positions:number[]=[],normals:number[]=[],uvs:number[]=[],colors:number[]=[];
- let seed=kind==='birch'?172:kind==='oak'?919:431;
+ let seed=(kind==='birch'?172:kind==='oak'?919:431)+variation*7919;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const up=new T.Vector3(),side=new T.Vector3(),normal=new T.Vector3(),center=new T.Vector3();
  const points=[[-1,0,0],[0,.15,-.46],[1,0,0],[0,.15,.46],[0,.26,0]];
@@ -15,7 +15,13 @@ export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf')
   center.set(Math.cos(az)*ring*radius*lobe,ny*radius,Math.sin(az)*ring*radius*lobe);
   // Soft asymmetric shoulders and a tapered top, not a perfect ellipsoid.
   center.x+=.12*center.y*center.y;center.z+=.09*Math.sin(center.y*4);
-  if(kind==='birch'){center.x*=.87;center.z*=.87;}
+  if(kind==='birch'){
+   // Different shoulders, gaps and gently drooping sides for each shared silhouette.
+   const phase=variation*1.73,spread=1+.12*Math.sin(az*(3+variation%2)+phase)*(1-ny*ny);
+   center.x*=.87*spread;center.z*=.87*spread;
+   center.x+=.10*Math.sin(ny*3+phase)*(1-Math.abs(ny));
+   center.y-=Math.pow(ring,3)*(.08+.05*variation)*(1+.4*Math.sin(az*3+phase));
+  }
   normal.copy(center).normalize().lerp(new T.Vector3(0,1,0),.45).normalize();
   side.set(Math.sin(az),.3*(random()-.5),Math.cos(az)).cross(normal).normalize();
   up.crossVectors(normal,side).normalize();
