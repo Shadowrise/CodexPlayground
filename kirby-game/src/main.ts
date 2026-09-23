@@ -1,3 +1,4 @@
+import {updateVisibility} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
 import { actorState, applyActor, RemotePlayers } from './network-actors';
@@ -190,7 +191,10 @@ shadows.updateFrustums();
 // Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
 for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
 const shadowMaterials=new WeakSet<THREE.Material>();
+const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials() {
+  decorativeCharacters.length=0;
+  scene.traverse(o=>{if(o.name.startsWith('Permanent Kirby passenger ')||o.name==='Luigi · permanent passenger')decorativeCharacters.push(o);});
   scene.traverse(object=>{
     if(!(object instanceof THREE.Mesh))return;
     for(const material of Array.isArray(object.material)?object.material:[object.material]) {
@@ -610,6 +614,11 @@ renderer.setAnimationLoop((time: number) => {
   ponds.update(dt);
   watermill.update(dt);
   updateNetwork(dt);
+  for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten);
+  for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
+  for(const npc of npcs)updateVisibility(npc.actor,camera.position);
+  for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
+  if(character)updateVisibility(character.actor,camera.position,true,true);
   renderer.render(scene, camera);
 });
 window.addEventListener('resize', () => {

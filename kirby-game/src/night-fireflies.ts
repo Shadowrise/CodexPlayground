@@ -1,3 +1,4 @@
+import {ACTOR_DISTANCE,MIST_DISTANCE} from './visibility';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
@@ -95,8 +96,6 @@ export class NightFireflies {
   update(dt:number,night:boolean,camera:T.Vector3){
     this.group.visible=true;
     this.time+=dt;
-    const nearest=[...this.bugs].sort((a,b)=>a.carrier.position.distanceToSquared(camera)-b.carrier.position.distanceToSquared(camera));
-    const detailed=new Set(nearest.slice(0,5));
     for(const bug of this.bugs){
       if(bug!==this.mount && !this.networkBlocked.has(this.bugs.indexOf(bug))){
       bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,.65,4,dt));
@@ -107,7 +106,9 @@ export class NightFireflies {
       if(bug.land===flying){bug.firefly.setMode(flying?'Fly':'Sit');bug.land=!flying;}
       }
       const flying=!bug.land;
-      const visible=bug===this.mount || this.networkBlocked.has(this.bugs.indexOf(bug)) || detailed.has(bug)&&bug.carrier.position.distanceTo(camera)<42;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
+      const distance=bug.carrier.position.distanceTo(camera);
+      bug.halo.visible=distance<=MIST_DISTANCE;
+      const visible=bug===this.mount || distance<=ACTOR_DISTANCE;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
       // Keep the light on the luminous rear end even when the detailed mesh is culled.
       bug.carrier.updateWorldMatrix(true,false);bug.lightPosition.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65).applyMatrix4(bug.carrier.matrixWorld);
       bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.65+.15*Math.sin(this.time*2+bug.phase);
