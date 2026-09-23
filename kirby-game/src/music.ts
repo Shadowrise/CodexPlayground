@@ -68,7 +68,7 @@ export class BackgroundMusic {
   private loadTrack() {
     this.playRequest++;
     this.audio.pause();
-    this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${MUSIC_TRACKS[this.track][0]}.wav`;
+    this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${MUSIC_TRACKS[this.track][0]}.wav${MUSIC_TRACKS[this.track][0]==='button-swing'?'?v=2':''}`;
     this.audio.loop = false;
     this.trackLabel.textContent = `${this.track + 1} / ${MUSIC_TRACKS.length} · ${MUSIC_TRACKS[this.track][1]}`;
   }
