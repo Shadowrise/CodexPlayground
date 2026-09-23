@@ -11,6 +11,6 @@ try{
  assert.equal(await a.locator('.player-stats .host-badge:not([hidden])').count(),1);assert.equal(await b.locator('.player-stats .host-badge:not([hidden])').count(),1);
  assert(await a.locator('.online-roster').isHidden());assert.equal(await b.locator('.variant-button:disabled').count(),1);assert(await a.locator('#save-game').isHidden());assert(await b.locator('#save-game').isHidden());
  await a.screenshot({path:(process.env.TEMP||'/tmp')+'/kirby-online.png'});
- await a.close();await b.waitForFunction(()=>document.querySelectorAll('.remote-stat-row').length===0);
+ await a.locator('#settings-toggle').click();await a.locator('#exit-to-menu').click();await a.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});assert(await a.locator('#startup-menu').isVisible());await a.close();await b.waitForFunction(()=>document.querySelectorAll('.remote-stat-row').length===0);
  await b.waitForTimeout(1200);assert(await b.locator('#player-host-badge').isVisible());assert.equal(await b.locator('.player-stats .host-badge:not([hidden])').count(),1);assert.deepEqual(errors,[]);assert(frames.some(m=>m.type==='frame'&&m.world?.npcs?.length===14));assert(frames.some(m=>m.type==='frame'&&m.actor?.state==='Run'));console.log('PASS two browser clients, roster, movement, hidden saves, departure, no browser exceptions');
 }finally{await browser.close();}

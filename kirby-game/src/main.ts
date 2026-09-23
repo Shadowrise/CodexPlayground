@@ -108,7 +108,7 @@ const startupMessage=document.createElement('p');startupMessage.setAttribute('ro
 selectionCard.before(startupCard);
 newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
 networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
-const leaveOnline=document.createElement('button');leaveOnline.textContent='Выйти из сетевой игры';leaveOnline.hidden=true;audioPanel.append(leaveOnline);
+const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent='Выйти в главное меню';audioPanel.append(leaveOnline);
 leaveOnline.addEventListener('click',()=>{network?.close();location.reload();});
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
@@ -379,9 +379,13 @@ async function loadCharacter() {
     statusDot.classList.add('error');
     document.querySelector('#selection-message')!.textContent = 'Не удалось загрузить персонажей. Обновите страницу.';
     startButton.textContent = 'Загрузка не удалась';
+    throw error;
   }
 }
-void loadCharacter();
+export const ready=loadCharacter().then(async()=>{
+  await renderer.compileAsync(scene,camera);
+  renderer.render(scene,camera);
+});
 startButton.addEventListener('click', async () => {
   if (!loadedModel || playing || !requirePlayerName()) return;
   music.start();
@@ -456,7 +460,7 @@ renderer.setAnimationLoop((time: number) => {
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
-  const usingPad=gamepad.input.active!=='keyboard';
+  const usingPad=!document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(usingPad?'gamepad':'keyboard'));
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'';}
   if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
