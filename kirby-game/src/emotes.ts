@@ -1,3 +1,4 @@
+import { poseFace } from './emote-face';
 import {Object3D} from 'three';
 export const EMOTES=[{id:'Hello',name:'Привет',icon:'👋'},{id:'Joy',name:'Радость',icon:'✨'},{id:'Fear',name:'Испуг',icon:'😳'},{id:'Anger',name:'Гнев',icon:'💢'},{id:'Sad',name:'Грусть',icon:'💧'}] as const;
 export type Emote=typeof EMOTES[number]['id'];
@@ -19,6 +20,7 @@ export class EmotePose {
   if(this.kind==='Fear'){root!.position.y+=Math.max(0,Math.sin(Math.min(1,t/.55)*Math.PI))*.35;root!.rotateX(-.14*e);left?.rotateY(1.1*e);right?.rotateY(-1.1*e);left?.rotateZ(-.65*e);right?.rotateZ(.65*e);root!.rotateZ(Math.sin(t*38)*.035*e);}
   if(this.kind==='Anger'){root!.rotateX(.12*e);root!.position.y+=Math.abs(Math.sin(t*12))*.06*e;if(lf)lf.position.y+=Math.max(0,Math.sin(t*12))*.19*e;if(rf)rf.position.y+=Math.max(0,-Math.sin(t*12))*.19*e;left?.rotateZ(-.55*e);right?.rotateZ(.55*e);}
   if(this.kind==='Sad'){root!.rotateX(.28*e);root!.position.y-=.1*e;left?.rotateZ(.25*e);right?.rotateZ(-.25*e);}
+  poseFace(this.root,this.kind,e,this.restore);
   return t>=duration;
  }
 }

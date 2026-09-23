@@ -1,3 +1,4 @@
+import {Mesh} from 'three';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
@@ -23,4 +24,24 @@ test('fear recoils once, movement interrupts and activities or flight refuse emo
 test('wheel maps five directions and central dead zone to predictable choices',()=>{
  assert.equal(emoteSector(0,0),undefined);assert.equal(emoteSector(.1,.1),undefined);
  for(let i=0;i<5;i++){const a=i*Math.PI*2/5;assert.equal(emoteSector(Math.sin(a),-Math.cos(a)),i);}
+});
+
+test('all five facial expressions affect eyes and mouth, restore on interruption, and preserve Eat bindings',async()=>{
+ const c=await create();
+ const mouth=c.animationRoot.getObjectByName('Open_smiling_mouth') as Mesh;
+ assert(mouth);const original=mouth.geometry,weights=mouth.morphTargetInfluences;
+ for(const emote of EMOTES){
+  c.setActivity('Idle');assert(c.startEmote(emote.id));c.update(.25,idle);
+  let eyes=0,mouths=0;
+  c.animationRoot.traverse(n=>{if(n instanceof Mesh && n.morphTargetDictionary?.[`Emotion ${emote.id}`]!==undefined){
+   const index=n.morphTargetDictionary[`Emotion ${emote.id}`];assert.equal(n.morphTargetInfluences![index],1);
+   const delta=n.geometry.morphAttributes.position[index];assert(Array.from(delta.array).some(v=>Math.abs(Number(v))>.001));
+   if(n.name.includes('eye'))eyes++;if(n===mouth)mouths++;
+  }});
+  assert.equal(eyes,8);assert.equal(mouths,1);
+  c.update(.1,{...idle,forward:true});
+  c.animationRoot.traverse(n=>{if(n instanceof Mesh && n.morphTargetDictionary)for(const [name,index] of Object.entries(n.morphTargetDictionary))if(name.startsWith('Emotion '))assert.equal(n.morphTargetInfluences![index],0);});
+ }
+ assert.notEqual(mouth.geometry,original);assert.equal(original.morphAttributes.position!.length,1);assert.equal(mouth.morphTargetInfluences,weights);
+ c.setActivity('Idle');c.update(.1,{...idle,eat:true});for(let i=0;i<4;i++)c.update(.1,idle);assert(mouth.morphTargetInfluences![0]>.1);
 });
