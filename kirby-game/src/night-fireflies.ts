@@ -67,7 +67,9 @@ export class NightFireflies {
     this.group.name='Forty meadow fireflies';
     for(let i=0;i<40;i++){
       const object=gltf.scene.clone(true);const imported:T.Object3D[]=[];object.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
-      const color=new T.Color().setHSL((i*.618)%1,1,.46),firefly=new Firefly({...gltf,scene:object},color);
+      // Spread 39 saturated hues evenly; permute them so nearby bugs contrast.
+      const color=i===39?new T.Color('#ffffff'):new T.Color().setHSL(((i*16)%39)/39,1,.5,T.SRGBColorSpace);
+      const firefly=new Firefly({...gltf,scene:object},color);
       object.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=false;});object.scale.setScalar(.65);
       const home=new T.Vector3((i%8-3.5)*54,0,(Math.floor(i/8)-2)*78);
       for(let j=0;j<600;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(Math.abs(x)<210 && Math.abs(z)<210 && sceneryClearance(x,z,15)){home.set(x,0,z);break;}}

@@ -30,7 +30,9 @@ test('waking during the bed approach returns control without granting an unfinis
 
 test('forty fireflies alternate flight and rest, have coloured light, and remain active by day',async()=>{
  const world=new NightFireflies(await model('firefly')),camera=new Vector3(0,5,0);assert.equal(world.bugs.length,40);assert.equal(new Set(world.bugs.map(b=>b.color.getHexString())).size,40);
- assert(world.bugs.every(b=>Math.min(b.color.r,b.color.g,b.color.b)<.001));
+ assert.equal(world.bugs.filter(b=>b.color.getHexString()==='ffffff').length,1);
+ assert(world.bugs.filter(b=>b.color.getHexString()!=='ffffff').every(b=>Math.min(b.color.r,b.color.g,b.color.b)<.001 && Math.max(b.color.r,b.color.g,b.color.b)>.99));
+ assert(world.bugs.every(b=>b.halo.material.color.equals(b.color)));
  assert(world.bugs.every(b=>sceneryClearance(b.home.x,b.home.z)));
  world.update(.1,false,camera);assert(world.group.visible);assert(world.bugs.some(b=>!b.land));
  world.update(.1,true,camera);assert(world.group.visible);const bug=world.bugs[0];let flying=false,resting=false;

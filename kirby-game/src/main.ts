@@ -247,24 +247,33 @@ let dragX = 0, dragY = 0;
 let dragMode:'camera'|'character'='camera';
 let mouseTurn=0;
 let pointerLocked=false;
+let rightMouseHeld=false;
 const stopDragging = () => {
-  const pointer=dragPointer;dragPointer=undefined;mouseTurn=0;
+  const pointer=dragPointer;dragPointer=undefined;mouseTurn=0;rightMouseHeld=false;
   if(pointer!==undefined && canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);
   if(document.pointerLockElement===canvas)document.exitPointerLock();
   canvas.style.cursor='grab';
 };
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
-  if (!playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || (event.button !== 0 && event.button !== 2) || event.pointerType !== 'mouse') return;
+  if (!playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
   event.preventDefault();
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
-  dragMode=event.button===2?'character':'camera';mouseTurn=0;
+  if(rightMouseHeld)return;
+  dragMode='camera';mouseTurn=0;
   dragPointer = event.pointerId;
   dragX = event.clientX; dragY = event.clientY;
-  if(dragMode==='character'){
-    try{Promise.resolve(canvas.requestPointerLock()).catch(stopDragging);}catch{stopDragging();}
-  }else canvas.setPointerCapture(event.pointerId);
+  canvas.setPointerCapture(event.pointerId);
   canvas.style.cursor='grabbing';
+});
+// Use MouseEvents throughout the right-button gesture. Pointer capture cancellation
+// during pointer lock must not end the separate mouse-lock gesture.
+canvas.addEventListener('mousedown',event=>{
+  if(event.button!==2 || !playing || gamepad.input.active!=='keyboard' || !audioPanel.hidden)return;
+  event.preventDefault();stopDragging();
+  if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+  rightMouseHeld=true;dragMode='character';canvas.style.cursor='grabbing';
+  try{Promise.resolve(canvas.requestPointerLock()).catch(()=>{if(rightMouseHeld)stopDragging();});}catch{stopDragging();}
 });
 canvas.addEventListener('pointermove', event => {
   if(document.pointerLockElement===canvas)return;
@@ -276,21 +285,21 @@ canvas.addEventListener('pointermove', event => {
   dragX = event.clientX; dragY = event.clientY;
 });
 canvas.addEventListener('contextmenu',event=>{if(playing && gamepad.input.active==='keyboard')event.preventDefault();});
-document.addEventListener('pointerup',event=>{if(event.button===(dragMode==='character'?2:0))stopDragging();});
+document.addEventListener('pointerup',event=>{if(event.button===0 && dragMode==='camera')stopDragging();});
 document.addEventListener('mouseup',event=>{if(event.button===2 && dragMode==='character')stopDragging();});
 document.addEventListener('mousemove',event=>{
-  if(document.pointerLockElement!==canvas || dragMode!=='character')return;
-  if(!(event.buttons&2) || gamepad.input.active!=='keyboard' || !audioPanel.hidden){stopDragging();return;}
+  if(document.pointerLockElement!==canvas || !rightMouseHeld)return;
+  if(gamepad.input.active!=='keyboard' || !audioPanel.hidden){stopDragging();return;}
   mouseTurn=THREE.MathUtils.clamp(mouseTurn-event.movementX*.006,-.5,.5);
 });
 document.addEventListener('pointerlockchange',()=>{
   const locked=document.pointerLockElement===canvas;
-  if(locked && (dragPointer===undefined || dragMode!=='character')){document.exitPointerLock();return;}
+  if(locked && !rightMouseHeld){document.exitPointerLock();return;}
   const released=pointerLocked&&!locked;pointerLocked=locked;if(released)stopDragging();
 });
 document.addEventListener('pointerlockerror',stopDragging);
-canvas.addEventListener('pointercancel', stopDragging);
-canvas.addEventListener('lostpointercapture', stopDragging);
+canvas.addEventListener('pointercancel',()=>{if(dragMode==='camera')stopDragging();});
+canvas.addEventListener('lostpointercapture',()=>{if(dragMode==='camera')stopDragging();});
 window.addEventListener('blur', stopDragging);
 document.addEventListener('visibilitychange', stopDragging);
 canvas.addEventListener('wheel', event => {
@@ -427,7 +436,7 @@ renderer.setAnimationLoop((time: number) => {
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const held=(key:string)=>settingsOpen || wheelUsed || (!usingPad && editingUi)?false:usingPad?padKeys.has(key):keys.has(key);
-  const mouseTurning=!usingPad && dragPointer!==undefined && dragMode==='character' && !settingsOpen;
+  const mouseTurning=!usingPad && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
   const mouseSteer=mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
   if(mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character) {
