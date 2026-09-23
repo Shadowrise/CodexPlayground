@@ -34,7 +34,7 @@ test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject 
   assert.equal(passengers.length,7);
   const parents=passengers.map(p=>p.parent);
   const actor=new Group(),scene=new Group();scene.add(actor);actor.position.copy(STATION);
-  const player={actor,state:'Idle',yaw:0,mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
   carts.forEach(c=>c.wait=c.occupied?1:0);
   assert.equal(c.board(player),false);
   for(let i=0;i<7200;i++)c.update(1/60);
@@ -43,7 +43,7 @@ test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject 
 
 test('departure accelerates gradually; returning rider stays seated in the station queue',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);actor.position.copy(STATION);
-  const player={actor,state:'Idle',yaw:0,mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
   assert(coaster.board(player));
   let previous=0,max=0;
   for(let i=0;i<240;i++) {
@@ -93,7 +93,7 @@ test('closed mountain circuit has height changes, inverted loop and continuous f
 
 test('player stays seated over multiple laps and can exit anywhere to the depot',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);
-  const player={actor,state:'Idle',yaw:0,mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
   assert.equal(coaster.board(player),false);
   actor.position.copy(STATION);
   assert(coaster.board(player));assert(coaster.riding);
@@ -102,7 +102,7 @@ test('player stays seated over multiple laps and can exit anywhere to the depot'
     coaster.update(1/60);high=Math.max(high,actor.position.y);
     inverted ||= new Vector3(0,1,0).applyQuaternion(actor.quaternion).y<-.8;
   }
-  assert(high>75);assert(inverted);assert(coaster.riding);
+  assert(high>75);assert(inverted);assert(coaster.riding);assert.deepEqual([...player.achievements],['coaster']);
   coaster.disembark();assert(!coaster.riding);
   assert.equal(actor.position.y,0);assert.equal(actor.parent,scene);
   assert(actor.quaternion.angleTo(new Group().quaternion)<1e-8);

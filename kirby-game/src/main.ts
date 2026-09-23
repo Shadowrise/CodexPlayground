@@ -1,3 +1,5 @@
+import { TaskList } from './tasks';
+import { awardFirst, scoreOf, placeOf } from './score';
 import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
 import { FpsCounter } from './fps';
 import { EMOTES, EmoteWheel, type Emote } from './emotes';
@@ -46,6 +48,7 @@ const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-frui
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
 const audioPanel = document.querySelector<HTMLElement>('#audio-panel')!;
 const controlsPanel = document.querySelector<HTMLElement>('#controls-panel')!;
+const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
 settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
@@ -209,6 +212,7 @@ window.addEventListener('keydown', event => {
   if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
   const digit=/^(?:Digit|Numpad)([1-5])$/.exec(event.code);
   if(digit && audioPanel.hidden && !event.repeat){event.preventDefault();pendingEmote=EMOTES[Number(digit[1])-1].id;return;}
+  if(event.target instanceof HTMLElement && event.target.closest('button') && (event.code==='Space'||event.code==='Enter'))return;
   if (controls.has(event.code)) {
     event.preventDefault(); keys.add(event.code);
     if (!event.repeat && (event.code === 'KeyA' || event.code === 'KeyD')) pendingTurn = event.code;
@@ -325,7 +329,7 @@ let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
-  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera, #destination-select')).filter(element=>element.getClientRects().length>0);
+  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera, #destination-select, #tasks-toggle')).filter(element=>element.getClientRects().length>0);
   if(!elements.length)return;
   let index=elements.indexOf(document.activeElement as HTMLElement);
   if(direction || index<0) {index=index<0?0:(index+direction+elements.length)%elements.length;elements[index].focus();}
@@ -383,6 +387,7 @@ renderer.setAnimationLoop((time: number) => {
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const held=(key:string)=>settingsOpen || wheelUsed || (!usingPad && editingUi)?false:usingPad?padKeys.has(key):keys.has(key);
   if (character) {
+    const achievementsBefore=character.achievements.size;
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
@@ -396,7 +401,7 @@ renderer.setAnimationLoop((time: number) => {
       else if(balloons.riding){ /* Remain safely in the basket until landing. */ }
       else if(benches.active || ((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)))benches.interact(character);
       else if(treehouse.active || treehouse.prompt(character.actor.position))treehouse.interact(character);
-      else if(watermill.prompt(character.actor.position))watermill.interact(character.actor.position);
+      else if(watermill.prompt(character.actor.position)){watermill.interact(character.actor.position);awardFirst(character,'mill');}
       else if(balloons.prompt(character.actor.position))balloons.board(character);
       else if(atStation)coaster.board(character);
     }
@@ -448,8 +453,7 @@ renderer.setAnimationLoop((time: number) => {
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;
-    fruitValue.textContent = String(character.fruitsEaten);
-    npcFruitValue.textContent = String(fruits.eatenByNpcs);
+    npcFruitValue.textContent = String(npcs.reduce((sum,npc)=>sum+scoreOf(npc),0));
     remainingFruitValue.textContent = String(fruits.onMap);
     const message = document.querySelector<HTMLElement>('#combat-message')!;
     if (hit) {
@@ -463,6 +467,10 @@ renderer.setAnimationLoop((time: number) => {
     if(maze.update(dt,character,!coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
     }
+    if(character.achievements.size>achievementsBefore){message.textContent=`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`;hitMessageRemaining=3;}
+    taskList.update(character.achievements);
+    fruitValue.textContent=String(scoreOf(character));
+    document.querySelector<HTMLElement>('#player-place')!.textContent=`${placeOf(character,[character,...npcs])}.`;
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }

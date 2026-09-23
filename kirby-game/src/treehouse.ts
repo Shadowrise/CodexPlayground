@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
 
@@ -181,7 +182,7 @@ export class Treehouse {
       if(armL)armL.rotation.x=-1+step*.7;if(armR)armR.rotation.x=-1-step*.7;
       if(footL)footL.rotation.x=step*.5;if(footR)footR.rotation.x=-step*.5;
       if(this.elapsed>=this.soundAfter){this.sound('ladder');this.soundAfter=this.elapsed+.32;}
-      if(u===1){this.activity='deck';c.setActivity('Lookout');}
+      if(u===1){awardFirst(c,'treehouse');this.activity='deck';c.setActivity('Lookout');}
     }else if(this.activity==='deck'){
       if(jump){this.dive();return;}
       c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*1.8*dt;c.actor.rotation.y=c.yaw;
@@ -195,7 +196,7 @@ export class Treehouse {
       c.yaw=Math.atan2(target.x-this.from.x,target.z-this.from.z);c.actor.rotation.y=c.yaw;
       if(armL)armL.rotation.z=-1.1;if(armR)armR.rotation.z=1.1;
       c.animationRoot.rotation.x=-.3*Math.sin(Math.PI*u);
-      if(u===1){this.activity='land';this.elapsed=0;this.burstTime=0;this.sound('leaves');}
+      if(u===1){awardFirst(c,'leaves');this.activity='land';this.elapsed=0;this.burstTime=0;this.sound('leaves');}
     }else if(this.activity==='land'){
       const u=Math.min(1,this.elapsed/.7),squash=Math.sin(u*Math.PI)*.28;
       c.animationRoot.scale.set(1+squash,1-squash,1+squash);c.animationRoot.rotation.x=0;
@@ -203,6 +204,7 @@ export class Treehouse {
     }else{
       this.swing.updateWorldMatrix(true,false);
       const seat=this.swing.localToWorld(new T.Vector3(0,-5.58,0));
+      if(this.elapsed>=1.5)awardFirst(c,'swing');
       const mount=Math.min(1,this.elapsed/.65),blend=mount*mount*(3-2*mount);
       c.actor.position.lerpVectors(this.from,seat,blend);
       c.actor.rotation.set(this.swingAngle,0,0);c.yaw=0;

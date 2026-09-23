@@ -13,7 +13,7 @@ test('every bench supports smooth sitting, standing and correct return height',a
     c.setActivity(seat.floor?'Lookout':'Idle');const start=c.actor.position.clone();
     assert(benches.prompt(start));benches.interact(c);assert(benches.active);
     benches.update(.01);assert(c.actor.position.distanceTo(start)<.01);
-    benches.update(.6);assert.equal(c.state,'Sitting');assert(Math.abs(c.actor.position.y-(seat.position.y-.18))<1e-8);
+    benches.update(.6);assert.deepEqual([...c.achievements],['bench']);assert.equal(c.state,'Sitting');assert(Math.abs(c.actor.position.y-(seat.position.y-.18))<1e-8);
     benches.interact(c);benches.update(.4);assert(!benches.active);assert.equal(c.actor.position.y,seat.floor);
     assert.equal(c.state,seat.floor?'Lookout':'Idle');assert(c.actor.position.equals(start));
   }

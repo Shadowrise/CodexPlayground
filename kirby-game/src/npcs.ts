@@ -1,3 +1,4 @@
+import type { ScoreAction } from './score';
 import { AnimationAction, AnimationClip, AnimationMixer, Color, Group, LoopOnce, LoopRepeat, Mesh, MeshStandardMaterial, Object3D, PropertyBinding, Vector3 } from 'three';
 import { cloneVariant, KIRBY_VARIANTS, remainingVariants, type KirbyVariant } from './variants';
 import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
@@ -52,6 +53,7 @@ export class KirbyNpc {
   private readonly bodyRadii = new Vector3();
   private readonly contactCenter = new Vector3();
   fruitsEaten = 0;
+  readonly achievements=new Set<ScoreAction>();
   private growth?: { from: number; to: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   grow() {

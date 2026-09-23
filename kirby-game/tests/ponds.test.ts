@@ -41,3 +41,12 @@ test('terrain leaves real holes over lakes and streams, with water below the ban
  }
  assert(WATER_Y<-.2);assert(!inPond(20,0));
 });
+
+test('any lake completes the swimming task and other lakes do not award it again',async()=>{
+ const c=await player(),ponds=new Ponds();
+ for(const site of PONDS){
+  c.achievements.clear();c.actor.position.set(site.x,0,site.z);ponds.apply(c,c.actor.position.clone());
+  assert(c.swimming);assert.deepEqual([...c.achievements],['swim']);
+ }
+ for(const site of PONDS){c.actor.position.set(site.x,0,site.z);ponds.apply(c,c.actor.position.clone());assert.equal(c.achievements.size,1);}
+});

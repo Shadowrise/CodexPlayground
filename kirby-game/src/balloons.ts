@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
@@ -142,7 +143,7 @@ export class Balloons {
       const heading=Math.atan2(b.end.x-b.start.x,b.end.z-b.start.z);
       p.yaw+=Math.atan2(Math.sin(heading-p.yaw),Math.cos(heading-p.yaw))*(1-Math.exp(-dt*2));p.actor.rotation.set(b.group.rotation.x,p.yaw,b.group.rotation.z);
       for(const side of ['Left','Right']){const arm=p.actor.getObjectByName(`${side}_shoulder`);if(arm){arm.rotation.x=-.25;arm.rotation.z=(side==='Left'?-1:1)*(.35+.07*Math.sin(this.clock*2));}}
-      if(b.phase==='exiting' && b.time>=1){p.actor.rotation.set(0,p.yaw,0);if(p instanceof CharacterController)p.setActivity('Idle');else {p.endBalloon();this.npcAfter=35+this.random()*25;}b.passenger=undefined;b.phase='parked';b.time=0;b.scale=1;b.group.scale.setScalar(1);}
+      if(b.phase==='exiting' && b.time>=1){awardFirst(p,'balloon');p.actor.rotation.set(0,p.yaw,0);if(p instanceof CharacterController)p.setActivity('Idle');else {p.endBalloon();this.npcAfter=35+this.random()*25;}b.passenger=undefined;b.phase='parked';b.time=0;b.scale=1;b.group.scale.setScalar(1);}
     }
     if(this.approach){
       const {npc,balloon:b,health}=this.approach;this.approach.elapsed+=dt;

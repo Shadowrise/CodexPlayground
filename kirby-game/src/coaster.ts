@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeLuigi, updateLuigiIdle } from './luigi';
@@ -209,6 +210,7 @@ export class Coaster {
         if(cart===this.ridden)this.rideMotion.speed=dt>0?travel/dt:0;
         for(const wheel of cart.wheels)wheel.rotateY(travel/.32);
         if(cart.distance>=this.length-.02) {
+          if(cart===this.ridden && this.rider)awardFirst(this.rider,'coaster');
           cart.distance=0;cart.wait=(cart.occupied || cart===this.ridden) ? .4 : 2.5;cart.speed=0;
         }
       }

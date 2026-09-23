@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
 import { HOME_SITE } from './home-site';
@@ -53,7 +54,7 @@ export class KirbyHome {
     this.windows.emissiveIntensity=this.night?1.5:.12;const c=this.sleeper;if(!c)return;
     const before=this.elapsed;this.elapsed+=dt;const t=this.elapsed;
     this.blackout=t<2?T.MathUtils.smoothstep(t,1,2):t<4?1:1-T.MathUtils.smoothstep(t,4,5.3);
-    if(before<2.2 && t>=2.2)this.night=!this.night;
+    if(before<2.2 && t>=2.2){this.night=!this.night;awardFirst(c,'sleep');}
     c.mixer.update(dt);const bed=new T.Vector3(HOME_SITE.x,1.1,HOME_SITE.z+.7),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
     if(t<1){const u=T.MathUtils.smoothstep(t,0,1);c.actor.position.lerpVectors(this.from,bed,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,sleepRotation,u);}
     else if(t<3.2){c.actor.position.copy(bed);c.actor.quaternion.copy(sleepRotation);for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}

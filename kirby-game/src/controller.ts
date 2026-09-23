@@ -1,3 +1,4 @@
+import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
 import { constrainToMeadow } from './world-bounds';
@@ -32,6 +33,7 @@ export class CharacterController {
   private eatElapsed: number | undefined;
   private eatWasHeld = false;
   fruitsEaten = 0;
+  readonly achievements=new Set<ScoreAction>();
   starBlessed = false;
   starRemaining = 0;
   starCooldown = 0;

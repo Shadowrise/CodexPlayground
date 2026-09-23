@@ -14,9 +14,9 @@ test('player boards smoothly, travels above the trees, lands elsewhere and regai
   const start=c.actor.position.clone();assert(world.board(c));world.update(.01,[],c);assert(c.actor.position.distanceTo(start)<.01);
   world.update(1,[],c);const saved=world.savePosition(c)!;assert.equal(saved.y,0);assert(saved.distanceTo(start)<3);
   for(let i=0;i<350;i++)world.update(.05,[],c);
-  assert(world.riding);assert(c.actor.position.y>60);assert.equal(c.state,'Balloon');assert(!world.board(c));
+  assert(world.riding);assert(!c.achievements.has('balloon'));assert(c.actor.position.y>60);assert.equal(c.state,'Balloon');assert(!world.board(c));
   for(let i=0;i<520;i++)world.update(.05,[],c);
-  assert(!world.riding);assert.equal(c.actor.position.y,0);assert.equal(c.state,'Idle');assert.equal(c.actor.scale.x,2);
+  assert(!world.riding);assert(c.achievements.has('balloon'));assert.equal(c.actor.position.y,0);assert.equal(c.state,'Idle');assert.equal(c.actor.scale.x,2);
   assert(c.actor.position.distanceTo(start)>100);assert(events.includes('burner') && events.includes('departure') && events.includes('arrival'));
   const before=c.actor.position.clone();c.update(.1,{forward:true,left:false,right:false});assert(c.actor.position.distanceTo(before)>0);
 });
@@ -28,7 +28,7 @@ test('NPC walks to a balloon, occasionally rides and returns to walking; two bal
     world.update(.05,[npc]);if(npc.state==='Balloon'){rode=true;assert(!npc.takeHit());assert(world.savePosition(npc));}
     if(rode && !world.owns(npc)){landed=true;break;}
   }
-  assert(rode && landed);assert.equal(npc.state,'Walk');assert.equal(npc.actor.position.y,0);
+  assert(rode && landed);assert(npc.achievements.has('balloon'));assert.equal(npc.state,'Walk');assert.equal(npc.actor.position.y,0);
   assert(world.balloons.filter(b=>b.phase==='parked').length>=2);
 });
 test('three ports are clear of trees and detailed balloons have distinct random colours',()=>{

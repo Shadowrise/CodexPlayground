@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
 import { MAZE_SITE, mazeLayout, farthestMazeCell } from './maze-layout';
@@ -51,7 +52,7 @@ export class MazeTrampoline {
     }else{
       if(previous<4){this.sound('leaves');this.burst=0;}
       c.actor.position.copy(this.landing);const u=Math.min(1,(t-4)/.65),s=Math.sin(u*Math.PI)*.26;c.animationRoot.scale.set(1+s,1-s,1+s);
-      if(u===1){c.setActivity('Idle');this.player=undefined;}
+      if(u===1){awardFirst(c,'trampoline');c.setActivity('Idle');this.player=undefined;}
     }
   }
 }

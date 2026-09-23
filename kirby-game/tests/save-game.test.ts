@@ -14,6 +14,7 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const variant=KIRBY_VARIANTS[4],player=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const npcs=createNpcs(model.scene,model.animations,variant),world=new FruitWorld();
  player.actor.position.set(12,0,33);player.yaw=.8;player.grow();player.grow();
+ player.achievements.add('bench');player.achievements.add('star');npcs[3].achievements.add('balloon');
  player.starBlessed=true;player.starRemaining=18;player.starCooldown=108;
  npcs[3].actor.position.set(-15,0,90);npcs[3].grow();
  world.restore(world.fruits.map((_,i)=>i<3),1);
@@ -21,6 +22,8 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const restored=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const friends=createNpcs(model.scene,model.animations,variant),fruits=new FruitWorld();
  restoreGame(save,restored,friends,fruits);
+ assert.deepEqual([...restored.achievements],['bench','star']);assert(friends[3].achievements.has('balloon'));
+ assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,achievements:['bench','bench']}})));
  assert(restored.starBlessed);assert.equal(restored.starRemaining,18);assert.equal(restored.starCooldown,108);
  assert.equal(save.player.variant,variant[0]);assert.equal(restored.actor.position.x,12);assert.equal(restored.actor.position.z,33);
  assert.equal(restored.yaw,.8);assert(Math.abs(restored.actor.scale.x-1.2)<1e-9);assert.equal(restored.fruitsEaten,2);
@@ -31,6 +34,8 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  assert.throws(()=>parseSave('broken'));
  const nightSave=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,undefined,true)));assert.equal(nightSave.night,true);assert.throws(()=>parseSave(JSON.stringify({...save,night:'yes'})));
  assert.throws(()=>parseSave(JSON.stringify({...save,mazeStar:'yes'})));
+ const oldFormat=JSON.parse(JSON.stringify(save));delete oldFormat.player.achievements;for(const npc of oldFormat.npcs)delete npc.achievements;
+ restoreGame(parseSave(JSON.stringify(oldFormat)),restored,friends,fruits);assert.deepEqual([...restored.achievements],['star']);assert.equal(friends[3].achievements.size,0);assert.equal(restored.fruitsEaten,2);
  const legacy={...save};delete legacy.mazeStar;delete legacy.starRemaining;delete legacy.starCooldown;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);assert.equal(restored.starRemaining,0);assert.equal(restored.starCooldown,0);
  assert.throws(()=>parseSave(JSON.stringify({...save,starRemaining:31})));assert.throws(()=>parseSave(JSON.stringify({...save,starCooldown:-1})));
 });

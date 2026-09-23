@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import { MathUtils, Vector3 } from 'three';
 import type { CharacterController } from './controller';
 import { LANDMARKS } from './landmarks';
@@ -40,6 +41,7 @@ export class Benches {
     const c=this.rider;if(!c)return;
     this.elapsed+=dt;
     const t=Math.min(1,this.elapsed/(this.leaving?.35:.5)),smooth=t*t*(3-2*t);
+    if(!this.leaving && t===1)awardFirst(c,'bench');
     this.blend=this.leaving?this.startBlend*(1-smooth):smooth;
     c.mixer.update(dt);c.actor.position.lerpVectors(this.from,this.target,this.blend);
     const delta=Math.atan2(Math.sin(this.seat!.yaw-this.yaw),Math.cos(this.seat!.yaw-this.yaw));

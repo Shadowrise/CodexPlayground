@@ -1,3 +1,4 @@
+import { awardFirst } from './score';
 import * as T from 'three';
 import { PONDS, WATER_Y, deckHeight, inPond, pondOutline } from './pond-layout';
 import type { CharacterController } from './controller';
@@ -76,6 +77,7 @@ export class Ponds {
   }
   this.onBridge=bridge;
   c.swimming=wet&&!c.flight.active;
+  if(c.swimming)awardFirst(c,'swim');
   // Preserve flight height relative to the support surface.
   if(c.flight.active)p.y+=height-this.base;else p.y=height;
   c.surfaceY=height;this.base=height;
