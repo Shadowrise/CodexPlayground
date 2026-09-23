@@ -189,12 +189,14 @@ button:disabled { cursor:default; }
 .map-mode {display:flex;align-items:center;gap:12px;margin:14px 0;font-size:14px;font-weight:700;}
 .map-mode select {flex:1;padding:10px 12px;border:1px solid var(--ui-border);border-radius:10px;background:var(--ui-raised);color:var(--ui-text);font:inherit;}
 
-/* Reserve the same counter column for each startup button. */
-#startup-menu .startup-section {display:grid;grid-template-columns:minmax(0,1fr) 82px;column-gap:14px;}
-#startup-menu .startup-section h3 {grid-column:1 / -1;}
-#startup-menu .network-entry {grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) 82px;gap:14px;}
+/* Keep the original button width while centering each row. */
+#startup-menu .startup-section {display:flex;flex-direction:column;align-items:center;}
+#startup-menu .startup-section > h3 {align-self:stretch;}
+#startup-menu .network-entry {width:100%;display:flex;justify-content:center;}
+.network-heading {display:flex;align-items:baseline;justify-content:space-between;gap:14px;width:100%;margin-bottom:12px;}
+#startup-menu .network-heading h3 {margin:0;}
 #startup-menu #new-game, #startup-menu #load-game, #startup-menu .network-entry button {
- grid-column:1;width:100%;height:72px;box-sizing:border-box;padding:12px 14px;border-width:1px;border-style:solid;font:inherit;font-weight:700;line-height:22px;
+ flex:none;width:calc(100% - 96px);height:72px;box-sizing:border-box;padding:12px 14px;border-width:1px;border-style:solid;font:inherit;font-weight:700;line-height:22px;
 }
 #startup-menu #new-game {border-color:transparent;}
 @media(max-width:520px){#startup-menu #new-game,#startup-menu #load-game,#startup-menu .network-entry button{height:100px;}}

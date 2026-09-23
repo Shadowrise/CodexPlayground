@@ -88,7 +88,7 @@ const startupCard=document.createElement('div');startupCard.className='selection
 startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>Добро пожаловать!</h2>';
 const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
 const soloSection=document.createElement('section');soloSection.className='startup-section';soloSection.innerHTML='<h3>Одиночная игра</h3>';soloSection.append(newGameButton,loadButton);
-const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<h3>Сетевая игра</h3><div class="network-entry"><button type="button" disabled title="Подключение появится позже">Подключиться к сетевой игре</button><span id="online-players" aria-live="polite">… игроков</span></div>';
+const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<div class="network-heading"><h3>Сетевая игра</h3><span id="online-players" aria-live="polite">… игроков</span></div><div class="network-entry"><button type="button" disabled title="Подключение появится позже">Подключиться к сетевой игре</button></div>';
 startupCard.append(nameField,soloSection,networkSection);
 watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,import.meta.env.VITE_GAME_SERVER_URL || 'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
@@ -202,8 +202,18 @@ const destinations:Destination[]=[
  ...LANDMARKS.flatMap((p,i)=>p.kind===0 || p.kind===4 ? [{id:`landmark-${i}`,name:`${p.kind===0?'Озеро с мостиком':'Пикник и лавочки'} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13*POND_SCALE:0),z:p.z,radius:6,group:'Места на поляне'}] : []),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
-const fruits = new FruitWorld();
-for(const fruit of fruits.fruits){watermill.constrain(fruit.object.position,.15);treehouse.constrain(fruit.object.position,.15);maze.moveFruitOutside(fruit.object.position);home.constrain(fruit.object.position,.15);}
+const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...coaster.supports.map(s=>({x:s.base.x,z:s.base.z,radius:2}))];
+const fruits = new FruitWorld(fruitObstacles);
+// Clear only the small footprints beneath fruit, keeping surrounding grass intact.
+const grassMatrix=new THREE.Matrix4();
+scene.getObjectByName('Meadow grass')?.traverse(object=>{
+ if(!(object instanceof THREE.InstancedMesh))return;
+ for(let i=0;i<object.count;i++){
+  object.getMatrixAt(i,grassMatrix);const x=grassMatrix.elements[12],z=grassMatrix.elements[14];
+  if(fruits.fruits.some(f=>Math.hypot(x-f.object.position.x,z-f.object.position.z)<2.6)){grassMatrix.scale(new THREE.Vector3(0,0,0));object.setMatrixAt(i,grassMatrix);}
+ }
+ object.instanceMatrix.needsUpdate=true;
+});
 scene.add(fruits.group);
 setupShadowMaterials();
 

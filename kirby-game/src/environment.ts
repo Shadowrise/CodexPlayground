@@ -33,6 +33,7 @@ export function addEnvironment(scene: THREE.Scene) {
       grass.setColorAt(id, color);
     }
   }
+  grass.name='Meadow grass';
   grass.receiveShadow = true;
   scene.add(spatialInstances(grass));
 

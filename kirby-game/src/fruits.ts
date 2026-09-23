@@ -5,7 +5,7 @@ import { makeStrawberry } from './strawberry';
 import { makeBanana } from './banana';
 import { makeFruitMist } from './fruit-mist';
 import { makeWatermelon } from './watermelon';
-import { MEADOW_HALF_SIZE } from './world-bounds';
+import { fruitLayout,type FruitObstacle } from './fruit-layout';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
 export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean };
@@ -66,23 +66,15 @@ export class FruitWorld {
   private time = 0;
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
-  constructor() {
+  constructor(obstacles:readonly FruitObstacle[]=[]) {
     const templates = FRUIT_TYPES.map((_, i) => makeFruit(i));
-    let seed = 9913;
-    const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+    const positions=fruitLayout(obstacles);
     for (let i = 0; i < 70; i++) {
       const kind = i % 10, object = templates[kind].clone(true);
       object.add(makeFruitMist(kind));
       object.scale.setScalar(2.5);
-      // One fruit per sector, shuffled across types: no dense starting cluster
-      // or large empty regions from unconstrained random placement.
-      const cell = (i * 27) % 70, span = (MEADOW_HALF_SIZE - 8) * 2;
-      object.position.set(
-        ((cell % 10 + .2 + random() * .6) / 10 - .5) * span,
-        -.015,
-        ((Math.floor(cell / 10) + .2 + random() * .6) / 7 - .5) * span,
-      );
-      object.rotation.y = random() * Math.PI * 2;
+      const position=positions[i];object.position.set(position.x,-.012,position.z);
+      object.rotation.y=i*2.399;
       object.name = FRUIT_TYPES[kind]; this.group.add(object);
       this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false });
     }
