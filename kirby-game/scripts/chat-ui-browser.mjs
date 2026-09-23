@@ -1,0 +1,8 @@
+import {chromium} from 'playwright';import assert from 'node:assert/strict';
+const b=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});try{
+ const p=await b.newPage({viewport:{width:1200,height:850}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto('http://127.0.0.1:5173/');await p.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});await p.locator('#player-name-input').fill('Тест');await p.locator('#new-game').click();await p.locator('#start-game').click();
+ assert(await p.locator('#controls-panel').isHidden());await p.locator('#settings-toggle').click();
+ const audio=await p.locator('#audio-panel').boundingBox(),help=await p.locator('#controls-panel').boundingBox();assert(help.x>=audio.x+audio.width);assert.equal(help.y,audio.y);assert.equal(await p.locator('#reset-camera').count(),0);assert(await p.locator('#controls-panel [data-controls="gamepad"]').isHidden());
+ await p.locator('#settings-toggle').click();await p.locator('#game canvas').click();await p.keyboard.press('Enter');await p.locator('#chat-input').fill('Белое сообщение');await p.keyboard.press('Enter');await p.waitForFunction(()=>document.querySelector('.chat-text')?.textContent==='Белое сообщение');assert.equal(await p.locator('.chat-text').evaluate(e=>getComputedStyle(e).color),'rgb(255, 255, 255)');assert.equal(await p.locator('.chat-title').count(),0);
+ await p.locator('#settings-toggle').click();await p.screenshot({path:(process.env.TEMP||'/tmp')+'/kirby-chat-controls.png'});assert.deepEqual(errors,[]);console.log('PASS chat colors, removed title, hidden panels, adjacent controls and no reset button');
+}finally{await b.close();}

@@ -60,6 +60,7 @@ const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-frui
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
 const audioPanel = document.querySelector<HTMLElement>('#audio-panel')!;
 const controlsPanel = document.querySelector<HTMLElement>('#controls-panel')!;
+const settingsPanels=document.createElement('div');settingsPanels.id='settings-panels';document.body.append(settingsPanels);settingsPanels.append(audioPanel,controlsPanel);
 const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
 settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
@@ -369,7 +370,7 @@ canvas.addEventListener('wheel', event => {
 }, { passive: false });
 let viewScale = 1;
 const cameraTarget = new THREE.Vector3(0, .9, 0);
-document.querySelector('#reset-camera')!.addEventListener('click', () => followCamera.reset(character?.yaw ?? 0));
+
 let character: CharacterController | undefined;
 let npcs: KirbyNpc[] = [];
 const labels: Record<string, string> = { Idle: 'Отдыхаем', Run: 'Бежим', WalkBackward: 'Пятимся назад', Jump: 'Парим', Attack: 'Атака', Eat: 'Кушаем', RotateLeft: 'Поворот налево', RotateRight: 'Поворот направо' };
@@ -454,7 +455,7 @@ let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
-  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera, #destination-select, #tasks-toggle')).filter(element=>element.getClientRects().length>0);
+  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #destination-select, #tasks-toggle')).filter(element=>element.getClientRects().length>0);
   if(!elements.length)return;
   let index=elements.indexOf(document.activeElement as HTMLElement);
   if(direction || index<0) {index=index<0?0:(index+direction+elements.length)%elements.length;elements[index].focus();}
@@ -475,7 +476,7 @@ renderer.setAnimationLoop((time: number) => {
   const pad=gamepad.poll();
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
-  document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(usingPad?'gamepad':'keyboard'));
+  document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(gamepad.input.active!=='keyboard'?'gamepad':'keyboard'));
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'';}
   if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
   const settingsOpen=!audioPanel.hidden || chat.open;
