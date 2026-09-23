@@ -1,3 +1,4 @@
+import { depotFloorHeight } from '../src/depot-floor';
 import {POND_SCALE} from '../src/landmark-sites';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -71,5 +72,19 @@ test('every additional rotated bridge supports crossing in both directions',asyn
   const position=(x:number)=>{c.actor.position.x=site.x+x*cos*POND_SCALE;c.actor.position.z=site.z-x*sin*POND_SCALE;};
   position(side*5.1);
   for(let i=1;i<=102;i++){const old=c.actor.position.clone(),x=side*(5.1-i*.1);position(x);ponds.apply(c,old);assert(!c.swimming);assert(Math.abs(c.actor.position.y-deckHeight(x))<1e-6);}
+ }
+});
+
+test('depot stairs and platform support walking, growth and jumping without floor penetration',async()=>{
+ for(const size of [1,3]){
+  const c=await player(),ponds=new Ponds();c.actor.scale.setScalar(size);c.actor.position.set(0,0,216);
+  let previousHeight=0;
+  for(let z=216;z<228;z+=.05){const previous=c.actor.position.clone();c.actor.position.z=z;ponds.apply(c,previous);assert.equal(c.actor.position.y,depotFloorHeight(0,z));assert(c.actor.position.y>=previousHeight);assert(c.actor.position.y-previousHeight<=.241);previousHeight=c.actor.position.y;assert(!c.swimming);}
+  assert.equal(c.actor.position.y,.7);assert.equal(c.surfaceY,.7);
+  c.update(.1,{...input,forward:false,jump:true});ponds.apply(c,c.actor.position.clone());assert(c.actor.position.y>.7);
+  for(let i=0;i<400;i++){c.update(.02,{...input,forward:false});ponds.apply(c,c.actor.position.clone());assert(c.actor.position.y>=.7);}
+  assert.equal(c.actor.position.y,.7);
+  for(let z=228;z>216;z-=.05){const previous=c.actor.position.clone();c.actor.position.z=z;ponds.apply(c,previous);assert.equal(c.actor.position.y,depotFloorHeight(0,z));}
+  assert.equal(c.actor.position.y,0);
  }
 });

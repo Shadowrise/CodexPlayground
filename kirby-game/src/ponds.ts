@@ -1,3 +1,4 @@
+import { depotFloorHeight } from './depot-floor';
 import { POND_SCALE } from './landmark-sites';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -73,7 +74,7 @@ export class Ponds {
     p.x=previous.x;p.z=previous.z;
    }
   }
-  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):0;}
+  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z);}
   this.onBridge=bridge;
   c.swimming=wet&&!c.flight.active;
   if(c.swimming)awardFirst(c,'swim');

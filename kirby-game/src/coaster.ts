@@ -1,3 +1,4 @@
+import { DEPOT_PLATFORM, DEPOT_STEPS } from './depot-floor';
 import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -118,8 +119,7 @@ export class Coaster {
       }
     }
     // Open boarding platform: no canopy obscures the rider or follow camera.
-    add(box,'#b9a582',new T.Vector3(0,.35,224),new T.Vector3(24,.7,10));
-    for(let i=0;i<3;i++)add(box,'#a7987c',new T.Vector3(0,.12+i*.1,217+i*.7),new T.Vector3(7,.24+i*.2,.8));
+    for(const surface of [DEPOT_PLATFORM,...DEPOT_STEPS])add(box,surface===DEPOT_PLATFORM?'#b9a582':'#a7987c',new T.Vector3(surface.x,surface.height/2,surface.z),new T.Vector3(surface.width,surface.height,surface.depth));
     for(const x of [-11,-5,5,11]) {
       for(const z of [220,225])if(Math.abs(x)>6)beam(new T.Vector3(x,.7,z),new T.Vector3(x,1.8,z),.07,'#d6cba6');
     }
