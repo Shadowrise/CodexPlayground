@@ -22,6 +22,7 @@ export class GameRoom extends DurableObject<Env>{
   if(first)this.room={id:crypto.randomUUID(),host:id,epoch:Date.now(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);server.serializeAttachment({id,seen:Date.now(),visible:true,variant} satisfies Attachment);
   this.persist();this.send(server,{type:'welcome',protocolVersion:PROTOCOL,playerId:id,room:this.room,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,actor:a.actor};})});
+  this.broadcast({type:'presence',count:this.players().length});
   if(first)await this.ctx.storage.setAlarm(Date.now()+30000);
   return new Response(null,{status:101,webSocket:client});
  }
@@ -59,7 +60,7 @@ export class GameRoom extends DurableObject<Env>{
   const r=this.room;if(!r)return;
   for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
-  this.broadcast({type:'left',id:a.id},socket);this.changed();
+  this.broadcast({type:'left',id:a.id},socket);this.broadcast({type:'presence',count:remaining.length},socket);this.changed();
  }
  async webSocketClose(socket:WebSocket){await this.remove(socket);}
  async webSocketError(socket:WebSocket){await this.remove(socket);}

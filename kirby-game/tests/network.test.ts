@@ -1,3 +1,4 @@
+import {NetworkSession} from '../src/network';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
@@ -21,6 +22,7 @@ test('actual world fits the shared wire contract and attachment budget',async()=
  assert(!validWorld({...w,npcLife:[[]]}));assert(!validActor({...w.npcs[0],p:[Infinity,0,0]}));
  coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies.networkApply(w.bugs);
  assert.deepEqual(round(coaster.networkState()),w.carts);
+ assert(validActor({...w.npcs[0],ride:{key:'bug:0',data:w.bugs[0]}}));
  w.bugs[0][9]=3.6;fireflies.networkApply(w.bugs);assert.equal(fireflies.networkState()[0][9],3.6);
 });
 
@@ -28,4 +30,16 @@ test('malformed peer payloads fail validation without throwing',()=>{
  for(const value of [null,{},[],{ride:{key:7,data:[]}},{balloons:[null,null,null]}]){
   assert.equal(validActor(value),false);assert.equal(validWorld(value),false);
  }
+});
+
+test('solo checkpoints reduce messages while multiplayer keeps its update cadence',()=>{
+ const actor={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
+ const count=(peers:number)=>{
+  const session=new NetworkSession();session.id='host';session.room={id:'test',host:'host',epoch:0,fruits:[],starAt:0,mill:false,locks:{}};session.peerCount=peers;
+  const messages:any[]=[];(session as any).socket={readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s))};
+  for(let i=0;i<3000;i++){actor.p[0]=i/10;session.tick(.1,actor,()=>({} as any));}
+  session.event({type:'mill'});session.tick(.1,actor,()=>({} as any));assert(messages.at(-1).events.some((e:any)=>e.type==='mill'));
+  return messages.length;
+ };
+ assert(count(1)<=151);assert.equal(count(2),3001);
 });
