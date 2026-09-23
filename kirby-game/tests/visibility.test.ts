@@ -4,8 +4,8 @@ import {Group,Vector3} from 'three';
 import {updateVisibility,FRUIT_DISTANCE} from '../src/visibility';
 test('models remain visible beyond mist range; consumed fruit stays hidden',()=>{
  const root=new Group(),mist=new Group();mist.name='Fruit colored mist';root.add(mist);const camera=new Vector3();
- root.position.x=40;updateVisibility(root,camera);assert(root.visible&&mist.visible);
- root.position.x=60;updateVisibility(root,camera);assert(root.visible);assert(!mist.visible);
+ root.position.x=84;updateVisibility(root,camera);assert(root.visible&&mist.visible);
+ root.position.x=85;updateVisibility(root,camera);assert(root.visible);assert(!mist.visible);
  root.position.x=169;updateVisibility(root,camera);assert(!root.visible);
  root.position.x=10;updateVisibility(root,camera,false);assert(!root.visible);
  updateVisibility(root,camera);assert(root.visible&&mist.visible);

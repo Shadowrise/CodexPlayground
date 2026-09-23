@@ -40,7 +40,7 @@ test('forty fireflies alternate flight and rest, have coloured light, and remain
  assert(flying&&resting);
  world.bugs.forEach(b=>b.land=true);assert.equal(world.buzzLevel(bug.carrier.position),0);bug.land=false;assert.equal(world.buzzLevel(bug.carrier.position),1);assert.equal(world.buzzLevel(new Vector3(10000,0,10000)),0);assert(world.lights.some(l=>l.intensity>0));assert(world.lights.length<=4);
  world.update(0,true,camera);
- for(const b of world.bugs){const distance=b.carrier.position.distanceTo(camera);assert.equal(b.firefly.object.visible,distance<=168);assert.equal(b.halo.visible,distance<=42);}
+ for(const b of world.bugs){const distance=b.carrier.position.distanceTo(camera);assert.equal(b.firefly.object.visible,distance<=168);assert.equal(b.halo.visible,distance<=84);}
  world.update(.1,false,camera);assert(world.group.visible);assert(world.bugs.some(b=>!b.land));
 });
 test('sky replaces sun with moon and stars at night',()=>{

@@ -1,7 +1,7 @@
 import {Object3D,Vector3} from 'three';
-export const MIST_DISTANCE=42;
-export const ACTOR_DISTANCE=MIST_DISTANCE*4;
-export const FRUIT_DISTANCE=MIST_DISTANCE*8;
+export const MIST_DISTANCE=84;
+export const ACTOR_DISTANCE=168;
+export const FRUIT_DISTANCE=336;
 const position=new Vector3();
 const mistCache=new WeakMap<Object3D,Object3D[]>();
 /** Render-only limits: simulation and network state continue outside the view radius. */
