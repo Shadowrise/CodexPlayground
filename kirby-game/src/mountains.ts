@@ -1,11 +1,16 @@
+import { createMountainTexture } from './mountain-texture';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H, MOUNTAIN_WIDTH as W } from './world-bounds';
 
 /** Continuous square heightfield: adjoining sides share their corner vertices. */
 export function createMountains() {
-  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
+  const positions: number[] = [], colors: number[] = [], uvs: number[] = [], indices: number[] = [];
   const along = 240, across = 40;
-  const green = new THREE.Color('#65854e'), rock = new THREE.Color('#7d827b'), snow = new THREE.Color('#edf3f0');
+  const snow = new THREE.Color('#ffffff');
+  // Same smooth boundaries as the meadow: spruce, birch, autumn and orchard.
+  const greens=['#7e9a75','#a4ae7c','#b2a16a','#91ab70'].map(c=>new THREE.Color(c));
+  const rocks=['#a2afb4','#c2c1ae','#bfa58b','#afafa0'].map(c=>new THREE.Color(c));
+  const southColor=new THREE.Color(),green=new THREE.Color(),rock=new THREE.Color();
   function height(x: number, z: number) {
     const d = Math.max(Math.abs(x), Math.abs(z)) - H;
     const envelope = Math.sin(Math.PI * Math.max(0, Math.min(1, d / W))) ** .85;
@@ -22,6 +27,12 @@ export function createMountains() {
       const z = side === 0 ? -r : side === 1 ? tangent : side === 2 ? r : -tangent;
       const y = height(x, z);
       positions.push(x, y - .025, z);
+      // Continuous UVs at corners; 64 repeats close the ring without a seam.
+      uvs.push((side+i/along)*16,(r-H)/16+y/24);
+      const east=.5+.5*Math.tanh((x+12*Math.sin(z*.025))/18);
+      const south=.5+.5*Math.tanh((z+10*Math.sin(x*.032))/18);
+      green.copy(greens[0]).lerp(greens[1],east).lerp(southColor.copy(greens[2]).lerp(greens[3],east),south);
+      rock.copy(rocks[0]).lerp(rocks[1],east).lerp(southColor.copy(rocks[2]).lerp(rocks[3],east),south);
       const c = green.clone().lerp(rock, THREE.MathUtils.smoothstep(y, 5, 28));
       const slope = Math.hypot(height(x + .7, z) - height(x - .7, z), height(x, z + .7) - height(x, z - .7));
       const snowline = 62 + 5 * Math.sin(x * .21 + z * .16);
@@ -33,9 +44,10 @@ export function createMountains() {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setIndex(indices); geometry.computeVertexNormals();
-  const mountains = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }));
+  const mountains = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ vertexColors: true, map:createMountainTexture(), roughness: 1 }));
   mountains.name = 'Continuous square mountain range'; mountains.receiveShadow = true;
   return mountains;
 }

@@ -11,6 +11,8 @@ test('meadow area is eight times larger and boundary contains large steps, corne
 });
 test('mountain range has a continuous square inner border, matching corners and upward faces', () => {
   const mesh = createMountains(), p = mesh.geometry.getAttribute('position'), n = mesh.geometry.getAttribute('normal');
+  const uv=mesh.geometry.getAttribute('uv');
+  assert.equal(uv.count,p.count);
   const row = 241, side = row * 41;
   for (let s = 0; s < 4; s++) {
     for (let i = 0; i < row; i++) {
@@ -23,6 +25,9 @@ test('mountain range has a continuous square inner border, matching corners and 
       assert(Math.abs(p.getX(a) - p.getX(b)) < .001);
       assert(Math.abs(p.getY(a) - p.getY(b)) < .001);
       assert(Math.abs(p.getZ(a) - p.getZ(b)) < .001);
+      const uDifference=uv.getX(a)-uv.getX(b);
+      assert(Math.abs(uDifference-Math.round(uDifference))<.001);
+      assert(Math.abs(uv.getY(a)-uv.getY(b))<.001);
     }
   }
   assert(n.getY(side / 2 | 0) > 0);
