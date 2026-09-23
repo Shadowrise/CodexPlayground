@@ -133,3 +133,15 @@ input[type="range"], input[type="checkbox"] { accent-color:var(--ui-accent); }
 .variant-button[aria-pressed="true"]:hover { background:#345843; }
 button:disabled { cursor:default; }
 ::selection { background:#43684f; color:#fff; }
+
+.name-field {display:grid;gap:7px;margin:16px 0 20px;}
+.name-field label {font-size:13px;font-weight:700;}
+.name-field label span {color:var(--ui-accent);}
+.name-field input {width:100%;min-width:0;padding:12px 14px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-raised);color:var(--ui-text);font:inherit;font-size:15px;}
+.name-field input::placeholder {color:var(--ui-muted);opacity:1;}
+.name-field input[aria-invalid="true"] {border-color:#ffadbb;}
+.name-field small {font-size:11px;color:var(--ui-muted);}
+.stat-name {width:90px;flex:0 1 90px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800;color:var(--kirby-color);text-shadow:0 1px 2px #000;}
+.npc-name {color:var(--ui-muted);}
+.player-stats {max-width:calc(100vw - 88px);}
+@media(max-width:520px){.stat-name{width:60px;flex-basis:60px;font-size:12px;}.stat-row{gap:8px;}.stat-row .mini-kirby{flex-basis:54px;width:54px;transform:scale(.8);transform-origin:left center;}.player-stats strong{font-size:20px;}.stat-row #player-size{font-size:16px;}}

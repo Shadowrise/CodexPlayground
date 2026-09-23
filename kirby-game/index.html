@@ -12,6 +12,7 @@
         <span class="eyebrow">GREEN PLAYGROUND · 15 ДРУЗЕЙ</span>
         <h2 id="select-title">Какой Кирби — ты?</h2>
         <p class="selection-description">Выбери свой цвет. Остальные 14 друзей уже ждут на поляне.</p>
+        <div id="player-name-field" class="name-field"><label for="player-name-input">Твоё имя <span aria-hidden="true">*</span></label><input id="player-name-input" name="nickname" type="text" required maxlength="24" autocomplete="nickname" placeholder="Как тебя зовут?" aria-describedby="player-name-hint" /><small id="player-name-hint">Обязательно · до 24 символов</small></div>
         <div id="variant-grid" aria-label="Варианты Кирби"></div>
         <label class="spawn-option"><input id="spawn-near-depot" type="checkbox" autocomplete="off" /> Появиться возле депо</label>
         <div class="selection-bottom"><div><span class="label">ТВОЙ ПЕРСОНАЖ</span><strong id="selected-name">Классический</strong></div><button id="start-game" disabled>Загрузка…</button></div>
@@ -22,8 +23,8 @@
     <button id="settings-toggle" class="panel settings-toggle" type="button" aria-label="Настройки и управление" aria-expanded="false" aria-controls="audio-panel controls-panel" title="Настройки и управление">⚙</button>
     <div class="panel status" role="status"><span id="status-dot"></span><span id="status">Загружаем Кирби…</span></div>
     <aside class="panel player-stats" aria-label="Статистика фруктов и игрока">
-      <div class="stat-row" id="player-avatar" style="--kirby-color:#ff8fbb" aria-label="Твой Кирби"><span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><strong id="player-fruits" title="Съедено тобой" aria-label="Съедено тобой">0</strong><strong id="player-size" title="Размер Кирби" aria-label="Размер Кирби">100%</strong></div>
-      <div class="stat-row npc-avatar" style="--kirby-color:#ffae48" aria-label="Кирби NPC"><span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><strong id="npc-fruits" title="Съедено NPC" aria-label="Съедено NPC">0</strong></div>
+      <div class="stat-row" id="player-avatar" style="--kirby-color:#ff8fbb" aria-label="Твой Кирби"><span id="player-name" class="stat-name"></span><span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><strong id="player-fruits" title="Съедено тобой" aria-label="Съедено тобой">0</strong><strong id="player-size" title="Размер Кирби" aria-label="Размер Кирби">100%</strong></div>
+      <div class="stat-row npc-avatar" style="--kirby-color:#ffae48" aria-label="Кирби NPC"><span class="stat-name npc-name">NPC</span><span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><strong id="npc-fruits" title="Съедено NPC" aria-label="Съедено NPC">0</strong></div>
       <div class="fruit-remaining"><strong id="remaining-fruits">70</strong><span>Осталось фруктов</span></div>
     </aside>
     <div id="combat-message" class="panel combat-message" role="status" hidden></div>

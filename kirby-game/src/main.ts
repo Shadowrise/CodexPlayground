@@ -1,3 +1,4 @@
+import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
 import { FpsCounter } from './fps';
 import { EMOTES, EmoteWheel, type Emote } from './emotes';
 import { Wayfinder, type Destination } from './navigation';
@@ -59,18 +60,36 @@ let loadedModel: GLTF | undefined;
 let pendingSave: GameSave | undefined;
 const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent='Загрузить сохранение';loadButton.disabled=true;
 const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
+const nameField=document.querySelector<HTMLElement>('#player-name-field')!;
+const nameInput=document.querySelector<HTMLInputElement>('#player-name-input')!;
+try{nameInput.value=readPlayerName(localStorage);}catch{ /* Storage may be unavailable. */ }
+nameInput.addEventListener('input',()=>{
+  nameInput.setCustomValidity('');nameInput.removeAttribute('aria-invalid');
+  try{rememberPlayerName(localStorage,nameInput.value);}catch{}
+});
+function requirePlayerName(){
+  const name=normalizePlayerName(nameInput.value);
+  nameInput.setCustomValidity(name?'':'Введи имя, чтобы войти в игру.');
+  if(!name){nameInput.setAttribute('aria-invalid','true');nameInput.focus();nameInput.reportValidity();return false;}
+  nameInput.value=name;nameInput.removeAttribute('aria-invalid');
+  try{rememberPlayerName(localStorage,name);}catch{}
+  return true;
+}
+
 const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=true;
 startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>С возвращением!</h2><p class="selection-description">Продолжить приключение или начать заново?</p>';
 const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
 startupCard.append(newGameButton,loadButton);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.textContent='Геймпад: A — новая игра · X — загрузить сохранение';startupCard.append(startupMessage);
 selectionCard.before(startupCard);
-newGameButton.addEventListener('click',()=>{pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+newGameButton.addEventListener('click',()=>{pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
 const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent='Сохранить игру';audioPanel.append(saveButton);
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 try {startupCard.hidden=localStorage.getItem(SAVE_KEY)===null;}catch {startupCard.hidden=true;}
 selectionCard.hidden=!startupCard.hidden;
+if(!startupCard.hidden)newGameButton.before(nameField);
 loadButton.addEventListener('click',()=>{
+  if(!requirePlayerName())return;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
@@ -268,7 +287,7 @@ async function loadCharacter() {
 }
 void loadCharacter();
 startButton.addEventListener('click', () => {
-  if (!loadedModel || playing) return;
+  if (!loadedModel || playing || !requirePlayerName()) return;
   music.start();
   sounds.start();
   const { scene: template, animations } = loadedModel;
@@ -294,6 +313,7 @@ startButton.addEventListener('click', () => {
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
   statusDot.classList.add('ready');
   document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
+  const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
 });
