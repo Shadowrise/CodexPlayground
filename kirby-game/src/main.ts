@@ -472,7 +472,8 @@ renderer.setAnimationLoop((time: number) => {
     for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     const hit = resolveAttack(character, npcs);
-    const eaten = fruits.update(dt, character, npcs, coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || home.active || !!fireflies?.riding);
+    const fireflyPickup=fireflies?.fruitPickupPosition;
+    const eaten = fruits.update(dt, character, npcs, coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;

@@ -92,7 +92,7 @@ export class FruitWorld {
     this.npcEaten=npcEaten;this.pickupAfter=new WeakMap();
   }
   get remaining() { return this.onMap; }
-  update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], riding = false) {
+  update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], riding = false, playerPickupPosition?: Vector3) {
     this.time += dt;
     for (let i=0;i<this.fruits.length;i++) {
       const fruit=this.fruits[i];
@@ -112,7 +112,7 @@ export class FruitWorld {
       let distance = .9 * eater.actor.scale.x + .65;
       for (const fruit of this.fruits) {
         if (fruit.eaten) continue;
-        const d = eater.actor.position.distanceTo(fruit.object.position);
+        const d = (isPlayer && playerPickupPosition ? playerPickupPosition : eater.actor.position).distanceTo(fruit.object.position);
         if (d < distance) { nearest = fruit; distance = d; }
       }
       if (!nearest) continue;
