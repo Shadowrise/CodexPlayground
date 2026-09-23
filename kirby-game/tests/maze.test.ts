@@ -26,3 +26,18 @@ test('star is awarded only at its new location on foot and a restored blessing i
   assert(maze.update(.1,c));assert(c.starBlessed);assert(!maze.update(.1,c));assert(c.actor.getObjectByName('Golden star blessing'));
   const restored=new HedgeMaze();assert(!restored.update(.1,c));assert(c.starBlessed);
 });
+
+ test('star doubles movement and jump height for 30 seconds and reappears at 120 seconds',async()=>{
+  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  const c=new CharacterController(gltf.scene,gltf.animations),maze=new HedgeMaze();
+  const speed=c.speed,backward=c.backwardSpeed;
+  c.actor.position.copy(center(maze.rewardCell));assert(maze.update(0,c));
+  assert.equal(c.speed,speed*2);assert.equal(c.backwardSpeed,backward*2);
+  c.update(.01,{forward:false,left:false,right:false,jump:true});
+  let peak=0;for(let i=0;i<80;i++){c.update(.01,{forward:false,left:false,right:false});peak=Math.max(peak,c.actor.position.y);}
+  assert(Math.abs(peak-2.9)<.01);
+  maze.update(30,c,false);assert.equal(c.starRemaining,0);assert.equal(c.speed,speed);assert.equal(c.backwardSpeed,backward);
+  assert.equal(c.actor.getObjectByName('Golden star blessing')!.visible,false);assert(c.starBlessed);
+  c.actor.position.copy(center(maze.rewardCell));assert(!maze.update(89,c));assert.equal(c.starCooldown,1);
+  assert(maze.update(1,c));assert.equal(c.starRemaining,30);assert.equal(c.starCooldown,120);
+ });

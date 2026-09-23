@@ -21,6 +21,7 @@ export class SoundEffects {
   private voiceAfter = 0;
   private wheelAfter = 0;
   private cheerAfter = 0;
+  private buzz?: {source: AudioBufferSourceNode;gain: GainNode};
   constructor(private button: HTMLButtonElement, slider: HTMLInputElement) {
     const saved = readAudioSettings('sounds', .45);
     this.enabled = saved.enabled;
@@ -68,7 +69,33 @@ export class SoundEffects {
     this.button.setAttribute('aria-pressed', String(this.enabled));
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }
-  private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); }
+  private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); this.buzz=undefined; }
+
+  updateFireflyBuzz(level:number) {
+    const ctx=this.context;
+    if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
+    const volume=Math.max(0,Math.min(1,level))*.075;
+    if(!this.buzz && volume>0){
+      // Integer periods make a seamless, gently modulated wing hum.
+      let buffer=this.buffers.get('firefly-buzz');
+      if(!buffer){
+        const rate=22050;buffer=ctx.createBuffer(1,rate*2,rate);
+        const data=buffer.getChannelData(0);
+        for(let i=0;i<data.length;i++){
+          const t=i/rate,phase=2*Math.PI*155*t+.7*Math.sin(2*Math.PI*3*t);
+          data[i]=(Math.sin(phase)*.65+Math.sin(phase*2)*.22+Math.sin(phase*3)*.08)*(.8+.2*Math.sin(2*Math.PI*7*t));
+        }
+        this.buffers.set('firefly-buzz',buffer);
+      }
+      const source=ctx.createBufferSource(),gain=ctx.createGain();
+      source.buffer=buffer;source.loop=true;gain.gain.value=0;
+      source.connect(gain);gain.connect(this.master!);this.active.add(source);
+      this.buzz={source,gain};
+      source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();if(this.buzz?.source===source)this.buzz=undefined;};
+      source.start();
+    }
+    this.buzz?.gain.gain.setTargetAtTime(volume,ctx.currentTime,.18);
+  }
 
   sayHello() {
     const ctx=this.context;

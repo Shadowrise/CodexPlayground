@@ -18,15 +18,17 @@ test('sleep switches time only under blackout, then restores movement; second sl
  }
  const z=c.actor.position.z;c.update(.1,{forward:true,left:false,right:false});assert(c.actor.position.z>z);
 });
-test('twenty fireflies alternate flight and rest, have coloured light, and disappear by day',async()=>{
- const world=new NightFireflies(await model('firefly')),camera=new Vector3(0,5,0);assert.equal(world.bugs.length,20);assert.equal(new Set(world.bugs.map(b=>b.color.getHexString())).size,20);
+test('forty fireflies alternate flight and rest, have coloured light, and disappear by day',async()=>{
+ const world=new NightFireflies(await model('firefly')),camera=new Vector3(0,5,0);assert.equal(world.bugs.length,40);assert.equal(new Set(world.bugs.map(b=>b.color.getHexString())).size,40);
+ assert(world.bugs.every(b=>Math.min(b.color.r,b.color.g,b.color.b)<.001));
  assert(world.bugs.every(b=>sceneryClearance(b.home.x,b.home.z)));
- world.update(.1,false,camera);assert(!world.group.visible);assert(world.lights.every(l=>l.intensity===0));
+ world.update(.1,false,camera);assert(!world.group.visible);assert.equal(world.buzzLevel(camera),0);assert(world.lights.every(l=>l.intensity===0));
  world.update(.1,true,camera);assert(world.group.visible);const bug=world.bugs[0];let flying=false,resting=false;
  for(let i=0;i<660;i++){world.update(.05,true,bug.home.clone().add(new Vector3(0,3,4)));flying ||= !bug.land;resting ||= bug.land;}
- assert(flying&&resting);assert(world.lights.some(l=>l.intensity>0));assert(world.lights.length<=4);
+ assert(flying&&resting);
+ world.bugs.forEach(b=>b.land=true);assert.equal(world.buzzLevel(bug.carrier.position),0);bug.land=false;assert.equal(world.buzzLevel(bug.carrier.position),1);assert.equal(world.buzzLevel(new Vector3(10000,0,10000)),0);assert(world.lights.some(l=>l.intensity>0));assert(world.lights.length<=4);
  assert(world.bugs.filter(b=>b.firefly.object.visible).length<=5);
- world.update(.1,false,camera);assert(!world.group.visible);assert(world.lights.every(l=>l.intensity===0));
+ world.update(.1,false,camera);assert(!world.group.visible);assert.equal(world.buzzLevel(camera),0);assert(world.lights.every(l=>l.intensity===0));
 });
 test('sky replaces sun with moon and stars at night',()=>{
  const scene=new Scene(),camera=new PerspectiveCamera(),update=createSky(scene);update(.1,camera,false);assert(scene.getObjectByName('Sun disc')!.visible);assert(!scene.getObjectByName('Moon')!.visible);

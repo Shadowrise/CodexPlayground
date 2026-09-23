@@ -12,7 +12,7 @@ export class Firefly {
   }
   setGlowColor(value:ColorRepresentation){
     const color=new Color(value);
-    this.object.traverse(o=>{if(o instanceof PointLight && o.name==='Firefly_Light')o.color.copy(color);if(o instanceof Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof MeshStandardMaterial && m.name==='Firefly_Glow'){m.emissive.copy(color);m.color.copy(color).lerp(new Color('#ffffff'),.3);}});
+    this.object.traverse(o=>{if(o instanceof PointLight && o.name==='Firefly_Light')o.color.copy(color);if(o instanceof Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof MeshStandardMaterial && m.name==='Firefly_Glow'){m.emissive.copy(color);m.color.copy(color);m.emissiveIntensity=1.4;m.roughness=.65;m.toneMapped=false;}});
   }
   setMode(mode:'Sit'|'Fly'){
     if(mode===this.mode)return;const clip=this.gltf.animations.find(c=>c.name===mode);if(!clip)throw Error(`Missing firefly animation: ${mode}`);

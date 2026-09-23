@@ -359,7 +359,7 @@ renderer.setAnimationLoop((time: number) => {
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
     }
     const interaction=home.prompt(character.actor.position) || trampoline.prompt(character).replace('Пробел — тоже прыгнуть',usingPad?'A — тоже прыгнуть':'Пробел — тоже прыгнуть') || balloons.prompt(character.actor.position) || (!coaster.riding && (((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)) || treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starBlessed?'★ Звезда найдена! Твоё сияние сохранится.':'Найди звезду в глубине лабиринта · здесь только пешком') : `Лабиринт ${Math.round(Math.hypot(character.actor.position.x-MAZE_SITE.x,character.actor.position.z-MAZE_SITE.z))} м | Шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : `Лабиринт ${Math.round(Math.hypot(character.actor.position.x-MAZE_SITE.x,character.actor.position.z-MAZE_SITE.z))} м | Шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
     if(!interaction && !maze.contains(character.actor.position,5))rideHint.textContent=`${home.night?'☾ Ночь':'☀ День'} · Домик Кирби ${Math.round(character.actor.position.distanceTo(home.entrance))} м | ${rideHint.textContent}`;
     followCamera.update(dt, character.yaw, movingOrTurning,
@@ -373,6 +373,7 @@ renderer.setAnimationLoop((time: number) => {
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
     status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({Balloon:'Летим на воздушном шаре',Sitting:'Отдыхаем на лавочке',Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
+    if(character.starRemaining>0)status.textContent+=` · ★ ×2: ${Math.ceil(character.starRemaining)} с`;
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if(!coaster.riding && greetingCooldown===0) {
@@ -399,7 +400,7 @@ renderer.setAnimationLoop((time: number) => {
       hitMessageRemaining = 2.5;
     }
     if(maze.update(dt,character,!coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
-      sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Кирби сияет золотом!';hitMessageRemaining=5;
+      sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
     }
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
@@ -417,6 +418,7 @@ renderer.setAnimationLoop((time: number) => {
   for(const light of shadows.lights){light.color.set(night?'#bad0ff':'#fff1d7');light.intensity=night?1.35:3.2;}
   renderer.toneMappingExposure=night?1:1.2;
   updateSky(dt,camera,night);fireflies?.update(dt,night,camera.position);
+  sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   watermill.update(dt);
   renderer.render(scene, camera);
 });

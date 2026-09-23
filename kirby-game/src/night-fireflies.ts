@@ -10,20 +10,26 @@ export class NightFireflies {
   readonly bugs:Bug[]=[];
   private time=0;
   constructor(gltf:GLTF){
-    this.group.name='Twenty nocturnal fireflies';
-    for(let i=0;i<20;i++){
+    this.group.name='Forty nocturnal fireflies';
+    for(let i=0;i<40;i++){
       const object=gltf.scene.clone(true);const imported:T.Object3D[]=[];object.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
-      const color=new T.Color().setHSL((i*.618)%1,.92,.62),firefly=new Firefly({...gltf,scene:object},color);
+      const color=new T.Color().setHSL((i*.618)%1,1,.46),firefly=new Firefly({...gltf,scene:object},color);
       object.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=false;});object.scale.setScalar(.65);
-      const home=new T.Vector3((i%5-2)*88,0,(Math.floor(i/5)-1.5)*110);
-      for(let j=0;j<120;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(sceneryClearance(x,z,15)){home.set(x,0,z);break;}}
+      const home=new T.Vector3((i%8-3.5)*54,0,(Math.floor(i/8)-2)*78);
+      for(let j=0;j<600;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(Math.abs(x)<210 && Math.abs(z)<210 && sceneryClearance(x,z,15)){home.set(x,0,z);break;}}
       const carrier=new T.Group();carrier.add(object);this.group.add(carrier);
       const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.copy(color);halo.material.opacity=.8;halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.set(3.5,3.5,1);carrier.add(halo);
       this.bugs.push({carrier,firefly,home,halo,color,phase:i*1.87,land:true,lightPosition:new T.Vector3()});
     }
-    // A fixed light pool avoids twenty point lights on every terrain fragment.
+    // A fixed light pool avoids forty point lights on every terrain fragment.
     for(let i=0;i<4;i++){const light=new T.PointLight('#ffffff',0,11,2);light.castShadow=false;this.lights.push(light);}
     this.group.visible=false;
+  }
+  buzzLevel(listener:T.Vector3){
+    if(!this.group.visible)return 0;
+    let level=0;
+    for(const bug of this.bugs)if(!bug.land)level=Math.max(level,Math.max(0,1-bug.carrier.position.distanceTo(listener)/16)**2);
+    return level;
   }
   update(dt:number,night:boolean,camera:T.Vector3){
     this.group.visible=night;if(!night){for(const l of this.lights)l.intensity=0;return;}

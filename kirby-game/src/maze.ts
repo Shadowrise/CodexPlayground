@@ -13,7 +13,7 @@ export class HedgeMaze {
   private aura?:T.Group;
   private sparkles?:T.InstancedMesh;
   private clock=0;
-  private glowMaterials:T.MeshStandardMaterial[]=[];
+  private glowMaterials=new Map<T.MeshStandardMaterial,{color:T.Color;intensity:number}>();
   private dummy=new T.Object3D();
   constructor(){
     const root=this.group;root.name='Hedge maze and golden star';root.position.set(MAZE_SITE.x,0,MAZE_SITE.z);
@@ -93,19 +93,25 @@ export class HedgeMaze {
   moveFruitOutside(p:T.Vector3){if(this.contains(p,3)){const a=Math.atan2(p.z-MAZE_SITE.z,p.x-MAZE_SITE.x);p.x=MAZE_SITE.x+Math.cos(a)*56;p.z=MAZE_SITE.z+Math.sin(a)*56;}}
   private bless(player:CharacterController){
     this.aura=new T.Group();this.aura.name='Golden star blessing';player.actor.add(this.aura);
-    player.actor.traverse(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof T.MeshStandardMaterial&&!this.glowMaterials.includes(m))this.glowMaterials.push(m);}});
+    player.actor.traverse(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof T.MeshStandardMaterial&&!this.glowMaterials.has(m))this.glowMaterials.set(m,{color:m.emissive.clone(),intensity:m.emissiveIntensity});}});
     const mist=makeFruitMist(0);mist.material=mist.material.clone();mist.material.color.set('#ffe6a1');mist.material.opacity=.22;mist.position.y=1;mist.scale.set(3.8,4,1);this.aura.add(mist);
     this.sparkles=new T.InstancedMesh(new T.OctahedronGeometry(.07),new T.MeshBasicMaterial({color:'#fff0a2'}),28);this.sparkles.frustumCulled=false;this.aura.add(this.sparkles);
   }
   update(dt:number,player?:CharacterController,available=true){
     this.clock+=dt;this.star.position.y=2.25+Math.sin(this.clock*1.7)*.25;this.star.rotation.y=this.clock*.65;
     if(!player)return false;let collected=false;
-    if(!player.starBlessed && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x-this.rewardPosition.x,player.actor.position.z-MAZE_SITE.z-this.rewardPosition.z)<2){player.starBlessed=true;collected=true;}
-    this.star.visible=!player.starBlessed;
-    if(player.starBlessed){
+    player.starRemaining=Math.max(0,player.starRemaining-dt);player.starCooldown=Math.max(0,player.starCooldown-dt);
+    if(player.starCooldown===0 && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x-this.rewardPosition.x,player.actor.position.z-MAZE_SITE.z-this.rewardPosition.z)<2){player.starBlessed=true;player.starRemaining=30;player.starCooldown=120;collected=true;}
+    this.star.visible=player.starCooldown===0;
+    if(player.starRemaining>0){
       if(!this.aura)this.bless(player);
-      for(const m of this.glowMaterials){m.emissive.set('#ffbe4a');m.emissiveIntensity=.25+.07*Math.sin(this.clock*2);}
+      this.aura!.visible=true;
+      for(const m of this.glowMaterials.keys()){m.emissive.set('#ffbe4a');m.emissiveIntensity=.25+.07*Math.sin(this.clock*2);}
       for(let i=0;i<28;i++){const a=i*2.399+this.clock*.7,t=(this.clock*.35+i/28)%1;this.dummy.position.set(Math.cos(a)*(1.05+.25*Math.sin(i)),.1+t*2.5,Math.sin(a)*(1.05+.25*Math.sin(i)));this.dummy.rotation.set(this.clock,i,a);this.dummy.scale.setScalar(Math.sin(t*Math.PI)*(.7+.4*Math.sin(this.clock*3+i)**2));this.dummy.updateMatrix();this.sparkles!.setMatrixAt(i,this.dummy.matrix);}this.sparkles!.instanceMatrix.needsUpdate=true;
+    }
+    if(player.starRemaining===0 && this.aura?.visible){
+      this.aura.visible=false;
+      for(const [m,original] of this.glowMaterials){m.emissive.copy(original.color);m.emissiveIntensity=original.intensity;}
     }
     return collected;
   }

@@ -25,6 +25,9 @@ export class CharacterController {
   private eatWasHeld = false;
   fruitsEaten = 0;
   starBlessed = false;
+  starRemaining = 0;
+  starCooldown = 0;
+  private flightBoost = 1;
   private growth?: { from: number; to: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   grow() {
@@ -34,8 +37,8 @@ export class CharacterController {
     this.eatElapsed = undefined;
   }
   readonly animationRoot: Object3D;
-  get speed() { return 3.4 * this.actor.scale.x; }
-  get backwardSpeed() { return 1.65 * this.actor.scale.x; }
+  get speed() { return 3.4 * this.actor.scale.x * (this.starRemaining > 0 ? 2 : 1); }
+  get backwardSpeed() { return 1.65 * this.actor.scale.x * (this.starRemaining > 0 ? 2 : 1); }
   readonly turnStep = Math.PI / 18;
   readonly turnDuration = .1;
 
@@ -132,6 +135,7 @@ export class CharacterController {
         this.attackElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
+        this.flightBoost = this.starRemaining > 0 ? 2 : 1;
         this.flight.press();
       } else if (direction) {
         this.turn = { direction, startYaw: this.yaw, elapsed: 0, duration: this.turnDuration };
@@ -164,7 +168,7 @@ export class CharacterController {
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
-      this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x;
+      this.flight.update(dt);this.actor.position.y=this.flight.height*this.actor.scale.x*this.flightBoost;
       updateFlightCloud(this.cloud,this.flight);
       this.mixer.update(dt);
       if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
