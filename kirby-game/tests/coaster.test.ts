@@ -120,3 +120,26 @@ test('east and west corkscrews invert riders smoothly outside the vertical loops
   }
  }assert(inverted);}
 });
+
+test('every track support joins an actual rail to a ground footing, including banking',()=>{
+ const c=new Coaster();assert(c.supports.length>100);let unequalPair=false;
+ for(const support of c.supports){
+  const pose=c.pose(support.distance),rail=new Vector3(support.side*1.2,0,0).applyQuaternion(pose.q).add(pose.p);
+  assert(support.rail.distanceTo(rail)<1e-8);assert.equal(support.base.y,-.02);
+  assert.equal(support.base.x,support.elbow.x);assert.equal(support.base.z,support.elbow.z);assert(support.elbow.y>.4);
+  const opposite=c.supports.find(s=>s.distance===support.distance&&s.side!==support.side);
+  if(opposite&&Math.abs(opposite.rail.y-support.rail.y)>.3)unequalPair=true;
+ }assert(unequalPair,'Banked track needs rail attachments at different heights');
+});
+test('ordinary track alternates mild banking with level stretches and keeps a smooth depot joint',()=>{
+ const c=new Coaster();let level=0,banked=0;
+ for(let i=1;i<2400;i++){
+  const a=c.pose(c.length*(i-1)/2400),b=c.pose(c.length*i/2400),p=b.p;
+  assert(a.q.angleTo(b.q)<.4,'Orientation must be continuous throughout the ride');
+  if((p.x>205&&p.z>-105&&p.z<125)||(p.x<-205&&p.z>-135&&p.z<85)||(p.z<-205&&p.x>55&&p.x<145))continue;
+  const right=new Vector3(1,0,0).applyQuaternion(b.q),up=new Vector3(0,1,0).applyQuaternion(b.q),bank=Math.atan2(right.y,up.y);
+  assert(Math.abs(bank)<.29,'No sustained sideways riding on ordinary track');
+  if(Math.abs(bank)<.01)level++;if(Math.abs(bank)>.06)banked++;
+ }
+ assert(level>300);assert(banked>100);assert(c.pose(0).q.angleTo(c.pose(c.length-.001).q)<.01);
+});

@@ -30,6 +30,7 @@ export class Coaster {
   readonly curve=createCoasterCurve();
   readonly length=this.curve.getLength();
   private frames:T.Quaternion[]=[];
+  readonly supports:{rail:T.Vector3;elbow:T.Vector3;base:T.Vector3;distance:number;side:number}[]=[];
   private carts:{group:T.Group; distance:number; wait:number; speed:number; wheels:T.Object3D[]; occupied:boolean}[]=[];
   private passengerMixers:T.AnimationMixer[]=[];
   private kirbysAdded=false;
@@ -42,24 +43,41 @@ export class Coaster {
   readonly rideMotion={speed:0,slope:0,inverted:false,turn:0};
   constructor() {
     this.group.name='Mountain circuit roller coaster';
-    let right=new T.Vector3(0,0,-1);
+    const nearest=(p:T.Vector3)=>{let best=0,d=Infinity;for(let i=0;i<=this.sampleCount;i++){const n=this.curve.getPointAt(i/this.sampleCount).distanceToSquared(p);if(n<d){d=n;best=i;}}return best;};
+    const worldUp=new T.Vector3(0,1,0),forward=new T.Vector3(0,0,1);
+    // Ordinary track always returns to a level cross-section: transport roll must not accumulate.
     for(let i=0;i<=this.sampleCount;i++) {
       const tangent=this.curve.getTangentAt(i/this.sampleCount).normalize();
-      right.addScaledVector(tangent,-right.dot(tangent)).normalize();
-      const up=new T.Vector3().crossVectors(tangent,right).normalize();
-      this.frames.push(new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(right,up,tangent)));
+      const right=new T.Vector3().crossVectors(worldUp,tangent).normalize(),up=new T.Vector3().crossVectors(tangent,right);
+      const q=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(right,up,tangent));
+      const distance=i/this.sampleCount*this.length,phase=(distance%110)/110;
+      const stationFade=T.MathUtils.smoothstep(Math.min(distance,this.length-distance),0,35);
+      const bank=phase<.55?Math.sin(phase/.55*Math.PI)**2*Math.sin(distance/220*Math.PI)*.28*stationFade:0;
+      q.multiply(new T.Quaternion().setFromAxisAngle(forward,bank));this.frames.push(q);
     }
-    // Spread residual transport twist around the loop for a seamless station joint.
-    const end=this.frames[this.sampleCount],start=this.frames[0];
-    const correction=end.clone().invert().multiply(start);
-    for(let i=1;i<=this.sampleCount;i++)this.frames[i].multiply(new T.Quaternion().slerp(correction,i/this.sampleCount));
+    // Transport orientation only through each vertical loop, then meet the upright track smoothly.
+    for(const [from,to] of [
+      [new T.Vector3(220,12,90),new T.Vector3(238,12,35)],
+      [new T.Vector3(140,8,-220),new T.Vector3(65,8,-238)],
+      [new T.Vector3(-218,9,-125),new T.Vector3(-236,9,-45)]
+    ]) {
+      const a=nearest(from),b=nearest(to),finish=this.frames[b].clone();
+      let right=new T.Vector3(1,0,0).applyQuaternion(this.frames[a]);
+      for(let i=a;i<=b;i++){
+        const tangent=this.curve.getTangentAt(i/this.sampleCount).normalize();right.addScaledVector(tangent,-right.dot(tangent)).normalize();
+        const up=new T.Vector3().crossVectors(tangent,right).normalize();this.frames[i].setFromRotationMatrix(new T.Matrix4().makeBasis(right,up,tangent));
+      }
+      const correction=this.frames[b].clone().invert().multiply(finish);
+      for(let i=a;i<=b;i++){const u=(i-a)/(b-a);this.frames[i].multiply(new T.Quaternion().slerp(correction,u*u*(3-2*u)));}
+    }
     // A full local roll twists both rails and passengers together, with zero speed at either end.
     for(const [from,to] of [[new T.Vector3(238,12,35),new T.Vector3(222,46,-100)],
       [new T.Vector3(-236,9,-45),new T.Vector3(-221,43,80)]]) {
-      const nearest=(p:T.Vector3)=>{let best=0,d=Infinity;for(let i=0;i<=this.sampleCount;i++){const n=this.curve.getPointAt(i/this.sampleCount).distanceToSquared(p);if(n<d){d=n;best=i;}}return best;};
       const a=nearest(from),b=nearest(to);
       for(let i=a;i<=b;i++){const u=(i-a)/(b-a),ease=u*u*u*(10+u*(-15+6*u));this.frames[i].multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),ease*Math.PI*2));}
     }
+    // The closed spline uses one-sided numerical tangents at its seam.
+    this.frames[this.sampleCount].copy(this.frames[0]);
     const colors=new Map<string,T.MeshStandardMaterial>();
     const box=new T.BoxGeometry(1,1,1),pole=new T.CylinderGeometry(1,1,1,8);
     const material=(c:string)=>{if(!colors.has(c))colors.set(c,new T.MeshStandardMaterial({color:c,roughness:.65,metalness:c==='#becbd0'?.7:.15}));return colors.get(c)!;};
@@ -76,20 +94,28 @@ export class Coaster {
       const pose=this.pose(d);add(box,'#307f88',pose.p,new T.Vector3(3,.18,.32),pose.q);
       for(const x of [-1.2,1.2])add(box,'#596671',pose.p.clone().add(new T.Vector3(x,.15,0).applyQuaternion(pose.q)),new T.Vector3(.25,.15,.4),pose.q);
     }
-    for(let d=0;d<this.length;d+=15) {
+    // Each assembly connects one actual rail to a grounded footing. Outboard arms
+    // keep the columns away from passengers, even when a loop is upside down.
+    const passengerHeads=Array.from({length:1200},(_,i)=>{const pose=this.pose(this.length*i/1200);return new T.Vector3(0,7.41,0).applyQuaternion(pose.q).add(pose.p);});
+    const segment=new T.Line3(),closest=new T.Vector3();
+    const clear=(a:T.Vector3,b:T.Vector3)=>{segment.set(a,b);return passengerHeads.every(p=>segment.closestPointToPoint(p,true,closest).distanceToSquared(p)>3.4**2);};
+    for(let d=0;d<this.length;d+=14.4){
       const {p,q}=this.pose(d);
-      // Leave the swept interior of loops and corkscrews clear.
-      if((p.x>210 && p.z<35 && p.z>-100) || (p.x<-210 && p.z>-45 && p.z<80) || (p.x>210 && p.z>25 && p.z<120) || (p.z<-210 && p.x>55 && p.x<145)
-        || (p.x<-205 && p.z>-130 && p.z<-45) || (p.x<-155 && p.z<-175))continue;
-      for(const sign of [-1,1]) {const base=new T.Vector3(p.x+sign*2.2,.1,p.z);
-        add(box,'#a1a39a',base,new T.Vector3(2,.3,2));beam(base,p.clone().add(new T.Vector3(sign*1.45,-.12,0).applyQuaternion(q)),.18,'#426a70');}
-      if(p.y>8){const rightBase=new T.Vector3(p.x+2.2,.1,p.z),rightTop=p.clone().add(new T.Vector3(1.45,-.12,0).applyQuaternion(q));beam(new T.Vector3(p.x-2.2,.1,p.z),rightBase.lerp(rightTop,.72),.1,'#577e7f');}
-    }
-    // The spiral is carried by an inner tower; arms sit below each coil.
-    for(const x of [-195,-183])for(const z of [-213,-201])beam(new T.Vector3(x,0,z),new T.Vector3(x,65,z),.3,'#426a70');
-    for(let i=0;i<12;i++) {
-      const u=i/12,a=u*Math.PI*3;
-      beam(new T.Vector3(-189,20+36*u,-207),new T.Vector3(-189+24*Math.cos(a),27.6+36*u,-207+24*Math.sin(a)),.18,'#577e7f');
+      for(const side of [-1,1]){
+        const rail=p.clone().add(new T.Vector3(side*1.2,0,0).applyQuaternion(q));
+        for(const reach of [5.5,8,11]){
+          const elbow=p.clone().add(new T.Vector3(side*reach,0,0).applyQuaternion(q));
+          if(elbow.y<.4)continue;
+          const base=new T.Vector3(elbow.x,-.02,elbow.z);
+          if(!clear(rail,elbow)||!clear(elbow,base))continue;
+          this.supports.push({rail,elbow,base,distance:d,side});
+          add(box,'#a1a39a',base.clone().setY(.12),new T.Vector3(1.7,.24,1.7));
+          beam(base,elbow,.2,'#426a70');beam(elbow,rail,.18,'#426a70');
+          const braceBase=base.clone().lerp(elbow,.78),braceEnd=elbow.clone().lerp(rail,.7);
+          if(clear(braceBase,braceEnd))beam(braceBase,braceEnd,.12,'#577e7f');
+          break;
+        }
+      }
     }
     // Open boarding platform: no canopy obscures the rider or follow camera.
     add(box,'#b9a582',new T.Vector3(0,.35,224),new T.Vector3(24,.7,10));
