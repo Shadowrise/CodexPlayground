@@ -1,8 +1,11 @@
+import {emoteMessage} from './world-log';
+import type {Emote} from './emotes';
 import type {LogEntry} from './world-log';
 import {BUILD,PROTOCOL,type ActorState,type WorldState,type RoomState,type Event,type ServerMessage} from './network-protocol';
 export class NetworkSession{
  log:LogEntry[]=[];
  id='';peerCount=1;room!:RoomState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
+ onEmote?:(emote:Emote)=>void;
  onHit?:(actor:ActorState)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
@@ -12,6 +15,7 @@ export class NetworkSession{
   const s=this.socket=new WebSocket(url),timeout=setTimeout(()=>{s.close();reject(Error('Сервер не ответил. Попробуй подключиться ещё раз.'));},12000);
   s.onmessage=e=>{if(e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
    if(m.type==='welcome'){if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.peerCount=m.players.length;this.room=m.room;this.log=m.room.log??[];this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.actors.set(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
+   else if(m.type==='emote'&&m.id!==this.id&&emoteMessage(m.emote))this.onEmote?.(m.emote as Emote);
    else if(m.type==='log'){this.log=[...this.log,m.entry].slice(-10);}
    else if(m.type==='presence'){if(m.count>this.peerCount){this.worldElapsed=2;this.lastActor='';}this.peerCount=m.count;}
    else if(m.type==='error'){clearTimeout(timeout);reject(Error(m.message));}

@@ -1,6 +1,6 @@
 import {MeadowChat} from './chat';
 import {emoteMessage,type LogEntry} from './world-log';
-import {updateVisibility} from './visibility';
+import {updateVisibility,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
 import { actorState, applyActor, RemotePlayers } from './network-actors';
@@ -439,6 +439,7 @@ startButton.addEventListener('click', async () => {
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
     network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
   }
@@ -468,7 +469,7 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
   if(confirm && element instanceof HTMLButtonElement)element.click();
 }
 renderer.setAnimationLoop((time: number) => {
-  const dt = Math.min((time - previousTime) / 1000, .05);
+  const dt = Math.max(0,Math.min((time - previousTime) / 1000, .05));
   previousTime = time;
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
@@ -624,7 +625,7 @@ renderer.setAnimationLoop((time: number) => {
   watermill.update(dt);
   updateNetwork(dt);
   chat.render(network?.log??localLog,!audioPanel.hidden);
-  for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten);
+  for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
@@ -683,7 +684,7 @@ function applyRide(a:ActorState){
  if(kind==='tree')treehouse.networkSwing(a.ride.data[0] as number);
  if(kind==='cart'){const rows=coaster.networkState();rows[i]=a.ride.data as number[];coaster.networkApply(rows);}
  if(kind==='balloon'){const rows=balloons.networkState();rows[i]=a.ride.data;balloons.networkApply(rows,npcs);}
- if(kind==='bug'){const rows=fireflies!.networkState();rows[i]=a.ride.data as number[];fireflies!.networkApply(rows);}
+
 }
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
@@ -723,6 +724,7 @@ function updateNetwork(dt:number){
  if(!network.host&&network.world)npcs.forEach((n,i)=>applyActor(n,network!.world!.npcs[i],dt));
  for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
  const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
+ for(const [id,state] of network.actors){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
  const active=coaster.riding||balloons.riding||fireflies?.riding||home.active||treehouse.active||benches.active||trampoline.active;
  if(heldResource&&!active){network.event({type:'release',key:heldResource});heldResource=undefined;}
  const a=actorState(character,nameInput.value,KIRBY_VARIANTS.indexOf(selected));

@@ -1,3 +1,4 @@
+import type {ActorState} from './network-protocol';
 import {ACTOR_DISTANCE,MIST_DISTANCE} from './visibility';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -24,7 +25,17 @@ export class NightFireflies {
   networkBlocked=new Set<number>();
   networkKey(c:CharacterController){const b=this.mount??this.nearby(c);return b?'bug:'+this.bugs.indexOf(b):undefined;}
   networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land),b.firefly.object.scale.x]);}
-  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount)return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.object.scale.setScalar(v[9]??.65);b.firefly.setMode(b.land?'Sit':'Fly');});}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount||this.networkBlocked.has(i))return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.object.scale.setScalar(v[9]??.65);b.firefly.setMode(b.land?'Sit':'Fly');});}
+  private remoteOffsets=new Map<number,T.Vector3>();
+  syncRemoteRider(index:number,rider:CharacterController,state:ActorState,dt:number){
+    const bug=this.bugs[index],v=state.ride?.data as number[]|undefined;if(!bug||!v||bug===this.mount)return;
+    const target=new T.Vector3(v[4]-state.p[0],v[5]-state.p[1],v[6]-state.p[2]);
+    let offset=this.remoteOffsets.get(index);if(!offset){offset=target.clone();this.remoteOffsets.set(index,offset);}
+    offset.lerp(target,1-Math.exp(-16*dt));
+    bug.carrier.position.copy(rider.actor.position).add(offset);bug.carrier.quaternion.copy(rider.actor.quaternion);
+    bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,v[9],16,dt));
+    bug.land=!!v[8];bug.firefly.setMode(bug.land?'Sit':'Fly');
+  }
   outlineBug(c:CharacterController){return !c.flight.active && !c.swimming ? this.nearby(c)?.firefly.object : undefined;}
   private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
   prompt(c:CharacterController){return this.riding?'E — слезть со светлячка':this.nearby(c)?'E — прокатиться на светлячке':'';}
@@ -95,6 +106,7 @@ export class NightFireflies {
   }
   update(dt:number,night:boolean,camera:T.Vector3){
     this.group.visible=true;
+    for(const index of this.remoteOffsets.keys())if(!this.networkBlocked.has(index))this.remoteOffsets.delete(index);
     this.time+=dt;
     for(const bug of this.bugs){
       if(bug!==this.mount && !this.networkBlocked.has(this.bugs.indexOf(bug))){

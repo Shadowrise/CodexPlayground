@@ -1,3 +1,4 @@
+import {Object3D} from 'three';
 import {NetworkSession} from '../src/network';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,4 +43,15 @@ test('solo checkpoints reduce messages while multiplayer keeps its update cadenc
   return messages.length;
  };
  assert(count(1)<=151);assert.equal(count(2),3001);
+});
+
+test('remote firefly follows interpolated rider and ignores conflicting world snapshots',async()=>{
+ const fireflies=new NightFireflies(await model('firefly-animated.glb'));
+ const actor=new Object3D();actor.position.set(5,4,0);
+ const state={p:[10,4,0],ride:{key:'bug:0',data:[0,0,0,0,10,2,0,0,0,2]}} as any;
+ fireflies.networkBlocked.add(0);fireflies.syncRemoteRider(0,{actor} as any,state,.016);
+ const bug=fireflies.bugs[0];assert.equal(bug.carrier.position.x,5);assert.equal(bug.carrier.position.y,2);
+ const snapshot=fireflies.networkState();snapshot[0][4]=100;fireflies.networkApply(snapshot);assert.equal(bug.carrier.position.x,5);
+ actor.position.x=6;fireflies.syncRemoteRider(0,{actor} as any,state,.016);assert.equal(bug.carrier.position.x,6);
+ assert(bug.firefly.object.scale.x>.65&&bug.firefly.object.scale.x<2);
 });
