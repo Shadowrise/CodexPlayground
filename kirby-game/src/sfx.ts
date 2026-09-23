@@ -1,3 +1,4 @@
+import type { Emote } from './emotes';
 import { SoundEvents, type SoundActor, type SoundKind } from './sound-events';
 import { readAudioSettings, saveAudioSettings } from './audio-settings';
 import type { CharacterController } from './controller';
@@ -95,6 +96,31 @@ export class SoundEffects {
       source.start();
     }
     this.buzz?.gain.gain.setTargetAtTime(volume,ctx.currentTime,.18);
+  }
+
+  playEmote(kind:Emote){
+    if(kind==='Hello'){this.sayHello();return;}
+    const ctx=this.context;if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
+    const key=`emote-${kind}`;
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=kind==='Fear'?.65:kind==='Joy'?1.2:1.4;
+      const buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);let phase=0,noise=0;
+      for(let i=0;i<data.length;i++){
+        const t=i/rate,u=t/duration;
+        const f=kind==='Joy'?620+150*Math.sin(t*15):kind==='Fear'?850-260*u:kind==='Anger'?380+18*Math.sin(t*23):530-230*u;
+        phase+=2*Math.PI*f/rate;noise=noise*.8+(Math.random()*2-1)*.2;
+        const edge=T_smoothstep(t/.06)*T_smoothstep((duration-t)/.2);
+        const voice=Math.sin(phase)*.6+Math.sin(phase*2)*(kind==='Anger'?.08:.23)+Math.sin(phase*3)*(kind==='Sad'?.19:.045);
+        const pulse=kind==='Joy'?.55+.45*Math.sin(t*15)**2:1;
+        // Rounded "oo" for anger, falling "eh" with a breathy ending for sadness.
+        const breath=kind==='Sad'?T_smoothstep((u-.55)/.4)*.7:kind==='Fear'?.17:0;
+        data[i]=(voice*(1-breath)+noise*breath)*edge*pulse*.19;
+      }
+      this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.8;
+    source.connect(gain);gain.connect(this.master!);this.active.add(source);
+    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();this.voiceAfter=ctx.currentTime+2;
   }
 
   sayHello() {

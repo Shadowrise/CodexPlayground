@@ -92,3 +92,32 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
   box-shadow: 0 0 0 7px #fff6d9;
   border-radius: 8px;
 }
+
+[data-controls][hidden] { display:none; }
+.player-stats { display:flex; flex-direction:column; gap:0; padding:8px 16px; top:85px; min-width:210px; }
+.stat-row { display:flex; align-items:center; gap:18px; min-height:62px; }
+.stat-row .mini-kirby { flex:0 0 70px; isolation:isolate; }
+.player-stats strong { margin:0; font-variant-numeric:tabular-nums; }
+.stat-row #player-size { font-size:20px; color:#58744a; margin-left:auto; }
+.npc-avatar { border-top:1px solid #dce5d5; }
+.npc-avatar .mini-feet::before, .npc-avatar .mini-feet::after { background:#195b39; }
+.fruit-remaining { display:flex; align-items:center; gap:12px; padding:12px 0 6px; border-top:1px solid #dce5d5; }
+.fruit-remaining span { font-size:11px; color:#637859; }
+.music-controls { top:90px; }
+.route-panel { pointer-events:auto; display:flex; flex-direction:column; align-items:center; gap:7px; max-width:calc(100% - 32px); width:max-content; }
+.route-panel label { display:flex; align-items:center; gap:10px; font-weight:700; }
+.route-panel select { font:inherit; padding:9px 12px; border:1px solid #c9d8bf; border-radius:10px; background:#f4f8ef; color:#35582c; max-width: min(320px,60vw); }
+.route-panel .interaction-hint:empty { display:none; }
+.route-distance { position:fixed; z-index:2; pointer-events:none; transform:translate(-50%,-100%); border:2px solid #fff3a3; border-radius:12px; padding:4px 9px; background:#344723e8; color:#fff8d1; font-size:13px; font-weight:800; font-variant-numeric:tabular-nums; box-shadow:0 3px 12px #0003; }
+.route-distance[hidden] {display:none;}
+#destination-select:focus { outline:3px solid #e5a12b; outline-offset:3px; }
+@media(max-width:760px) { .player-stats { top:16px;right:16px;min-width:185px;padding:6px 12px; } .stat-row {gap:10px;} .music-controls {top:80px;bottom:auto;} .combat-message {top:255px;} .route-panel{bottom:12px;} .status{bottom:100px;} }
+
+body:has(#settings-toggle[aria-expanded="true"]) .route-panel { bottom:240px; }
+
+.emote-wheel { position:fixed;z-index:5;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,90vw);aspect-ratio:1;border-radius:50%;background:#243923dc;border:2px solid #f6ffe386;box-shadow:0 15px 70px #0004;backdrop-filter:blur(12px);pointer-events:none; }
+.emote-wheel[hidden]{display:none;}
+.emote-center {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:white;font-weight:800;}
+.emote-choice {position:absolute;transform:translate(-50%,-50%);padding:14px 10px;border-radius:18px;background:#f6fbe9;color:#3b5233;font-size:13px;white-space:nowrap;border:3px solid transparent;}
+.emote-choice.selected {background:#ffe884;border-color:white;box-shadow:0 0 24px #ffec8e88;transform:translate(-50%,-50%) scale(1.12);}
+.emote-wheel>p {position:absolute;top:100%;left:50%;transform:translateX(-50%);width:110%;text-align:center;background:#243923ed;color:white;padding:10px;border-radius:12px;font-size:12px;}

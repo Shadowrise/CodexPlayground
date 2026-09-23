@@ -1,3 +1,4 @@
+import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
 import { constrainToMeadow } from './world-bounds';
 import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
@@ -14,6 +15,11 @@ export class CharacterController {
   surfaceY = 0;
   yaw = 0;
   private active?: AnimationAction;
+  private emotion?:EmotePose;
+  startEmote(kind:Emote){
+    if(this.emotion || this.flight.active || this.swimming || !['Idle','Run','WalkBackward','RotateLeft','RotateRight'].includes(this.state))return false;
+    this.setActivity(kind);this.emotion=new EmotePose(kind,this.animationRoot);return true;
+  }
   private turn?: Turn;
   readonly flight = new Flight();
   readonly cloud = flightCloud();
@@ -98,6 +104,7 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;this.turn=undefined;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;
     this.play('Idle');this.state=name;
@@ -125,6 +132,17 @@ export class CharacterController {
     this.attackHit = false;
     this.eatBite = false;
     this.eatPull = false;
+    if(this.emotion){
+      this.emotion.clear();
+      if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
+      else {
+        this.mixer.update(dt);
+        const emote=this.emotion;
+        if(emote.kind==='Fear' && emote.elapsed<.3){const step=Math.min(dt,.3-emote.elapsed)*2*this.actor.scale.x;this.actor.position.x-=Math.sin(this.yaw)*step;this.actor.position.z-=Math.cos(this.yaw)*step;constrainToMeadow(this.actor.position,this.actor.scale.x);}
+        if(emote.update(dt)){emote.clear();this.emotion=undefined;this.play('Idle');}
+        return;
+      }
+    }
     const eatPressed = !!input.eat && !this.eatWasHeld;
     this.eatWasHeld = !!input.eat;
     const attackPressed = !!input.attack && !this.attackWasHeld;

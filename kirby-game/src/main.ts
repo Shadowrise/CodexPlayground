@@ -1,3 +1,7 @@
+import { EMOTES, EmoteWheel, type Emote } from './emotes';
+import { Wayfinder, type Destination } from './navigation';
+import { LANDMARKS } from './landmark-sites';
+import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
 import { meadowGeometry } from './pond-layout';
 import * as THREE from 'three';
@@ -151,7 +155,19 @@ const sleepFade=document.createElement('div');sleepFade.setAttribute('aria-hidde
 const maze=new HedgeMaze();scene.add(maze.group);
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}});scene.add(balloons.group);
-const rideHint=document.createElement('div');rideHint.className='panel ride-hint';document.body.appendChild(rideHint);
+const routePanel=document.createElement('div');routePanel.className='panel ride-hint route-panel';document.body.appendChild(routePanel);
+const rideHint=document.createElement('div');rideHint.className='interaction-hint';routePanel.append(rideHint);
+const destinations:Destination[]=[
+ {id:'home',name:'Домик Кирби',x:home.entrance.x,z:home.entrance.z},
+ {id:'treehouse',name:'Домик на дереве и качели',x:TREEHOUSE_SITE.x-4,z:TREEHOUSE_SITE.z+11,radius:3},
+ {id:'swing',name:'Качели у домика',x:TREEHOUSE_SITE.x-11,z:TREEHOUSE_SITE.z+3,radius:3},
+ {id:'mill',name:'Водяная мельница',x:MILL_LEVER.x,z:MILL_LEVER.z},
+ {id:'depot',name:'Американские горки — депо',x:STATION.x,z:STATION.z-7},
+ {id:'maze',name:'Радужный лабиринт',x:MAZE_SITE.x,z:MAZE_SITE.z+39},
+ ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
+ ...LANDMARKS.map((p,i)=>({id:`landmark-${i}`,name:`${['Озеро с мостиком','Цветочная поляна','Грибная роща','Сад камней','Пикник и лавочки','Древние руины'][p.kind]} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13:0),z:p.z,radius:6,group:'Места на поляне'})),
+];
+const wayfinder=new Wayfinder(routePanel,scene,destinations);
 const fruits = new FruitWorld();
 for(const fruit of fruits.fruits){watermill.constrain(fruit.object.position,.15);treehouse.constrain(fruit.object.position,.15);maze.moveFruitOutside(fruit.object.position);home.constrain(fruit.object.position,.15);}
 scene.add(fruits.group);
@@ -161,12 +177,16 @@ const keys = new Set<string>();
 let pendingTurn: 'KeyA' | 'KeyD' | undefined;
 let pendingJump = false;
 let pendingAttack = false;
+let pendingEmote:Emote|undefined;
+const emoteWheel=new EmoteWheel();
 let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
   if (!playing || gamepad.input.active !== 'keyboard') return;
   if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
+  const digit=/^(?:Digit|Numpad)([1-5])$/.exec(event.code);
+  if(digit && audioPanel.hidden && !event.repeat){event.preventDefault();pendingEmote=EMOTES[Number(digit[1])-1].id;return;}
   if (controls.has(event.code)) {
     event.preventDefault(); keys.add(event.code);
     if (!event.repeat && (event.code === 'KeyA' || event.code === 'KeyD')) pendingTurn = event.code;
@@ -176,7 +196,7 @@ window.addEventListener('keydown', event => {
   }
 });
 window.addEventListener('keyup', event => { keys.delete(event.code); });
-window.addEventListener('blur', () => { keys.clear(); pendingTurn = undefined; pendingJump = false; pendingAttack = false; pendingBoard = false; });
+window.addEventListener('blur', () => { pendingEmote=undefined;emoteWheel.close();keys.clear(); pendingTurn = undefined; pendingJump = false; pendingAttack = false; pendingBoard = false; });
 document.addEventListener('visibilitychange', () => { keys.clear(); pendingTurn = undefined; pendingJump = false; pendingAttack = false; pendingBoard = false; });
 
 const followCamera = new FollowCamera();
@@ -192,6 +212,7 @@ canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
   if (!playing || gamepad.input.active !== 'keyboard' || event.button !== 0 || event.pointerType !== 'mouse') return;
   event.preventDefault();
+  if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
   dragPointer = event.pointerId;
   dragX = event.clientX; dragY = event.clientY;
   canvas.setPointerCapture(event.pointerId);
@@ -225,6 +246,7 @@ const labels: Record<string, string> = { Idle: 'Отдыхаем', Run: 'Беж�
 async function loadCharacter() {
   labels.Trampoline='Прыгаем с батута';
   labels.Sleep='Спим в домике';
+  for(const emote of EMOTES)labels[emote.id]=emote.name;
   try {
     const [gltf,bugModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`)]);
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
@@ -268,7 +290,7 @@ startButton.addEventListener('click', () => {
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
   statusDot.classList.add('ready');
-  document.querySelector('#npc-count')!.textContent = `${selected[0]} — это ты · ${npcs.length} друзей на поляне`;
+  document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
 });
@@ -277,7 +299,7 @@ let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
-  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera')).filter(element=>element.getClientRects().length>0);
+  const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #reset-camera, #destination-select')).filter(element=>element.getClientRects().length>0);
   if(!elements.length)return;
   let index=elements.indexOf(document.activeElement as HTMLElement);
   if(direction || index<0) {index=index<0?0:(index+direction+elements.length)%elements.length;elements[index].focus();}
@@ -295,11 +317,15 @@ renderer.setAnimationLoop((time: number) => {
   const dt = Math.min((time - previousTime) / 1000, .05);
   previousTime = time;
   const pad=gamepad.poll();
-  if(pad.changed){keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
+  if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=gamepad.input.active!=='keyboard';
+  document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(usingPad?'gamepad':'keyboard'));
+  startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'Продолжить с сохранённого места или начать новое приключение.';
   if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
   const settingsOpen=!audioPanel.hidden;
   const wasChoosing=!playing;
+  const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
+  if(usingPad && playing && !settingsOpen && !document.hidden && document.hasFocus()){const picked=emoteWheel.update(pad.held.has(4),pad.x,pad.y,pad.held.has(1));if(picked)pendingEmote=picked;}else emoteWheel.close();
   menuRepeat=Math.max(0,menuRepeat-dt);
   const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
   const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
@@ -320,14 +346,15 @@ renderer.setAnimationLoop((time: number) => {
     }
   }
   const padKeys=new Set<string>();
-  if(usingPad && !settingsOpen && !wasChoosing) {
+  if(usingPad && !settingsOpen && !wasChoosing && !wheelUsed) {
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.held.has(7))padKeys.add('ShiftLeft');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;
     followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
-  const held=(key:string)=>usingPad?padKeys.has(key):keys.has(key);
+  const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
+  const held=(key:string)=>settingsOpen || wheelUsed || (!usingPad && editingUi)?false:usingPad?padKeys.has(key):keys.has(key);
   if (character) {
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
@@ -346,15 +373,17 @@ renderer.setAnimationLoop((time: number) => {
       else if(balloons.prompt(character.actor.position))balloons.board(character);
       else if(atStation)coaster.board(character);
     }
+    if(pendingEmote && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote))sounds.playEmote(pendingEmote);
+    pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
     const homeWasActive=home.active;home.update(dt);sleepFade.style.opacity=String(home.blackout);
-    if(!homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && pad.pressed.has(0))))trampoline.start(character);
+    if(!homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,npcs,character);
     const benchWasActive=benches.active;benches.update(dt);
-    if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && pad.pressed.has(0)));
-    if(!homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : undefined,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
+    if(!homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : undefined, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     coaster.update(dt);
     if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){
@@ -363,12 +392,12 @@ renderer.setAnimationLoop((time: number) => {
     }
     ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
     const interaction=home.prompt(character.actor.position) || trampoline.prompt(character).replace('Пробел — тоже прыгнуть',usingPad?'A — тоже прыгнуть':'Пробел — тоже прыгнуть') || balloons.prompt(character.actor.position) || (!coaster.riding && (((!treehouse.active || treehouse.canSit) && benches.prompt(character.actor.position)) || treehouse.prompt(character.actor.position) || watermill.prompt(character.actor.position))) || coaster.prompt(character);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : `Лабиринт ${Math.round(Math.hypot(character.actor.position.x-MAZE_SITE.x,character.actor.position.z-MAZE_SITE.z))} м | Шары ${balloons.nearestDistance(character.actor.position)} м | Домик ${Math.round(character.actor.position.distanceTo(TREEHOUSE_SITE))} м | Мельница ${Math.round(character.actor.position.distanceTo(MILL_LEVER))} м | Депо ${Math.round(character.actor.position.distanceTo(STATION))} м`;
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
-    if(!interaction && !maze.contains(character.actor.position,5))rideHint.textContent=`${home.night?'☾ Ночь':'☀ День'} · Домик Кирби ${Math.round(character.actor.position.distanceTo(home.entrance))} м | ${rideHint.textContent}`;
+
     followCamera.update(dt, character.yaw, movingOrTurning,
-      usingPad && !settingsOpen ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
-      usingPad && !settingsOpen ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined);
+      usingPad && !settingsOpen && !wheelUsed ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
+      usingPad && !settingsOpen && !wheelUsed ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined);
     pendingBoard = false;
     pendingAttack = false;
     pendingTurn = undefined;
@@ -415,6 +444,7 @@ renderer.setAnimationLoop((time: number) => {
   constrainToMeadow(camera.position, .5);
   camera.lookAt(cameraTarget);
   camera.updateMatrixWorld();
+  if(character)wayfinder.update(character.actor.position,character.actor.scale.x,camera);
   shadows.update();
   const night=home.night;
   (scene.background as THREE.Color).set(night?'#0b1428':'#b3d9ef');(scene.fog as THREE.Fog).color.set(night?'#182b4b':'#d8e9eb');
