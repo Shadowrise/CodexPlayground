@@ -44,6 +44,8 @@ const statusDot = document.querySelector<HTMLSpanElement>('#status-dot')!;
 const sizeValue = document.querySelector<HTMLElement>('#player-size')!;
 const fruitValue = document.querySelector<HTMLElement>('#player-fruits')!;
 const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
+const playerStatsRow=document.querySelector<HTMLElement>('#player-avatar')!;
+const npcStatsRow=document.querySelector<HTMLElement>('.npc-avatar')!;
 const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-fruits')!;
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
 const audioPanel = document.querySelector<HTMLElement>('#audio-panel')!;
@@ -481,6 +483,8 @@ renderer.setAnimationLoop((time: number) => {
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
     document.querySelector<HTMLElement>('#player-place')!.textContent=`${teamPoints>playerPoints?2:1}.`;
     document.querySelector<HTMLElement>('#npc-place')!.textContent=`${playerPoints>teamPoints?2:1}.`;
+    const [leader,runnerUp]=teamPoints>playerPoints?[npcStatsRow,playerStatsRow]:[playerStatsRow,npcStatsRow];
+    if(leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
