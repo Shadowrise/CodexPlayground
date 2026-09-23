@@ -1,3 +1,4 @@
+import { createGroundTexture } from './ground-texture';
 import { meadowGeometry } from './pond-layout';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H } from './world-bounds';
@@ -109,21 +110,7 @@ export function createForest() {
   }
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);
-  const resolution=512,data=new Uint8Array(resolution*resolution*4);
-  const sw=new THREE.Color('#a9b95e'),se=new THREE.Color('#9fc767');
-  const nw=new THREE.Color('#72976c'),ne=new THREE.Color('#b7ca79');
-  const c=new THREE.Color(),southColor=new THREE.Color();
-  for(let row=0;row<resolution;row++)for(let col=0;col<resolution;col++){
-    const x=((col+.5)/resolution-.5)*2*H,z=-((row+.5)/resolution-.5)*2*H;
-    const east=.5+.5*Math.tanh((x+12*Math.sin(z*.025))/18);
-    const south=.5+.5*Math.tanh((z+10*Math.sin(x*.032))/18);
-    c.copy(nw).lerp(ne,east).lerp(southColor.copy(sw).lerp(se,east),south);
-    c.multiplyScalar(.48+.015*Math.sin(x*.15)*Math.cos(z*.13)).convertLinearToSRGB();
-    const i=(row*resolution+col)*4;data[i]=Math.round(c.r*255);data[i+1]=Math.round(c.g*255);data[i+2]=Math.round(c.b*255);data[i+3]=255;
-  }
-  const map=new THREE.DataTexture(data,resolution,resolution);map.colorSpace=THREE.SRGBColorSpace;
-  map.magFilter=THREE.LinearFilter;map.minFilter=THREE.LinearMipmapLinearFilter;map.generateMipmaps=true;
-  map.repeat.set(1/(2*H),1/(2*H));map.offset.set(.5,.5);map.needsUpdate=true;
+  const map=createGroundTexture(H);
   const floor=new THREE.Mesh(ground,new THREE.MeshStandardMaterial({map,roughness:1}));floor.name='Biome ground';
   floor.position.y=-.012;floor.receiveShadow=true;forest.add(floor);
   return forest;
