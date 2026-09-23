@@ -177,3 +177,11 @@ button:disabled { cursor:default; }
 .stat-row #player-size {margin-left:0;}
 .npc-name {color:var(--kirby-color);}
 @media(max-width:520px){.stat-row{grid-template-columns:2ch 60px 54px minmax(3ch,1fr) 5ch;gap:6px;}}
+
+#startup-menu {width:min(560px,100%);}
+.startup-section {margin-top:22px;padding-top:16px;border-top:1px solid var(--ui-border);}
+.startup-section h3 {margin:0 0 12px;font-size:17px;}
+.network-entry {display:flex;align-items:center;gap:14px;}
+.network-entry button {flex:1;padding:12px;border:1px solid var(--ui-border);border-radius:12px;background:var(--ui-raised);color:var(--ui-muted);font:inherit;font-size:13px;}
+#online-players {flex:none;white-space:nowrap;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ui-accent);}
+#startup-menu button:disabled {cursor:not-allowed;opacity:.55;}

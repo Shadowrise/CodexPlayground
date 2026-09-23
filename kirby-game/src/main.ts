@@ -1,3 +1,4 @@
+import { watchPlayerCount } from './player-count';
 import { TaskList } from './tasks';
 import { awardFirst, scoreOf } from './score';
 import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
@@ -83,32 +84,36 @@ function requirePlayerName(){
   return true;
 }
 
-const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=true;
-startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>С возвращением!</h2><p class="selection-description">Продолжить приключение или начать заново?</p>';
+const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=false;
+startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>Добро пожаловать!</h2>';
 const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
-startupCard.append(newGameButton,loadButton);
+const soloSection=document.createElement('section');soloSection.className='startup-section';soloSection.innerHTML='<h3>Одиночная игра</h3>';soloSection.append(newGameButton,loadButton);
+const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<h3>Сетевая игра</h3><div class="network-entry"><button type="button" disabled title="Подключение появится позже">Подключиться к сетевой игре</button><span id="online-players" aria-live="polite">… игроков</span></div>';
+startupCard.append(nameField,soloSection,networkSection);
+watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,import.meta.env.VITE_GAME_SERVER_URL || 'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.textContent='Геймпад: A — новая игра · X — загрузить сохранение';startupCard.append(startupMessage);
 selectionCard.before(startupCard);
 newGameButton.addEventListener('click',()=>{pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
 const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent='Сохранить игру';audioPanel.append(saveButton);
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
-try {startupCard.hidden=localStorage.getItem(SAVE_KEY)===null;}catch {startupCard.hidden=true;}
-selectionCard.hidden=!startupCard.hidden;
-if(!startupCard.hidden)newGameButton.before(nameField);
+let hasSave=false;
+try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
+selectionCard.hidden=true;
+loadButton.title=hasSave?'Загрузить сохранение':'Сохранений пока нет';
 loadButton.addEventListener('click',()=>{
   if(!requirePlayerName())return;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
     startButton.click();
-  }catch(error){pendingSave=undefined;startupMessage.textContent=error instanceof Error?error.message:'Не удалось загрузить сохранение.';}
+  }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.textContent=error instanceof Error?error.message:'Не удалось загрузить сохранение.';}
 });
 saveButton.addEventListener('click',()=>{
   if(!character)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
     localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??(c instanceof CharacterController?fireflies?.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
-    saveMessage.textContent='Игра сохранена.';loadButton.hidden=false;
+    saveMessage.textContent='Игра сохранена.';hasSave=true;loadButton.disabled=false;loadButton.title='Загрузить сохранение';
   }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
 });
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
@@ -288,7 +293,7 @@ async function loadCharacter() {
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
     startButton.disabled = false;
-    loadButton.disabled = false;
+    loadButton.disabled = !hasSave;
     startButton.textContent = 'На поляну →';
     document.querySelector('#selection-message')!.textContent = 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
   } catch (error) {
@@ -361,7 +366,7 @@ renderer.setAnimationLoop((time: number) => {
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=gamepad.input.active!=='keyboard';
   document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(usingPad?'gamepad':'keyboard'));
-  startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'Продолжить с сохранённого места или начать новое приключение.';
+  if(!startupMessage.dataset.error)startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'Выбери новую игру или загрузи сохранение.';
   if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
   const settingsOpen=!audioPanel.hidden;
   const wasChoosing=!playing;
