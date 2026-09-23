@@ -53,7 +53,9 @@ settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
   audioPanel.hidden = controlsPanel.hidden = !open;
+  keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();
   if(open)audioPanel.querySelector<HTMLElement>('select, button, input')?.focus();
+  else if(playing)canvas.focus();
 });
 const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
@@ -208,7 +210,13 @@ let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
-  if (!playing || gamepad.input.active !== 'keyboard') return;
+  if(!playing)return;
+  if(event.code==='Escape'){
+    event.preventDefault();
+    if(!event.repeat)settingsToggle.click();
+    return;
+  }
+  if(gamepad.input.active !== 'keyboard' || !audioPanel.hidden)return;
   if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
   const digit=/^(?:Digit|Numpad)([1-5])$/.exec(event.code);
   if(digit && audioPanel.hidden && !event.repeat){event.preventDefault();pendingEmote=EMOTES[Number(digit[1])-1].id;return;}
