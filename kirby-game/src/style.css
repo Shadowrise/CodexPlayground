@@ -254,3 +254,8 @@ button:disabled { cursor:default; }
 @media(max-width:780px){#settings-panels{left:16px;top:80px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 96px);flex-wrap:wrap;pointer-events:auto;}#settings-panels > .panel{max-height:none;}#settings-panels #audio-panel,#settings-panels #controls-panel{width:min(410px,calc(100vw - 32px));}}
 #settings-panels > .panel[hidden] {display:none;}
 #settings-panels #controls-panel[hidden], #settings-panels #audio-panel[hidden] {display:none;}
+
+#startup-menu #network-join {background:#3264b8;color:#fff;border-color:#75a7ef;cursor:pointer;box-shadow:0 3px 0 #173566;transition:background .15s,box-shadow .15s;}
+#startup-menu #network-join:hover:not(:disabled) {background:#3d76d0;}
+#startup-menu #network-join:active:not(:disabled) {background:#28549e;box-shadow:0 1px 0 #173566;}
+#startup-menu #network-join:focus-visible {outline:3px solid var(--ui-focus);outline-offset:4px;}
