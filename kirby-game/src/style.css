@@ -266,3 +266,13 @@ button:disabled { cursor:default; }
 #navigation-hud .route-panel {padding:10px 16px;border-radius:14px;font-size:12px;}
 #action-hint {padding:13px 22px;border:1px solid #f0cc78;border-radius:14px;background:#263d36ed;color:#fff0bd;box-shadow:0 3px 18px #0006;font-size:15px;font-weight:800;line-height:1.45;text-align:center;}
 #action-hint:empty {display:none;}
+
+#starfall-hud {position:fixed;z-index:25;left:50%;top:22px;transform:translateX(-50%);max-width:min(560px,calc(100vw - 40px));padding:14px 25px;border-radius:22px;border:1px solid #f4d889;background:linear-gradient(120deg,#29365aef,#583056ef);box-shadow:0 3px 24px #b994e540;color:#fff2bc;font-size:17px;font-weight:800;text-align:center;pointer-events:none;}
+#starfall-results {width:min(610px,calc(100vw - 50px));max-height:85vh;box-sizing:border-box;overflow:auto;background:linear-gradient(145deg,#19283e,#382b4b);border:1px solid #e2c474;border-radius:25px;color:#f7edff;padding:30px;box-shadow:0 15px 80px #0008;}
+#starfall-results::backdrop {background:#0d1529b8;backdrop-filter:blur(5px);}
+#starfall-results h2 {color:#ffe08a;margin:0 0 20px;text-align:center;}
+#starfall-results ol {list-style:none;padding:0;display:grid;gap:10px;font-weight:750;}
+#starfall-results li {padding:10px 14px;background:#ffffff09;border-radius:12px;}
+#starfall-results p {line-height:1.5;} #starfall-results small {display:block;color:#c4c5dc;text-align:center;}
+#starfall-results button {display:block;margin:20px auto 0;padding:14px 30px;background:#8f4ba8;border:1px solid #dba6ee;border-radius:12px;color:white;font-weight:800;font-size:16px;cursor:pointer;}
+#starfall-results button:focus-visible {outline:3px solid #ffda70;outline-offset:4px;}

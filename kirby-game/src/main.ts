@@ -1,3 +1,5 @@
+import {StarfallView} from './starfall-view';
+import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
 import {MeadowChat} from './chat';
 import {emoteMessage,type LogEntry} from './world-log';
@@ -276,7 +278,7 @@ let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
-  if(!playing)return;
+  if(!playing||roundFinished())return;
   if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
     event.preventDefault();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
   }
@@ -442,7 +444,7 @@ startButton.addEventListener('click', async () => {
     remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
-    network.onDisconnect=reason=>{playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onDisconnect=reason=>{if(network?.room.festival&&Date.now()>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
     network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
@@ -451,6 +453,19 @@ startButton.addEventListener('click', async () => {
   renderer.domElement.focus();
 });
 
+const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
+function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+a.achievements.length*3+(id?network!.room.festival?.players[id]?.bonus??0:0);}
+function roundFinished(){return !!network?.room.festival&&Date.now()>=network.room.festival.endsAt;}
+function festivalTick(){
+ if(!character||!playing)return;
+ const now=Date.now(),id=network?.id??'solo';
+ if(!network&&!character.festival&&allTasks(character.achievements))character.festival=createStarfall(now,nameInput.value);
+ const f=network?.room.festival??character.festival;if(!f)return;
+ if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+character.achievements.size*3;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
+ character.bonusPoints=f.players[id]?.bonus??0;
+ festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
+ if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+CELEBRATE_MS+RESULTS_MS)leaveOnline.click();}
+}
 const fpsCounter=new FpsCounter();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});
 const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel.textContent='—';fpsLabel.title='Кадров в секунду';fpsLabel.setAttribute('aria-label','Кадров в секунду');document.body.append(fpsLabel);
@@ -481,8 +496,9 @@ renderer.setAnimationLoop((time: number) => {
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(gamepad.input.active!=='keyboard'?'gamepad':'keyboard'));
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'';}
-  if(usingPad && pad.pressed.has(9) && playing)settingsToggle.click();
-  const settingsOpen=!audioPanel.hidden || chat.open;
+  if(usingPad && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
+  const settingsOpen=!audioPanel.hidden || chat.open || roundFinished();
+  if(usingPad&&festivalView.results.open&&pad.pressed.has(0))leaveOnline.click();
   const wasChoosing=!playing;
   const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
   if(usingPad && playing && !settingsOpen && !document.hidden && document.hasFocus()){const picked=emoteWheel.update(pad.held.has(4),pad.x,pad.y,pad.held.has(1));if(picked)pendingEmote=picked;}else emoteWheel.close();
@@ -521,7 +537,7 @@ renderer.setAnimationLoop((time: number) => {
   const mouseTurning=!usingPad && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
   const mouseSteer=mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
   if(mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
-  if (character) {
+  if (character && !roundFinished()) {
     syncNetworkWorld(dt);
     const achievementsBefore=character.achievements.size;
     const previousX = character.actor.position.x;
@@ -603,14 +619,14 @@ renderer.setAnimationLoop((time: number) => {
     taskList.update(character.achievements);
     fruitValue.textContent=String(scoreOf(character));
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
-    document.querySelector<HTMLElement>('#player-place')!.textContent=`${1+Number(teamPoints>playerPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>playerPoints).length:0)}.`;
-    document.querySelector<HTMLElement>('#npc-place')!.textContent=`${1+Number(playerPoints>teamPoints)+(network?[...network.actors.values()].filter(a=>a.fruits+a.achievements.length*3>teamPoints).length:0)}.`;
+    document.querySelector<HTMLElement>('#player-place')!.textContent=`${1+Number(teamPoints>playerPoints)+(network?[...network.actors.values()].filter(a=>peerPoints(a)>playerPoints).length:0)}.`;
+    document.querySelector<HTMLElement>('#npc-place')!.textContent=`${1+Number(playerPoints>teamPoints)+(network?[...network.actors.values()].filter(a=>peerPoints(a)>teamPoints).length:0)}.`;
     const [leader,runnerUp]=teamPoints>playerPoints?[npcStatsRow,playerStatsRow]:[playerStatsRow,npcStatsRow];
     if(!network && leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
-  else {coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
+  else if(!character) {coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
   constrainToMeadow(camera.position, .5);
@@ -628,6 +644,7 @@ renderer.setAnimationLoop((time: number) => {
   ponds.update(dt);
   watermill.update(dt);
   updateNetwork(dt);
+  festivalTick();
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
@@ -725,7 +742,7 @@ async function interactOnline(){
  heldResource=key;resolveInteraction(character)?.run();
 }
 function updateNetwork(dt:number){
- if(!network||!character||!playing)return;
+ if(!network||!character||!playing||roundFinished())return;
  if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));}
  for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
  const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
@@ -736,7 +753,7 @@ function updateNetwork(dt:number){
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld);
  playerHostBadge.hidden=!network.host;
- const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+actor.achievements.length*3}))];
+ const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+actor.achievements.length*3+(network!.room.festival?.players[id]?.bonus??0)}))];
  const teamPoints=npcs.reduce((sum,n)=>sum+scoreOf(n),0);
  const signature=JSON.stringify([network.room.host,entries.map(e=>[e.id,e.actor.name,e.actor.variant,e.actor.s,e.points]),teamPoints]);
  if(rosterSignature!==signature){

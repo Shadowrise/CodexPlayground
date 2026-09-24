@@ -116,6 +116,12 @@ export class SoundEffects {
     this.buzz?.gain.gain.setTargetAtTime(volume,ctx.currentTime,.18);
   }
 
+  playStarPickup(){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const source=ctx.createOscillator(),gain=ctx.createGain();source.type='sine';source.frequency.setValueAtTime(1046.5,ctx.currentTime);source.frequency.exponentialRampToValueAtTime(1568,ctx.currentTime+.14);
+    gain.gain.setValueAtTime(0,ctx.currentTime);gain.gain.linearRampToValueAtTime(.12,ctx.currentTime+.012);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.35);
+    source.connect(gain);gain.connect(this.master!);source.start();source.stop(ctx.currentTime+.36);source.onended=()=>{source.disconnect();gain.disconnect();};
+  }
   playTaskComplete(count=1){
     const ctx=this.context;
     if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;

@@ -43,17 +43,17 @@ test('fourteen tracks advance and wrap in both directions while preserving mute 
     assert(audio!.paused); assert(!audio!.loop);
     music.start(); await Promise.resolve(); assert(!audio!.paused);
     volume.value = '37'; volume.dispatchEvent(new Event('input'));
-    const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.endsWith(`${file}.wav`));
+    const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.split('?')[0].endsWith(`${file}.wav`));
     assert(first >= 0);assert(label.textContent.includes('/ 14 ·'));
     for (let i = 0; i < MUSIC_TRACKS.length; i++) {
-      assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
+      assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       audio!.dispatchEvent(new Event('ended'));
     }
-    assert(audio!.src.endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
+    assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
     previous.dispatchEvent(new Event('click'));
-    assert(audio!.src.endsWith(`${MUSIC_TRACKS[(first + MUSIC_TRACKS.length - 1) % MUSIC_TRACKS.length][0]}.wav`));
+    assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + MUSIC_TRACKS.length - 1) % MUSIC_TRACKS.length][0]}.wav`));
     next.dispatchEvent(new Event('click'));
-    assert(audio!.src.endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
+    assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[first][0]}.wav`));
     button.dispatchEvent(new Event('click')); assert(audio!.paused);
     next.dispatchEvent(new Event('click'));
     assert(audio!.paused); assert(!audio!.loop); assert.equal(audio!.volume, .37);

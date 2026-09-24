@@ -1,3 +1,4 @@
+import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
 import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
@@ -12,11 +13,17 @@ export class GameRoom extends DurableObject<Env>{
  private broadcast(v:unknown,except?:WebSocket){for(const s of this.players())if(s!==except)this.send(s,v);}
  private persist(){if(!this.room)return;for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a.id===this.room.host){a.room=this.room;s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}}
  private log(a:Attachment,text:string,chat=false){if(!this.room||!a.actor)return;const entry:LogEntry={id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat};this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
+ private finishFestival(now=Date.now()){
+  const f=this.room?.festival;if(!f)return;
+  if(!f.results&&now>=f.endsAt&&this.room?.world){const npcs=this.room.world.npcs;f.players.npc={name:'Команда NPC',variant:1,base:npcs.reduce((sum,n)=>sum+n.fruits+n.achievements.length*3,0),fruits:0,size:1,bonus:0,collected:[]};}
+  if(finishStarfall(f,now))this.changed();
+ }
  private changed(){this.persist();this.broadcast({type:'room',room:this.room});}
  async fetch(request:Request){
   if(request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return new Response('WebSocket required',{status:426});
   const url=new URL(request.url);if(url.searchParams.get('build')!==BUILD)return new Response('Refresh game client',{status:409});
   if(this.players().length>=MAX_PLAYERS)return Response.json({error:'ROOM_FULL'},{status:503});
+  if(this.room?.festival&&Date.now()>=this.room.festival.endsAt&&this.players().length)return new Response('Celebration finished. Try again shortly.',{status:409});
   const variant=Number(url.searchParams.get('variant'));
   if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=15)return new Response('Invalid variant',{status:400});
   if(this.players().some(s=>(s.deserializeAttachment() as Attachment).variant===variant)){const [client,server]=Object.values(new WebSocketPair());server.accept();this.send(server,{type:'error',message:'Этот цвет уже занят. Выбери другого Кирби.'});server.close(1008,'Color occupied');return new Response(null,{status:101,webSocket:client});}
@@ -32,7 +39,8 @@ export class GameRoom extends DurableObject<Env>{
   if(typeof message!=='string'||message.length>22000){socket.close(1009,'Message too large');return;}
   let m:any;try{m=JSON.parse(message);}catch{socket.close(1008,'Invalid JSON');return;}
   const a=socket.deserializeAttachment() as Attachment,r=this.room;if(!r||m?.type!=='frame')return;
-  const now=Date.now();if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
+  const now=Date.now();this.finishFestival(now);if(r.festival?.results)return;
+  if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){world=m.world;r.world=world;}
@@ -41,7 +49,8 @@ export class GameRoom extends DurableObject<Env>{
   let changed=false;
   for(const e of (Array.isArray(m.events)?m.events.slice(0,16):[]) as Event[]){
    if(!e||typeof e!=='object')continue;
-   if(e.type==='chat'&&a.actor&&now-(a.lastChat??0)>=700){const text=chatText(e.text);if(text){a.lastChat=now;this.log(a,text,true);}}
+   if(e.type==='festival-star'&&r.festival){if(collectStar(r.festival,a.id,e.index,now))changed=true;}
+   else if(e.type==='chat'&&a.actor&&now-(a.lastChat??0)>=700){const text=chatText(e.text);if(text){a.lastChat=now;this.log(a,text,true);}}
    else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);this.broadcast({type:'emote',emote:e.emote,id:a.id},socket);}}
    else if(e.type==='fruit'&&Number.isInteger(e.index)&&e.index>=0&&e.index<70&&!r.fruits[e.index]&&a.actor){
     if(e.npc===undefined){r.fruits[e.index]=a.id;changed=true;}
@@ -54,8 +63,14 @@ export class GameRoom extends DurableObject<Env>{
    else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>350){a.lastHit=now;this.broadcast({type:'hit',id:a.id,actor:a.actor});}
    else if(e.type==='visible'){a.visible=e.value===true;socket.serializeAttachment(a);if(a.id===r.host&&!a.visible){const next=this.players().find(s=>(s.deserializeAttachment() as Attachment).visible);if(next){r.host=(next.deserializeAttachment() as Attachment).id;changed=true;}}}
   }
+  if(!r.festival&&a.actor&&allTasks(a.actor.achievements)){
+   r.festival=createStarfall(now,a.actor.name);changed=true;
+   for(const peer of this.players()){const v=peer.deserializeAttachment() as Attachment;if(v.actor)r.festival.players[v.id]={name:v.actor.name,variant:v.variant,base:v.actor.fruits+v.actor.achievements.length*3,fruits:v.actor.fruits,size:v.actor.s,bonus:0,collected:[]};}
+   void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival.endsAt));
+  }
+  if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=r.fruits.filter(owner=>owner===a.id).length+a.actor.achievements.length*3;p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.s;}
   a.room=a.id===r.host?r:undefined;socket.serializeAttachment(a);
-  if(changed)this.changed();else if(world)this.persist();
+  if(changed)this.changed();else if(world||r.festival)this.persist();
   if(actor||world)this.broadcast({type:'frame',id:a.id,actor,world},socket);
  }
  private async remove(socket:WebSocket){
@@ -69,7 +84,12 @@ export class GameRoom extends DurableObject<Env>{
  }
  async webSocketClose(socket:WebSocket){await this.remove(socket);}
  async webSocketError(socket:WebSocket){await this.remove(socket);}
- async alarm(){for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s);}if(this.players().length)await this.ctx.storage.setAlarm(Date.now()+30000);}
+ async alarm(){
+  this.finishFestival();
+  if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+CELEBRATE_MS+RESULTS_MS){
+   for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;a.left=true;s.serializeAttachment(a);s.close(1000,'Festival finished');}this.room=undefined;await this.ctx.storage.deleteAll();await this.ctx.storage.deleteAlarm();return;
+  }
+for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s);}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+CELEBRATE_MS+RESULTS_MS):Infinity));}
 }
 export default {async fetch(request,env):Promise<Response>{
  const path=new URL(request.url).pathname,headers={'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'};

@@ -1,3 +1,4 @@
+import type {StarfallState} from './starfall';
 import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
@@ -33,6 +34,8 @@ export class CharacterController {
   private eatElapsed: number | undefined;
   private eatWasHeld = false;
   fruitsEaten = 0;
+  bonusPoints=0;
+  festival?:StarfallState;
   readonly achievements=new Set<ScoreAction>();
   starBlessed = false;
   starRemaining = 0;

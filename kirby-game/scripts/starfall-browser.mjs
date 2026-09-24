@@ -1,0 +1,17 @@
+import {chromium} from 'playwright';import assert from 'node:assert/strict';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+try{
+ const page=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>d.accept());
+ await page.goto('http://127.0.0.1:5173/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});await page.locator('#player-name-input').fill('Звёздочка');await page.locator('#new-game').click();await page.locator('#start-game').click();await page.locator('#settings-toggle').click();await page.locator('#save-game').click();
+ await page.evaluate(async()=>{const {SCORE_ACTIONS}=await import('/src/score.ts');const data=JSON.parse(localStorage.getItem('kirby-save-v1'));data.player.achievements=SCORE_ACTIONS;localStorage.setItem('kirby-save-v1',JSON.stringify(data));});
+ await page.reload();await page.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});await page.locator('#load-game').click();await page.waitForFunction(()=>document.querySelector('#starfall-hud').textContent.includes('Звездопад через'));
+ await page.locator('#settings-toggle').click();await page.locator('#save-game').click();
+ await page.evaluate(()=>{const data=JSON.parse(localStorage.getItem('kirby-save-v1'));data.festival.startsAt=Date.now()-14000;data.festival.endsAt=data.festival.startsAt+120000;data.savedAt=new Date().toISOString();localStorage.setItem('kirby-save-v1',JSON.stringify(data));});
+ await page.reload();await page.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});await page.locator('#load-game').click();await page.waitForFunction(()=>document.querySelector('#starfall-hud').textContent.includes('/30'));
+ await page.waitForTimeout(1500);await page.screenshot({path:(process.env.TEMP||'/tmp')+'/kirby-starfall.png'});
+ await page.locator('#settings-toggle').click();await page.locator('#save-game').click();
+ await page.evaluate(()=>{const data=JSON.parse(localStorage.getItem('kirby-save-v1'));data.festival.startsAt=Date.now()-130000;data.festival.endsAt=data.festival.startsAt+120000;data.savedAt=new Date().toISOString();localStorage.setItem('kirby-save-v1',JSON.stringify(data));});
+ await page.reload();await page.locator('#startup-loader').waitFor({state:'hidden',timeout:60000});await page.locator('#load-game').click();await page.waitForTimeout(500);assert(await page.locator('#starfall-hud').isHidden());assert(!await page.locator('#starfall-results').evaluate(e=>e.open));assert(!await page.locator('#character-select').isVisible());
+ await page.evaluate(async()=>{const {StarfallView}=await import('/src/starfall-view.ts');const T=await import('/node_modules/.vite/deps/three.js');const view=new StarfallView(()=>{},()=>{},()=>{});window.testFestivalView=view;const s={startsAt:0,endsAt:120000,initiator:'Звёздочка',players:{},results:[{id:'a',name:'Звёздочка',variant:0,points:65,bonus:24,fruits:12,size:2.2},{id:'b',name:'Солнышко',variant:2,points:59,bonus:30,fruits:9,size:1.9}]};view.update(s,'a',130000,new T.Vector3(),1,new T.PerspectiveCamera(),true,[],()=>{});});
+ await page.getByText('🍉 Толстячок: Звёздочка',{exact:true}).waitFor();await page.screenshot({path:(process.env.TEMP||'/tmp')+'/kirby-starfall-results.png'});assert.deepEqual(errors,[]);console.log('PASS solo trigger, saved active event, free play after finale and results nominations');
+}finally{await browser.close();}
