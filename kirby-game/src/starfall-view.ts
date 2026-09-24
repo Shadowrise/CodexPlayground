@@ -43,10 +43,10 @@ export class StarfallView {
   if(phase==='collect')this.hud.textContent=`★ Собирай звёзды · ${Math.ceil((s.endsAt-now)/1000)} с · +${bonus}/${STAR_LIMIT} очков`;
   if(phase==='celebrate')this.hud.textContent='★ Спасибо за чудесное приключение!';
   if(phase==='collect'){
-   for(let i=0;i<STAR_COUNT;i++){const age=now-s.startsAt-i*STAR_INTERVAL;if(age>=0&&age<STAR_LIFE&&!this.stars.has(i)&&!player?.collected.includes(i)&&bonus<STAR_LIMIT)this.spawn(i,p,obstacles);}
+   for(let i=0;i<STAR_COUNT;i++){const age=now-s.startsAt-i*STAR_INTERVAL;if(age>=0&&age<STAR_LIFE&&!this.stars.has(i)&&!player?.collected.includes(i))this.spawn(i,p,obstacles);}
   }
   for(const [i,star] of this.stars){const age=now-s.startsAt-i*STAR_INTERVAL,g=star.group;
-   g.visible=phase==='collect'&&age<STAR_LIFE&&!star.claimed&&!player?.collected.includes(i)&&bonus<STAR_LIMIT;if(!g.visible)continue;
+   g.visible=phase==='collect'&&age<STAR_LIFE&&!star.claimed&&!player?.collected.includes(i);if(!g.visible)continue;
    const fall=Math.max(0,1-age/5500);g.position.copy(star.origin);g.position.y+=1.35+fall*fall*15+Math.sin(now*.002+i)*.16;g.rotation.set(.15*Math.sin(i+now*.001),now*.001+i,.13*Math.sin(now*.002+i));g.scale.setScalar((starValue(i)===3?1.05:.72)*Math.min(1,age/500,(STAR_LIFE-age)/1300));
    const target=p.clone().add(new T.Vector3(0,scale,0));
    if(age>=2500&&g.position.distanceTo(target)<3+scale){star.claimed=true;claim(i);this.pickup();}
