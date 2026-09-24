@@ -1,3 +1,4 @@
+import {oakBarkMaterial} from './oak-bark';
 import {createCanopyGeometry,createLeafSurface} from './canopy';
 import { LeafPile } from './leaf-pile';
 import { awardFirst } from './score';
@@ -41,12 +42,8 @@ export class Treehouse {
       p.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return p;
     };
     // Mature oak: properly tapered trunk, branching scaffold and a single leafy canopy.
-    part(root,'pole','#65432e',0,15,-6,1.85,30,1.65);
-    for(let i=0;i<18;i++){
-      const a=i*Math.PI*2/18;
-      beam([Math.cos(a)*1.8,.5,-6+Math.sin(a)*1.6],[Math.cos(a)*5.5,.12,-6+Math.sin(a)*5.5],.33,'#70503a');
-      beam([Math.cos(a)*1.8,1,-6+Math.sin(a)*1.6],[Math.cos(a)*1.65,27,-6+Math.sin(a)*1.45],.07,i%2?'#805b3e':'#503a2c');
-    }
+    const trunk=new T.Mesh(new T.CylinderGeometry(1.35,1.85,30,24,6),oakBarkMaterial());
+    trunk.name='Textured oak trunk';trunk.position.set(0,15,-6);trunk.scale.z=1.65/1.85;root.add(trunk);
     for(let i=0;i<12;i++){
       const a=i*2.4,x=Math.cos(a)*7,z=-6+Math.sin(a)*7,y=30+i%3;
       beam([0,20+i%4,-6],[x*.48,27,-6+(z+6)*.48],.62,'#65432e');
