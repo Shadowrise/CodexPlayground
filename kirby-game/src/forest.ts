@@ -105,12 +105,16 @@ export function createForest() {
         branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(cx+Math.cos(angle)*.65*s,cy+.65*s,cz+Math.sin(angle)*.65*s),.025*s,trunk);
       }
       if (biome==='orchard') for (let f=0;f<3;f++) {
-        const fa=a+f*2.1, fx=cx+Math.cos(fa)*crownRadius*.55, fz=cz+Math.sin(fa)*crownRadius*.55;
+        // Place fruit inside the canopy, rather than beyond the tip of a limb.
+        const fa=a+(f-1)*.32, fruitRadius=crownRadius*(.60+f*.06);
+        const fx=x+Math.cos(fa)*fruitRadius, fz=z+Math.sin(fa)*fruitRadius;
         const fy=cy-.45*s, fs=(.16+random()*.035)*s;
         const fc=['#e74b39','#f9a52d','#b8cf46'][fruitKind];
         part('fruit',fx,fy,fz,fs,fs*(fruitKind===2?1.35:.95),fs,fc);
         if(fruitKind===2) part('fruit',fx,fy+fs*.8,fz,fs*.58,fs*.65,fs*.58,fc);
-        part('wood',fx,fy+fs*1.3,fz,.018*s,.17*s,.018*s,'#69503a');
+        const stemBottom=fy+fs*(fruitKind===2?1.15:.8),stemTop=fy+fs*1.5+.15*s;
+        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(fx,stemTop,fz),.025*s,trunk);
+        branch(new THREE.Vector3(fx,stemBottom,fz),new THREE.Vector3(fx,stemTop,fz),.018*s,'#69503a');
       }
     }
   }
