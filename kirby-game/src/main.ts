@@ -237,8 +237,9 @@ const maze=new HedgeMaze();scene.add(maze.group);
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
 let balloonSeed=6173;
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}},()=>{balloonSeed=(Math.imul(balloonSeed,1664525)+1013904223)>>>0;return balloonSeed/4294967296;});scene.add(balloons.group);
-const routePanel=document.createElement('div');routePanel.className='panel ride-hint route-panel';document.body.appendChild(routePanel);
-const rideHint=document.createElement('div');rideHint.className='interaction-hint';routePanel.append(rideHint);
+const navigationHud=document.createElement('div');navigationHud.id='navigation-hud';document.body.append(navigationHud);
+const routePanel=document.createElement('div');routePanel.className='panel route-panel';
+const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint,routePanel);
 const destinations:Destination[]=[
  {id:'home',name:'Домик Кирби',x:home.entrance.x,z:home.entrance.z},
  {id:'treehouse',name:'Домик на дереве и качели',x:TREEHOUSE_SITE.x-4,z:TREEHOUSE_SITE.z+11,radius:3},
@@ -553,7 +554,7 @@ renderer.setAnimationLoop((time: number) => {
     const occupied=!!(candidate&&network?.room.locks[candidate]&&network.room.locks[candidate]!==network.id);
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —').replace('W/S — гулять · A/D — повернуться',usingPad?'Левый стик — гулять · A — прыгнуть':'W/S — гулять · A/D — повернуться') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
@@ -671,7 +672,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     const swing=p.x-TREEHOUSE_SITE.x<-7;
     return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,9.4,9.15)),[2.3,19.4,4.2]));
   }
-  if(watermill.prompt(p))return result(watermill.prompt(p),()=>{watermill.interact(p);awardFirst(c,'mill');},object(watermill.handle));
+  if(watermill.prompt(p))return result(watermill.prompt(p),()=>{if(watermill.interact(p))awardFirst(c,'mill');},object(watermill.handle));
   if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));
   if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
   const bug=fireflies?.outlineBug(c);
@@ -715,7 +716,7 @@ function resourceKey(c:CharacterController){
 async function interactOnline(){
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
- if(watermill.prompt(character.actor.position)&&!heldResource&&!home.active&&!treehouse.active){network.event({type:'mill'});return;}
+ if(watermill.prompt(character.actor.position)&&!heldResource&&!home.active&&!treehouse.active){network.event({type:'mill'});awardFirst(character,'mill');return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
  acquiring=true;const ok=await network.acquire(key);acquiring=false;

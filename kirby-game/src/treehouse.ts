@@ -142,7 +142,7 @@ export class Treehouse {
   networkSwing(angle:number){if(!this.rider){this.swingAngle=angle;this.swing.rotation.x=angle;}}
   get outlineSwing(){return this.swing;}
   prompt(position:T.Vector3) {
-    if(this.rider)return this.activity==='deck'?'E — прыгнуть в листья · W/S — гулять · A/D — повернуться':this.activity==='swing'?'E — слезть с качелей':this.activity==='climb'?'Поднимаемся к домику…':'Прыжок в мягкие листья!';
+    if(this.rider)return this.activity==='deck'?'E — прыгнуть в листья':this.activity==='swing'?'E — слезть с качелей':this.activity==='climb'?'Поднимаемся к домику…':'Прыжок в мягкие листья!';
     const p=position.clone().sub(TREEHOUSE_SITE);
     if(p.y>1)return '';
     if(p.distanceTo(new T.Vector3(-4,0,11))<3.5)return 'E — подняться в домик на дереве';
