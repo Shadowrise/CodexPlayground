@@ -276,3 +276,14 @@ button:disabled { cursor:default; }
 #starfall-results p {line-height:1.5;} #starfall-results small {display:block;color:#c4c5dc;text-align:center;}
 #starfall-results button {display:block;margin:20px auto 0;padding:14px 30px;background:#8f4ba8;border:1px solid #dba6ee;border-radius:12px;color:white;font-weight:800;font-size:16px;cursor:pointer;}
 #starfall-results button:focus-visible {outline:3px solid #ffda70;outline-offset:4px;}
+
+#starfall-results {width:min(760px,calc(100vw - 32px));}
+#starfall-results .festival-result-row {display:grid;grid-template-columns:40px 70px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px;}
+.festival-rank {text-align:center;font-size:22px;color:#d5dceb;font-variant-numeric:tabular-nums;}
+.festival-rank svg {display:block;width:40px;height:47px;filter:drop-shadow(0 2px 3px #0005);}
+.festival-result-row .mini-kirby {isolation:isolate;}
+.festival-identity {display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-width:0;}
+.festival-name {color:var(--kirby-color);overflow-wrap:anywhere;font-size:17px;}
+.festival-award {padding:4px 7px;border-radius:7px;background:#ffda7820;color:#ffe5a2;font-size:11px;font-weight:650;}
+.festival-points {font-size:17px;font-variant-numeric:tabular-nums;white-space:nowrap;color:#f6edff;}
+@media(max-width:540px){#starfall-results{padding:20px 12px;}#starfall-results .festival-result-row{grid-template-columns:30px 52px minmax(0,1fr) auto;gap:6px;padding:8px 6px;}.festival-rank svg{width:30px;}.festival-result-row .mini-kirby{width:52px;transform:scale(.75);transform-origin:left center;}.festival-name,.festival-points{font-size:14px;}.festival-award{font-size:10px;}}

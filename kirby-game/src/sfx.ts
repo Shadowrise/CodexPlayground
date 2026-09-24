@@ -118,9 +118,9 @@ export class SoundEffects {
 
   playStarPickup(){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
-    const source=ctx.createOscillator(),gain=ctx.createGain();source.type='sine';source.frequency.setValueAtTime(1046.5,ctx.currentTime);source.frequency.exponentialRampToValueAtTime(1568,ctx.currentTime+.14);
-    gain.gain.setValueAtTime(0,ctx.currentTime);gain.gain.linearRampToValueAtTime(.12,ctx.currentTime+.012);gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.35);
-    source.connect(gain);gain.connect(this.master!);source.start();source.stop(ctx.currentTime+.36);source.onended=()=>{source.disconnect();gain.disconnect();};
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('grow')!;gain.gain.value=.8;
+    source.connect(gain);gain.connect(this.master!);this.active.add(source);
+    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
   playTaskComplete(count=1){
     const ctx=this.context;

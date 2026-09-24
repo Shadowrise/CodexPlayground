@@ -60,12 +60,31 @@ export class StarfallView {
   }
   if(online&&phase==='done'&&s.results){
    if(this.resultKey!==String(s.startsAt)){this.resultKey=String(s.startsAt);this.results.replaceChildren();const title=document.createElement('h2');title.textContent='★ Праздник завершён!';this.results.append(title);
-    const list=document.createElement('ol');for(const r of s.results){const row=document.createElement('li');row.style.color=KIRBY_VARIANTS[r.variant]?.[1]??'#fff';row.textContent=`${1+s.results.filter(v=>v.points>r.points).length}. ${r.name} — ${r.points} очков (+${r.bonus} за звёзды)`;list.append(row);}this.results.append(list);
-    const award=(label:string,winners:typeof s.results)=>{if(!winners.length)return;const el=document.createElement('p');el.textContent=label+': '+winners.map(v=>v.name).join(', ');this.results.append(el);};
-    const humans=s.results.filter(r=>r.id!=='npc');const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0];
-    if(top)award('🍉 Толстячок',humans.filter(r=>r.fruits===top.fruits&&r.size===top.size));
-    const best=Math.max(...humans.map(r=>r.bonus));award('★ Звёздный собиратель',humans.filter(r=>r.bonus===best));
-    const adventure=document.createElement('p');adventure.textContent='♥ Любитель приключений: '+s.initiator;this.results.append(adventure);
+    const humans=s.results.filter(r=>r.id!=='npc');
+    const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0],best=Math.max(...humans.map(r=>r.bonus));
+    const list=document.createElement('ol');
+    for(const r of s.results){
+      const place=1+s.results.filter(v=>v.points>r.points).length,row=document.createElement('li');row.className='festival-result-row';
+      row.style.setProperty('--kirby-color',KIRBY_VARIANTS[r.variant]?.[1]??'#ff8fbb');if(r.id==='npc')row.classList.add('npc-avatar');
+      const rank=document.createElement('span');rank.className='festival-rank';rank.setAttribute('aria-label',`${place} место`);
+      if(place<=3){
+        const [metal,shade,shine]=[['#f5bf42','#a76b20','#fff1ad'],['#cbd9e6','#738699','#f5faff'],['#ce8a54','#854622','#ffd0a0']][place-1];
+        rank.innerHTML=`<svg viewBox="0 0 48 56" aria-hidden="true"><path d="M12 9H4v9c0 9 8 13 14 12M36 9h8v9c0 9-8 13-14 12" fill="none" stroke="${metal}" stroke-width="4"/><path d="M12 5h24v13c0 10-5 16-12 16S12 28 12 18Z" fill="${metal}" stroke="${shade}" stroke-width="1.4"/><path d="M15 8h5v12c0 5 1 8 3 10-6-2-8-7-8-12Z" fill="${shine}" opacity=".75"/><path d="M21 33h6v11h-6zM14 44h20v6H14z" fill="${metal}"/><path d="M10 50h28v4H10z" fill="${shade}"/><path d="m24 12 2.1 4.2 4.6.7-3.3 3.3.8 4.6-4.2-2.2-4.2 2.2.8-4.6-3.3-3.3 4.6-.7Z" fill="${shine}"/></svg>`;
+        rank.title=['Золотой кубок','Серебряный кубок','Бронзовый кубок'][place-1];
+      }else rank.textContent=String(place);
+      const portrait=document.createElement('span');portrait.className='mini-kirby';portrait.setAttribute('aria-hidden','true');portrait.innerHTML='<i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i>';
+      const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.name;identity.append(name);
+      const awards:string[]=[];
+      if(r.id!=='npc'){
+        if(top&&r.fruits===top.fruits&&r.size===top.size)awards.push('Толстячок');
+        if(r.bonus===best)awards.push('Звёздный собиратель');
+        if(r.name===s.initiator)awards.push('Любитель приключений');
+      }
+      for(const award of awards){const badge=document.createElement('span');badge.className='festival-award';badge.textContent=award;identity.append(badge);}
+      const points=document.createElement('strong');points.className='festival-points';points.textContent=`${r.points} очков`;
+      row.append(rank,portrait,identity,points);list.append(row);
+    }
+    this.results.append(list);
     const countdown=document.createElement('small');countdown.id='starfall-exit-time';this.results.append(countdown);const button=document.createElement('button');button.textContent='В главное меню';this.results.append(button);this.results.showModal();button.focus();
    }
    this.results.querySelector('small')!.textContent=`Возвращение в меню через ${Math.max(0,Math.ceil((s.endsAt+CELEBRATE_MS+RESULTS_MS-now)/1000))} с`;

@@ -120,7 +120,11 @@ selectionCard.before(startupCard);
 newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
 networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
 const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent='Выйти в главное меню';audioPanel.append(leaveOnline);
-leaveOnline.addEventListener('click',()=>{network?.close();location.reload();});
+let returningToMenu=false;
+leaveOnline.addEventListener('click',()=>{
+ if(returningToMenu)return;returningToMenu=true;playing=false;
+ renderer.setAnimationLoop(null);keys.clear();stopDragging();network?.close();location.reload();
+});
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
 const onlineRoster=document.createElement('div');onlineRoster.className='online-roster';onlineRoster.hidden=true;document.body.append(onlineRoster);
@@ -446,7 +450,7 @@ startButton.addEventListener('click', async () => {
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{if(network?.room.festival&&Date.now()>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
-    network.onStar=()=>{if(character){awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
+    network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
     network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
   }
   renderer.domElement.tabIndex = -1;
@@ -613,7 +617,7 @@ renderer.setAnimationLoop((time: number) => {
     }
     if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
     if(maze.update(dt,character,!network && !coaster.riding && !balloons.riding && !treehouse.active && !benches.active)){
-      sounds.playBalloon('arrival',1);sounds.playTreehouse('cheer');message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
+      sounds.playStarPickup();message.textContent='★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!';hitMessageRemaining=5;
     }
     if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);message.textContent=`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`;hitMessageRemaining=3;}
     taskList.update(character.achievements);
