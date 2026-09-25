@@ -294,3 +294,12 @@ button:disabled { cursor:default; }
 .time-dial svg {display:block;width:100%;height:100%;}
 .choosing .status-cluster {visibility:hidden;}
 @media(max-width:760px){.status-cluster{top:auto;bottom:100px;right:16px;}.time-dial{width:42px;height:42px;}}
+
+.npc-hearts {position:fixed;z-index:2;display:flex;gap:3px;transform:translate(-50%,-100%);pointer-events:none;filter:drop-shadow(0 2px 3px #101426b0);}
+.npc-hearts[hidden]{display:none;}
+.npc-hearts svg{width:27px;height:26px;overflow:visible;}
+.npc-hearts .heart{stroke-width:1.7;stroke-linejoin:round;}
+.npc-hearts .full .heart{fill:#ff5987;stroke:#ffe2ec;}
+.npc-hearts .empty .heart{fill:#16213799;stroke:#eedbe7;}
+.npc-hearts .shine{fill:none;stroke:#fff3;stroke-width:2.4;stroke-linecap:round;}
+.npc-hearts .full .shine{stroke:#fff9;}

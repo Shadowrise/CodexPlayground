@@ -1,3 +1,4 @@
+import {NpcHearts} from './npc-hearts';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
@@ -80,6 +81,7 @@ const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#soun
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
+const npcHearts=new NpcHearts(n=>{if(!network){localLog.push({id:crypto.randomUUID(),name:n.variant[0]+' кирби',variant:KIRBY_VARIANTS.indexOf(n.variant),text:'уснул и немного отдохнёт, а потом вернётся к приключениям.',chat:false});if(localLog.length>10)localLog.shift();}});
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
@@ -612,7 +614,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'&&npc.fireflyIndex===undefined){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
-    const hit = network?undefined:resolveAttack(character, npcs);
+    if(!network)resolveAttack(character, npcs);
     const fireflyPickup=fireflies?.fruitPickupPosition;
     const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
@@ -621,10 +623,6 @@ renderer.setAnimationLoop((time: number) => {
     npcFruitValue.textContent = String(npcs.reduce((sum,npc)=>sum+scoreOf(npc),0));
     remainingFruitValue.textContent = String(fruits.onMap);
     const message = document.querySelector<HTMLElement>('#combat-message')!;
-    if (hit) {
-      message.textContent = hit.isDown ? `${hit.variant[0]} отдыхает. Скоро вернётся!` : `${hit.variant[0]}  ${'♥'.repeat(hit.health)}${'♡'.repeat(3 - hit.health)}`;
-      hitMessageRemaining = 2;
-    }
     if (eaten) {
       message.textContent = `${eaten.type} съеден! Размер +10% · ${Math.round(character.actor.scale.x * 100)}%`;
       hitMessageRemaining = 2.5;
@@ -667,6 +665,7 @@ renderer.setAnimationLoop((time: number) => {
   ponds.update(dt);
   watermill.update(dt);
   updateNetwork(dt);
+  npcHearts.update(npcs,dt,camera,playing);
   festivalTick();
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);

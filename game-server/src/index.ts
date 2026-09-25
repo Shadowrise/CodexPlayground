@@ -44,7 +44,9 @@ export class GameRoom extends DurableObject<Env>{
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
-  if(a.id===r.host&&validWorld(m.world)){world=m.world;r.world=world;}
+  if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;const previous=r.world;r.world=next;
+   next.npcLife.forEach((life,i)=>{if(previous&&previous.npcLife[i][0]>0&&life[0]===0){const npc=next.npcs[i];this.log({id:`npc:${i}`,seen:now,visible:true,variant:npc.variant,actor:{...npc,name:npc.name+' кирби'}},'уснул и немного отдохнёт, а потом вернётся к приключениям.');}});
+  }
   socket.serializeAttachment(a);
   if(a.actor&&!a.announced){a.announced=true;this.log(a,'зашёл на полянку.');}
   let changed=false;

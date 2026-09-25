@@ -16,6 +16,8 @@ try{
  assert.equal((await a.wait(m=>m.type==='frame'&&m.id===b.hello.playerId)).actor.variant,1);
  const duplicate=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-3&variant=0');const rejected=await new Promise(resolve=>duplicate.addEventListener('message',e=>resolve(JSON.parse(e.data)),{once:true}));assert.equal(rejected.type,'error');assert.equal((await (await fetch(base+'/room')).json()).occupiedVariants.length,2);duplicate.close();
  await pause(120);const world=JSON.parse(await readFile(tmpdir()+'/kirby-network-world.json','utf8'));a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world);
+ const sleeping=structuredClone(world);sleeping.npcLife[0][0]=0;sleeping.npcs[0].state='Death';a.send({type:'frame',actor,world:sleeping});const sleepLog=await b.wait(m=>m.type==='log'&&m.entry.text.startsWith('уснул'));assert.equal(sleepLog.entry.variant,world.npcs[0].variant);assert.equal(sleepLog.entry.chat,false);a.send({type:'frame',actor,world:sleeping});await pause(150);assert.equal(b.messages.filter(m=>m.type==='log'&&m.entry.text.startsWith('уснул')).length,1);
+
  for(let i=0;i<11;i++){await pause(720);const text='message '+i+' '+('я'.repeat(280));a.send({type:'frame',actor,events:[{type:'chat',text}]});const entry=(await b.wait(m=>m.type==='log'&&m.entry.text.startsWith('message '+i+' '))).entry;assert.equal(entry.text.length,255);assert.equal(entry.name,'Test');}
  a.send({type:'frame',actor,events:[{type:'emote',emote:'Hello'}]});assert.equal((await b.wait(m=>m.type==='emote')).emote,'Hello');assert(!a.messages.some(m=>m.type==='emote'));
  b.send({type:'frame',events:[{type:'lock',key:'bug:0'}]});assert.equal((await b.wait(m=>m.type==='lock'&&m.key==='bug:0')).ok,true);
