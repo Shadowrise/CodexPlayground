@@ -49,3 +49,10 @@ test('cruise takes twenty seconds while ascent and descent still take nine each'
   world.update(10,[],c);assert.equal(balloon.group.position.x,balloon.end.x);assert(balloon.group.position.y>64);
   world.update(9,[],c);assert.equal(balloon.phase,'exiting');assert.equal(balloon.group.position.y,.28);
 });
+
+test('an empty balloon stays at its arrival port instead of returning alone',async()=>{
+ const gltf=await model(),c=new CharacterController(gltf.scene,gltf.animations),world=new Balloons(()=>{},()=>.2),balloon=world.balloons[0];c.actor.position.copy(balloon.group.position);assert(world.board(c));
+ for(let i=0;i<850;i++)world.update(.05,[],c);assert(!world.riding);assert.equal(balloon.phase,'parked');assert.notEqual(balloon.station,0);const parked=balloon.group.position.clone();c.actor.position.set(0,0,0);
+ for(let i=0;i<1800;i++)world.update(.05,[],c);assert.equal(balloon.phase,'parked');assert(balloon.group.position.equals(parked));
+ c.actor.position.copy(parked);assert(world.board(c));world.update(1.1,[],c);assert.equal(balloon.phase,'flying');assert.equal(balloon.passenger,c);
+});

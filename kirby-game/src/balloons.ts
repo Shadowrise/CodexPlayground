@@ -119,7 +119,7 @@ export class Balloons {
     if(passenger instanceof CharacterController)passenger.setActivity('Balloon');else passenger.beginBalloon();
     passenger.cloud.visible=false;passenger.flight.reset();
   }
-  private launch(b:Balloon,index:number){b.start.copy(this.dock(b.station,index));b.end.copy(this.dock(b.destination,index));b.phase='flying';b.time=0;b.nextSound=0;this.sound('departure',b.group.position);}
+  private launch(b:Balloon,index:number){if(!b.passenger)return;b.start.copy(this.dock(b.station,index));b.end.copy(this.dock(b.destination,index));b.phase='flying';b.time=0;b.nextSound=0;this.sound('departure',b.group.position);}
   update(dt:number,npcs:readonly KirbyNpc[]=[],player?:CharacterController){
     this.clock+=dt;this.npcAfter-=dt;
     for(const [index,b] of this.balloons.entries()){
@@ -127,7 +127,7 @@ export class Balloons {
       if(b.phase==='parked'){
         b.group.position.copy(this.dock(b.station,index));b.group.rotation.set(0,0,Math.sin(this.clock*.6+index)*.006);
         b.wait+=dt;
-        if(b.station!==index && b.wait>14 && b!==this.approach?.balloon && (!player || player.actor.position.distanceTo(b.group.position)>14)){b.destination=index;this.launch(b,index);}
+        // Stay at the arrival port until a Kirby boards; never return empty.
       }else if(b.phase==='boarding'){
         if(b.time>=1)this.launch(b,index);
       }else if(b.phase==='flying'){
