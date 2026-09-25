@@ -50,7 +50,7 @@ export class Balloons {
       part(port,'box','#365c64',0,3.8,-5,8.5,1.6,.2);
       if(typeof document!=='undefined'){
         const canvas=document.createElement('canvas');canvas.width=768;canvas.height=160;const ctx=canvas.getContext('2d');
-        if(ctx){ctx.fillStyle='#365c64';ctx.fillRect(0,0,768,160);ctx.strokeStyle='#e7c98d';ctx.lineWidth=7;ctx.strokeRect(5,5,758,150);ctx.fillStyle='#fff1c8';ctx.textAlign='center';ctx.font='bold 47px sans-serif';ctx.fillText(site.name.toUpperCase(),384,66);ctx.font='28px sans-serif';ctx.fillText('ВОЗДУШНЫЕ ПРОГУЛКИ • E / Y',384,122);
+        if(ctx){ctx.fillStyle='#365c64';ctx.fillRect(0,0,768,160);ctx.strokeStyle='#e7c98d';ctx.lineWidth=7;ctx.strokeRect(5,5,758,150);ctx.fillStyle='#fff1c8';ctx.textAlign='center';ctx.font='bold 47px sans-serif';ctx.textBaseline='middle';ctx.fillText(site.name.toUpperCase(),384,80);
           const sign=new T.Mesh(new T.PlaneGeometry(8.3,1.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,3.8,-4.88);port.add(sign);}
       }
       for(let i=0;i<30;i++){const a=i*2.399,x=Math.cos(a)*14,z=Math.sin(a)*9;part(port,'pole','#42683a',x,.3,z,.025,.6,.025);for(let j=0;j<5;j++)part(port,'ball',['#f1c454','#ce91c9','#d67a63'][index],x+Math.sin(j*1.256)*.13,.64,z+Math.cos(j*1.256)*.13,.13,.055,.13);}

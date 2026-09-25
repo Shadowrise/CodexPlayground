@@ -604,7 +604,7 @@ renderer.setAnimationLoop((time: number) => {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    fireflies?.prepareNpcs(npcs,!network||network.host,dt);
+    fireflies?.prepareNpcs(npcs,!network||network.host,dt,character.actor.position);
     if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'&&npc.fireflyIndex===undefined){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}

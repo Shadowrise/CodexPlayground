@@ -32,7 +32,9 @@ export class KirbyNpc {
   private readonly originalColors = new Map<MeshStandardMaterial, { color: Color; emissive: Color; intensity: number }>();
   get isDown() { return this.health === 0; }
   get canBoardBalloon(){return !this.isDown && !this.greeting && !this.flight.active && this.flashRemaining<=0 && ['Idle','Walk','Run','WalkBackward'].includes(this.state);}
-  get fireflyIndex(){const match=/^FireflyRide:(\d+)$/.exec(this.state);return match?Number(match[1]):undefined;}
+  get fireflyIndex(){const match=/^Firefly(?:Ride|Approach):(\d+)$/.exec(this.state);return match?Number(match[1]):undefined;}
+  get approachingFirefly(){return this.state.startsWith('FireflyApproach:');}
+  beginFireflyApproach(index:number){this.start('Walk');this.state=`FireflyApproach:${index}`;this.hello=false;}
   get fireflyRideTime(){return this.elapsed;}
   beginFirefly(index:number){this.start('Idle');this.state=`FireflyRide:${index}`;this.hello=false;}
   poseFirefly(){for(const side of ['Left','Right']){const foot=this.actor.getObjectByName(`${side}_foot_pivot`),arm=this.actor.getObjectByName(`${side}_shoulder`);if(foot)foot.rotation.x=-.85;if(arm){arm.rotation.x=-.45;arm.rotation.z=(side==='Left'?-1:1)*.25;}}}
@@ -124,7 +126,7 @@ export class KirbyNpc {
   networkApplyLife(v:number[]){[this.health,this.downRemaining,this.flashRemaining,this.elapsed,this.duration,this.seed,this.turnStart]=v;this.flight.networkApply(v.slice(7));
     for(const [material,original] of this.originalColors){if(this.flashRemaining>0){material.color.set('#ff1824');material.emissive.set('#ff0000');material.emissiveIntensity=.65;}else{material.color.copy(original.color);material.emissive.copy(original.emissive);material.emissiveIntensity=original.intensity;}}
   }
-  networkAnimate(state:string,dt:number){if(this.state!==state){if(this.actions.has(state))this.start(state);else {this.state=state;if(this.fireflyIndex!==undefined){this.actions.forEach(a=>a.stop());this.actions.get('Idle')?.reset().play();}}}this.mixer.update(dt);if(this.isDown)this.groundFallenBody();}
+  networkAnimate(state:string,dt:number){if(this.state!==state){if(this.actions.has(state))this.start(state);else {this.state=state;if(this.fireflyIndex!==undefined){this.actions.forEach(a=>a.stop());this.actions.get(this.approachingFirefly?'Walk':'Idle')?.reset().play();}}}this.mixer.update(dt);if(this.isDown)this.groundFallenBody();}
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
 
   takeHit(): boolean {
@@ -191,7 +193,7 @@ export class KirbyNpc {
       if(t===1)this.growth=undefined;
     }
     this.hello=false;
-    if(this.fireflyIndex!==undefined){this.elapsed+=dt;this.mixer.update(dt);this.poseFirefly();return;}
+    if(this.fireflyIndex!==undefined){this.elapsed+=dt;this.mixer.update(dt);if(!this.approachingFirefly)this.poseFirefly();return;}
     constrainToMeadow(this.actor.position, this.actor.scale.x);
     this.eatBite = false;
     this.eatPull = false;

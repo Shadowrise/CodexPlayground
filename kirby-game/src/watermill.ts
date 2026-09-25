@@ -165,8 +165,7 @@ export class Watermill {
       const ctx=canvas.getContext('2d');
       if(ctx) {
         ctx.fillStyle='#254f49';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#d6bd7b';ctx.lineWidth=10;ctx.strokeRect(10,10,748,172);
-        ctx.textAlign='center';ctx.fillStyle='#fff0c2';ctx.font='bold 56px sans-serif';ctx.fillText('ВОДЯНАЯ МЕЛЬНИЦА',384,84);
-        ctx.font='30px sans-serif';ctx.fillText('Открой шлюз — оживи колесо',384,143);
+        ctx.textAlign='center';ctx.fillStyle='#fff0c2';ctx.font='bold 56px sans-serif';ctx.textBaseline='middle';ctx.fillText('ВОДЯНАЯ МЕЛЬНИЦА',384,96);
         const sign=new T.Mesh(new T.PlaneGeometry(7.2,1.8),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));
         sign.position.set(17,8.35,4.2);root.add(sign);
         for(const x of [14.2,19.8])box('#35474b',x,9,4.1,.065,1.4,.065);

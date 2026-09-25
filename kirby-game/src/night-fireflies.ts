@@ -17,7 +17,7 @@ export class NightFireflies {
   readonly lights:T.PointLight[]=[];
   readonly bugs:Bug[]=[];
   private time=0;
-  private npcAfter=22;
+  private npcAfter=3;
   private npcRiders=new Map<number,KirbyNpc>();
   private rider?:CharacterController;
   private mount?:Bug;
@@ -64,19 +64,32 @@ export class NightFireflies {
     c.setActivity('FireflyRide');c.swimming=false;c.surfaceY=0;return true;
   }
   savePosition(c:CharacterController|KirbyNpc){if(this.rider===c)return this.safeGround.clone();for(const [i,n] of this.npcRiders)if(n===c)return this.bugs[i].home.clone();return undefined;}
-  prepareNpcs(npcs:readonly KirbyNpc[],authority:boolean,dt:number){
+  prepareNpcs(npcs:readonly KirbyNpc[],authority:boolean,dt:number,focus?:T.Vector3){
     this.npcRiders.clear();for(const n of npcs)if(n.fireflyIndex!==undefined&&this.bugs[n.fireflyIndex])this.npcRiders.set(n.fireflyIndex,n);
     if(!authority)return;
-    this.npcAfter-=dt;if(this.npcAfter>0||this.npcRiders.size>=2)return;
-    this.npcAfter=18+Math.random()*18;
-    for(let i=0;i<this.bugs.length;i++){
-      const b=this.bugs[i];if(b===this.mount||this.networkBlocked.has(i)||this.npcRiders.has(i)||!b.land)continue;
-      const n=npcs.find(n=>n.canBoardBalloon&&n.actor.position.y<.1&&n.actor.position.distanceTo(b.carrier.position)<8);
-      if(n){n.beginFirefly(i);this.npcRiders.set(i,n);break;}
+    for(const [i,n] of this.npcRiders){if(!n.approachingFirefly)continue;const b=this.bugs[i];
+      if(b===this.mount||this.networkBlocked.has(i)||n.fireflyRideTime>45){n.endBalloon();this.npcRiders.delete(i);continue;}
+      const delta=b.home.clone().sub(n.actor.position);delta.y=0;const distance=delta.length();
+      if(distance<2.5){if(b.land)n.beginFirefly(i);continue;}
+      const next=n.actor.position.clone().addScaledVector(delta,Math.min(distance,4*n.actor.scale.x*dt)/distance);
+      if(!inWater(next.x,next.z)&&sceneryClearance(next.x,next.z,n.actor.scale.x)){n.actor.position.copy(next);n.yaw=Math.atan2(delta.x,delta.z);n.actor.rotation.y=n.yaw;}
     }
+    this.npcAfter-=dt;if(this.npcAfter>0||this.npcRiders.size>=4)return;
+    this.npcAfter=4+Math.random()*4;
+    const candidates:{n:KirbyNpc;i:number;cost:number}[]=[];
+    for(let i=0;i<this.bugs.length;i++){
+      const b=this.bugs[i];if(b===this.mount||this.networkBlocked.has(i)||this.npcRiders.has(i))continue;
+      for(const n of npcs){const distance=n.actor.position.distanceTo(b.home);if(!n.canBoardBalloon||n.actor.position.y>.1||distance>80)continue;
+        let clear=true;for(let j=1;j<=12;j++){const p=n.actor.position.clone().lerp(b.home,j/12);if(inWater(p.x,p.z)||!sceneryClearance(p.x,p.z,n.actor.scale.x)){clear=false;break;}}
+        if(clear)candidates.push({n,i,cost:distance+(focus?b.home.distanceTo(focus)*.25:0)});
+      }
+    }
+    candidates.sort((a,b)=>a.cost-b.cost);const pick=candidates[0];
+    if(pick){const b=this.bugs[pick.i];if(b.land&&pick.n.actor.position.distanceTo(b.carrier.position)<3)pick.n.beginFirefly(pick.i);else pick.n.beginFireflyApproach(pick.i);this.npcRiders.set(pick.i,pick.n);}
   }
+
   syncNpcRiders(npcs:readonly KirbyNpc[],authority:boolean,dt:number){
-    for(const n of npcs){const i=n.fireflyIndex;if(i===undefined)continue;const b=this.bugs[i];if(!b)continue;
+    for(const n of npcs){const i=n.fireflyIndex;if(i===undefined||n.approachingFirefly)continue;const b=this.bugs[i];if(!b)continue;
       if(authority){
         // Human riders always have priority, including a simultaneous online claim.
         if(b===this.mount||this.networkBlocked.has(i)||(n.fireflyRideTime>12&&b.land)){
@@ -159,7 +172,7 @@ export class NightFireflies {
     for(const bug of this.bugs){
       if(bug!==this.mount && !this.networkBlocked.has(this.bugs.indexOf(bug))){
       const passenger=this.npcRiders.get(this.bugs.indexOf(bug));
-      bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,passenger?passenger.actor.scale.x*1.8:.65,4,dt));
+      bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,passenger&&!passenger.approachingFirefly?passenger.actor.scale.x*1.8:.65,4,dt));
       const cycle=((this.time+bug.phase)%32+32)%32,flying=cycle<23;
       const t=cycle/23,fade=Math.sin(Math.PI*Math.min(1,t));
       const x=flying?Math.sin(t*Math.PI*2)*11:0,z=flying?(1-Math.cos(t*Math.PI*2))*5:0;
