@@ -101,6 +101,7 @@ export class Treehouse {
       box(['#d98169','#e8c86d','#689d9a'][i%3],x,y-.17,.6,.23,.3,.035,0,0,.18);
     }
     raised=false;
+    const ladderStart=root.children.length;
     // Longer ladder, with normal rung spacing and thickness.
     for(const x of [-4.9,-3.1])beam([x,0,11],[x,18.8,7.3],.11,'#8c6238');
     for(let i=0;i<50;i++){
@@ -108,6 +109,11 @@ export class Treehouse {
       beam([-4.95,y,z],[-3.05,y,z],.095,'#c29a60');
       for(const x of [-4.9,-3.1])for(let j=0;j<3;j++)box('#d7c493',x,y-.05+j*.05,z,.25,.024,.25);
     }
+    for(const p of root.children.slice(ladderStart))p.userData.noShadow=true;
+    const ladderShadow=new T.Mesh(new T.BoxGeometry(2.1,Math.hypot(18.8,3.7),.22),new T.MeshBasicMaterial({colorWrite:false,depthWrite:false}));
+    ladderShadow.name='Stable ladder shadow';ladderShadow.position.set(-4,9.4,9.15);
+    ladderShadow.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(0,18.8,-3.7).normalize());
+    ladderShadow.castShadow=true;root.add(ladderShadow);
     // Branch-mounted rope swing, with a broad rounded wooden seat.
     // Route the supporting bough around the cabin, then across both rope anchors.
     beam([-1,26,-6],[-7,20,-4.8],.5,'#6b4b31');
@@ -132,8 +138,8 @@ export class Treehouse {
     }
     for(const parent of [root,this.swing]){
       const batches=new Map<string,T.Mesh[]>();
-      for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial && p!==crown){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
-      for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}
+      for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial && p!==crown){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid+!!p.userData.noShadow;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
+      for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=!list[0].userData.noShadow;mesh.computeBoundingSphere();parent.add(mesh);}
     }
 
   }

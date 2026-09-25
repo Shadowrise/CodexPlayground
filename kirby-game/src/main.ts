@@ -198,7 +198,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// Wider filtering smooths moving shadow edges on every receiver, at the same map resolution.
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 mount.appendChild(renderer.domElement);
@@ -211,7 +212,7 @@ const shadows = new CSM({camera,parent:scene,cascades:2,maxFar:300,mode:'practic
 shadows.fade=true;
 shadows.updateFrustums();
 // Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
-for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
+for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;light.shadow.radius=2;}
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials() {

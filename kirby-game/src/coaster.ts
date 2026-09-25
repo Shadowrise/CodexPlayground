@@ -83,18 +83,31 @@ export class Coaster {
     const box=new T.BoxGeometry(1,1,1),pole=new T.CylinderGeometry(1,1,1,8);
     const material=(c:string)=>{if(!colors.has(c))colors.set(c,new T.MeshStandardMaterial({color:c,roughness:.65,metalness:c==='#becbd0'?.7:.15}));return colors.get(c)!;};
     const parts:T.Mesh[]=[];
-    const add=(geometry:T.BufferGeometry,color:string,pos:T.Vector3,scale:T.Vector3,q=new T.Quaternion())=>{
-      const m=new T.Mesh(geometry,material(color));m.position.copy(pos);m.scale.copy(scale);m.quaternion.copy(q);m.updateMatrix();parts.push(m);return m;
+    const add=(geometry:T.BufferGeometry,color:string,pos:T.Vector3,scale:T.Vector3,q=new T.Quaternion(),castShadow=true)=>{
+      const m=new T.Mesh(geometry,material(color));m.position.copy(pos);m.scale.copy(scale);m.quaternion.copy(q);m.updateMatrix();m.castShadow=castShadow;parts.push(m);return m;
     };
     const beam=(a:T.Vector3,b:T.Vector3,r:number,c:string)=>add(pole,c,a.clone().add(b).multiplyScalar(.5),new T.Vector3(r,a.distanceTo(b),r),new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize()));
     for(const offset of [-1.2,1.2]) {
       const points=Array.from({length:this.sampleCount+1},(_,i)=>this.curve.getPointAt(i/this.sampleCount).add(new T.Vector3(offset,0,0).applyQuaternion(this.frames[i])));
-      const rail=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points,true),2400,.13,6,true),material('#becbd0'));rail.castShadow=true;this.group.add(rail);
+      const rail=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points,true),2400,.13,6,true),material('#becbd0'));rail.name='Detailed coaster rail';rail.castShadow=false;this.group.add(rail);
     }
     for(let d=0;d<this.length;d+=2.4) {
-      const pose=this.pose(d);add(box,'#307f88',pose.p,new T.Vector3(3,.18,.32),pose.q);
-      for(const x of [-1.2,1.2])add(box,'#596671',pose.p.clone().add(new T.Vector3(x,.15,0).applyQuaternion(pose.q)),new T.Vector3(.25,.15,.4),pose.q);
+      const pose=this.pose(d);add(box,'#307f88',pose.p,new T.Vector3(3,.18,.32),pose.q,false);
+      for(const x of [-1.2,1.2])add(box,'#596671',pose.p.clone().add(new T.Vector3(x,.15,0).applyQuaternion(pose.q)),new T.Vector3(.25,.15,.4),pose.q,false);
     }
+    // Continuous shadow envelope replaces the sub-texel rails and repeated ties.
+    const vertices:number[]=[],indices:number[]=[];
+    for(let i=0;i<=this.sampleCount;i++){
+      const center=this.curve.getPointAt(i/this.sampleCount);
+      for(const [x,y] of [[-1.35,-.14],[1.35,-.14],[1.35,.14],[-1.35,.14]]){
+        const v=new T.Vector3(x,y,0).applyQuaternion(this.frames[i]).add(center);vertices.push(v.x,v.y,v.z);
+      }
+      if(i<this.sampleCount)for(let j=0;j<4;j++){const a=i*4+j,b=i*4+(j+1)%4;indices.push(a,b,a+4,b,b+4,a+4);}
+    }
+    const shadowGeometry=new T.BufferGeometry();shadowGeometry.setAttribute('position',new T.Float32BufferAttribute(vertices,3));
+    shadowGeometry.setIndex(indices);shadowGeometry.computeVertexNormals();shadowGeometry.computeBoundingSphere();
+    const trackShadow=new T.Mesh(shadowGeometry,new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:T.DoubleSide}));
+    trackShadow.name='Stable continuous coaster shadow';trackShadow.castShadow=true;this.group.add(trackShadow);
     // Each assembly connects one actual rail to a grounded footing. Outboard arms
     // keep the columns away from passengers, even when a loop is upside down.
     const passengerHeads=Array.from({length:1200},(_,i)=>{const pose=this.pose(this.length*i/1200);return new T.Vector3(0,7.41,0).applyQuaternion(pose.q).add(pose.p);});
@@ -142,8 +155,8 @@ export class Coaster {
     }
     for(const x of [-8,8])add(box,'#d1a15b',new T.Vector3(x,1.15,222),new T.Vector3(4,.25,1));
     const batches=new Map<string,T.Mesh[]>();
-    for(const m of parts){const k=m.geometry.uuid+(m.material as T.Material).uuid;if(!batches.has(k))batches.set(k,[]);batches.get(k)!.push(m);}
-    for(const list of batches.values()){const m=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>m.setMatrixAt(i,p.matrix));m.castShadow=true;m.receiveShadow=true;this.group.add(m);}
+    for(const m of parts){const k=m.geometry.uuid+(m.material as T.Material).uuid+m.castShadow;if(!batches.has(k))batches.set(k,[]);batches.get(k)!.push(m);}
+    for(const list of batches.values()){const m=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>m.setMatrixAt(i,p.matrix));m.castShadow=list[0].castShadow;m.receiveShadow=list[0].castShadow;m.name=m.castShadow?'Coaster structure':'Detailed coaster ties';this.group.add(m);}
     for(const [i,c] of ['#e74b6b','#f3b62d','#48bccc','#9357d8','#70ba47','#f17b38','#dd538f','#4a91de','#bd76df','#c4d947','#dd7657','#48b798'].entries()) {
       const g=new T.Group(),wheels:T.Object3D[]=[];
       g.name=`Rounded coaster cart ${i+1}`;
