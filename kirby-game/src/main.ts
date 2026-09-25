@@ -650,13 +650,14 @@ renderer.setAnimationLoop((time: number) => {
   camera.updateMatrixWorld();
   wayfinder.syncPlayers(network ? Array.from(network.actors,([id,actor])=>[id,remotePlayers?.renderedStates.get(id)??actor] as const) : []);
   if(character)wayfinder.update(character.actor.position,character.actor.scale.x,camera);
-  shadows.update();
   const lightTime=daylight(currentDayPhase());home.night=lightTime.night>.5;home.nightAmount=lightTime.night;
   const {day,night,twilight}=lightTime;
   (scene.background as THREE.Color).copy(daySky).lerp(nightSky,night).lerp(sunsetSky,twilight*.65);
   (scene.fog as THREE.Fog).color.copy(dayFog).lerp(nightFog,night).lerp(sunsetFog,twilight*.7);
   ambient.color.copy(whiteLight).lerp(nightLight,night).lerp(duskLight,twilight*.25);ambient.groundColor.copy(dayGround).lerp(nightGround,night);ambient.intensity=.7+day*1.7;
-  for(const light of shadows.lights){light.color.copy(sunLight).lerp(nightLight,night).lerp(duskLight,twilight*.75);light.intensity=1.35+day*1.85;}
+  for(const light of shadows.lights){light.color.copy(sunLight).lerp(nightLight,night).lerp(duskLight,twilight*.75);light.intensity=(1.35+day*1.85)*lightTime.shadowStrength;}
+  shadows.lightDirection.fromArray(lightTime.shadowDirection);
+  shadows.update();
   renderer.toneMappingExposure=1+day*.2;
   timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=lightTime.label;timeDial.setAttribute('aria-label',`Время суток: ${lightTime.label}`);
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);

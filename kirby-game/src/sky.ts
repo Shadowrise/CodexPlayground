@@ -30,8 +30,8 @@ export function createSky(scene: THREE.Scene) {
   let elapsed=0;
   return (dt:number,camera:THREE.Camera,lighting:boolean|Daylight=false) => {
     elapsed+=dt;const light=typeof lighting==='boolean'?daylight(lighting?.75:.25):lighting;
-    const {night,twilight,elevation,angle}=light;
-    orbit.set(Math.cos(angle)*.85,elevation,Math.cos(angle)*.4).normalize();
+    const {night,twilight,elevation}=light;
+    orbit.fromArray(light.sunDirection);
     sun.position.copy(camera.position).addScaledVector(orbit,850);moon.position.copy(camera.position).addScaledVector(orbit,-850);moon.quaternion.copy(camera.quaternion);
     sun.visible=elevation>-.06;moon.visible=elevation<.06;stars.visible=night>.001;
     sun.material.opacity=THREE.MathUtils.smoothstep(elevation,-.06,.1);sun.material.color.set('#fff3ba').lerp(sunsetColor,twilight);
