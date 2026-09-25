@@ -90,7 +90,7 @@ export function flightCloud() {
   ];
   for(const [x,y,z,width,height] of puffs) {
     const puff=makeFruitMist(0);puff.material=puff.material.clone();
-    puff.material.color.set('#ffffff');puff.material.opacity=0;
+    puff.material.color.set('#b5bbc5');puff.material.opacity=0;
     puff.position.set(x,y,z);puff.scale.set(width,height,1);cloud.add(puff);
   }
   return cloud;
@@ -100,5 +100,5 @@ export function updateFlightCloud(cloud:Group,flight:Flight) {
   const progress=Math.min(1,Math.max(0,flight.height/(FLIGHT_HEIGHT/2)));
   const density=progress*progress*(3-2*progress);
   cloud.visible=flight.active && density>0;
-  for(const puff of cloud.children as Sprite[])puff.material.opacity=.7*density;
+  for(const puff of cloud.children as Sprite[])puff.material.opacity=.58*density;
 }
