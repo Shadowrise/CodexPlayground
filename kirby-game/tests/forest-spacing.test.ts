@@ -8,7 +8,7 @@ test('tall tree crowns leave clearance between trees, attractions and the track'
   const forest=createForest();
   const trees=forest.userData.treePositions as {x:number;z:number;crownRadius:number}[];
   assert(trees.length>100);
-  const edge=trees.filter(p=>Math.max(Math.abs(p.x),Math.abs(p.z))>218);assert(edge.length>=20,`foothill trees: ${edge.length}`);
+  const edge=trees.filter(p=>Math.max(Math.abs(p.x),Math.abs(p.z))>218);assert.equal(edge.length,153,`foothill trees: ${edge.length}`);
   for(const side of [0,1,2,3])assert(edge.some(p=>side===0?p.x< -218:side===1?p.x>218:side===2?p.z< -218:p.z>218));
   forest.traverse(o=>{if(o.name.startsWith('Decorative forest leaves')||o.name.startsWith('Decorative forest birchLeaves'))o.traverse(child=>{if('castShadow' in child)assert(!child.castShadow);});});
   assert(forest.children.some(o=>o.name.startsWith('Stable crown shadows')));

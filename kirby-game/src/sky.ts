@@ -17,6 +17,29 @@ export function createSky(scene: THREE.Scene) {
     fragmentShader:'varying vec2 vUv; uniform vec3 tint; uniform float strength; void main(){float r=length(vUv-.5)*2.;float a=pow(max(0.,1.-r),3.)*.38;gl_FragColor=vec4(tint,a*strength);}',
   });
   const halo=new THREE.Mesh(new THREE.PlaneGeometry(110,110),glowMaterial);halo.name='Soft sunlight halo';scene.add(halo);
+  // One depth-tested billboard: foreground scenery hides the rays without a postprocess pass.
+  const rayMaterial=new THREE.ShaderMaterial({
+    transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,
+    uniforms:{strength:{value:0},tint:{value:new THREE.Color('#ffe1a3')}},
+    vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader:`
+      varying vec2 vUv;
+      uniform float strength;
+      uniform vec3 tint;
+      void main(){
+        vec2 p=(vUv-.5)*2.;
+        float r=length(p),a=atan(p.y,p.x);
+        float broad=pow(.5+.5*sin(a*9.+.7*sin(a*3.)),10.);
+        float fine=pow(.5+.5*cos(a*17.+.9),24.);
+        float reach=.72+.18*sin(a*5.+.6);
+        float taper=pow(1.-smoothstep(.08,reach,r),1.5);
+        float core=smoothstep(.045,.13,r);
+        float alpha=(broad*.17+fine*.065)*taper*core*strength;
+        gl_FragColor=vec4(tint,alpha);
+      }`,
+  });
+  const rays=new THREE.Mesh(new THREE.PlaneGeometry(460,460),rayMaterial);
+  rays.name='Soft sun rays';scene.add(rays);
   const cloudMaterial=new THREE.MeshStandardMaterial({color:'#fffaf0',roughness:1,fog:true});
   const geometry=new THREE.SphereGeometry(1,12,8);
   const clouds=new THREE.InstancedMesh(geometry,cloudMaterial,28*7);
@@ -38,6 +61,11 @@ export function createSky(scene: THREE.Scene) {
     moon.traverse(o=>{if(o instanceof THREE.Mesh)(o.material as THREE.MeshBasicMaterial).opacity=THREE.MathUtils.smoothstep(-elevation,-.06,.1);});
     stars.material.opacity=night*.85;
     glowMaterial.uniforms.tint.value.copy(dayColor).lerp(nightColor,night).lerp(sunsetColor,twilight);glowMaterial.uniforms.strength.value=Math.max(sun.material.opacity,THREE.MathUtils.smoothstep(-elevation,-.06,.1))*(1-twilight*.65);
+    rayMaterial.uniforms.strength.value=THREE.MathUtils.smoothstep(elevation,-.015,.18)*(1-night);
+    rayMaterial.uniforms.tint.value.set('#ffe1a3').lerp(sunsetColor,twilight*.65);
+    rays.visible=rayMaterial.uniforms.strength.value>.001;
+    rays.position.copy(camera.position).addScaledVector(orbit,825);
+    rays.quaternion.copy(camera.quaternion);
     cloudMaterial.color.copy(dayColor).lerp(nightColor,night).lerp(sunsetColor,twilight*.65);
     dome.position.copy(camera.position);horizonMaterial.uniforms.top.value.copy(topDay).lerp(topNight,night).lerp(topDusk,twilight*.65);horizonMaterial.uniforms.horizon.value.copy(horizonDay).lerp(horizonNight,night).lerp(horizonDusk,twilight*.85);
     if(stars.visible)for(let i=0;i<160;i++){const a=i*2.399,y=.12+(i%23)/26,r=Math.sqrt(1-y*y);dummy.position.copy(camera.position).add(new THREE.Vector3(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(800));dummy.scale.setScalar(.45+i%3*.25);dummy.updateMatrix();stars.setMatrixAt(i,dummy.matrix);}stars.instanceMatrix.needsUpdate=stars.visible;

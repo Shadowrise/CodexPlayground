@@ -47,7 +47,9 @@ export function createForest() {
     if (!batches.has('wood')) batches.set('wood', []);
     batches.get('wood')!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
   }
-  for (let i=0; i<1200; i++) {
+  let foothillTrees=0;
+  // Aim for three times the original 51 foothill trees, keeping crown and track clearance.
+  for (let i=0; i<20000 && (i<800 || foothillTrees<153); i++) {
     // Keep all four species visible near the starting clearing as well as across the map.
     const angle=random()*Math.PI*2, radius=17+Math.sqrt(random())*75;
     let x=i<140 ? Math.cos(angle)*radius : (random()*2-1)*(H-10);
@@ -63,6 +65,7 @@ export function createForest() {
     if(treePositions.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+p.crownRadius+1.2))continue;
     if(track.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+5))continue;
     treePositions.push({x,z,crownRadius:crownRadiusLimit});
+    if(Math.max(Math.abs(x),Math.abs(z))>218)foothillTrees++;
     const h=(biome==='spruce'?7.5:biome==='birch'?10.2:8.3)*s;
     const trunk=biome==='birch'?'#eee9d5':biome==='spruce'?'#69513b':'#866044';
     const thickness=(biome==='birch'?.16:.25)*s;

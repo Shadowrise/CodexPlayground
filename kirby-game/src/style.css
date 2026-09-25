@@ -304,5 +304,7 @@ button:disabled { cursor:default; }
 .npc-hearts .shine{fill:none;stroke:#fff3;stroke-width:2.4;stroke-linecap:round;}
 .npc-hearts .full .shine{stroke:#fff9;}
 
-#time-dial {position:fixed;top:16px;left:50%;transform:translateX(-50%);width:104px;height:104px;box-sizing:content-box;}
-@media(max-width:760px){#time-dial{width:84px;height:84px;top:12px;}}
+:root {--day-dial-size:calc(104px / 1.5);--day-dial-top:16px;}
+#time-dial {position:fixed;top:var(--day-dial-top);left:50%;transform:translateX(-50%);width:var(--day-dial-size);height:var(--day-dial-size);box-sizing:content-box;}
+.combat-message {top:calc(var(--day-dial-top) + var(--day-dial-size) + 22px);bottom:auto;}
+@media(max-width:760px){:root{--day-dial-size:56px;--day-dial-top:12px;}}
