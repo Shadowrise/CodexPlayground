@@ -1,3 +1,4 @@
+import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-landing';
 import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
 import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
@@ -15,7 +16,7 @@ export class GameRoom extends DurableObject<Env>{
  private log(a:Attachment,text:string,chat=false){if(!this.room||!a.actor)return;const entry:LogEntry={id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat};this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
  private finishFestival(now=Date.now()){
   const f=this.room?.festival;if(!f)return;
-  if(!f.results&&now>=f.endsAt&&this.room?.world){const npcs=this.room.world.npcs;f.players.npc={name:'Команда NPC',variant:1,base:npcs.reduce((sum,n)=>sum+n.fruits+n.achievements.length*3,0),fruits:0,size:1,bonus:0,collected:[]};}
+  if(!f.results&&now>=f.endsAt&&this.room?.world){const npcs=this.room.world.npcs;f.players.npc={name:'Другие Kirby',variant:1,base:npcs.reduce((sum,n)=>sum+n.fruits+n.achievements.length*3,0),fruits:0,size:1,bonus:0,collected:[]};}
   if(finishStarfall(f,now))this.changed();
  }
  private changed(){this.persist();this.broadcast({type:'room',room:this.room});}
@@ -59,7 +60,10 @@ export class GameRoom extends DurableObject<Env>{
    else if(e.type==='star'&&now>=r.starAt&&a.actor){r.starAt=now+120000;a.actor.star=30;this.send(socket,{type:'star'});changed=true;}
    else if(e.type==='lock'&&validResourceKey(e.key)){
     const ok=!r.locks[e.key]||r.locks[e.key]===a.id;if(ok){for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];r.locks[e.key]=a.id;changed=true;}this.send(socket,{type:'lock',key:e.key,ok});
-   }else if(e.type==='release'&&r.locks[e.key]===a.id){delete r.locks[e.key];changed=true;}
+   }else if(e.type==='release'&&r.locks[e.key]===a.id){
+    if(e.key.startsWith('bug:')&&validBugLanding(e.bugState)){const i=e.key.split(':')[1];(r.bugLandings??={})[i]=[...e.bugState];if(r.world)r.world.bugs[Number(i)]=[...e.bugState];}
+    delete r.locks[e.key];changed=true;
+   }
    else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>350){a.lastHit=now;this.broadcast({type:'hit',id:a.id,actor:a.actor});}
    else if(e.type==='visible'){a.visible=e.value===true;socket.serializeAttachment(a);if(a.id===r.host&&!a.visible){const next=this.players().find(s=>(s.deserializeAttachment() as Attachment).visible);if(next){r.host=(next.deserializeAttachment() as Attachment).id;changed=true;}}}
   }
@@ -69,6 +73,7 @@ export class GameRoom extends DurableObject<Env>{
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival.endsAt));
   }
   if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=r.fruits.filter(owner=>owner===a.id).length+a.actor.achievements.length*3;p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.s;}
+  if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
   a.room=a.id===r.host?r:undefined;socket.serializeAttachment(a);
   if(changed)this.changed();else if(world||r.festival)this.persist();
   if(actor||world)this.broadcast({type:'frame',id:a.id,actor,world},socket);

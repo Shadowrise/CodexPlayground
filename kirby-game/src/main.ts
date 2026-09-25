@@ -1,3 +1,4 @@
+import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
 import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
@@ -146,7 +147,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??(c instanceof CharacterController?fireflies?.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??(c instanceof CharacterController?fireflies?.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
     saveMessage.textContent='Игра сохранена.';hasSave=true;loadButton.disabled=false;loadButton.title='Загрузить сохранение';
   }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
 });
@@ -237,6 +238,7 @@ const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
 const benches=new Benches();
+const skyTrail=new SkyTrail(kind=>{if(kind==='star')sounds.playStarPickup();else if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(skyTrail.group);
 const home=new KirbyHome();scene.add(home.group);
 let fireflies:NightFireflies|undefined;
 const maze=new HedgeMaze();scene.add(maze.group);
@@ -247,6 +249,7 @@ const navigationHud=document.createElement('div');navigationHud.id='navigation-h
 const routePanel=document.createElement('div');routePanel.className='panel route-panel';
 const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint,routePanel);
 const destinations:Destination[]=[
+ {id:'sky-trail',name:'Небесная тропа',x:skyTrail.entry.x,z:skyTrail.entry.z,radius:4},
  {id:'home',name:'Домик Кирби',x:home.entrance.x,z:home.entrance.z},
  {id:'treehouse',name:'Домик на дереве и качели',x:TREEHOUSE_SITE.x-4,z:TREEHOUSE_SITE.z+11,radius:3},
  {id:'swing',name:'Качели у домика',x:TREEHOUSE_SITE.x-11,z:TREEHOUSE_SITE.z+3,radius:3},
@@ -254,7 +257,6 @@ const destinations:Destination[]=[
  {id:'depot',name:'Американские горки — депо',x:STATION.x,z:STATION.z-7},
  {id:'maze',name:'Радужный лабиринт',x:MAZE_SITE.x,z:MAZE_SITE.z+39},
  ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
- ...LANDMARKS.flatMap((p,i)=>p.kind===0 || p.kind===4 ? [{id:`landmark-${i}`,name:`${p.kind===0?'Озеро с мостиком':'Пикник и лавочки'} ${LANDMARKS.slice(0,i+1).filter(s=>s.kind===p.kind).length}`,x:p.x+(p.kind===0?13*POND_SCALE:0),z:p.z,radius:6,group:'Места на поляне'}] : []),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
 const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...coaster.supports.map(s=>({x:s.base.x,z:s.base.z,radius:2}))];
@@ -547,27 +549,34 @@ renderer.setAnimationLoop((time: number) => {
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
+    const previousPosition=character.actor.position.clone();
+    const skyWasActive=skyTrail.active;
     if(pendingBoard)void interactOnline();
-    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
+    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && !skyTrail.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
     const homeWasActive=home.active;home.update(dt);
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
+    if(!skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
+    skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,!network||network.host?npcs:[],character);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt);
-    if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);}
-    if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive){
+    if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);}
+    if(!homeWasActive && !coaster.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){
       maze.constrain(character.actor.position,character.actor.scale.x,new THREE.Vector3(previousX,0,previousZ));
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
     }
-    ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
-    sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive);
+    const onSkyTrail=skyTrail.handles(character)&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive;
+    const skySurface=character.surfaceY;
+    ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
+    if(onSkyTrail)character.surfaceY=skySurface;
+    if(onSkyTrail&&!skyWasActive&&!skyTrail.active)skyTrail.apply(character,previousPosition,dt);
+    sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
     fireflies?.syncRider(dt);
     const availableInteraction=resolveInteraction(character);
     const candidate=network?resourceKey(character):undefined;
@@ -600,7 +609,7 @@ renderer.setAnimationLoop((time: number) => {
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     const hit = network?undefined:resolveAttack(character, npcs);
     const fireflyPickup=fireflies?.fruitPickupPosition;
-    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
+    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;
@@ -630,12 +639,13 @@ renderer.setAnimationLoop((time: number) => {
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     message.hidden = hitMessageRemaining === 0;
   }
-  else if(!character) {coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
+  else if(!character) {skyTrail.update(dt);coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
   constrainToMeadow(camera.position, .5);
   camera.lookAt(cameraTarget);
   camera.updateMatrixWorld();
+  wayfinder.syncPlayers(network ? Array.from(network.actors,([id,actor])=>[id,remotePlayers?.renderedStates.get(id)??actor] as const) : []);
   if(character)wayfinder.update(character.actor.position,character.actor.scale.x,camera);
   shadows.update();
   const night=home.night;
@@ -673,6 +683,8 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   const result=(text:string,run:()=>unknown,target?:OutlineTarget)=>({text,run,target});
   const region=(key:unknown,root:THREE.Object3D,center:THREE.Vector3,size:number[])=>outlineRegion(key,root,center,new THREE.Vector3(...size));
   const object=(root?:THREE.Object3D):OutlineTarget|undefined=>root?{key:root,root}:undefined;
+  if(skyTrail.active)return undefined;
+  if(skyTrail.prompt(c)&&!fireflies?.riding&&!coaster.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active)return result(skyTrail.prompt(c),()=>skyTrail.start(c),object(skyTrail.target(c)));
   if(fireflies?.riding)return result(fireflies.prompt(c),()=>fireflies?.disembark());
   if(home.active)return result(home.prompt(p),()=>home.wake());
   const free=!coaster.riding && !balloons.riding && !treehouse.active && !benches.active && !trampoline.active;
@@ -716,7 +728,7 @@ function syncNetworkWorld(dt:number){
  const r=network.room;
  if(npcSnapshotHost!==r.host){npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;}
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
- coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');
+ coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');fireflies!.syncLandings(r.bugLandings??{});
  watermill.networkRunning(r.mill);
  if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);worldRevision=network.revision;}
 
@@ -724,6 +736,7 @@ function syncNetworkWorld(dt:number){
  r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id)character!.grow();else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.grow();});
 }
 function resourceKey(c:CharacterController){
+ if(skyTrail.active||skyTrail.prompt(c))return;
  if(coaster.riding)return coaster.networkKey(c);if(balloons.riding)return balloons.networkKey(c.actor.position);if(fireflies?.riding)return fireflies.networkKey(c);
  if(home.active||home.prompt(c.actor.position))return 'home:0';
  if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
@@ -738,6 +751,7 @@ async function interactOnline(){
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
  if(watermill.prompt(character.actor.position)&&!heldResource&&!home.active&&!treehouse.active){network.event({type:'mill'});awardFirst(character,'mill');return;}
+ if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
  acquiring=true;const ok=await network.acquire(key);acquiring=false;
@@ -749,10 +763,10 @@ function updateNetwork(dt:number){
  if(!network||!character||!playing||roundFinished())return;
  if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));}
  for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
- const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
- for(const [id,state] of network.actors){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
+ const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt,network.actorSnapshots);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
+ for(const [id,state] of remotePlayers?.renderedStates??[]){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
  const active=coaster.riding||balloons.riding||fireflies?.riding||home.active||treehouse.active||benches.active||trampoline.active;
- if(heldResource&&!active){network.event({type:'release',key:heldResource});heldResource=undefined;}
+ if(heldResource&&!active){network.event({type:'release',key:heldResource,...(heldResource.startsWith('bug:')?{bugState:fireflies!.networkState()[Number(heldResource.split(':')[1])]}:{})});heldResource=undefined;}
  const a=actorState(character,nameInput.value,KIRBY_VARIANTS.indexOf(selected));
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld);

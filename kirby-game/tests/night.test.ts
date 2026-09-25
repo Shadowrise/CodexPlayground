@@ -102,3 +102,16 @@ test('first firefly flight earns three points once; sitting and repeated rides d
   assert.equal(scoreOf(c),3);assert(c.achievements.has('firefly'));world.disembark();
  }
 });
+
+test('dismount anchors the bug locally and across stale snapshots and later riders',async()=>{
+ const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),bug=world.bugs[0];
+ world.update(.01,true,bug.home);c.actor.position.copy(bug.carrier.position).setY(0);assert(world.board(c));
+ const stale=world.networkState();
+ // An obstructed location moves Kirby to safe ground, but never moves his mount sideways.
+ c.actor.position.set(135,5,39);world.syncRider(.1);const landing=bug.carrier.position.clone().setY(0);world.disembark();
+ assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());assert(bug.carrier.position.distanceTo(c.actor.position)>1);
+ world.networkApply(stale);world.update(.05,true,c.actor.position);assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());
+ const row=world.networkState()[0];world.syncLandings({'0':row});world.networkApply(stale);world.update(.05,true,c.actor.position);assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());
+ const other=[...row];other[0]+=.5;other[3]-=.5;other[1]=other[4]=80;other[2]=other[6]=20;
+ world.syncLandings({'0':other});world.networkApply(stale);world.update(.05,true,c.actor.position);assert.equal(bug.carrier.position.x,80);assert.equal(bug.carrier.position.z,20);
+});

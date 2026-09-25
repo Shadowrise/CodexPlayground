@@ -1,0 +1,4 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {reconcileBugLanding,validBugLanding} from '../src/firefly-landing';
+test('landing validation rejects malformed or airborne data',()=>{const row=[10,80,20,15,80,0,20,1,1,1.8];assert(validBugLanding(row));assert(!validBugLanding([...row.slice(0,9),Infinity]));assert(!validBugLanding([10,80,20,15,80,4,20,1,0,1.8]));assert(!validBugLanding(null));assert(!validBugLanding([10,800,20,15,800,0,20,1,1,1.8]));});
+test('old host snapshots cannot restore the previous home; normal autonomous motion is preserved',()=>{const landing=[10,80,20,15,80,0,20,1,1,1.8],stale=[11,0,0,0,3,2,1,0,0,.65];const fixed=reconcileBugLanding(stale,landing);assert.deepEqual(fixed,[11,80,20,15,80,0,20,1,1,1.8]);const flying=[20,80,20,15,88,2,24,2,0,.65];assert.equal(reconcileBugLanding(flying,landing),flying);});

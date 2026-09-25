@@ -35,6 +35,7 @@ export class CharacterController {
   private eatWasHeld = false;
   fruitsEaten = 0;
   bonusPoints=0;
+  skyCheckpoint=0;
   festival?:StarfallState;
   readonly achievements=new Set<ScoreAction>();
   starBlessed = false;

@@ -174,7 +174,7 @@ button:disabled { cursor:default; }
 .stat-row .score-place,.stat-row strong {font-variant-numeric:tabular-nums;text-align:right;}
 .stat-row .stat-name {width:auto;min-width:0;}
 .stat-row #player-size {margin-left:0;}
-.npc-name {color:var(--kirby-color);}
+.npc-name {color:var(--kirby-color);white-space:normal;overflow:visible;line-height:1.2;}
 @media(max-width:520px){.stat-row{grid-template-columns:2ch 60px 54px minmax(3ch,1fr) 5ch;gap:6px;}}
 
 #startup-menu {width:min(560px,100%);}

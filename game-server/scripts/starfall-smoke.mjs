@@ -5,7 +5,7 @@ async function join(variant){const socket=new WebSocket(base.replace('http','ws'
 const actor={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Финал',variant:0,star:0};
 try{
  const a=await join(0),b=await join(1);b.socket.send(JSON.stringify({type:'frame',actor:{...actor,name:'Друг',variant:1}}));await pause(100);
- a.socket.send(JSON.stringify({type:'frame',actor:{...actor,achievements:['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','swim','firefly']}}));
+ a.socket.send(JSON.stringify({type:'frame',actor:{...actor,achievements:['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','swim','firefly','skyStar']}}));
  const f=(await b.wait(m=>m.type==='room'&&m.room.festival)).room.festival;assert.equal(Object.keys(f.players).length,2);
  const c=await join(2);assert.equal(c.welcome.room.festival.startsAt,f.startsAt);a.socket.close();await b.wait(m=>m.type==='room'&&m.room.host!==a.welcome.playerId);
  await pause(Math.max(0,f.startsAt+3200-Date.now()));b.socket.send(JSON.stringify({type:'frame',events:[{type:'festival-star',index:0},{type:'festival-star',index:0}]}));

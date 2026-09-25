@@ -1,6 +1,6 @@
 import {SCORE_ACTIONS,type ScoreAction} from './score';
 export const TASK_NAMES:Record<ScoreAction,string>={
- mill:'Повернуть рычаг мельницы',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',trampoline:'Прыгнуть на батуте в лабиринте',star:'Найти звёздочку в лабиринте',swim:'Покупаться в любом озере',firefly:'Покататься на светлячке',
+ skyStar:'Добыть звёздочку Небесной тропы',mill:'Повернуть рычаг мельницы',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',trampoline:'Прыгнуть на батуте в лабиринте',star:'Найти звёздочку в лабиринте',swim:'Покупаться в любом озере',firefly:'Покататься на светлячке',
 };
 const alphabet=new Intl.Collator('ru');
 export function sortedTasks(done:ReadonlySet<ScoreAction>){return SCORE_ACTIONS.map(id=>({id,name:TASK_NAMES[id],done:done.has(id)})).sort((a,b)=>Number(a.done)-Number(b.done)||alphabet.compare(a.name,b.name));}

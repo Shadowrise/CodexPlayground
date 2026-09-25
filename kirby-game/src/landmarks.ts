@@ -1,3 +1,4 @@
+import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import { spatialInstances } from './spatial-instances';
 import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
@@ -8,10 +9,10 @@ import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
 import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline } from './pond-layout';
 export function sceneryClearance(x:number,z:number,padding=0) {
-  return riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
+  return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
-  for(const p of [...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
+  for(const p of [SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }

@@ -18,7 +18,11 @@ try{
  await pause(120);const world=JSON.parse(await readFile(tmpdir()+'/kirby-network-world.json','utf8'));a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world);
  for(let i=0;i<11;i++){await pause(720);const text='message '+i+' '+('я'.repeat(280));a.send({type:'frame',actor,events:[{type:'chat',text}]});const entry=(await b.wait(m=>m.type==='log'&&m.entry.text.startsWith('message '+i+' '))).entry;assert.equal(entry.text.length,255);assert.equal(entry.name,'Test');}
  a.send({type:'frame',actor,events:[{type:'emote',emote:'Hello'}]});assert.equal((await b.wait(m=>m.type==='emote')).emote,'Hello');assert(!a.messages.some(m=>m.type==='emote'));
- const c=await join();clients.push(c);assert.equal(c.hello.room.log.length,10);assert(c.hello.room.log.at(-1).text.includes('приветствует'));assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
+ b.send({type:'frame',events:[{type:'lock',key:'bug:0'}]});assert.equal((await b.wait(m=>m.type==='lock'&&m.key==='bug:0')).ok,true);
+ const landing=[...world.bugs[0]];landing[1]=landing[4]=78;landing[2]=landing[6]=12;landing[3]=25-landing[0];landing[5]=0;landing[8]=1;
+ b.send({type:'frame',events:[{type:'release',key:'bug:0',bugState:landing}]});await a.wait(m=>m.type==='room'&&m.room.bugLandings?.['0']?.[1]===78&&!m.room.locks['bug:0']);
+ a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world?.bugs[0][1]===78&&m.world.bugs[0][2]===12);
+ const c=await join();assert.equal(c.hello.room.bugLandings['0'][1],78);clients.push(c);assert.equal(c.hello.room.log.length,10);assert(c.hello.room.log.at(-1).text.includes('приветствует'));assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
  const room=a.hello.room.id;a.socket.close();await b.wait(m=>m.type==='room'&&m.room.host!==a.hello.playerId&&!m.room.locks['cart:0']);
  b.socket.close();c.socket.close();await pause(200);
  assert.equal((await (await fetch(base+'/players')).json()).players,0);

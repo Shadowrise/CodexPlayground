@@ -18,7 +18,7 @@ export function makeFruitMist(kind: number) {
     texture=new DataTexture(data,size,size);
     texture.magFilter=texture.minFilter=LinearFilter;texture.needsUpdate=true;
   }
-  materials[kind] ??= new SpriteMaterial({map:texture,color:colors[kind],opacity:kind===2?.72:.6,
+  materials[kind] ??= new SpriteMaterial({map:texture,color:colors[kind],opacity:kind===2?.36:.3,
     transparent:true,depthWrite:false,depthTest:true,toneMapped:false});
   const mist=new Sprite(materials[kind]);mist.name='Fruit colored mist';
   mist.position.y=.48;mist.scale.set(2.5,1.7,1);

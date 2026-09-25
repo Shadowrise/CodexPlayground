@@ -16,20 +16,44 @@ export class Wayfinder {
  readonly select=document.createElement('select');
  private label=document.createElement('div');
  private anchor=new T.Vector3();
- constructor(panel:HTMLElement,scene:T.Scene,places:Destination[]){
+ private players=new Map<string,Destination>();
+ private playerGroup?:HTMLOptGroupElement;
+ constructor(panel:HTMLElement,scene:T.Scene,private places:Destination[]){
   this.select.id='destination-select';this.select.setAttribute('aria-label','Точка интереса');
   this.select.append(new Option('Выбрать место…',''));
   const groups=new Map<string,HTMLOptGroupElement>();
   for(const place of places){const name=place.group??'Приключения';if(!groups.has(name)){const group=document.createElement('optgroup');group.label=name;this.select.append(group);groups.set(name,group);}groups.get(name)!.append(new Option(place.name,place.id));}
   const field=document.createElement('label');field.textContent='Куда пойдём?';field.append(this.select);panel.prepend(field);
   const hint=document.createElement('small');hint.dataset.controls='gamepad';hint.hidden=true;hint.textContent='← / → на крестовине — выбрать место';panel.append(hint);
-  this.select.addEventListener('change',()=>this.route.select(this.select.value,places));
+  this.select.addEventListener('change',()=>this.route.select(this.select.value,[...this.places,...this.players.values()]));
   this.label.className='route-distance';this.label.hidden=true;document.body.append(this.label);
   const shape=new T.Shape();shape.moveTo(-.15,-.8);shape.lineTo(.15,-.8);shape.lineTo(.15,.25);shape.lineTo(.55,.25);shape.lineTo(0,1.1);shape.lineTo(-.55,.25);shape.lineTo(-.15,.25);shape.closePath();
   const geometry=new T.ExtrudeGeometry(shape,{depth:.09,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.035,bevelThickness:.025});
   const outline=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#fffbea'}));outline.rotation.x=Math.PI/2;outline.scale.set(1.17,1.12,.9);outline.position.y=-.03;
   const mesh=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#ffbf35'}));mesh.rotation.x=Math.PI/2;mesh.position.y=.04;
   this.arrow.add(outline,mesh);this.arrow.name='Destination arrow';this.arrow.visible=false;scene.add(this.arrow);
+ }
+ /** Reuse destination objects so a selected player follows their rendered position. */
+ syncPlayers(players:Iterable<readonly [string,{name:string;p:number[]}]>){
+  const present=new Set<string>();let changed=false;
+  for(const [id,actor] of players){
+   const key=`player:${id}`;present.add(key);let destination=this.players.get(key);
+   if(!destination){destination={id:key,name:actor.name,x:0,z:0};this.players.set(key,destination);changed=true;}
+   if(destination.name!==actor.name){destination.name=actor.name;changed=true;}
+   destination.x=actor.p[0];destination.y=actor.p[1];destination.z=actor.p[2];
+  }
+  for(const [id,destination] of this.players)if(!present.has(id)){
+   if(this.route.target===destination){this.route.target=undefined;this.select.value='';}
+   this.players.delete(id);changed=true;
+  }
+  if(!changed)return;
+  const selected=this.select.value;
+  this.playerGroup?.remove();this.playerGroup=undefined;
+  if(this.players.size){const group=document.createElement('optgroup');group.label='Игроки онлайн';
+   for(const player of this.players.values())group.append(new Option(player.name,player.id));
+   this.select.append(group);this.playerGroup=group;
+  }
+  this.select.value=selected;
  }
  cycle(direction:number){
   this.select.selectedIndex=(this.select.selectedIndex+direction+this.select.options.length)%this.select.options.length;

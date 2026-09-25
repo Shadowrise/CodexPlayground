@@ -1,9 +1,12 @@
+import {PlayerSnapshots} from './player-snapshots';
 import {emoteMessage} from './world-log';
 import type {Emote} from './emotes';
 import type {LogEntry} from './world-log';
 import {BUILD,PROTOCOL,type ActorState,type WorldState,type RoomState,type Event,type ServerMessage} from './network-protocol';
 export class NetworkSession{
  log:LogEntry[]=[];
+ readonly actorSnapshots=new Map<string,PlayerSnapshots>();
+ private receiveActor(id:string,actor:ActorState){this.actors.set(id,actor);let buffer=this.actorSnapshots.get(id);if(!buffer){buffer=new PlayerSnapshots();this.actorSnapshots.set(id,buffer);}buffer.push(performance.now(),actor);}
  id='';peerCount=1;room!:RoomState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
  onEmote?:(emote:Emote)=>void;
  onHit?:(actor:ActorState)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
@@ -14,14 +17,14 @@ export class NetworkSession{
   const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);url.searchParams.set('variant',String(variant));
   const s=this.socket=new WebSocket(url),timeout=setTimeout(()=>{s.close();reject(Error('Сервер не ответил. Попробуй подключиться ещё раз.'));},12000);
   s.onmessage=e=>{if(e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
-   if(m.type==='welcome'){if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.peerCount=m.players.length;this.room=m.room;this.log=m.room.log??[];this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.actors.set(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
+   if(m.type==='welcome'){if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.peerCount=m.players.length;this.room=m.room;this.log=m.room.log??[];this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.receiveActor(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
    else if(m.type==='emote'&&m.id!==this.id&&emoteMessage(m.emote))this.onEmote?.(m.emote as Emote);
    else if(m.type==='log'){this.log=[...this.log,m.entry].slice(-10);}
    else if(m.type==='presence'){if(m.count>this.peerCount){this.worldElapsed=2;this.lastActor='';}this.peerCount=m.count;}
    else if(m.type==='error'){clearTimeout(timeout);reject(Error(m.message));}
-   else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.actors.set(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}}
+   else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.receiveActor(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}}
    else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=m.room;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
-   else if(m.type==='left')this.actors.delete(m.id);
+   else if(m.type==='left'){this.actors.delete(m.id);this.actorSnapshots.delete(m.id);}
    else if(m.type==='hit'&&this.host)this.onHit?.(m.actor);
    else if(m.type==='star')this.onStar?.();
    else if(m.type==='lock'){this.locks.get(m.key)?.(m.ok);this.locks.delete(m.key);}

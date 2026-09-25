@@ -1,3 +1,4 @@
+import {reconcileBugLanding} from './firefly-landing';
 import type {ActorState} from './network-protocol';
 import {ACTOR_DISTANCE,MIST_DISTANCE} from './visibility';
 import { awardFirst } from './score';
@@ -23,9 +24,22 @@ export class NightFireflies {
   get riding(){return !!this.rider;}
   get fruitPickupPosition(){return this.rider && this.mount?.land && !this.moving && this.altitude<=.05 ? this.mount.carrier.position : undefined;}
   networkBlocked=new Set<number>();
+  private landings=new Map<number,number[]>();
+  private pendingLandings=new Map<number,number[]>();
+  syncLandings(rows:Record<string,number[]>){
+    for(const [key,row] of Object.entries(rows)){
+      const i=Number(key),old=this.landings.get(i);if(old&&old[0]===row[0]&&old[3]===row[3])continue;
+      this.landings.set(i,row);
+      const pending=this.pendingLandings.get(i);
+      if(pending&&[1,2,3].every(j=>Math.abs(pending[j]-row[j])<.0011))this.pendingLandings.delete(i);
+      const b=this.bugs[i];if(b&&b!==this.mount&&!this.networkBlocked.has(i)&&!this.pendingLandings.has(i))this.applyBugState(b,row);
+    }
+  }
+  private applyBugState(b:Bug,v:number[]){b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.object.scale.setScalar(v[9]??.65);b.firefly.setMode(b.land?'Sit':'Fly');}
+
   networkKey(c:CharacterController){const b=this.mount??this.nearby(c);return b?'bug:'+this.bugs.indexOf(b):undefined;}
   networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land),b.firefly.object.scale.x]);}
-  networkApply(rows:number[][]){rows.forEach((v,i)=>{const b=this.bugs[i];if(!b||!v||b===this.mount||this.networkBlocked.has(i))return;this.time=v[0];b.home.set(v[1],0,v[2]);b.phase=v[3];b.carrier.position.fromArray(v.slice(4,7));b.carrier.rotation.y=v[7];b.land=!!v[8];b.firefly.object.scale.setScalar(v[9]??.65);b.firefly.setMode(b.land?'Sit':'Fly');});}
+  networkApply(rows:number[][]){rows.forEach((row,i)=>{const b=this.bugs[i];if(!b||!row||b===this.mount||this.networkBlocked.has(i))return;this.time=row[0];this.applyBugState(b,reconcileBugLanding(row,this.pendingLandings.get(i)??this.landings.get(i)));});}
   private remoteOffsets=new Map<number,T.Vector3>();
   syncRemoteRider(index:number,rider:CharacterController,state:ActorState,dt:number){
     const bug=this.bugs[index],v=state.ride?.data as number[]|undefined;if(!bug||!v||bug===this.mount)return;
@@ -42,16 +56,19 @@ export class NightFireflies {
   board(c:CharacterController){
     if(this.riding || c.flight.active || c.swimming)return false;
     const bug=this.nearby(c);if(!bug)return false;
+    this.pendingLandings.delete(this.bugs.indexOf(bug));
     this.rider=c;this.mount=bug;this.safeGround.copy(c.actor.position);this.altitude=0;this.moving=false;
     c.setActivity('FireflyRide');c.swimming=false;c.surfaceY=0;return true;
   }
   savePosition(c:CharacterController){return this.rider===c?this.safeGround.clone():undefined;}
   disembark(){
     const c=this.rider,bug=this.mount;if(!c||!bug)return;
+    const landing=bug.carrier.position.clone();landing.y=0;
     const position=c.actor.position.clone();position.y=0;
     if(inWater(position.x,position.z)||!sceneryClearance(position.x,position.z,c.actor.scale.x))position.copy(this.safeGround);
     c.actor.position.copy(position);c.actor.rotation.set(0,c.yaw,0);c.surfaceY=0;c.setActivity('Idle');
-    bug.home.copy(position);bug.phase=25-this.time;bug.carrier.position.copy(position);bug.land=true;bug.firefly.setMode('Sit');
+    bug.home.copy(landing);bug.phase=25-this.time;bug.carrier.position.copy(landing);bug.land=true;bug.firefly.setMode('Sit');
+    const index=this.bugs.indexOf(bug);this.pendingLandings.set(index,this.networkState()[index]);
     this.rider=undefined;this.mount=undefined;this.moving=false;
   }
   moveRider(dt:number,input:Input){
@@ -91,7 +108,7 @@ export class NightFireflies {
       const home=new T.Vector3((i%8-3.5)*54,0,(Math.floor(i/8)-2)*78);
       for(let j=0;j<600;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(Math.abs(x)<210 && Math.abs(z)<210 && sceneryClearance(x,z,15)){home.set(x,0,z);break;}}
       const carrier=new T.Group();carrier.add(object);this.group.add(carrier);
-      const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.copy(color);halo.material.opacity=.8;halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.set(3.5,3.5,1);carrier.add(halo);
+      const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.copy(color);halo.material.opacity=.4;halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.set(3.5,3.5,1);carrier.add(halo);
       this.bugs.push({carrier,firefly,home,halo,color,phase:i*1.87,land:true,lightPosition:new T.Vector3()});
     }
     // A fixed light pool avoids forty point lights on every terrain fragment.
@@ -123,7 +140,7 @@ export class NightFireflies {
       const visible=bug===this.mount || distance<=ACTOR_DISTANCE;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
       // Keep the light on the luminous rear end even when the detailed mesh is culled.
       bug.carrier.updateWorldMatrix(true,false);bug.lightPosition.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65).applyMatrix4(bug.carrier.matrixWorld);
-      bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.65+.15*Math.sin(this.time*2+bug.phase);
+      bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.325+.075*Math.sin(this.time*2+bug.phase);
     }
     const sources=[...this.bugs].sort((a,b)=>a.lightPosition.distanceToSquared(camera)-b.lightPosition.distanceToSquared(camera));
     this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=(night?9:4)*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});
