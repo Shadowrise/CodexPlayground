@@ -41,8 +41,9 @@ export class SkyTrail{
    const ribbon=new T.Mesh(geo,new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.48,roughness:.24,side:T.DoubleSide}));this.group.add(ribbon);
   });
   for(let j=0;j<=12;j++)for(const side of [-1,1]){const x=T.MathUtils.lerp(start.x,end.x,j/12),s=new T.Mesh(new T.SphereGeometry(.07,6,4),glowing[j%7]);s.position.set(x,rainbowHeight(x)!+.1,start.z+side*1.8);this.group.add(s);}
-  // Floating stars, diamonds and rings decorate the outside of the jumping lane.
-  for(let i=0;i<56;i++){const a=i*2.399,r=13+(i%3)*.8;const m=new T.Mesh(i%3===0?star:i%3===1?crystal:new T.TorusGeometry(.48,.075,7,20),glowing[i%7]);m.position.set(Math.cos(a)*r,2+i*.77,Math.sin(a)*r);m.scale.setScalar(i%3===0?.45:.85);this.group.add(m);this.cores.push(m);}
+  // Hollow ornaments stay outside the jump route; only the summit reward is a star.
+  const ornaments=[new T.TorusGeometry(.55,.07,7,32),new T.TorusGeometry(.55,.07,7,4),new T.TorusGeometry(.55,.07,7,6)];
+  for(let i=0;i<56;i++){const a=i*2.399,r=21+(i%3)*.6;const m=new T.Mesh(ornaments[i%3],glowing[i%7]);m.name='Sky Trail decorative ornament';m.position.set(Math.cos(a)*r,10+i*.63,Math.sin(a)*r);m.scale.setScalar(.85);this.group.add(m);this.cores.push(m);}
   const summit=PLATFORMS.at(-1)!;const reward=new T.Mesh(star,new T.MeshStandardMaterial({color:'#fff08a',emissive:'#ffd12e',emissiveIntensity:1.1,metalness:.3,roughness:.15}));this.star.add(reward);
   const orbit=new T.Mesh(new T.TorusGeometry(1.5,.035,6,48),glowing[2]);orbit.rotation.x=Math.PI/2;this.star.add(orbit);this.star.position.set(summit.x-1,summit.y+2,summit.z);this.group.add(this.star);
   this.lower.position.set(PLATFORMS[0].x-5,0,PLATFORMS[0].z);this.upper.position.set(summit.x+1,summit.y,summit.z);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);

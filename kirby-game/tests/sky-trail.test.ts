@@ -40,3 +40,9 @@ test('recovery trampoline unlocks at first checkpoint and launches only after la
  assert.equal(trail.lower.position.z,P[0].z);assert(P[0].x-trail.lower.position.x-P[0].size/2-1.71>1);
  assert.equal(sign.rotation.y,Math.PI);assert.equal(trail.landing.x,S.x);assert.equal(trail.landing.z,S.z);
 });
+
+test('decorations are hollow geometric ornaments outside the platforms, with the first raised high',()=>{
+ const trail=new SkyTrail(),ornaments=trail.group.children.filter(o=>o.name==='Sky Trail decorative ornament');assert.equal(ornaments.length,56);
+ assert(ornaments[0].position.y>=10);
+ for(const o of ornaments){assert(Math.hypot(o.position.x,o.position.z)>=20.99);assert.equal((o as any).geometry.type,'TorusGeometry');for(const p of P)assert(Math.hypot(o.position.x-p.x,o.position.z-p.z)>p.size/Math.sqrt(2)+1);}
+});
