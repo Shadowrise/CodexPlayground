@@ -19,7 +19,7 @@ test('one click yields one timed hit; attack cannot restart mid-swing or while h
   let hits = 0;
   for (let i = 0; i < 180; i++) {
     player.update(1 / 60, { ...idle, attack: true, forward: true });
-    if (i < 28) assert.equal(npc.health, 3);
+    if (i < 14) assert.equal(npc.health, 3);
     if (resolveAttack(player, [npc])) hits++;
     assert.equal(resolveAttack(player, [npc]), undefined, 'Hit event is consumed');
   }
@@ -67,3 +67,14 @@ test('three flashes cause death, ten seconds lying down, then full health and wa
   assert(npc.actor.position.distanceTo(position) > .1);
   assert(root.quaternion.angleTo(new Quaternion()) < 1e-6);
 });
+
+test('attack animation and hit timing run at twice the original speed',async()=>{
+ const {player}=await setup();let time=0,hitTime=0;do{player.update(.01,{...idle,attack:true});time+=.01;if(player.attackHit)hitTime=time;}while(player.state==='Attack'&&time<4);
+ assert(Math.abs(hitTime-.24)<.02);assert(Math.abs(time-player.actions.get('Attack')!.getClip().duration/2)<.02);
+});
+test('one hit knocks a firefly passenger down with a visible fall and normal revival',async()=>{
+ const {player,npcs}=await setup(),n=npcs[0];n.beginFirefly(0);n.actor.position.set(0,6,2);player.attackHit=true;assert.equal(resolveAttack(player,[n]),n);assert.equal(n.health,0);assert.equal(n.state,'Death');assert.equal(n.fireflyIndex,undefined);assert.equal(n.actor.position.y,6);
+ n.update(.1,[]);assert(n.actor.position.y>0&&n.actor.position.y<6);for(let i=0;i<20;i++)n.update(.05,[]);assert.equal(n.actor.position.y,0);assert(n.isDown);
+ for(let i=0;i<300&&n.isDown;i++)n.update(.05,[]);assert.equal(n.health,3);assert.equal(n.state,'Walk');
+});
+test('an approaching NPC still requires normal three-hit combat',async()=>{const {npcs}=await setup(),n=npcs[0];n.beginFireflyApproach(0);assert(n.takeHit());assert.equal(n.health,2);assert.equal(n.fireflyIndex,undefined);});

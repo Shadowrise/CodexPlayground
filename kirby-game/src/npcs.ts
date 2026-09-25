@@ -130,10 +130,12 @@ export class KirbyNpc {
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
 
   takeHit(): boolean {
-    if (this.isDown || this.state==='Balloon' || this.fireflyIndex!==undefined) return false;
+    if (this.isDown || this.state==='Balloon') return false;
+    const mounted=this.fireflyIndex!==undefined&&!this.approachingFirefly;
+    if(this.approachingFirefly)this.start('Idle');
     if(this.flight.active){this.flight.reset();this.actor.position.y=0;this.cloud.visible=false;this.start('Idle');}
     this.greeting=undefined;
-    this.health--;
+    this.health=mounted?0:this.health-1;
     this.flashRemaining = .28;
     for (const [material] of this.originalColors) {
       material.color.set('#ff1824'); material.emissive.set('#ff0000'); material.emissiveIntensity = .65;
@@ -205,6 +207,8 @@ export class KirbyNpc {
       }
     }
     if (this.isDown) {
+      this.elapsed+=dt;
+      this.actor.position.y=Math.max(0,this.actor.position.y-24*(this.elapsed-dt/2)*dt);
       this.mixer.update(dt);
       this.groundFallenBody();
       this.downRemaining = Math.max(0, this.downRemaining - dt);
@@ -274,7 +278,7 @@ export class KirbyNpc {
     const radiusY = Math.hypot(m[1] * this.bodyRadii.x, m[5] * this.bodyRadii.y, m[9] * this.bodyRadii.z);
     const bottom = this.contactCenter.y - radiusY;
     const u = Math.min(1, this.actions.get('Death')!.time / .7);
-    this.model.position.y = (-.02 - bottom) / this.actor.scale.y * u * u * (3 - 2 * u);
+    this.model.position.y = (this.actor.position.y-.02 - bottom) / this.actor.scale.y * u * u * (3 - 2 * u);
     this.actor.updateWorldMatrix(true, true);
   }
 }

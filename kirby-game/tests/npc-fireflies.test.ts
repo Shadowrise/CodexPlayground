@@ -12,7 +12,7 @@ import {validActor} from '../src/network-protocol';
 async function model(name:string){const b=await readFile(new URL(`../public/models/${name}-animated.glb`,import.meta.url));return new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');}
 async function setup(){const [k,b]=await Promise.all([model('kirby'),model('firefly')]);const n=new KirbyNpc(k.scene,k.animations,0,KIRBY_VARIANTS[1]),world=new NightFireflies(b);world.update(0,false,new Vector3());const bug=world.bugs[0];bug.phase=25;world.update(0,false,new Vector3());n.actor.position.copy(bug.home);n.networkAnimate('Idle',0);return {n,world,k,b};}
 test('NPC occasionally boards, flies, earns first-ride points and returns to walking',async()=>{
- const {n,world}=await setup();world.prepareNpcs([n],true,2);assert.equal(n.fireflyIndex,undefined);world.prepareNpcs([n],true,1);assert.equal(n.fireflyIndex,0);assert(!n.canEat);assert(!n.canBoardBalloon);assert(!n.takeHit());assert.equal(world.savePosition(n)!.y,0);
+ const {n,world}=await setup();world.prepareNpcs([n],true,2);assert.equal(n.fireflyIndex,undefined);world.prepareNpcs([n],true,1);assert.equal(n.fireflyIndex,0);assert(!n.canEat);assert(!n.canBoardBalloon);assert.equal(world.savePosition(n)!.y,0);
  let airborne=false;for(let i=0;i<900;i++){world.prepareNpcs([n],true,0);n.update(.05,[]);world.update(.05,false,n.actor.position);world.syncNpcRiders([n],true,.05);airborne ||= n.actor.position.y>4;if(n.fireflyIndex===undefined)break;}
  assert(airborne);assert.equal(n.fireflyIndex,undefined);assert.equal(n.actor.position.y,0);assert(n.achievements.has('firefly'));
 });
@@ -44,3 +44,5 @@ test('player can take a bug targeted by an approaching NPC, and stale occupant r
  n.beginFireflyApproach(0);world.prepareNpcs([n],false,0);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));world.prepareNpcs([n],true,.01);assert.equal(n.fireflyIndex,undefined);world.disembark();
  n.beginFirefly(0);world.prepareNpcs([n],false,0);assert.equal(world.networkKey(c),undefined);n.endBalloon();assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));
 });
+
+test('hitting a mounted NPC immediately releases its firefly for the player',async()=>{const {n,world,k}=await setup(),c=new CharacterController(k.scene,k.animations);n.beginFirefly(0);world.prepareNpcs([n],false,0);c.actor.position.copy(world.bugs[0].home);assert.equal(world.networkKey(c),undefined);assert(n.takeHit());assert(n.isDown);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));});

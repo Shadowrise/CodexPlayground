@@ -93,7 +93,7 @@ export class CharacterController {
   private play(name: string) {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
-    next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
+    next.reset().setEffectiveTimeScale(name==='Attack'?2:1).setEffectiveWeight(1);
     const turning = name === 'Attack' || name === 'Eat';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
@@ -187,7 +187,7 @@ export class CharacterController {
       }
     } else if (this.attackElapsed !== undefined) {
       const previous = this.attackElapsed;
-      this.attackElapsed += dt;
+      this.attackElapsed += dt*2;
       // One hit event at the extended fist pose, not one hit per render frame.
       this.attackHit = previous < .48 && this.attackElapsed >= .48;
       this.mixer.update(dt);
