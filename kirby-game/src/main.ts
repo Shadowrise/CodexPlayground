@@ -147,7 +147,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??(c instanceof CharacterController?fireflies?.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
     saveMessage.textContent='Игра сохранена.';hasSave=true;loadButton.disabled=false;loadButton.title='Загрузить сохранение';
   }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
 });
@@ -604,7 +604,8 @@ renderer.setAnimationLoop((time: number) => {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
       for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
     }
-    if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
+    fireflies?.prepareNpcs(npcs,!network||network.host,dt);
+    if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'&&npc.fireflyIndex===undefined){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     const hit = network?undefined:resolveAttack(character, npcs);
@@ -654,6 +655,7 @@ renderer.setAnimationLoop((time: number) => {
   for(const light of shadows.lights){light.color.set(night?'#bad0ff':'#fff1d7');light.intensity=night?1.35:3.2;}
   renderer.toneMappingExposure=night?1:1.2;
   updateSky(dt,camera,night);fireflies?.update(dt,night,camera.position);
+  if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   ponds.update(dt);
   watermill.update(dt);
@@ -761,7 +763,7 @@ async function interactOnline(){
 }
 function updateNetwork(dt:number){
  if(!network||!character||!playing||roundFinished())return;
- if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));}
+ if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));fireflies?.syncNpcRiders(npcs,false,dt);}
  for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
  const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt,network.actorSnapshots);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
  for(const [id,state] of remotePlayers?.renderedStates??[]){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
