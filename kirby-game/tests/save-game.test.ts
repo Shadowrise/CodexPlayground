@@ -33,7 +33,7 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  const ride=captureGame(player,variant,npcs,world,true);assert.equal(ride.player.x,STATION.x);assert.equal(ride.player.z,STATION.z-8);
  assert.throws(()=>parseSave(JSON.stringify({...save,fruits:[]})));
  assert.throws(()=>parseSave('broken'));
- const nightSave=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,undefined,true)));assert.equal(nightSave.night,true);assert.throws(()=>parseSave(JSON.stringify({...save,night:'yes'})));
+ const nightSave=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,undefined,true)));assert.equal(nightSave.night,true);const timed=parseSave(JSON.stringify({...save,dayPhase:.137}));assert.equal(timed.dayPhase,.137);assert.throws(()=>parseSave(JSON.stringify({...save,dayPhase:1})));assert.throws(()=>parseSave(JSON.stringify({...save,night:'yes'})));
  assert.throws(()=>parseSave(JSON.stringify({...save,mazeStar:'yes'})));
  const oldFormat=JSON.parse(JSON.stringify(save));delete oldFormat.player.achievements;for(const npc of oldFormat.npcs)delete npc.achievements;
  restoreGame(parseSave(JSON.stringify(oldFormat)),restored,friends,fruits);assert.deepEqual([...restored.achievements],['star']);assert.equal(friends[3].achievements.size,0);assert.equal(restored.fruitsEaten,2);

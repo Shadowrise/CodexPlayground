@@ -8,17 +8,17 @@ import { STATION } from './coaster';
 import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
 type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;fruitsEaten:number;achievements?:ScoreAction[]};
-export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;festival?:StarfallState;skyCheckpoint?:number};
-export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false):GameSave {
+export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number};
+export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number):GameSave {
   const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitsEaten:c.fruitsEaten,achievements:[...c.achievements]};};
   const savedPlayer=actor(player,variant[0]);
   if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
-  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,festival:player.festival,skyCheckpoint:player.skyCheckpoint};
+  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,dayPhase,festival:player.festival,skyCheckpoint:player.skyCheckpoint};
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
   const actor=(a:ActorSave)=>a && KIRBY_VARIANTS.some(v=>v[0]===a.variant) && [a.x,a.z,a.yaw,a.size,a.fruitsEaten].every(Number.isFinite) && a.size>0 && Number.isInteger(a.fruitsEaten) && a.fruitsEaten>=0 && (a.achievements===undefined || validAchievements(a.achievements));
-  if((data?.skyCheckpoint!==undefined&&(!Number.isInteger(data.skyCheckpoint)||data.skyCheckpoint<0||data.skyCheckpoint>4)) || (data?.festival!==undefined&&!validStarfall(data.festival)) || data?.version!==1 || (data.starRemaining!==undefined && (!Number.isFinite(data.starRemaining) || data.starRemaining<0 || data.starRemaining>30)) || (data.starCooldown!==undefined && (!Number.isFinite(data.starCooldown) || data.starCooldown<0 || data.starCooldown>120)) || (data.night!==undefined && typeof data.night!=='boolean') || (data.mazeStar!==undefined && typeof data.mazeStar!=='boolean') || !actor(data.player) || !Array.isArray(data.npcs) || data.npcs.length!==14 || !data.npcs.every(actor)
+  if((data?.dayPhase!==undefined&&(!Number.isFinite(data.dayPhase)||data.dayPhase<0||data.dayPhase>=1)) || (data?.skyCheckpoint!==undefined&&(!Number.isInteger(data.skyCheckpoint)||data.skyCheckpoint<0||data.skyCheckpoint>4)) || (data?.festival!==undefined&&!validStarfall(data.festival)) || data?.version!==1 || (data.starRemaining!==undefined && (!Number.isFinite(data.starRemaining) || data.starRemaining<0 || data.starRemaining>30)) || (data.starCooldown!==undefined && (!Number.isFinite(data.starCooldown) || data.starCooldown<0 || data.starCooldown>120)) || (data.night!==undefined && typeof data.night!=='boolean') || (data.mazeStar!==undefined && typeof data.mazeStar!=='boolean') || !actor(data.player) || !Array.isArray(data.npcs) || data.npcs.length!==14 || !data.npcs.every(actor)
     || new Set([data.player.variant,...data.npcs.map(n=>n.variant)]).size!==15
     || !Array.isArray(data.fruits) || data.fruits.length!==70 || !data.fruits.every(f=>typeof f==='boolean'))throw Error('Сохранение повреждено или несовместимо.');
   return data;

@@ -1,3 +1,4 @@
+import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
 import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from './starfall';
@@ -118,8 +119,8 @@ startupCard.append(nameField,soloSection,networkSection);
 watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,serverUrl);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
-newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();mapMode.disabled=false;pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
-networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();mapMode.value='day';mapMode.disabled=true;document.querySelector('#selection-message')!.textContent='Общая дневная поляна · выбери Кирби и подключайся';});
+newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
+networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();document.querySelector('#selection-message')!.textContent='Общая поляна · выбери Кирби и подключайся';});
 const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent='Выйти в главное меню';audioPanel.append(leaveOnline);
 let returningToMenu=false;
 leaveOnline.addEventListener('click',()=>{
@@ -147,14 +148,17 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night)));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase())));
     saveMessage.textContent='Игра сохранена.';hasSave=true;loadButton.disabled=false;loadButton.title='Загрузить сохранение';
   }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
 });
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
 const spawnNearDepot = document.querySelector<HTMLInputElement>('#spawn-near-depot')!;
 spawnNearDepot.checked = false;
-const mapMode=document.querySelector<HTMLSelectElement>('#map-mode')!;mapMode.value='day';
+let dayStart=Date.now(),dayStartPhase=Math.random();
+const currentDayPhase=()=>network?cyclePhase(network.room.dayPhase??.25,network.room.epoch,network.serverNow):cyclePhase(dayStartPhase,dayStart,Date.now());
+const timeDial=document.querySelector<HTMLElement>('#time-dial')!;
+const timeNeedle=document.querySelector<SVGGElement>('#time-needle')!;
 const variantGrid = document.querySelector<HTMLDivElement>('#variant-grid')!;
 for (const variant of KIRBY_VARIANTS) {
   const button = document.createElement('button');
@@ -197,6 +201,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 mount.appendChild(renderer.domElement);
 
+const daySky=new THREE.Color('#b3d9ef'),nightSky=new THREE.Color('#0b1428'),sunsetSky=new THREE.Color('#dd8b9b'),dayFog=new THREE.Color('#d8e9eb'),nightFog=new THREE.Color('#182b4b'),sunsetFog=new THREE.Color('#ffc392'),whiteLight=new THREE.Color('#ffffff'),nightLight=new THREE.Color('#9db5e0'),duskLight=new THREE.Color('#ffad70'),dayGround=new THREE.Color('#779455'),nightGround=new THREE.Color('#293850'),sunLight=new THREE.Color('#fff1d7');
 const ambient=new THREE.HemisphereLight('#ffffff', '#779455', 2.4);scene.add(ambient);
 const shadows = new CSM({camera,parent:scene,cascades:2,maxFar:300,mode:'practical',
   shadowMapSize:1024,lightDirection:SUN_DIRECTION.clone().negate(),lightIntensity:3.2,
@@ -427,8 +432,8 @@ startButton.addEventListener('click', async () => {
   character = new CharacterController(cloneVariant(template, selected, false), animations);
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
-  home.night=!network && mapMode.value==='night';
-  if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);home.night=pendingSave.night===true;pendingSave=undefined;}
+  dayStart=Date.now();dayStartPhase=Math.random();
+  if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
   maze.constrain(character.actor.position,character.actor.scale.x);
@@ -520,7 +525,6 @@ renderer.setAnimationLoop((time: number) => {
       else if(pad.pressed.has(0))newGameButton.click();
     } else if(!playing) {
       if(repeat){const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*5+15)%15;(variantGrid.children[i] as HTMLButtonElement).click();}
-      if(pad.pressed.has(2))mapMode.value=mapMode.value==='day'?'night':'day';
       if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
       if(pad.pressed.has(0))startButton.click();
     } else {
@@ -649,12 +653,15 @@ renderer.setAnimationLoop((time: number) => {
   wayfinder.syncPlayers(network ? Array.from(network.actors,([id,actor])=>[id,remotePlayers?.renderedStates.get(id)??actor] as const) : []);
   if(character)wayfinder.update(character.actor.position,character.actor.scale.x,camera);
   shadows.update();
-  const night=home.night;
-  (scene.background as THREE.Color).set(night?'#0b1428':'#b3d9ef');(scene.fog as THREE.Fog).color.set(night?'#182b4b':'#d8e9eb');
-  ambient.color.set(night?'#9db5e0':'#ffffff');ambient.groundColor.set(night?'#293850':'#779455');ambient.intensity=night?.7:2.4;
-  for(const light of shadows.lights){light.color.set(night?'#bad0ff':'#fff1d7');light.intensity=night?1.35:3.2;}
-  renderer.toneMappingExposure=night?1:1.2;
-  updateSky(dt,camera,night);fireflies?.update(dt,night,camera.position);
+  const lightTime=daylight(currentDayPhase());home.night=lightTime.night>.5;home.nightAmount=lightTime.night;
+  const {day,night,twilight}=lightTime;
+  (scene.background as THREE.Color).copy(daySky).lerp(nightSky,night).lerp(sunsetSky,twilight*.65);
+  (scene.fog as THREE.Fog).color.copy(dayFog).lerp(nightFog,night).lerp(sunsetFog,twilight*.7);
+  ambient.color.copy(whiteLight).lerp(nightLight,night).lerp(duskLight,twilight*.25);ambient.groundColor.copy(dayGround).lerp(nightGround,night);ambient.intensity=.7+day*1.7;
+  for(const light of shadows.lights){light.color.copy(sunLight).lerp(nightLight,night).lerp(duskLight,twilight*.75);light.intensity=1.35+day*1.85;}
+  renderer.toneMappingExposure=1+day*.2;
+  timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=lightTime.label;timeDial.setAttribute('aria-label',`Время суток: ${lightTime.label}`);
+  updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   ponds.update(dt);

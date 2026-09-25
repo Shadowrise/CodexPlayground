@@ -8,7 +8,7 @@ async function join(){const socket=new WebSocket(base.replace('http','ws')+'/ws?
 const actor={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
 const clients=[];
 try{
- const a=await join(),b=await join();clients.push(a,b);assert.equal(a.hello.room.id,b.hello.room.id);assert.equal(b.hello.room.host,a.hello.playerId);
+ const a=await join(),b=await join();clients.push(a,b);assert.equal(a.hello.room.id,b.hello.room.id);assert.equal(b.hello.room.host,a.hello.playerId);assert(a.hello.room.dayPhase>=0&&a.hello.room.dayPhase<1);assert.equal(a.hello.room.dayPhase,b.hello.room.dayPhase);assert.equal(a.hello.room.epoch,b.hello.room.epoch);assert(Math.abs(a.hello.serverNow-Date.now())<5000);
  a.send({type:'frame',actor,events:[{type:'fruit',index:0},{type:'lock',key:'cart:0'}]});
  await b.wait(m=>m.type==='room'&&m.room.fruits[0]===a.hello.playerId);
  b.send({type:'frame',actor:{...actor,name:'Second'},events:[{type:'fruit',index:0},{type:'lock',key:'cart:0'}]});

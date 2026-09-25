@@ -170,7 +170,7 @@ export class NightFireflies {
     for(const bug of this.bugs)if(!bug.land)level=Math.max(level,Math.max(0,1-bug.carrier.position.distanceTo(listener)/16)**2);
     return level;
   }
-  update(dt:number,night:boolean,camera:T.Vector3){
+  update(dt:number,night:boolean|number,camera:T.Vector3){
     this.group.visible=true;
     for(const index of this.remoteOffsets.keys())if(!this.networkBlocked.has(index))this.remoteOffsets.delete(index);
     this.time+=dt;
@@ -193,6 +193,6 @@ export class NightFireflies {
       bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.325+.075*Math.sin(this.time*2+bug.phase);
     }
     const sources=[...this.bugs].sort((a,b)=>a.lightPosition.distanceToSquared(camera)-b.lightPosition.distanceToSquared(camera));
-    this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=(night?9:4)*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});
+    this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=(4+5*Number(night))*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});
   }
 }

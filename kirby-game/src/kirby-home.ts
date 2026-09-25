@@ -6,6 +6,7 @@ export class KirbyHome {
   readonly group=new T.Group();
   readonly entrance=new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+6);
   night=false;
+  nightAmount?:number;
   private waking=false;
   private sleeper?:CharacterController;
   private elapsed=0;
@@ -55,7 +56,7 @@ export class KirbyHome {
     this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
   }
   update(dt:number){
-    this.windows.emissiveIntensity=this.night?1.5:.12;const c=this.sleeper;if(!c)return;
+    this.windows.emissiveIntensity=.12+1.38*(this.nightAmount??Number(this.night));const c=this.sleeper;if(!c)return;
     this.elapsed+=dt;const t=this.elapsed;c.mixer.update(dt);
     if(this.waking){
       const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.entrance,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);

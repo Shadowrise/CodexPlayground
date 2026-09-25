@@ -29,9 +29,9 @@ export class GameRoom extends DurableObject<Env>{
   if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=15)return new Response('Invalid variant',{status:400});
   if(this.players().some(s=>(s.deserializeAttachment() as Attachment).variant===variant)){const [client,server]=Object.values(new WebSocketPair());server.accept();this.send(server,{type:'error',message:'Этот цвет уже занят. Выбери другого Кирби.'});server.close(1008,'Color occupied');return new Response(null,{status:101,webSocket:client});}
   const id=crypto.randomUUID(),first=this.players().length===0;
-  if(first)this.room={id:crypto.randomUUID(),host:id,epoch:Date.now(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
+  if(first)this.room={id:crypto.randomUUID(),host:id,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);server.serializeAttachment({id,seen:Date.now(),visible:true,variant} satisfies Attachment);
-  this.persist();this.send(server,{type:'welcome',protocolVersion:PROTOCOL,playerId:id,room:this.room,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,actor:a.actor};})});
+  this.persist();this.send(server,{type:'welcome',serverNow:Date.now(),protocolVersion:PROTOCOL,playerId:id,room:this.room,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,actor:a.actor};})});
   this.broadcast({type:'presence',count:this.players().length});
   if(first)await this.ctx.storage.setAlarm(Date.now()+30000);
   return new Response(null,{status:101,webSocket:client});
