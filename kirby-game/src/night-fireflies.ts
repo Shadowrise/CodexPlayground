@@ -19,6 +19,8 @@ export class NightFireflies {
   private time=0;
   private npcAfter=3;
   private npcRiders=new Map<number,KirbyNpc>();
+  private npcCooldown=new Map<KirbyNpc,number>();
+  private occupiedByNpc(index:number){const n=this.npcRiders.get(index);return n?.fireflyIndex===index&&!n.approachingFirefly;}
   private rider?:CharacterController;
   private mount?:Bug;
   private altitude=0;
@@ -54,7 +56,7 @@ export class NightFireflies {
     bug.land=!!v[8];bug.firefly.setMode(bug.land?'Sit':'Fly');
   }
   outlineBug(c:CharacterController){return !c.flight.active && !c.swimming ? this.nearby(c)?.firefly.object : undefined;}
-  private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && !this.npcRiders.has(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
+  private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && !this.occupiedByNpc(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
   prompt(c:CharacterController){return this.riding?'E — слезть со светлячка':this.nearby(c)?'E — прокатиться на светлячке':'';}
   board(c:CharacterController){
     if(this.riding || c.flight.active || c.swimming)return false;
@@ -65,10 +67,13 @@ export class NightFireflies {
   }
   savePosition(c:CharacterController|KirbyNpc){if(this.rider===c)return this.safeGround.clone();for(const [i,n] of this.npcRiders)if(n===c)return this.bugs[i].home.clone();return undefined;}
   prepareNpcs(npcs:readonly KirbyNpc[],authority:boolean,dt:number,focus?:T.Vector3){
+    for(const [n,remaining] of this.npcCooldown){if(remaining<=dt)this.npcCooldown.delete(n);else this.npcCooldown.set(n,remaining-dt);}
+    // Observe completed rides on guests too, so a new host retains the cooldown.
+    for(const [i,n] of this.npcRiders)if(n.fireflyIndex!==i)this.npcCooldown.set(n,30);
     this.npcRiders.clear();for(const n of npcs)if(n.fireflyIndex!==undefined&&this.bugs[n.fireflyIndex])this.npcRiders.set(n.fireflyIndex,n);
     if(!authority)return;
     for(const [i,n] of this.npcRiders){if(!n.approachingFirefly)continue;const b=this.bugs[i];
-      if(b===this.mount||this.networkBlocked.has(i)||n.fireflyRideTime>45){n.endBalloon();this.npcRiders.delete(i);continue;}
+      if(b===this.mount||this.networkBlocked.has(i)||n.fireflyRideTime>45){n.endBalloon();this.npcCooldown.set(n,30);this.npcRiders.delete(i);continue;}
       const delta=b.home.clone().sub(n.actor.position);delta.y=0;const distance=delta.length();
       if(distance<2.5){if(b.land)n.beginFirefly(i);continue;}
       const next=n.actor.position.clone().addScaledVector(delta,Math.min(distance,4*n.actor.scale.x*dt)/distance);
@@ -79,7 +84,7 @@ export class NightFireflies {
     const candidates:{n:KirbyNpc;i:number;cost:number}[]=[];
     for(let i=0;i<this.bugs.length;i++){
       const b=this.bugs[i];if(b===this.mount||this.networkBlocked.has(i)||this.npcRiders.has(i))continue;
-      for(const n of npcs){const distance=n.actor.position.distanceTo(b.home);if(!n.canBoardBalloon||n.actor.position.y>.1||distance>80)continue;
+      for(const n of npcs){const distance=n.actor.position.distanceTo(b.home);if(this.npcCooldown.has(n)||!n.canBoardBalloon||n.actor.position.y>.1||distance>80)continue;
         let clear=true;for(let j=1;j<=12;j++){const p=n.actor.position.clone().lerp(b.home,j/12);if(inWater(p.x,p.z)||!sceneryClearance(p.x,p.z,n.actor.scale.x)){clear=false;break;}}
         if(clear)candidates.push({n,i,cost:distance+(focus?b.home.distanceTo(focus)*.25:0)});
       }
@@ -93,7 +98,7 @@ export class NightFireflies {
       if(authority){
         // Human riders always have priority, including a simultaneous online claim.
         if(b===this.mount||this.networkBlocked.has(i)||(n.fireflyRideTime>12&&b.land)){
-          n.actor.position.copy(b.home);n.actor.position.y=0;n.endBalloon();this.npcRiders.delete(i);continue;
+          n.actor.position.copy(b.home);n.actor.position.y=0;n.endBalloon();this.npcCooldown.set(n,30);this.npcRiders.delete(i);continue;
         }
         const target=b.carrier.position.clone();target.y+=b.firefly.object.scale.x*.95;
         if(!b.land&&n.fireflyRideTime>2)awardFirst(n,'firefly');

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Vector3} from 'three';
+import {CharacterController} from '../src/controller';
 import {NightFireflies} from '../src/night-fireflies';
 import {KirbyNpc,createNpcs} from '../src/npcs';
 import {KIRBY_VARIANTS} from '../src/variants';
@@ -30,4 +31,16 @@ test('normal meadow NPC population starts flights during the first minute and a 
  const {world,k}=await setup();const npcs=createNpcs(k.scene,k.animations,KIRBY_VARIANTS[0]);let flew=false;
  for(let i=0;i<900;i++){world.prepareNpcs(npcs,true,.1,new Vector3());for(const n of npcs)n.update(.1,npcs.map(p=>p.actor.position));world.update(.1,false,new Vector3());world.syncNpcRiders(npcs,true,.1);if(npcs.some(n=>n.fireflyIndex!==undefined&&!n.approachingFirefly&&n.actor.position.y>4)){flew=true;break;}}
  assert(flew,'ordinary starting distribution produces an airborne passenger');
+});
+
+test('finished ride enforces a 30 second personal cooldown before another approach',async()=>{
+ const {n,world}=await setup();n.beginFirefly(0);n.update(13,[]);world.prepareNpcs([n],true,0);world.syncNpcRiders([n],true,.01);assert.equal(n.fireflyIndex,undefined);
+ for(let i=0;i<29;i++){n.networkAnimate('Idle',0);world.prepareNpcs([n],true,1);assert.equal(n.fireflyIndex,undefined);}
+ // After the cooldown the regular search cadence is allowed to choose a ride again.
+ n.networkAnimate('Idle',0);world.prepareNpcs([n],true,9);assert.notEqual(n.fireflyIndex,undefined);
+});
+test('player can take a bug targeted by an approaching NPC, and stale occupant records do not block boarding',async()=>{
+ const {n,world,k}=await setup(),c=new CharacterController(k.scene,k.animations);c.actor.position.copy(world.bugs[0].home);
+ n.beginFireflyApproach(0);world.prepareNpcs([n],false,0);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));world.prepareNpcs([n],true,.01);assert.equal(n.fireflyIndex,undefined);world.disembark();
+ n.beginFirefly(0);world.prepareNpcs([n],false,0);assert.equal(world.networkKey(c),undefined);n.endBalloon();assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));
 });
