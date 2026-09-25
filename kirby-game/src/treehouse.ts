@@ -1,5 +1,5 @@
 import {oakBarkMaterial} from './oak-bark';
-import {createCanopyGeometry,createLeafSurface} from './canopy';
+import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
 import { LeafPile } from './leaf-pile';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -51,7 +51,8 @@ export class Treehouse {
       for(let j=0;j<3;j++)beam([x,y,z],[x+Math.cos(a+j*.6)*2,y+2+j*.45,z+Math.sin(a+j*.6)*2],.12,'#70503a');
     }
     const crown=new T.Mesh(createCanopyGeometry('oak'),new T.MeshStandardMaterial({color:'#518245',vertexColors:true,map:createLeafSurface(),side:T.DoubleSide,roughness:.95}));
-    crown.name='Oak leaf canopy';crown.position.set(0,34,-6);crown.scale.set(12,7.2,11);crown.castShadow=crown.receiveShadow=true;root.add(crown);
+    crown.name='Oak leaf canopy';crown.position.set(0,34,-6);crown.scale.set(12,7.2,11);crown.castShadow=crown.receiveShadow=false;root.add(crown);
+    const crownShadow=new T.Mesh(createCanopyShadowGeometry(),new T.MeshBasicMaterial({colorWrite:false,depthWrite:false}));crownShadow.name='Stable oak crown shadow';crownShadow.position.copy(crown.position);crownShadow.scale.copy(crown.scale);crownShadow.castShadow=true;root.add(crownShadow);
     raised=true;
     // Wide plank deck, underfloor joists, diagonal braces and brass nail heads.
     for(let i=0;i<30;i++){

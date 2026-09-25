@@ -1,4 +1,4 @@
-import {createCanopyGeometry,createLeafSurface} from './canopy';
+import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
 import { createCoasterCurve } from './coaster';
 import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
@@ -47,16 +47,18 @@ export function createForest() {
     if (!batches.has('wood')) batches.set('wood', []);
     batches.get('wood')!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
   }
-  for (let i=0; i<800; i++) {
+  for (let i=0; i<1200; i++) {
     // Keep all four species visible near the starting clearing as well as across the map.
     const angle=random()*Math.PI*2, radius=17+Math.sqrt(random())*75;
     let x=i<140 ? Math.cos(angle)*radius : (random()*2-1)*(H-10);
     let z=i<140 ? Math.sin(angle)*radius : (random()*2-1)*(H-10);
+    if(i>=800){const edge=220+random()*26,along=(random()*2-1)*(H-10),side=i%4;if(Math.sin(along*.045+side)<-.5)continue;x=side<2?(side===0?-edge:edge):along;z=side>=2?(side===2?-edge:edge):along;}
     ({x,z}=outsideLandmarks(x,z,6));
-    if(Math.max(Math.abs(x),Math.abs(z))>218 || (Math.abs(x)<19 && z>207))continue;
+    if((i<800&&Math.max(Math.abs(x),Math.abs(z))>218) || (Math.abs(x)<19 && z>207))continue;
     if (Math.hypot(x,z)<14) continue;
     const biome=biomeAt(x,z), s=.65+random()*1.2, yaw=random()*Math.PI*2;
     const crownRadiusLimit=(biome==='spruce'?2.2:biome==='birch'?6.4:4.2)*s;
+    if(Math.max(Math.abs(x),Math.abs(z))+crownRadiusLimit>H-2)continue;
     if(!sceneryClearance(x,z,crownRadiusLimit+1))continue;
     if(treePositions.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+p.crownRadius+1.2))continue;
     if(track.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+5))continue;
@@ -120,12 +122,15 @@ export function createForest() {
   }
   const leafSurface=createLeafSurface();
   const foliageMaps={leaves:leafSurface,birchLeaves:leafSurface,birchLeaves1:leafSurface,birchLeaves2:leafSurface,birchLeaves3:leafSurface,needles:createFoliageTexture('spruce')};
+  const shadowGeometry=createCanopyShadowGeometry(),shadowMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
   for (const [kind, instances] of batches) {
     const mesh=new THREE.InstancedMesh(geometries[kind],new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,vertexColors:kind==='leaves'||kind.startsWith('birchLeaves'),side:kind==='leaves'||kind.startsWith('birchLeaves')?THREE.DoubleSide:THREE.FrontSide,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null}),instances.length);
     mesh.name=`Decorative forest ${kind}`;
     instances.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);mesh.setColorAt(i,p.color);});
-    mesh.castShadow=true;mesh.receiveShadow=true;
+    const leafy=kind==='leaves'||kind.startsWith('birchLeaves');
+    mesh.castShadow=!leafy;mesh.receiveShadow=!leafy;
     forest.add(spatialInstances(mesh));
+    if(leafy){const proxy=new THREE.InstancedMesh(shadowGeometry,shadowMaterial,instances.length);proxy.name=`Stable crown shadows ${kind}`;proxy.castShadow=true;instances.forEach((p,i)=>proxy.setMatrixAt(i,p.matrix));forest.add(spatialInstances(proxy));}
   }
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);

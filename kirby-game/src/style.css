@@ -303,3 +303,6 @@ button:disabled { cursor:default; }
 .npc-hearts .empty .heart{fill:#16213799;stroke:#eedbe7;}
 .npc-hearts .shine{fill:none;stroke:#fff3;stroke-width:2.4;stroke-linecap:round;}
 .npc-hearts .full .shine{stroke:#fff9;}
+
+#time-dial {position:fixed;top:16px;left:50%;transform:translateX(-50%);width:104px;height:104px;box-sizing:content-box;}
+@media(max-width:760px){#time-dial{width:84px;height:84px;top:12px;}}

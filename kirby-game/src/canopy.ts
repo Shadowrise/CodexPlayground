@@ -48,3 +48,10 @@ export function createLeafSurface(){
  }
  const texture=new T.DataTexture(data,size,size);texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.needsUpdate=true;return texture;
 }
+
+/** A continuous crown silhouette prevents sub-texel leaves from sparkling in shadow maps. */
+export function createCanopyShadowGeometry(){
+ const geometry=new T.IcosahedronGeometry(.94,2),position=geometry.getAttribute('position');
+ for(let i=0;i<position.count;i++){const x=position.getX(i),y=position.getY(i),z=position.getZ(i),a=Math.atan2(z,x),lobe=1+.07*Math.sin(a*3+y*4)+.04*Math.cos(a*5-y*3);position.setXYZ(i,x*lobe+.1*y*y,y,z*lobe+.07*Math.sin(y*4));}
+ geometry.computeVertexNormals();geometry.computeBoundingSphere();return geometry;
+}
