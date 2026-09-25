@@ -2,7 +2,7 @@ import * as T from 'three';
 import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
 import type {CharacterController} from './controller';
-import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHECKPOINTS,SKY_COLORS as COLORS,rainbowHeight,skySurfaces} from './sky-trail-layout';
+import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHECKPOINTS,SKY_COLORS as COLORS,rainbowHeight,skySurfaces,SKY_RAINBOW_START,SKY_RAINBOW_END,platformThickness} from './sky-trail-layout';
 export type SkySound='bounce'|'checkpoint'|'star'|'leaves';
 function starGeometry(){const s=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.43:1;if(i)s.lineTo(Math.cos(a)*r,Math.sin(a)*r);else s.moveTo(Math.cos(a)*r,Math.sin(a)*r);}s.closePath();return new T.ExtrudeGeometry(s,{depth:.22,bevelEnabled:true,bevelSize:.07,bevelThickness:.06,bevelSegments:2,steps:1});}
 export class SkyTrail{
@@ -19,7 +19,7 @@ export class SkyTrail{
   const glowing=COLORS.map(color=>new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.9,roughness:.22,metalness:.15}));
   const glass=COLORS.map(color=>new T.MeshPhysicalMaterial({color,transparent:true,opacity:.32,roughness:.12,metalness:.1,clearcoat:1,depthWrite:false}));
   PLATFORMS.forEach((p,i)=>{
-   const thickness=i===PLATFORMS.length-1?1.2:Math.min(p.size,p.y-.15),lift=thickness/2;
+   const thickness=platformThickness(i),lift=thickness/2;
    const g=new T.Group();g.position.set(p.x,p.y-lift,p.z);this.group.add(g);
    const body=new T.Mesh(cube,glass[i%7]);body.scale.set(p.size,thickness,p.size);g.add(body);
    const frame=new T.LineSegments(edges,new T.LineBasicMaterial({color:COLORS[i%7],transparent:true,opacity:.9}));frame.scale.copy(body.scale);g.add(frame);
@@ -33,22 +33,21 @@ export class SkyTrail{
    }
   });
   // Seven adjacent curved ribbons form one walkable rainbow surface.
-  const start=PLATFORMS[14];
+  const start=PLATFORMS[SKY_RAINBOW_START],end=PLATFORMS[SKY_RAINBOW_END];
   COLORS.forEach((color,lane)=>{
    const points:number[]=[],indices:number[]=[];
-   for(let j=0;j<=48;j++){const x=T.MathUtils.lerp(start.x,8.5,j/48),y=rainbowHeight(x)!;for(const side of [0,1])points.push(x,y,start.z-1.75+(lane+side)*.5);if(j<48){const k=j*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}}
+   for(let j=0;j<=48;j++){const x=T.MathUtils.lerp(start.x,end.x,j/48),y=rainbowHeight(x)!;for(const side of [0,1])points.push(x,y,start.z-1.75+(lane+side)*.5);if(j<48){const k=j*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();
    const ribbon=new T.Mesh(geo,new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.48,roughness:.24,side:T.DoubleSide}));this.group.add(ribbon);
   });
-  for(let j=0;j<=12;j++)for(const side of [-1,1]){const x=T.MathUtils.lerp(start.x,8.5,j/12),s=new T.Mesh(new T.SphereGeometry(.07,6,4),glowing[j%7]);s.position.set(x,rainbowHeight(x)!+.1,start.z+side*1.8);this.group.add(s);}
+  for(let j=0;j<=12;j++)for(const side of [-1,1]){const x=T.MathUtils.lerp(start.x,end.x,j/12),s=new T.Mesh(new T.SphereGeometry(.07,6,4),glowing[j%7]);s.position.set(x,rainbowHeight(x)!+.1,start.z+side*1.8);this.group.add(s);}
   // Floating stars, diamonds and rings decorate the outside of the jumping lane.
-  for(let i=0;i<28;i++){const a=i*2.399,r=13+(i%3)*.8;const m=new T.Mesh(i%3===0?star:i%3===1?crystal:new T.TorusGeometry(.48,.075,7,20),glowing[i%7]);m.position.set(Math.cos(a)*r,2+i*.77,Math.sin(a)*r);m.scale.setScalar(i%3===0?.45:.85);this.group.add(m);this.cores.push(m);}
+  for(let i=0;i<56;i++){const a=i*2.399,r=13+(i%3)*.8;const m=new T.Mesh(i%3===0?star:i%3===1?crystal:new T.TorusGeometry(.48,.075,7,20),glowing[i%7]);m.position.set(Math.cos(a)*r,2+i*.77,Math.sin(a)*r);m.scale.setScalar(i%3===0?.45:.85);this.group.add(m);this.cores.push(m);}
   const summit=PLATFORMS.at(-1)!;const reward=new T.Mesh(star,new T.MeshStandardMaterial({color:'#fff08a',emissive:'#ffd12e',emissiveIntensity:1.1,metalness:.3,roughness:.15}));this.star.add(reward);
-  const orbit=new T.Mesh(new T.TorusGeometry(1.5,.035,6,48),glowing[2]);orbit.rotation.x=Math.PI/2;this.star.add(orbit);this.star.position.set(-2,summit.y+2,0);this.group.add(this.star);
-  this.lower.position.set(0,0,17);this.upper.position.set(2,summit.y,0);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);
+  const orbit=new T.Mesh(new T.TorusGeometry(1.5,.035,6,48),glowing[2]);orbit.rotation.x=Math.PI/2;this.star.add(orbit);this.star.position.set(summit.x-1,summit.y+2,summit.z);this.group.add(this.star);
+  this.lower.position.set(0,0,17);this.upper.position.set(summit.x+1,summit.y,summit.z);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);
   this.leaves.group.position.copy(this.landing).sub(this.group.position);this.group.add(this.leaves.group);
   const sign=new T.Mesh(new T.BoxGeometry(7,.9,.2),new T.MeshStandardMaterial({color:'#263d66',roughness:.65}));sign.position.set(0,3,20.5);this.group.add(sign);this.label(this.group,'НЕБЕСНАЯ ТРОПА',[0,3,20.62],6.7,.65);
-  this.label(this.group,'Прыгай вверх • E — к чекпойнту',[0,2.15,20.62],6.5,.6);
   for(const x of [-3,3]){const post=new T.Mesh(new T.CylinderGeometry(.07,.07,3,8),glowing[3]);post.position.set(x,1.5,20.5);this.group.add(post);}
  }
  private label(parent:T.Group,text:string,position:number[],width:number,height:number){
@@ -88,7 +87,7 @@ export class SkyTrail{
    p.y=support.height;c.surfaceY=this.base=support.height;this.fall=undefined;
    if(c.flight.active){c.setActivity('Idle');c.surfaceY=support.height;}
    const checkpoint=CHECKPOINTS.indexOf(support.index)+1;if(checkpoint>c.skyCheckpoint){c.skyCheckpoint=checkpoint;this.sound('checkpoint');}
-   if(support.index===PLATFORMS.length-1&&Math.hypot(localX+2,localZ)<2.8&&awardFirst(c,'skyStar'))this.sound('star');
+   if(support.index===PLATFORMS.length-1&&Math.hypot(localX-this.star.position.x,localZ-this.star.position.z)<2.8&&awardFirst(c,'skyStar'))this.sound('star');
   }else if(!c.flight.active&&this.fall===undefined){this.fall=0;c.surfaceY=0;}
   else if(c.flight.active)c.surfaceY=this.base;
   if(p.y<=0&&!c.flight.active){p.y=0;c.surfaceY=this.base=0;this.fall=undefined;this.inCourse=this.contains(p);}

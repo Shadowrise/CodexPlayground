@@ -73,7 +73,7 @@ export class StarfallView {
         rank.title=['Золотой кубок','Серебряный кубок','Бронзовый кубок'][place-1];
       }else rank.textContent=String(place);
       const portrait=document.createElement('span');portrait.className='mini-kirby';portrait.setAttribute('aria-hidden','true');portrait.innerHTML='<i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i>';
-      const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.id==='npc'?'Другие Kirby':r.name;identity.append(name);
+      const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.id==='npc'?'Другие кирби':r.name;identity.append(name);
       const awards:string[]=[];
       if(r.id!=='npc'){
         if(top&&r.fruits===top.fruits&&r.size===top.size)awards.push('Толстячок');
