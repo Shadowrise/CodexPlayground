@@ -36,5 +36,7 @@ test('recovery trampoline unlocks at first checkpoint and launches only after la
  trail.update(.09,c);assert(c.actor.position.y<.56);assert.equal(sounds.length,0);
  trail.update(.1,c);assert.deepEqual(sounds,['bounce']);for(let i=0;i<200;i++)trail.update(1/60,c);
  assert(c.actor.position.distanceTo(pos(SKY_CHECKPOINTS[0]))<.01);assert(!trail.active);
- assert(trail.lower.position.x<P[0].x);const sign=trail.group.getObjectByName('Sky Trail entrance sign')!;assert.equal(sign.position.x,P[0].x);assert(sign.position.z>P[0].z);
+ assert(trail.lower.position.x<P[0].x);const sign=trail.group.getObjectByName('Sky Trail entrance sign')!;assert.equal(sign.position.x,P[0].x);assert(sign.position.z<P[0].z);
+ assert.equal(trail.lower.position.z,P[0].z);assert(P[0].x-trail.lower.position.x-P[0].size/2-1.71>1);
+ assert.equal(sign.rotation.y,Math.PI);assert.equal(trail.landing.x,S.x);assert.equal(trail.landing.z,S.z);
 });

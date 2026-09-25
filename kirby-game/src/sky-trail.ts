@@ -6,8 +6,8 @@ import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHE
 export type SkySound='bounce'|'checkpoint'|'star'|'leaves';
 function starGeometry(){const s=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.43:1;if(i)s.lineTo(Math.cos(a)*r,Math.sin(a)*r);else s.moveTo(Math.cos(a)*r,Math.sin(a)*r);}s.closePath();return new T.ExtrudeGeometry(s,{depth:.22,bevelEnabled:true,bevelSize:.07,bevelThickness:.06,bevelSegments:2,steps:1});}
 export class SkyTrail{
- readonly group=new T.Group();readonly entry=new T.Vector3(SITE.x+PLATFORMS[0].x,0,SITE.z+PLATFORMS[0].z+6);
- readonly landing=new T.Vector3(SITE.x+16,0,SITE.z-10);
+ readonly group=new T.Group();readonly entry=new T.Vector3(SITE.x+PLATFORMS[0].x,0,SITE.z+PLATFORMS[0].z-6);
+ readonly landing=new T.Vector3(SITE.x,0,SITE.z);
  readonly lower=new T.Group();readonly upper=new T.Group();
  private leaves=new LeafPile(4.7,4.2);private star=new T.Group();private cores:T.Object3D[]=[];private time=0;private flags:{mesh:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;checkpoint:number}[]=[];
  private fall:number|undefined;private base=0;private inCourse=false;
@@ -45,9 +45,9 @@ export class SkyTrail{
   for(let i=0;i<56;i++){const a=i*2.399,r=13+(i%3)*.8;const m=new T.Mesh(i%3===0?star:i%3===1?crystal:new T.TorusGeometry(.48,.075,7,20),glowing[i%7]);m.position.set(Math.cos(a)*r,2+i*.77,Math.sin(a)*r);m.scale.setScalar(i%3===0?.45:.85);this.group.add(m);this.cores.push(m);}
   const summit=PLATFORMS.at(-1)!;const reward=new T.Mesh(star,new T.MeshStandardMaterial({color:'#fff08a',emissive:'#ffd12e',emissiveIntensity:1.1,metalness:.3,roughness:.15}));this.star.add(reward);
   const orbit=new T.Mesh(new T.TorusGeometry(1.5,.035,6,48),glowing[2]);orbit.rotation.x=Math.PI/2;this.star.add(orbit);this.star.position.set(summit.x-1,summit.y+2,summit.z);this.group.add(this.star);
-  this.lower.position.set(PLATFORMS[0].x-5,0,PLATFORMS[0].z+5);this.upper.position.set(summit.x+1,summit.y,summit.z);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);
+  this.lower.position.set(PLATFORMS[0].x-5,0,PLATFORMS[0].z);this.upper.position.set(summit.x+1,summit.y,summit.z);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);
   this.leaves.group.position.copy(this.landing).sub(this.group.position);this.group.add(this.leaves.group);
-  const entrance=new T.Group();entrance.name='Sky Trail entrance sign';entrance.position.set(PLATFORMS[0].x,0,PLATFORMS[0].z+3.6);this.group.add(entrance);
+  const entrance=new T.Group();entrance.name='Sky Trail entrance sign';entrance.position.set(PLATFORMS[0].x,0,PLATFORMS[0].z-3.6);entrance.rotation.y=Math.PI;this.group.add(entrance);
   const sign=new T.Mesh(new T.BoxGeometry(7,.9,.2),new T.MeshStandardMaterial({color:'#263d66',roughness:.65}));sign.position.set(0,4,0);entrance.add(sign);this.label(entrance,'НЕБЕСНАЯ ТРОПА',[0,4,.12],6.7,.65);
   for(const x of [-3,3]){const post=new T.Mesh(new T.CylinderGeometry(.07,.07,4,8),glowing[3]);post.position.set(x,2,0);entrance.add(post);}
  }
