@@ -23,7 +23,7 @@ import { LANDMARKS, POND_SCALE } from './landmark-sites';
 import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
 import {RainbowFountain} from './fountain';
-import {FOUNTAIN_SITE,inFountain} from './fountain-site';
+import {FOUNTAIN_SITE} from './fountain-site';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
@@ -54,6 +54,7 @@ import './style.css';
 import './touch-controls.css';
 import {TouchControls} from './touch-controls';
 import {touchMotion,wantsTouchControls} from './touch-input';
+import {createFullscreenControls} from './fullscreen';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
 import { createGamepadInput, stickSteering } from './gamepad';
 const gamepad = createGamepadInput();
@@ -61,8 +62,6 @@ const mobile=wantsTouchControls(navigator.maxTouchPoints,matchMedia('(pointer: c
 document.body.classList.toggle('touch-ui',mobile);
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
-const status = document.querySelector<HTMLSpanElement>('#status')!;
-const statusDot = document.querySelector<HTMLSpanElement>('#status-dot')!;
 const sizeValue = document.querySelector<HTMLElement>('#player-size')!;
 const fruitValue = document.querySelector<HTMLElement>('#player-fruits')!;
 const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
@@ -77,6 +76,7 @@ const settingsPanels=document.createElement('div');settingsPanels.id='settings-p
 const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
 if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
 if(mobile){
+ audioPanel.prepend(createFullscreenControls());
  const help=document.createElement('div');help.dataset.controls='touch';help.hidden=true;
  help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение; край — спринт</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыгнуть; повторные касания — полёт</span></li><li><b>✦</b><span>Атаковать</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
  controlsPanel.append(help);
@@ -415,12 +415,8 @@ const cameraTarget = new THREE.Vector3(0, .9, 0);
 
 let character: CharacterController | undefined;
 let npcs: KirbyNpc[] = [];
-const labels: Record<string, string> = { Idle: 'Отдыхаем', Run: 'Бежим', WalkBackward: 'Пятимся назад', Jump: 'Парим', Attack: 'Атака', Eat: 'Кушаем', RotateLeft: 'Поворот налево', RotateRight: 'Поворот направо' };
 
 async function loadCharacter() {
-  labels.Trampoline='Прыгаем с батута';
-  labels.Sleep='Спим в домике';
-  for(const emote of EMOTES)labels[emote.id]=emote.name;
   try {
     const [gltf,bugModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`)]);
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
@@ -431,8 +427,6 @@ async function loadCharacter() {
     document.querySelector('#selection-message')!.textContent = mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — атака · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
   } catch (error) {
     console.error(error);
-    status.textContent = 'Не удалось загрузить Кирби. Обновите страницу.';
-    statusDot.classList.add('error');
     document.querySelector('#selection-message')!.textContent = 'Не удалось загрузить персонажей. Обновите страницу.';
     startButton.textContent = 'Загрузка не удалась';
     throw error;
@@ -474,7 +468,6 @@ startButton.addEventListener('click', async () => {
   playing = true;startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
-  statusDot.classList.add('ready');
   document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
@@ -633,9 +626,6 @@ renderer.setAnimationLoop((time: number) => {
     const position = character.actor.position;
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
-    status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({FireflyRide:'Катаемся на светлячке',Swim:'Плывём в круге',Balloon:'Летим на воздушном шаре',Sitting:'Отдыхаем на лавочке',Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
-    if(character.starRemaining>0)status.textContent+=` · ★ ×2: ${Math.ceil(character.starRemaining)} с`;
-    if(character.swimming&&inFountain(character.actor.position.x,character.actor.position.z))status.textContent=character.savedSize>1?'Купаемся и уменьшаемся':'Купаемся в фонтане';
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if((!network||network.host) && !coaster.riding && greetingCooldown===0) {
@@ -798,7 +788,7 @@ async function interactOnline(){
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
  acquiring=true;const ok=await network.acquire(key);acquiring=false;
- if(!ok){status.textContent='Этот объект уже занят';return;}
+ if(!ok)return;
  if(!character||resourceKey(character)!==key){network.event({type:'release',key});return;}
  heldResource=key;resolveInteraction(character)?.run();
 }

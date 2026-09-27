@@ -1,0 +1,11 @@
+{
+  "name": "Кирби · Маленькое приключение",
+  "short_name": "Кирби",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#171e29",
+  "theme_color": "#171e29",
+  "icons": [{"src": "kirby-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

@@ -11,9 +11,10 @@ async function checkHud(page,mobile){
  if(mobile){
   assert(!await page.locator('#meadow-chat').isVisible());
   const fps=await page.locator('#fps-counter').boundingBox(),settings=await page.locator('#settings-toggle').boundingBox(),dial=await page.locator('#time-dial').boundingBox();
-  assert(fps.x+fps.width<=settings.x);assert(Math.abs(dial.x+dial.width/2-page.viewportSize().width/2)<1);
+  assert(fps.x+fps.width<=settings.x);assert(dial.x>settings.x+settings.width);assert(dial.x-settings.x-settings.width<16);
   assert(dial.y+dial.height<=stats.y||dial.x+dial.width<=stats.x);
  }
+ assert.equal(await page.locator('#status,.panel.status').count(),0);
 }
 try{
  const page=await browser.newPage({...devices[iphone?'iPhone 13':'Pixel 7'],viewport:{width:844,height:390}});
@@ -88,11 +89,33 @@ try{
  await checkHud(page,true);
  for(const selector of ['#touch-stick','#touch-interact','#navigation-hud','#time-dial']){const b=await page.locator(selector).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=569&&b.y+b.height<=321,`${selector}: ${JSON.stringify(b)}`);}
  await page.screenshot({path:process.env.TEMP+'/kirby-mobile-small-landscape.png'});
+ await page.setViewportSize({width:844,height:260});await page.waitForTimeout(300);await checkHud(page,true);
+ const hud=await page.locator('.right-hud').boundingBox(),route=await page.locator('.route-panel').boundingBox(),toggle=await page.locator('#tasks-toggle').boundingBox();
+ assert(route.y+route.height<=hud.y+hud.height);assert(toggle.y+toggle.height<=hud.y+hud.height);
  await page.locator('#tasks-toggle').tap();assert(await page.locator('#task-list').isVisible());
  assert((await page.locator('#task-list').boundingBox()).height>100);
+ await page.locator('#task-list li').last().scrollIntoViewIfNeeded();
+ assert(await page.evaluate(()=>{const list=document.querySelector('#task-list'),hud=document.querySelector('.right-hud');return list.scrollTop>0||hud.scrollTop>0;}));
+ assert(await page.evaluate(()=>Number(getComputedStyle(document.querySelector('.right-hud')).zIndex)>Number(getComputedStyle(document.querySelector('#touch-controls')).zIndex)));
+ await page.screenshot({path:process.env.TEMP+'/kirby-mobile-short-tasks.png'});
  await page.locator('#tasks-toggle').tap();
  await page.locator('#settings-toggle').tap();assert(await page.locator('[data-controls="touch"]').isVisible());assert(!await page.locator('[data-controls="keyboard"]').isVisible());
  assert(await page.locator('#meadow-chat').isVisible());await page.screenshot({path:process.env.TEMP+'/kirby-mobile-settings-chat.png'});
+ if(await page.locator('#fullscreen-toggle').isVisible()){
+  await page.locator('#fullscreen-toggle').tap();await page.waitForFunction(()=>document.fullscreenElement===document.documentElement);
+  assert.equal(await page.locator('#fullscreen-toggle').getAttribute('aria-pressed'),'true');
+  await page.locator('#fullscreen-toggle').tap();await page.waitForFunction(()=>!document.fullscreenElement);
+  assert.equal(await page.locator('#fullscreen-toggle').getAttribute('aria-pressed'),'false');
+  await page.evaluate(()=>{document.documentElement.requestFullscreen=async()=>{throw new Error('Denied by browser');};});
+  await page.locator('#fullscreen-toggle').tap();await page.waitForFunction(()=>document.querySelector('#fullscreen-hint').textContent.includes('не разрешил'));
+  assert(!await page.locator('#fullscreen-toggle').isDisabled());
+ }
+ await page.evaluate(async()=>{
+  Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true});
+  const {createFullscreenControls}=await import('/src/fullscreen.ts');
+  document.querySelector('.fullscreen-controls').replaceWith(createFullscreenControls());
+ });
+ assert(!await page.locator('#fullscreen-toggle').isVisible());assert((await page.locator('#fullscreen-hint').textContent()).includes('На экран Домой'));
  await page.locator('#settings-toggle').tap();assert(!await page.locator('#meadow-chat').isVisible());
  assert.deepEqual(errors,[]);console.log(JSON.stringify({engine:safari?'WebKit':'Chromium',profile:iphone?'iPhone':'Android',multiTouch:!safari,interaction:true,errors}));
  await page.close();
@@ -102,7 +125,7 @@ try{
   assert.equal(await desktop.locator('.touch-ui,#touch-controls').count(),0);
   assert.equal(await desktop.locator('#tasks-toggle').getAttribute('aria-expanded'),'true');
   await desktop.click('#new-game');await desktop.fill('#player-name-input','Компьютер');await desktop.click('#start-game');
-  await desktop.keyboard.down('KeyW');await desktop.waitForFunction(()=>document.querySelector('#status').textContent==='Бежим');await desktop.keyboard.up('KeyW');
+  await desktop.keyboard.down('KeyW');await desktop.waitForTimeout(300);await desktop.keyboard.up('KeyW');
   await checkHud(desktop,false);assert(await desktop.locator('#meadow-chat').isVisible());await desktop.screenshot({path:process.env.TEMP+'/kirby-desktop-hud.png'});
   await desktop.keyboard.press('Escape');assert(await desktop.locator('[data-controls="keyboard"]').isVisible());assert(!await desktop.locator('.touch-chat-buttons').isVisible());
   await desktop.screenshot({path:process.env.TEMP+'/kirby-mobile-desktop.png'});
