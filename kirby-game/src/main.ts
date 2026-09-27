@@ -2,7 +2,7 @@ import {NpcHearts} from './npc-hearts';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
-import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from './starfall';
+import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
 import {MeadowChat} from './chat';
 import {emoteMessage,type LogEntry} from './world-log';
@@ -458,7 +458,7 @@ startButton.addEventListener('click', async () => {
     remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
-    network.onDisconnect=reason=>{if(network?.room.festival&&Date.now()>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
     network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
@@ -469,16 +469,17 @@ startButton.addEventListener('click', async () => {
 
 const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
 function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+a.achievements.length*3+(id?network!.room.festival?.players[id]?.bonus??0:0);}
-function roundFinished(){return !!network?.room.festival&&Date.now()>=network.room.festival.endsAt;}
+function roundFinished(){return !!network?.room.festival&&network.serverNow>=network.room.festival.endsAt;}
 function festivalTick(){
  if(!character||!playing)return;
- const now=Date.now(),id=network?.id??'solo';
+ const now=network?.serverNow??Date.now(),id=network?.id??'solo';
+ network?.finishFestivalIfDue();
  if(!network&&!character.festival&&allTasks(character.achievements))character.festival=createStarfall(now,nameInput.value);
  const f=network?.room.festival??character.festival;if(!f)return;
  if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+character.achievements.size*3;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
  festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
- if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+CELEBRATE_MS+RESULTS_MS)leaveOnline.click();}
+ if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
 }
 const fpsCounter=new FpsCounter();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});

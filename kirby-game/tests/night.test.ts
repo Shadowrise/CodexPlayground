@@ -107,9 +107,10 @@ test('dismount anchors the bug locally and across stale snapshots and later ride
  const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),bug=world.bugs[0];
  world.update(.01,true,bug.home);c.actor.position.copy(bug.carrier.position).setY(0);assert(world.board(c));
  const stale=world.networkState();
- // An obstructed location moves Kirby to safe ground, but never moves his mount sideways.
+ // An attraction's broad tree-exclusion radius must not teleport the player back.
  c.actor.position.set(135,5,39);world.syncRider(.1);const landing=bug.carrier.position.clone().setY(0);world.disembark();
- assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());assert(bug.carrier.position.distanceTo(c.actor.position)>1);
+ assert.deepEqual(c.actor.position.toArray(),landing.toArray());assert(bug.carrier.position.distanceTo(c.actor.position)>1);assert(bug.carrier.position.distanceTo(c.actor.position)<3);
+ landing.copy(bug.carrier.position);
  world.networkApply(stale);world.update(.05,true,c.actor.position);assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());
  const row=world.networkState()[0];world.syncLandings({'0':row});world.networkApply(stale);world.update(.05,true,c.actor.position);assert.deepEqual(bug.carrier.position.toArray(),landing.toArray());
  const other=[...row];other[0]+=.5;other[3]-=.5;other[1]=other[4]=80;other[2]=other[6]=20;

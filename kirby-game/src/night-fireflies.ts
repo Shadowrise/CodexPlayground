@@ -112,13 +112,29 @@ export class NightFireflies {
   }
   disembark(){
     const c=this.rider,bug=this.mount;if(!c||!bug)return;
-    const landing=bug.carrier.position.clone();landing.y=0;
-    const position=c.actor.position.clone();position.y=0;
-    if(inWater(position.x,position.z)||!sceneryClearance(position.x,position.z,c.actor.scale.x))position.copy(this.safeGround);
+    const origin=bug.carrier.position.clone().setY(0);
+    const position=this.nearestGround(origin,c.actor.scale.x);
+    const beside=position.clone().add(new T.Vector3(Math.cos(c.yaw),0,-Math.sin(c.yaw)).multiplyScalar(c.actor.scale.x+.8));
+    const landing=this.nearestGround(beside,.65);
     c.actor.position.copy(position);c.actor.rotation.set(0,c.yaw,0);c.surfaceY=0;c.setActivity('Idle');
     bug.home.copy(landing);bug.phase=25-this.time;bug.carrier.position.copy(landing);bug.land=true;bug.firefly.setMode('Sit');
     const index=this.bugs.indexOf(bug);this.pendingLandings.set(index,this.networkState()[index]);
     this.rider=undefined;this.mount=undefined;this.moving=false;
+  }
+  private nearestGround(origin:T.Vector3,radius:number){
+    // Scenery clearance reserves entire attractions for tree placement; it is not
+    // a walking collision test and used to teleport riders away from open ground.
+    const valid=(p:T.Vector3)=>Math.max(Math.abs(p.x),Math.abs(p.z))<=255-radius&&!inWater(p.x,p.z);
+    if(valid(origin))return origin.clone();
+    // Search outward from the actual dismount point, never rewind along the flown path.
+    for(let distance=.5;distance<=80;distance+=.5){
+      const samples=Math.ceil(Math.PI*2*distance/.5);
+      for(let i=0;i<samples;i++){
+        const p=origin.clone().add(new T.Vector3(Math.cos(i/samples*Math.PI*2)*distance,0,Math.sin(i/samples*Math.PI*2)*distance));
+        if(valid(p))return p;
+      }
+    }
+    return origin.clone();
   }
   moveRider(dt:number,input:Input){
     const c=this.rider;if(!c)return;

@@ -228,6 +228,7 @@ export class Coaster {
     for(const mixer of this.passengerMixers)mixer.update(dt);
     this.rideMotion.speed=0;this.rideMotion.slope=0;this.rideMotion.inverted=false;this.rideMotion.turn=0;
     for(const cart of this.carts) {
+      if(cart!==this.ridden&&!this.networkBlocked.has(this.carts.indexOf(cart)))cart.group.scale.setScalar(1);
       // Network rounding and a resumed animation clock must never leave the curve domain.
       cart.distance=T.MathUtils.clamp(Number.isFinite(cart.distance)?cart.distance:0,0,this.length-.021);
       cart.speed=Math.max(0,Number.isFinite(cart.speed)?cart.speed:0);

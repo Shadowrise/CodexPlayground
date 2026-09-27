@@ -1,5 +1,6 @@
 import {Object3D} from 'three';
 import {NetworkSession} from '../src/network';
+import {createStarfall} from '../src/starfall';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
@@ -54,4 +55,30 @@ test('remote firefly follows interpolated rider and ignores conflicting world sn
  const snapshot=fireflies.networkState();snapshot[0][4]=100;fireflies.networkApply(snapshot);assert.equal(bug.carrier.position.x,5);
  actor.position.x=6;fireflies.syncRemoteRider(0,{actor} as any,state,.016);assert.equal(bug.carrier.position.x,6);
  assert(bug.firefly.object.scale.x>.65&&bug.firefly.object.scale.x<2);
+});
+
+test('released remote rides restore their normal size despite stale snapshots',()=>{
+ const coaster=new Coaster(),balloons=new Balloons(),carts=coaster.networkState(),rows=balloons.networkState();
+ carts[0][3]=4;rows[0][5]=4;rows[0][1]='exiting';
+ coaster.networkBlocked.add(0);balloons.networkBlocked.add(0);
+ coaster.networkApply(carts);balloons.networkApply(rows,[]);coaster.update(.01);balloons.update(.01);
+ assert.equal(coaster.networkState()[0][3],4);assert.equal(balloons.balloons[0].scale,4);
+ coaster.networkBlocked.clear();balloons.networkBlocked.clear();
+ for(let i=0;i<3;i++){
+  coaster.networkApply(carts);balloons.networkApply(rows,[]);coaster.update(.01);balloons.update(.01);
+  assert.equal(coaster.networkState()[0][3],1);assert.equal(balloons.balloons[0].group.scale.x,1);assert.equal(balloons.balloons[0].phase,'parked');
+ }
+});
+
+test('festival end sends one final frame using server time even when normal ticks stop',()=>{
+ const original=Date.now;let now=100000;Date.now=()=>now;
+ try{
+  const session=new NetworkSession(),festival=createStarfall(0,'Test'),messages:any[]=[];
+  session.room={id:'test',host:'other',epoch:0,fruits:[],starAt:0,mill:false,locks:{},festival};
+  (session as any).clockOffset=festival.endsAt-now-1;
+  (session as any).socket={readyState:1,send:(s:string)=>messages.push(JSON.parse(s))};
+  session.finishFestivalIfDue();assert.equal(messages.length,0);
+  now++;for(let i=0;i<100;i++)session.finishFestivalIfDue();
+  assert.equal(messages.length,1);assert.equal(messages[0].type,'frame');
+ }finally{Date.now=original;}
 });

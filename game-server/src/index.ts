@@ -1,5 +1,5 @@
 import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-landing';
-import {allTasks,createStarfall,collectStar,finishStarfall,CELEBRATE_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
+import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from '../../kirby-game/src/starfall';
 import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
@@ -40,7 +40,8 @@ export class GameRoom extends DurableObject<Env>{
   if(typeof message!=='string'||message.length>22000){socket.close(1009,'Message too large');return;}
   let m:any;try{m=JSON.parse(message);}catch{socket.close(1008,'Invalid JSON');return;}
   const a=socket.deserializeAttachment() as Attachment,r=this.room;if(!r||m?.type!=='frame')return;
-  const now=Date.now();this.finishFestival(now);if(r.festival?.results)return;
+  const now=Date.now(),alreadyFinished=!!r.festival?.results;this.finishFestival(now);
+  if(r.festival?.results){if(alreadyFinished)this.send(socket,{type:'room',room:r});return;}
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.fruits=r.fruits.filter(owner=>owner===a.id).length;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
@@ -93,10 +94,10 @@ export class GameRoom extends DurableObject<Env>{
  async webSocketError(socket:WebSocket){await this.remove(socket);}
  async alarm(){
   this.finishFestival();
-  if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+CELEBRATE_MS+RESULTS_MS){
+  if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+RESULTS_MS){
    for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;a.left=true;s.serializeAttachment(a);s.close(1000,'Festival finished');}this.room=undefined;await this.ctx.storage.deleteAll();await this.ctx.storage.deleteAlarm();return;
   }
-for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s);}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+CELEBRATE_MS+RESULTS_MS):Infinity));}
+for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s);}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity));}
 }
 export default {async fetch(request,env):Promise<Response>{
  const path=new URL(request.url).pathname,headers={'Access-Control-Allow-Origin':'*','Cache-Control':'no-store'};

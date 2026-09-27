@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
 import {SCORE_ACTIONS} from '../src/score';
-import {CELEBRATE_MS,RESULTS_MS} from '../src/starfall';
+import {RESULTS_MS} from '../src/starfall';
 test('room starts once, survives host departure, freezes rewards and expires with players connected',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8')).replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,...args:any[]){} }').replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2');
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -20,8 +20,8 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);
  now=f.startsAt+3000;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:0},{type:'festival-star',index:0}]}));assert.equal(f.players.b.bonus,1);
  await room.webSocketClose(a);assert.equal(room.room.host,'b');assert.equal(room.room.festival.startsAt,f.startsAt);
- now=f.endsAt;await room.alarm();assert(f.results);const results=JSON.stringify(f.results);
+ now=f.endsAt;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[]}));assert(f.results);assert(b.messages.some(m=>m.type==='room'&&m.room.festival?.results));const results=JSON.stringify(f.results);
  room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:3}]}));assert.equal(JSON.stringify(f.results),results);
- now=f.endsAt+CELEBRATE_MS+RESULTS_MS;await room.alarm();assert.equal(b.readyState,3);assert.equal(room.room,undefined);assert(cleared);assert.equal(alarm,0);
+ now=f.endsAt+RESULTS_MS;await room.alarm();assert.equal(b.readyState,3);assert.equal(room.room,undefined);assert(cleared);assert.equal(alarm,0);
  }finally{Date.now=original;(globalThis as any).WebSocketRequestResponsePair=saved;}
 });

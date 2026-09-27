@@ -58,7 +58,7 @@ export class StarfallView {
    const t=(now-s.endsAt)/1000;this.finale.scale.setScalar(Math.min(1,t*1.5)*Math.min(1,(CELEBRATE_MS/1000-t)*.8));
    for(const o of this.finale.children)if(o.userData.spark!==undefined){const i=o.userData.spark,a=i*2.399,r=3+(t+i*.09)%3;o.position.set(Math.cos(a)*r,Math.sin(a)*r,0);}
   }
-  if(online&&phase==='done'&&s.results){
+  if(online&&now>=s.endsAt&&s.results){
    if(this.resultKey!==String(s.startsAt)){this.resultKey=String(s.startsAt);this.results.replaceChildren();const title=document.createElement('h2');title.textContent='★ Праздник завершён!';this.results.append(title);
     const humans=s.results.filter(r=>r.id!=='npc');
     const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0],best=Math.max(...humans.map(r=>r.bonus));
@@ -87,7 +87,8 @@ export class StarfallView {
     this.results.append(list);
     const countdown=document.createElement('small');countdown.id='starfall-exit-time';this.results.append(countdown);const button=document.createElement('button');button.textContent='В главное меню';this.results.append(button);this.results.showModal();button.focus();
    }
-   this.results.querySelector('small')!.textContent=`Возвращение в меню через ${Math.max(0,Math.ceil((s.endsAt+CELEBRATE_MS+RESULTS_MS-now)/1000))} с`;
+   this.hud.hidden=true;
+   this.results.querySelector('small')!.textContent=`Возвращение в меню через ${Math.max(0,Math.ceil((s.endsAt+RESULTS_MS-now)/1000))} с`;
   }
  }
 }

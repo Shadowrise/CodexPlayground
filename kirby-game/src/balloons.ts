@@ -123,6 +123,14 @@ export class Balloons {
   update(dt:number,npcs:readonly KirbyNpc[]=[],player?:CharacterController){
     this.clock+=dt;this.npcAfter-=dt;
     for(const [index,b] of this.balloons.entries()){
+      // A departed remote passenger can leave an enlarged or exiting snapshot behind.
+      if(!b.passenger&&!this.networkBlocked.has(index)){
+        if(b.phase!=='parked'){
+          b.station=[0,1,2].sort((a,c)=>this.dock(a,index).distanceToSquared(b.group.position)-this.dock(c,index).distanceToSquared(b.group.position))[0];
+          b.destination=b.station;b.phase='parked';b.time=0;
+        }
+        b.scale=1;b.group.scale.setScalar(1);
+      }
       b.time+=dt;
       if(b.phase==='parked'){
         b.group.position.copy(this.dock(b.station,index));b.group.rotation.set(0,0,Math.sin(this.clock*.6+index)*.006);

@@ -14,6 +14,14 @@ export class NetworkSession{
  onHit?:(actor:ActorState)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
+ private requestedFestivalEnd?:number;
+ finishFestivalIfDue(){
+  const f=this.room?.festival;
+  if(!f||f.results||this.serverNow<f.endsAt||this.requestedFestivalEnd===f.endsAt||this.socket?.readyState!==WebSocket.OPEN)return;
+  // One final frame wakes the room even after movement/world updates have stopped.
+  this.socket.send(JSON.stringify({type:'frame',events:this.events.splice(0,16)}));
+  this.requestedFestivalEnd=f.endsAt;
+ }
  get host(){return this.room?.host===this.id;}
  async connect(base:string,variant=0){return new Promise<void>((resolve,reject)=>{
   const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);url.searchParams.set('variant',String(variant));
