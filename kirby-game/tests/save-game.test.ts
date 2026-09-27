@@ -20,6 +20,7 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  npcs[3].actor.position.set(-15,0,90);npcs[3].grow();
  world.restore(world.fruits.map((_,i)=>i<3),1);
  const save=parseSave(JSON.stringify(captureGame(player,variant,npcs,world)));
+ const lakeSave=parseSave(JSON.stringify({...save,player:{...save.player,achievements:['swim','bench']}}));assert.deepEqual(lakeSave.player.achievements,['swim','bench']);
  const restored=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const friends=createNpcs(model.scene,model.animations,variant),fruits=new FruitWorld();
  restoreGame(save,restored,friends,fruits);

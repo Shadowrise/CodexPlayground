@@ -5,7 +5,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {Vector3} from 'three';
 import {CharacterController} from '../src/controller';
 import {RainbowFountain} from '../src/fountain';
-import {FOUNTAIN_SITE} from '../src/fountain-site';
+import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y} from '../src/fountain-site';
 import {Ponds} from '../src/ponds';
 import {scoreOf,validAchievements} from '../src/score';
 import {sortedTasks} from '../src/tasks';
@@ -15,6 +15,17 @@ import {createForest} from '../src/forest';
 import {inWater} from '../src/pond-layout';
 
 async function player(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');return new CharacterController(gltf.scene,gltf.animations);}
+test('fountain ring floats at the waterline for different sizes and disappears on exit or flight',async()=>{
+ const c=await player(),ponds=new Ponds();
+ for(const size of [1,2,4]){
+  c.actor.scale.setScalar(size);c.actor.position.set(FOUNTAIN_SITE.x+6,0,FOUNTAIN_SITE.z);ponds.apply(c,c.actor.position.clone());
+  const ring=c.actor.getObjectByName('Rainbow swim ring')!;assert(ring.visible);assert(c.swimming);
+  c.actor.updateMatrixWorld(true);assert(Math.abs(ring.getWorldPosition(new Vector3()).y-FOUNTAIN_WATER_Y)<.05);
+  c.update(.02,{forward:false,left:false,right:false});assert.equal(actorState(c,'Кирби',0).state,'Swim');
+ }
+ c.update(.02,{forward:false,left:false,right:false,jump:true});ponds.apply(c,c.actor.position.clone());assert(!c.actor.getObjectByName('Rainbow swim ring')!.visible);
+ c.flight.reset();c.actor.position.set(FOUNTAIN_SITE.x+12,0,FOUNTAIN_SITE.z);ponds.apply(c,c.actor.position.clone());assert(!c.swimming);assert(!c.actor.getObjectByName('Rainbow swim ring')!.visible);
+});
 test('bathing shrinks gradually, preserves fruit points, awards once and stops on exit',async()=>{
  const c=await player(),f=new RainbowFountain(),ponds=new Ponds();c.actor.scale.setScalar(2);c.fruitsEaten=10;c.actor.position.set(FOUNTAIN_SITE.x+6,0,FOUNTAIN_SITE.z);
  const step=(dt:number)=>{ponds.apply(c,c.actor.position.clone());f.bathe(dt,c);};

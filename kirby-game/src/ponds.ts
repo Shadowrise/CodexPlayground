@@ -1,7 +1,6 @@
 import { depotFloorHeight } from './depot-floor';
-import {FOUNTAIN_SITE,fountainDistance,inFountain} from './fountain-site';
+import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,fountainDistance,inFountain} from './fountain-site';
 import { POND_SCALE } from './landmark-sites';
-import { awardFirst } from './score';
 import * as T from 'three';
 import { WATER_Y, deckHeight, inWater, waterShapes, WATER_REGIONS, BRIDGES } from './pond-layout';
 import type { CharacterController } from './controller';
@@ -81,14 +80,13 @@ export class Ponds {
    }
   }
   if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z);}
-  if(fountainDistance(p.x,p.z)<11.8){height=.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
+  if(fountainDistance(p.x,p.z)<11.8){height=fountain?FOUNTAIN_WATER_Y-.63*size+.045*Math.sin(this.time*2.6):.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
   this.onBridge=bridge;
   c.swimming=wet&&!c.flight.active;
-  if(c.swimming&&!fountain)awardFirst(c,'swim');
   // Preserve flight height relative to the support surface.
   if(c.flight.active)p.y+=height-this.base;else p.y=height;
   c.surfaceY=height;this.base=height;
-  this.ring.visible=c.swimming&&!fountain;
+  this.ring.visible=c.swimming;
   if(c.swimming){this.ring.rotation.set(.035*Math.sin(this.time*2),0,.035*Math.cos(this.time*2.4));}
  }
 }

@@ -2,7 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import type {CharacterController} from './controller';
 import {awardFirst} from './score';
-import {FOUNTAIN_SITE,inFountain} from './fountain-site';
+import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,inFountain} from './fountain-site';
 
 const COLORS=['#ef557e','#f6a044','#f5d75b','#62be91','#54bbd9','#627ed3','#a375d0'];
 /** Batched enamel/stone ornament, animated water and instanced droplets; no extra lights. */
@@ -77,7 +77,7 @@ export class RainbowFountain {
     vec3 c=mix(vec3(.07,.42,.49),vec3(.38,.79,.84),.5+.18*wave)+glint*.24;
     gl_FragColor=vec4(c*brightness,.76);
    }`});
-  const surface=new T.Mesh(new T.CircleGeometry(9.4,96),this.water);surface.rotation.x=-Math.PI/2;surface.position.y=.27;this.group.add(surface);
+  const surface=new T.Mesh(new T.CircleGeometry(9.4,96),this.water);surface.rotation.x=-Math.PI/2;surface.position.y=FOUNTAIN_WATER_Y;this.group.add(surface);
   for(const [r,y] of [[2.45,1.28],[1.75,3.58],[1.02,5.73]]){const pool=new T.Mesh(new T.CircleGeometry(r,48),this.water);pool.rotation.x=-Math.PI/2;pool.position.y=y;this.group.add(pool);}
   const flow=new T.MeshStandardMaterial({color:'#8ed9e7',transparent:true,opacity:.56,roughness:.21,metalness:.12,depthWrite:false});
   const streams:T.BufferGeometry[]=[];

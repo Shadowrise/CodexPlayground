@@ -29,7 +29,7 @@ export class RemotePlayers{
  update(actors:Map<string,ActorState>,dt:number,snapshots?:Map<string,PlayerSnapshots>){
   const now=performance.now();
   for(const [id,c] of this.players)if(!actors.has(id)){this.scene.remove(c.actor);c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});this.players.delete(id);this.renderedStates.delete(id);}
-  for(const [id,latest] of actors){const a=snapshots?.get(id)?.sample(now)??latest;this.renderedStates.set(id,a);let c=this.players.get(id);const fresh=!c;if(!c){c=new CharacterController(cloneVariant(this.model.scene,KIRBY_VARIANTS[a.variant],false),this.model.animations);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;ring.position.y=.55;c.actor.add(ring);
+  for(const [id,latest] of actors){const a=snapshots?.get(id)?.sample(now)??latest;this.renderedStates.set(id,a);let c=this.players.get(id);const fresh=!c;if(!c){c=new CharacterController(cloneVariant(this.model.scene,KIRBY_VARIANTS[a.variant],false),this.model.animations);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 
   }applyActor(c,a,dt,!!snapshots||fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}
  }

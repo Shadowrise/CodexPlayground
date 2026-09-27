@@ -15,3 +15,8 @@ test('places use individual scores and tie fairly, never compare to aggregate NP
 test('saved achievements reject duplicates and unknown action identifiers',()=>{
  assert(validAchievements(['bench','star']));assert(!validAchievements(['bench','bench']));assert(!validAchievements(['fake']));assert(!validAchievements(null));
 });
+test('retired lake achievement remains compatible with older saves and players',()=>{
+ assert(validAchievements(['swim','fountain']));assert(!validAchievements(['swim','swim']));
+ const player=actor();player.achievements.add('swim');assert.equal(scoreOf(player),3);
+ assert(!SCORE_ACTIONS.some(id=>String(id)==='swim'));
+});

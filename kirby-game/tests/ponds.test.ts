@@ -44,13 +44,13 @@ test('terrain leaves real holes over lakes and streams, with water below the ban
  assert(WATER_Y<-.2);assert(!inPond(20,0));
 });
 
-test('any lake completes the swimming task and other lakes do not award it again',async()=>{
+test('lakes remain swimmable without awarding a retired task',async()=>{
  const c=await player(),ponds=new Ponds();
  for(const site of PONDS){
   c.achievements.clear();c.actor.position.set(site.x,0,site.z);ponds.apply(c,c.actor.position.clone());
-  assert(c.swimming);assert.deepEqual([...c.achievements],['swim']);
+  assert(c.swimming);assert.deepEqual([...c.achievements],[]);
  }
- for(const site of PONDS){c.actor.position.set(site.x,0,site.z);ponds.apply(c,c.actor.position.clone());assert.equal(c.achievements.size,1);}
+ for(const site of PONDS){c.actor.position.set(site.x,0,site.z);ponds.apply(c,c.actor.position.clone());assert.equal(c.achievements.size,0);}
 });
 
 test('expanded shores support swimming outside the previous lake boundary',async()=>{
