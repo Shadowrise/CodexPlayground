@@ -1,4 +1,5 @@
 import type {StarfallState} from './starfall';
+import type {Prank} from './pranks';
 import type {LogEntry} from './world-log';
 import {validAchievements} from './score';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
@@ -7,7 +8,7 @@ export const BUILD='meadow-network-4';
 export type ActorState={p:number[];q:number[];s:number;state:string;pose:number[][];fruits:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][]};
 export type Event={type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'fruit';index:number;npc?:number}|{type:'mill'}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
-export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState};
+export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
 export type Welcome={type:'welcome';serverNow?:number;protocolVersion:number;playerId:string;resume?:ActorState;room:RoomState;players:{id:string;actor?:ActorState}[]};
 export type ServerMessage=Welcome|{type:'emote';emote:string;id:string}|{type:'log';entry:LogEntry}|{type:'presence';count:number}|{type:'frame';id:string;actor?:ActorState;world?:WorldState}|{type:'room';room:RoomState}|{type:'left';id:string}|{type:'hit';id:string;actor:ActorState}|{type:'lock';key:string;ok:boolean}|{type:'star'}|{type:'error';message:string};
 export function validResourceKey(key:unknown):key is string {if(typeof key!=='string')return false;const match=/^(cart|balloon|bug|bench|home|tree|trampoline):(\d{1,2})$/.exec(key);return !!match&&Number(match[2])<({cart:12,balloon:3,bug:40,bench:32,home:1,tree:1,trampoline:1} as Record<string,number>)[match[1]];}

@@ -41,6 +41,11 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  if(path==='/admin/api/online'&&request.method==='GET'){
   try{return json(await env.ROOMS.getByName('main').adminOnline());}catch{return json({error:'Не удалось загрузить комнату'},503);}
  }
+ if(path==='/admin/api/online/prank'&&request.method==='POST'){
+  let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
+  if(!data||typeof data.roomId!=='string'||data.roomId.length>80||typeof data.playerId!=='string'||data.playerId.length>80)return json({error:'Некорректный идентификатор'},400);
+  try{const result=await env.ROOMS.getByName('main').adminPrank(data.roomId,data.playerId,data.kind);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось отправить розыгрыш'},503);}
+ }
  if(['/admin/api/online/recreate','/admin/api/online/disconnect','/admin/api/online/starfall','/admin/api/online/finish'].includes(path)&&request.method==='POST'){
   let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
   if(!data||typeof data.roomId!=='string'||!data.roomId||data.roomId.length>80||path.endsWith('/disconnect')&&(typeof data.playerId!=='string'||!data.playerId||data.playerId.length>80))return json({error:'Некорректный идентификатор'},400);

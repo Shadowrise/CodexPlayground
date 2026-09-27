@@ -2,6 +2,7 @@ import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-
 import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-name';
 import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/history-types';
 import {SCORE_ACTIONS} from '../../kirby-game/src/score';
+import {isPrankKind,makePrank,PRANKS} from '../../kirby-game/src/pranks';
 import {historyRoutes} from './admin';
 import {initHistory,writeVisits,historyPage,type Visit,type HistoryFilter} from './history-store';
 import {allTasks,createStarfall,collectStar,finishStarfall,COLLECT_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
@@ -24,6 +25,16 @@ export class GameRoom extends DurableObject<Env>{
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};}
+ adminPrank(roomId:string,playerId:string,kind:unknown){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room,now=Date.now();if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  if(!isPrankKind(kind))return {ok:false,error:'Неизвестный розыгрыш.'};
+  if(r.festival?.results)return {ok:false,error:'Игра уже завершена.'};
+  const socket=this.players().find(s=>(s.deserializeAttachment() as Attachment).id===playerId),a=socket?.deserializeAttachment() as Attachment|undefined;
+  if(!a?.actor)return {ok:false,error:'Игрок отключился или ещё загружается.'};
+  r.pranks=(r.pranks??[]).filter(p=>p.endsAt>now&&this.players().some(s=>(s.deserializeAttachment() as Attachment).id===p.playerId));
+  if(r.pranks.some(p=>p.playerId===playerId))return {ok:false,error:'У этого игрока ещё идёт розыгрыш. Подожди немного.'};
+  r.pranks.push(makePrank(playerId,kind,now,a.actor.p,a.actor.s));this.log(a,PRANKS[kind].text);this.changed();return {ok:true};
+ });}
  adminOnline(){return this.ctx.blockConcurrencyWhile(async()=>{
   const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
   return {room:room?{id:room.id,createdAt:room.epoch,festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null};})};

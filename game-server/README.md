@@ -122,6 +122,12 @@ the same signed session and same-origin POST checks as history/login:
   starfall, using the same scoring and timing as completion of all tasks.
 - `POST /admin/api/online/finish` with `{roomId}` — immediately shows the final
   standings, retaining earned star points. Results expire after two minutes.
+- `POST /admin/api/online/prank` with `{roomId, playerId, kind}` — sends a cosmetic
+  Veterok surprise: `hiccup` (12 seconds), `rainbow` (20 seconds), or `gift`
+  (12 seconds). One active prank per player; unavailable after the finale.
+  Events carry server timestamps and are included in room snapshots, so late
+  joiners see the same timeline. Rendering and nearby sounds run locally with
+  no new periodic requests. Movement, achievements, sizes and scores are unchanged.
 
 Stale room/player actions return 409. Destructive controls ask for confirmation.
 `/admin/favicon.svg` provides a Kirby-with-shield icon for admin browser tabs.

@@ -122,6 +122,21 @@ export class SoundEffects {
     source.connect(gain);gain.connect(this.master!);this.active.add(source);
     source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
+  playPrank(kind:import('./prank-effects').PrankSound,volume:number){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
+    const key='prank-'+kind;
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=kind==='quack'?.65:kind==='unbox'?.75:kind==='hiccup'?.26:.12,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);let phase=0;
+      for(let i=0;i<data.length;i++){
+        const t=i/rate,u=t/duration,env=Math.min(1,t/.018)*Math.pow(Math.sin(Math.PI*u),1.7);
+        const hz=kind==='hiccup'?480-210*u+150*Math.sin(u*Math.PI):kind==='quack'?260-85*u+25*Math.sin(t*48):kind==='unbox'?[523.25,659.25,783.99,1046.5][Math.min(3,Math.floor(u*4))]:850-350*u;
+        phase+=2*Math.PI*hz/rate;
+        const voice=kind==='quack'?(Math.sin(phase)+.5*Math.sin(phase*3)+.26*Math.sin(phase*5))*(.65+.35*Math.sin(t*38)):Math.sin(phase)+.18*Math.sin(phase*2);
+        data[i]=voice*env*.23;
+      }this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=Math.min(1,volume);source.connect(gain);gain.connect(this.master!);this.active.add(source);source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
   playTaskComplete(count=1){
     const ctx=this.context;
     if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;

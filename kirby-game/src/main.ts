@@ -1,4 +1,5 @@
 import {NpcHearts} from './npc-hearts';
+import {PrankEffects} from './prank-effects';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
@@ -207,6 +208,7 @@ async function refreshVariantAvailability(){
 }
 setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
 const scene = new THREE.Scene();
+const prankEffects=new PrankEffects((kind,gain)=>sounds.playPrank(kind,gain));scene.add(prankEffects.group);
 const interactionOutline=new InteractionOutline();scene.add(interactionOutline.group);
 scene.background = new THREE.Color('#b3d9ef');
 scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
@@ -525,6 +527,7 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
   if(confirm && element instanceof HTMLButtonElement)element.click();
 }
 renderer.setAnimationLoop((time: number) => {
+  prankEffects.beginFrame();
   const dt = Math.max(0,Math.min((time - previousTime) / 1000, .05));
   previousTime = time;
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
@@ -703,6 +706,7 @@ renderer.setAnimationLoop((time: number) => {
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
   if(character)updateVisibility(character.actor,camera.position,true,true);
+  prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
   renderer.render(scene, camera);
 });
 window.addEventListener('resize', () => {

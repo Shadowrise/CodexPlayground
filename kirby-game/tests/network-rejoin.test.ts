@@ -78,10 +78,20 @@ test('room restores disconnected players by name, rejects online duplicates, and
   const nextPlayer=await join('Кирби Друг',0);assert.equal(nextPlayer.messages[0].room.id,reset.roomId);assert(!nextPlayer.messages[0].resume);assert.equal(storage.size,0);
   // The admin uses the normal starfall, including immediate results and their deadline.
   send(nextPlayer,{...actor,achievements:['bench'],fruits:0});
+  assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'hiccup')).ok,true);
+  const prank=room.room.pranks[0];assert.equal(prank.kind,'hiccup');assert.equal(nextPlayer.data.actor.fruits,0);
+  assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'gift')).ok,false,'do not pile multiple surprises on one player');
+  assert.equal((await room.adminPrank('stale',nextPlayer.data.id,'rainbow')).ok,false);
+  assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'constructor')).ok,false);
+  room=new GameRoom(ctx,{});assert.equal(room.room.pranks[0].id,prank.id,'effects survive host hibernation');
+  const spectator=await join('Зритель',3);assert.equal(spectator.messages[0].room.pranks[0].id,prank.id,'late joiners see the same effect timeline');await room.webSocketClose(spectator);
+  now=prank.endsAt+1;assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'rainbow')).ok,true);assert.equal(room.room.pranks.length,1);
+  now=room.room.pranks[0].endsAt+1;assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'gift')).ok,true);
   assert.equal((await room.adminFestival(reset.roomId,false)).ok,true);assert(validStarfall(room.room.festival));
   assert.equal((await room.adminFestival(reset.roomId,false)).ok,false);
   assert.equal((await room.adminFestival(reset.roomId,true)).ok,true);assert(validStarfall(room.room.festival));
   assert.equal(room.room.festival.results[0].points,3);assert.equal(room.room.festival.endsAt,now);
+  assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'gift')).ok,false,'no pranks on the results screen');
   assert(nextPlayer.messages.some(m=>m.type==='room'&&m.room.festival?.results));assert.equal((await room.adminFestival(reset.roomId,true)).ok,false);
   now+=RESULTS_MS;await room.alarm();assert.equal((await room.adminOnline()).room,null);
   const immediate=await join('Без ивента',2),immediateId=room.room.id;
