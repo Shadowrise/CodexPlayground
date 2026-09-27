@@ -44,6 +44,11 @@ export class CharacterController {
   private flightBoost = 1;
   private growth?: { from: number; to: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
+  shrink(amount:number){
+    if(amount<=0)return;
+    this.actor.scale.setScalar(Math.max(1,this.actor.scale.x-amount));
+    if(this.growth){this.growth.from=Math.max(1,this.growth.from-amount);this.growth.to=Math.max(1,this.growth.to-amount);}
+  }
   grow() {
     this.growth = { from: this.actor.scale.x, to: (this.growth?.to ?? this.actor.scale.x) + .1, elapsed: 0 };
     this.fruitsEaten++;

@@ -1,4 +1,5 @@
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
+import {FOUNTAIN_SITE} from './fountain-site';
 import { spatialInstances } from './spatial-instances';
 import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
@@ -7,12 +8,18 @@ import { HOME_SITE } from './home-site';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
-import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline } from './pond-layout';
+import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, inWater } from './pond-layout';
+export function rockHasGround(x:number,z:number,radius:number){
+  if(inWater(x,z))return false;
+  for(let i=0;i<16;i++){const a=i/16*Math.PI*2;if(inWater(x+Math.cos(a)*radius,z+Math.sin(a)*radius))return false;}
+  return true;
+}
 export function sceneryClearance(x:number,z:number,padding=0) {
+  if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<=FOUNTAIN_SITE.radius+padding)return false;
   return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
-  for(const p of [SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
+  for(const p of [FOUNTAIN_SITE,SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }
@@ -31,6 +38,11 @@ export function createLandmarks() {
     const m=new T.Mesh(geo[k],materials.get(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.rotation.set(rx,ry,rz);g.add(m);return m;
   }
   const rock=(g:T.Group,x:number,z:number,s=1)=>{
+    // Use the final union of lakes and rivers, including confluences and widened banks.
+    // Skip the entire stone (moss and markings too), so no fragments remain afloat.
+    g.updateWorldMatrix(true,false);
+    const center=g.localToWorld(new T.Vector3(x,0,z)),scale=g.getWorldScale(new T.Vector3());
+    if(!rockHasGround(center.x,center.z,1.3*s*Math.max(scale.x,scale.z)))return;
     put(g,'rock','#838779',x,.6*s,z,1.2*s,.85*s,s,0,x, .14);
     put(g,'rock','#526846',x-.15*s,1.19*s,z,.8*s,.17*s,.65*s);
     put(g,'box','#585f53',x,.93*s,z+.79*s,.045*s,.42*s,.04*s,0,.3,.45);

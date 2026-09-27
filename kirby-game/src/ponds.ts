@@ -1,4 +1,5 @@
 import { depotFloorHeight } from './depot-floor';
+import {FOUNTAIN_SITE,fountainDistance,inFountain} from './fountain-site';
 import { POND_SCALE } from './landmark-sites';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -59,6 +60,11 @@ export class Ponds {
   if(!this.ring){this.ring=makeSwimRing();c.actor.add(this.ring);}
   if(!enabled){this.ring.visible=false;c.swimming=false;c.surfaceY=0;this.base=0;this.onBridge=false;return;}
   const p=c.actor.position,size=c.actor.scale.x;
+  const fountain=inFountain(p.x,p.z);
+  if(fountain&&!c.flight.active){
+    const dx=p.x-FOUNTAIN_SITE.x,dz=p.z-FOUNTAIN_SITE.z,d=Math.hypot(dx,dz),r=2.9+Math.min(size*.5,2);
+    if(d<r){p.x=FOUNTAIN_SITE.x+(d>.001?dx/d:1)*r;p.z=FOUNTAIN_SITE.z+(d>.001?dz/d:0)*r;}
+  }
   const site=BRIDGES.find(s=>Math.hypot(p.x-s.x,p.z-s.z)<8.7);
   let height=0,wet=false,bridge=false;
   if(site){
@@ -75,13 +81,14 @@ export class Ponds {
    }
   }
   if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z);}
+  if(fountainDistance(p.x,p.z)<11.8){height=.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
   this.onBridge=bridge;
   c.swimming=wet&&!c.flight.active;
-  if(c.swimming)awardFirst(c,'swim');
+  if(c.swimming&&!fountain)awardFirst(c,'swim');
   // Preserve flight height relative to the support surface.
   if(c.flight.active)p.y+=height-this.base;else p.y=height;
   c.surfaceY=height;this.base=height;
-  this.ring.visible=c.swimming;
+  this.ring.visible=c.swimming&&!fountain;
   if(c.swimming){this.ring.rotation.set(.035*Math.sin(this.time*2),0,.035*Math.cos(this.time*2.4));}
  }
 }

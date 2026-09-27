@@ -22,6 +22,8 @@ import { Wayfinder, type Destination } from './navigation';
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
+import {RainbowFountain} from './fountain';
+import {FOUNTAIN_SITE,inFountain} from './fountain-site';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CSM } from 'three/addons/csm/CSM.js';
@@ -242,6 +244,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 addEnvironment(scene);
 const ponds=new Ponds();scene.add(ponds.group);
+const fountain=new RainbowFountain();scene.add(fountain.group);
 const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
@@ -257,6 +260,7 @@ const navigationHud=document.createElement('div');navigationHud.id='navigation-h
 const routePanel=document.createElement('div');routePanel.className='panel route-panel';
 const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint,routePanel);
 const destinations:Destination[]=[
+ {id:'fountain',name:'Радужный фонтан',x:FOUNTAIN_SITE.x,z:FOUNTAIN_SITE.z+8},
  {id:'sky-trail',name:'Небесная тропа',x:skyTrail.entry.x,z:skyTrail.entry.z,radius:4},
  {id:'home',name:'Домик Кирби',x:home.entrance.x,z:home.entrance.z},
  {id:'treehouse',name:'Домик на дереве и качели',x:TREEHOUSE_SITE.x-4,z:TREEHOUSE_SITE.z+11,radius:3},
@@ -582,6 +586,7 @@ renderer.setAnimationLoop((time: number) => {
     const onSkyTrail=skyTrail.handles(character)&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive;
     const skySurface=character.surfaceY;
     ponds.apply(character,new THREE.Vector3(previousX,0,previousZ),!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
+    fountain.bathe(dt,character);
     if(onSkyTrail)character.surfaceY=skySurface;
     if(onSkyTrail&&!skyWasActive&&!skyTrail.active)skyTrail.apply(character,previousPosition,dt);
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
@@ -606,6 +611,7 @@ renderer.setAnimationLoop((time: number) => {
     cameraTarget.lerp(new THREE.Vector3(position.x, position.y + .9 * viewScale, position.z), 1 - Math.exp(-8 * dt));
     status.textContent = character.state === 'Run' && (held('ShiftLeft') || held('ShiftRight')) ? 'Спринт' : ({FireflyRide:'Катаемся на светлячке',Swim:'Плывём в круге',Balloon:'Летим на воздушном шаре',Sitting:'Отдыхаем на лавочке',Climb:'Лезем в домик',Lookout:'На обзорной площадке',LeafDive:'Прыгаем в листья',Swing:'Качаемся'} as Record<string,string>)[character.state] || labels[character.state] || character.state;
     if(character.starRemaining>0)status.textContent+=` · ★ ×2: ${Math.ceil(character.starRemaining)} с`;
+    if(character.swimming&&inFountain(character.actor.position.x,character.actor.position.z))status.textContent=character.savedSize>1?'Купаемся и уменьшаемся':'Купаемся в фонтане';
     const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if((!network||network.host) && !coaster.riding && greetingCooldown===0) {
@@ -666,6 +672,7 @@ renderer.setAnimationLoop((time: number) => {
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   ponds.update(dt);
+  fountain.update(dt,lightTime.day);
   watermill.update(dt);
   updateNetwork(dt);
   npcHearts.update(npcs,dt,camera,playing);
