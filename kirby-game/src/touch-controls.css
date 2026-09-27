@@ -65,7 +65,7 @@
 .touch-ui #character-select{padding:max(12px,env(safe-area-inset-top)) var(--touch-right) var(--touch-bottom) var(--touch-left);place-items:start center;}
 .touch-ui:has(#touch-emote-menu:not([hidden])) :is(#touch-controls,#touch-interaction){visibility:hidden;}
 .touch-ui #touch-jump::after,.touch-ui #touch-attack::after{display:block;font-size:10px;line-height:1.1;}
-.touch-ui #touch-jump::after{content:'Полёт';}.touch-ui #touch-attack::after{content:'Атака';}
+.touch-ui #touch-jump::after{content:'Полёт';}.touch-ui #touch-attack::after{content:'Толчок';}
 .touch-ui #starfall-hud{top:auto;bottom:calc(var(--touch-bottom) + 160px);font-size:12px;padding:8px 12px;}
 @media(orientation:portrait){
  .touch-ui{--touch-hud-top:calc(max(12px,env(safe-area-inset-top)) + 56px);}

@@ -122,6 +122,12 @@ export class SoundEffects {
     source.connect(gain);gain.connect(this.master!);this.active.add(source);
     source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
   }
+  playBoing(volume=1){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
+    if(!this.buffers.has('push-boing')){const rate=22050,buffer=ctx.createBuffer(1,rate*.62,rate),data=buffer.getChannelData(0);let phase=0;
+      for(let i=0;i<data.length;i++){const t=i/rate,u=t/.62;phase+=2*Math.PI*(170+240*Math.exp(-t*5)+110*Math.sin(t*43)*Math.exp(-t*5))/rate;data[i]=(Math.sin(phase)+.12*Math.sin(phase*2))*Math.min(1,t/.012)*Math.sin(Math.PI*u)*Math.exp(-u*2)*.32;}this.buffers.set('push-boing',buffer);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.active.add(source);source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+  }
   playPrank(kind:import('./prank-effects').PrankSound,volume:number){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
     const key='prank-'+kind;

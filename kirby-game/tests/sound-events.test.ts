@@ -47,7 +47,7 @@ test('sound effects fire once for action, growth, death and revival transitions'
   const update = () => events.update(.016, [player, npc], player).map(e => e.kind);
   assert.deepEqual(update(), []);
   player.state = 'Jump'; assert.deepEqual(update(), ['jump']); assert.deepEqual(update(), []);
-  player.state = 'Attack'; assert.deepEqual(update(), ['attack']); assert.deepEqual(update(), []);
+  player.state = 'Push'; assert.deepEqual(update(), ['attack']); assert.deepEqual(update(), []);
   player.size = 1.1; assert.deepEqual(update(), ['grow']); assert.deepEqual(update(), []);
   npc.down = true; npc.state = 'Death'; assert.deepEqual(update(), ['death']); assert.deepEqual(update(), []);
   npc.down = false; npc.state = 'Walk'; assert.deepEqual(update(), ['revive']); assert.deepEqual(update(), []);

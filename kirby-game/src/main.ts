@@ -1,4 +1,3 @@
-import {NpcHearts} from './npc-hearts';
 import {PrankEffects} from './prank-effects';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
@@ -83,7 +82,7 @@ if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
 if(mobile){
  audioPanel.prepend(createFullscreenControls());
  const help=document.createElement('div');help.dataset.controls='touch';help.hidden=true;
- help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение; край — спринт</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыгнуть; повторные касания — полёт</span></li><li><b>✦</b><span>Атаковать</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
+ help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение; край — спринт</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыгнуть; повторные касания — полёт</span></li><li><b>✦</b><span>Толкнуть</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
  controlsPanel.append(help);
 }
 settingsToggle.addEventListener('click', () => {
@@ -100,7 +99,6 @@ const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#soun
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
-const npcHearts=new NpcHearts(n=>{if(!network){localLog.push({id:crypto.randomUUID(),name:n.variant[0]+' кирби',variant:KIRBY_VARIANTS.indexOf(n.variant),text:'уснул и немного отдохнёт, а потом вернётся к приключениям.',chat:false});if(localLog.length>10)localLog.shift();}});
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
@@ -430,7 +428,7 @@ async function loadCharacter() {
     startButton.disabled = false;
     loadButton.disabled = !hasSave;
     startButton.textContent = 'На поляну →';
-    document.querySelector('#selection-message')!.textContent = mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — атака · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
+    document.querySelector('#selection-message')!.textContent = mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — толчок · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — толчок · E — взаимодействие';
   } catch (error) {
     console.error(error);
     document.querySelector('#selection-message')!.textContent = 'Не удалось загрузить персонажей. Обновите страницу.';
@@ -485,7 +483,14 @@ startButton.addEventListener('click', async () => {
     network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
-    network.onHit=a=>{const attacker={attackHit:true,actor:{position:new THREE.Vector3().fromArray(a.p),scale:new THREE.Vector3(a.s,a.s,a.s)},yaw:new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y} as CharacterController;resolveAttack(attacker,npcs);};
+    network.onHit=(a,target)=>{
+      if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
+      const npc=target.startsWith('npc:')?npcs[Number(target.slice(4))]:undefined;
+      if(target===network!.id && !coaster.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active){if(fireflies?.riding)fireflies.disembark(true);character.takePush(Math.sin(yaw),Math.cos(yaw));}
+      else if(npc&&network!.host)npc.takePush(Math.sin(yaw),Math.cos(yaw));
+      const position=npc?.actor.position??(target===network!.id?character.actor.position:remotePlayers?.players.get(target)?.actor.position);
+      if(position)sounds.playBoing(Math.max(0,1-position.distanceTo(character.actor.position)/35));
+    };
   }
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
@@ -594,7 +599,7 @@ renderer.setAnimationLoop((time: number) => {
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
     const homeWasActive=home.active;home.update(dt);
-    if(!skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
+    if(!character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,!network||network.host?npcs:[],character);
@@ -645,7 +650,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!network||network.host)for (const npc of npcs) {const previous=npc.actor.position.clone();if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'&&npc.fireflyIndex===undefined){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,previous);home.constrain(npc.actor.position,npc.actor.scale.x);}}
     if(npcs.some(n=>n.hello))sounds.sayHello();
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
-    if(!network)resolveAttack(character, npcs);
+    if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
     const fireflyPickup=fireflies?.fruitPickupPosition;
     const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
@@ -698,7 +703,6 @@ renderer.setAnimationLoop((time: number) => {
   fountain.update(dt,lightTime.day);
   watermill.update(dt);
   updateNetwork(dt);
-  npcHearts.update(npcs,dt,camera,playing);
   festivalTick();
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
@@ -723,6 +727,7 @@ window.addEventListener('resize', () => {
 
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   const p=c.actor.position;
+  if(c.roll.active)return undefined;
   const result=(text:string,run:()=>unknown,target?:OutlineTarget)=>({text,run,target});
   const region=(key:unknown,root:THREE.Object3D,center:THREE.Vector3,size:number[])=>outlineRegion(key,root,center,new THREE.Vector3(...size));
   const object=(root?:THREE.Object3D):OutlineTarget|undefined=>root?{key:root,root}:undefined;

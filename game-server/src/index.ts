@@ -1,3 +1,4 @@
+import {pushTarget} from '../../kirby-game/src/push-target';
 import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-landing';
 import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-name';
 import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/history-types';
@@ -133,8 +134,8 @@ export class GameRoom extends DurableObject<Env>{
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
-  if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;const previous=r.world;r.world=next;
-   next.npcLife.forEach((life,i)=>{if(previous&&previous.npcLife[i][0]>0&&life[0]===0){const npc=next.npcs[i];this.log({id:`npc:${i}`,seen:now,visible:true,variant:npc.variant,actor:{...npc,name:npc.name+' кирби'}},'уснул и немного отдохнёт, а потом вернётся к приключениям.');}});
+  if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
+
   }
   socket.serializeAttachment(a);
   if(a.actor&&!a.announced){a.announced=true;this.log(a,'зашёл на полянку.');}
@@ -155,7 +156,12 @@ export class GameRoom extends DurableObject<Env>{
     if(e.key.startsWith('bug:')&&validBugLanding(e.bugState)){const i=e.key.split(':')[1];(r.bugLandings??={})[i]=[...e.bugState];if(r.world)r.world.bugs[Number(i)]=[...e.bugState];}
     delete r.locks[e.key];changed=true;
    }
-   else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>350){a.lastHit=now;this.broadcast({type:'hit',id:a.id,actor:a.actor});}
+   else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>450){
+    a.lastHit=now;const actor=a.actor,q=actor.q,yaw=Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1]));
+    const humans=this.players().map(s=>s.deserializeAttachment() as Attachment).filter(p=>p.id!==a.id&&p.actor).map(p=>({id:p.id,...p.actor!}));
+    const targets=[...humans,...(r.world?.npcs??[]).map((n,i)=>({id:'npc:'+i,...n}))];
+    const target=pushTarget(actor.p,yaw,actor.s,targets);if(target)this.broadcast({type:'hit',id:a.id,actor,target:target.id});
+   }
    else if(e.type==='visible'){a.visible=e.value===true;socket.serializeAttachment(a);if(a.id===r.host&&!a.visible){const next=this.players().find(s=>(s.deserializeAttachment() as Attachment).visible);if(next){r.host=(next.deserializeAttachment() as Attachment).id;changed=true;}}}
   }
   if(a.actor){

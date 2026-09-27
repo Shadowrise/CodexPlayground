@@ -18,7 +18,8 @@ export class NpcSnapshots {
    // Teleports (respawning/boarding) should not sweep across the meadow.
    if(Math.hypot(...to.p.map((v,j)=>v-from.p[j]))>30)return blend<1?from:to;
    const state=blend<1?from:to;
-   return {...state,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
+   const roll=from.roll&&to.roll&&from.state==='Roll'&&to.state==='Roll'?from.roll.map((v,j)=>v+(to.roll![j]-v)*blend):state.roll;
+   return {...state,roll,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
     q:new Quaternion().fromArray(from.q).normalize().slerp(new Quaternion().fromArray(to.q).normalize(),blend).toArray()};
   });
  }

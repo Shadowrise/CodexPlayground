@@ -45,4 +45,12 @@ test('player can take a bug targeted by an approaching NPC, and stale occupant r
  n.beginFirefly(0);world.prepareNpcs([n],false,0);assert.equal(world.networkKey(c),undefined);n.endBalloon();assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));
 });
 
-test('hitting a mounted NPC immediately releases its firefly for the player',async()=>{const {n,world,k}=await setup(),c=new CharacterController(k.scene,k.animations);n.beginFirefly(0);world.prepareNpcs([n],false,0);c.actor.position.copy(world.bugs[0].home);assert.equal(world.networkKey(c),undefined);assert(n.takeHit());assert(n.isDown);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));});
+test('hitting a mounted NPC immediately releases its firefly for the player',async()=>{const {n,world,k}=await setup(),c=new CharacterController(k.scene,k.animations);n.beginFirefly(0);world.prepareNpcs([n],false,0);c.actor.position.copy(world.bugs[0].home);assert.equal(world.networkKey(c),undefined);assert(n.takeHit());assert(n.roll.active);assert(!n.isDown);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));});
+
+test('pushed human rider falls from the current seat and frees the same firefly',async()=>{
+ const {world,k}=await setup(),c=new CharacterController(k.scene,k.animations);c.actor.position.copy(world.bugs[0].home);assert(world.board(c));
+ for(let i=0;i<30;i++){world.moveRider(.05,{forward:true,left:false,right:false});world.syncRider(.05);}
+ const airborne=c.actor.position.clone();assert(airborne.y>3);world.disembark(true);assert(!world.riding);assert(c.actor.position.equals(airborne));assert(c.takePush(1,0));
+ for(let i=0;i<80&&c.roll.active;i++)c.update(.025,{forward:false,left:false,right:false});assert(!c.roll.active);assert.equal(c.actor.position.y,0);assert(c.actor.position.x>airborne.x+4);assert.equal(c.actor.position.z,airborne.z);
+ c.actor.position.copy(world.bugs[0].home);assert.equal(world.networkKey(c),'bug:0');assert(world.board(c));
+});

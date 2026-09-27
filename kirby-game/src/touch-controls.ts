@@ -35,7 +35,7 @@ export class TouchControls {
       parent.append(b);return b;
     };
     button('touch-jump','↑','Прыжок / полёт',actions.jump);
-    button('touch-attack','✦','Атака',actions.attack);
+    button('touch-attack','✦','Толчок',actions.attack);
     // Keep the contextual action above the scrollable HUD, outside the movement layer.
     this.action=button('touch-interact','Действие','Взаимодействовать',actions.interact,this.interactionLayer);this.action.hidden=true;
     const utilities=document.createElement('div');utilities.className='touch-tools';

@@ -1,4 +1,5 @@
 import type {StarfallState} from './starfall';
+import {PushRoll,pushClip,PUSH_HIT} from './push-motion';
 import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
@@ -24,6 +25,8 @@ export class CharacterController {
   }
   private turn?: Turn;
   readonly flight = new Flight();
+  readonly roll=new PushRoll();
+  takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
   private jumpWasHeld = false;
   private attackElapsed: number | undefined;
@@ -77,6 +80,7 @@ export class CharacterController {
     if (!(root instanceof Object3D)) throw new Error('Некорректный корень персонажа');
     this.animationRoot = root;
     for (const source of clips) {
+      if(source.name==='Attack')continue;
       const clip = source.name==='Jump' ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
       // Heading belongs to the game actor. Strip the GLB root yaw from ALL clips
       // so returning to Run/Idle never undoes a completed 90-degree turn.
@@ -86,7 +90,8 @@ export class CharacterController {
       });
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
-    for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Attack', 'Eat']) {
+    this.actions.set('Push',this.mixer.clipAction(pushClip(clips.find(c=>c.name==='Idle')!,model)));
+    for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Push', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
     const swim=flightClip(clips.find(c=>c.name==='Idle')!,model,'Swim');
@@ -98,8 +103,8 @@ export class CharacterController {
   private play(name: string) {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
-    next.reset().setEffectiveTimeScale(name==='Attack'?2:1).setEffectiveWeight(1);
-    const turning = name === 'Attack' || name === 'Eat';
+    next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
+    const turning = name === 'Push' || name === 'Eat';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
@@ -115,6 +120,7 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;this.turn=undefined;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;
@@ -131,6 +137,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.roll.clearPose();
     if(input.steer!==undefined)this.turn=undefined;
     if (this.growth) {
       const g=this.growth;
@@ -143,6 +150,7 @@ export class CharacterController {
     this.attackHit = false;
     this.eatBite = false;
     this.eatPull = false;
+    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY))this.roll.applyPose(this.animationRoot,this.yaw);else this.play('Idle');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
     if(this.emotion){
       this.emotion.clear();
       if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
@@ -167,7 +175,7 @@ export class CharacterController {
         this.play('Eat');
         this.eatElapsed = 0;
       } else if (attackPressed) {
-        this.play('Attack');
+        this.play('Push');
         this.attackElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
@@ -192,11 +200,10 @@ export class CharacterController {
       }
     } else if (this.attackElapsed !== undefined) {
       const previous = this.attackElapsed;
-      this.attackElapsed += dt*2;
-      // One hit event at the extended fist pose, not one hit per render frame.
-      this.attackHit = previous < .48 && this.attackElapsed >= .48;
+      this.attackElapsed += dt;
+      this.attackHit = previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT;
       this.mixer.update(dt);
-      if (this.attackElapsed >= this.actions.get('Attack')!.getClip().duration - 1e-6) {
+      if (this.attackElapsed >= this.actions.get('Push')!.getClip().duration - 1e-6) {
         this.attackElapsed = undefined;
         this.play(this.locomotion(input));
       }

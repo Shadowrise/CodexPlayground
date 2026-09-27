@@ -1,11 +1,12 @@
+import {PushRoll,pushClip} from './push-motion';
 import type { ScoreAction } from './score';
-import { AnimationAction, AnimationClip, AnimationMixer, Color, Group, LoopOnce, LoopRepeat, Mesh, MeshStandardMaterial, Object3D, PropertyBinding, Vector3 } from 'three';
+import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Vector3 } from 'three';
 import { cloneVariant, KIRBY_VARIANTS, remainingVariants, type KirbyVariant } from './variants';
 import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
 import { constrainToMeadow, insideMeadow, worldLimit, MEADOW_HALF_SIZE } from './world-bounds';
 export { NPC_COLORS } from './variants';
 
-const repertoire = ['Idle', 'Walk', 'Run', 'WalkBackward', 'RotateLeft', 'RotateRight', 'Jump', 'Eat', 'Attack'];
+const repertoire = ['Idle', 'Walk', 'Run', 'WalkBackward', 'RotateLeft', 'RotateRight', 'Jump', 'Eat', 'Push'];
 const loops = new Set(['Idle', 'Walk', 'Run', 'WalkBackward']);
 
 export class KirbyNpc {
@@ -26,12 +27,12 @@ export class KirbyNpc {
   private seed: number;
   private obstructed = false;
   private next = new Vector3();
-  health = 3;
-  private downRemaining = 0;
-  private flashRemaining = 0;
-  private readonly originalColors = new Map<MeshStandardMaterial, { color: Color; emissive: Color; intensity: number }>();
-  get isDown() { return this.health === 0; }
-  get canBoardBalloon(){return !this.isDown && !this.greeting && !this.flight.active && this.flashRemaining<=0 && ['Idle','Walk','Run','WalkBackward'].includes(this.state);}
+  readonly roll=new PushRoll();
+  readonly animationRoot:Object3D;
+  // Legacy snapshot slots stay neutral for saved rooms; pushes never damage anyone.
+  get health(){return 3;}
+  get isDown(){return false;}
+  get canBoardBalloon(){return !this.roll.active && !this.greeting && !this.flight.active && ['Idle','Walk','Run','WalkBackward'].includes(this.state);}
   get fireflyIndex(){const match=/^Firefly(?:Ride|Approach):(\d+)$/.exec(this.state);return match?Number(match[1]):undefined;}
   get approachingFirefly(){return this.state.startsWith('FireflyApproach:');}
   beginFireflyApproach(index:number){this.start('Walk');this.state=`FireflyApproach:${index}`;this.hello=false;}
@@ -54,10 +55,6 @@ export class KirbyNpc {
     this.greeting={elapsed:0,yaw:Math.atan2(player.x-this.actor.position.x,player.z-this.actor.position.z),landed:false};
     return true;
   }
-  private readonly body: Mesh;
-  private readonly bodyCenter = new Vector3();
-  private readonly bodyRadii = new Vector3();
-  private readonly contactCenter = new Vector3();
   fruitsEaten = 0;
   readonly achievements=new Set<ScoreAction>();
   private growth?: { from: number; to: number; elapsed: number };
@@ -77,20 +74,7 @@ export class KirbyNpc {
   constructor(template: Object3D, clips: AnimationClip[], readonly index: number, readonly variant: KirbyVariant) {
     this.seed = 8191 + index * 173;
     this.model = cloneVariant(template, variant, true);
-    let body: Mesh | undefined;
-    this.model.traverse(object => { if (object instanceof Mesh && object.name.startsWith('Body')) body = object; });
-    if (!body) throw new Error('NPC body mesh missing');
-    this.body = body;
-    this.body.geometry.computeBoundingBox();
-    this.body.geometry.boundingBox!.getCenter(this.bodyCenter);
-    this.body.geometry.boundingBox!.getSize(this.bodyRadii).multiplyScalar(.5);
     this.appetite = 4 + index * .6;
-    this.model.traverse(object => {
-      if (!(object instanceof Mesh)) return;
-      for (const material of (Array.isArray(object.material) ? object.material : [object.material]) as MeshStandardMaterial[]) {
-        if (!this.originalColors.has(material)) this.originalColors.set(material, { color: material.color.clone(), emissive: material.emissive.clone(), intensity: material.emissiveIntensity });
-      }
-    });
     this.actor.name = `NPC ${index + 1} · ${variant[0]}`;
     this.actor.add(this.model);
     this.actor.add(this.cloud);
@@ -100,12 +84,15 @@ export class KirbyNpc {
       const target = PropertyBinding.findNode(this.model, binding.nodeName);
       return binding.propertyName === 'quaternion' && target instanceof Object3D && target.parent === this.model;
     })!;
+    this.animationRoot=PropertyBinding.findNode(this.model,PropertyBinding.parseTrackName(rootTrack.name).nodeName) as Object3D;
     for (const source of clips) {
+      if(source.name==='Attack')continue;
       const clip = source.clone();
       // Transfer only turning yaw to actor; Death retains its sideways fall.
       if (clip.name.startsWith('Rotate')) clip.tracks = clip.tracks.filter(t => t.name !== rootTrack.name);
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
+    this.actions.set('Push',this.mixer.clipAction(pushClip(clips.find(c=>c.name==='Idle')!,this.model)));
     this.actions.set('Fly',this.mixer.clipAction(flightClip(clips.find(c=>c.name==='Idle')!,this.model)));
     for (const name of [...repertoire, 'Death']) if (!this.actions.has(name)) throw new Error(`NPC: отсутствует ${name}`);
     // Separate starting sectors leave space between neighbours and around the player.
@@ -122,30 +109,16 @@ export class KirbyNpc {
     this.duration += index * .13;
   }
 
-  networkLife(){return [this.health,this.downRemaining,this.flashRemaining,this.elapsed,this.duration,this.seed,this.turnStart,...this.flight.networkState()];}
-  networkApplyLife(v:number[]){[this.health,this.downRemaining,this.flashRemaining,this.elapsed,this.duration,this.seed,this.turnStart]=v;this.flight.networkApply(v.slice(7));
-    for(const [material,original] of this.originalColors){if(this.flashRemaining>0){material.color.set('#ff1824');material.emissive.set('#ff0000');material.emissiveIntensity=.65;}else{material.color.copy(original.color);material.emissive.copy(original.emissive);material.emissiveIntensity=original.intensity;}}
-  }
-  networkAnimate(state:string,dt:number){if(this.state!==state){if(this.actions.has(state))this.start(state);else {this.state=state;if(this.fireflyIndex!==undefined){this.actions.forEach(a=>a.stop());this.actions.get(this.approachingFirefly?'Walk':'Idle')?.reset().play();}}}this.mixer.update(dt);if(this.isDown)this.groundFallenBody();}
+  networkLife(){return [3,0,0,this.elapsed,this.duration,this.seed,this.turnStart,...this.flight.networkState()];}
+  networkApplyLife(v:number[]){[this.elapsed,this.duration,this.seed,this.turnStart]=v.slice(3,7);this.flight.networkApply(v.slice(7));}
+  networkAnimate(state:string,dt:number){this.roll.clearPose();if(this.state!==state){if(this.actions.has(state))this.start(state);else {this.start('Idle');this.state=state;}}this.mixer.update(dt);}
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
 
-  takeHit(): boolean {
-    if (this.isDown || this.state==='Balloon') return false;
-    const mounted=this.fireflyIndex!==undefined&&!this.approachingFirefly;
-    if(this.approachingFirefly)this.start('Idle');
-    if(this.flight.active){this.flight.reset();this.actor.position.y=0;this.cloud.visible=false;this.start('Idle');}
-    this.greeting=undefined;
-    this.health=mounted?0:this.health-1;
-    this.flashRemaining = .28;
-    for (const [material] of this.originalColors) {
-      material.color.set('#ff1824'); material.emissive.set('#ff0000'); material.emissiveIntensity = .65;
-    }
-    if (this.isDown) {
-      this.start('Death');
-      // Full fall animation, followed by ten seconds held in its final pose.
-      this.downRemaining = this.actions.get('Death')!.getClip().duration + 10;
-    }
-    return true;
+  takeHit(){return this.takePush(Math.sin(this.yaw),Math.cos(this.yaw));}
+  takePush(dx:number,dz:number):boolean {
+    if(this.roll.active||this.state==='Balloon'||this.state==='BalloonWalk')return false;
+    this.roll.clearPose();this.flight.reset();this.cloud.visible=false;this.greeting=undefined;
+    this.start('Idle');this.state='Roll';this.roll.start(dx,dz,0);return true;
   }
 
   private start(name: string) {
@@ -188,6 +161,7 @@ export class KirbyNpc {
   }
 
   update(dt: number, neighbors: readonly Vector3[]) {
+    this.roll.clearPose();
     if(this.growth) {
       const g=this.growth;g.elapsed+=dt;
       const t=Math.min(1,g.elapsed/.45);
@@ -195,29 +169,12 @@ export class KirbyNpc {
       if(t===1)this.growth=undefined;
     }
     this.hello=false;
+    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,0))this.roll.applyPose(this.animationRoot,this.yaw);else this.start('Walk');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
     if(this.fireflyIndex!==undefined){this.elapsed+=dt;this.mixer.update(dt);if(!this.approachingFirefly)this.poseFirefly();return;}
     constrainToMeadow(this.actor.position, this.actor.scale.x);
     this.eatBite = false;
     this.eatPull = false;
     this.appetite = Math.max(0, this.appetite - dt);
-    if (this.flashRemaining > 0) {
-      this.flashRemaining = Math.max(0, this.flashRemaining - dt);
-      if (this.flashRemaining === 0) for (const [material, original] of this.originalColors) {
-        material.color.copy(original.color); material.emissive.copy(original.emissive); material.emissiveIntensity = original.intensity;
-      }
-    }
-    if (this.isDown) {
-      this.elapsed+=dt;
-      this.actor.position.y=Math.max(0,this.actor.position.y-24*(this.elapsed-dt/2)*dt);
-      this.mixer.update(dt);
-      this.groundFallenBody();
-      this.downRemaining = Math.max(0, this.downRemaining - dt);
-      if (this.downRemaining < 1e-6) {
-        this.health = 3;
-        this.start('Walk');
-      }
-      return;
-    }
     this.model.position.y *= Math.exp(-14 * dt);
     if(this.flight.active) {
       const before=this.flightTime;this.flightTime+=dt;
@@ -268,19 +225,7 @@ export class KirbyNpc {
     this.mixer.update(dt);
   }
 
-  private groundFallenBody() {
-    // The GLB was grounded against the dangling arm. Ground the round head/body
-    // instead, using exact ellipsoid support under its current world transform.
-    this.model.position.y = 0;
-    this.actor.updateWorldMatrix(true, true);
-    this.contactCenter.copy(this.bodyCenter).applyMatrix4(this.body.matrixWorld);
-    const m = this.body.matrixWorld.elements;
-    const radiusY = Math.hypot(m[1] * this.bodyRadii.x, m[5] * this.bodyRadii.y, m[9] * this.bodyRadii.z);
-    const bottom = this.contactCenter.y - radiusY;
-    const u = Math.min(1, this.actions.get('Death')!.time / .7);
-    this.model.position.y = (this.actor.position.y-.02 - bottom) / this.actor.scale.y * u * u * (3 - 2 * u);
-    this.actor.updateWorldMatrix(true, true);
-  }
+
 }
 
 export function createNpcs(template: Object3D, clips: AnimationClip[], selected: KirbyVariant = KIRBY_VARIANTS[0]) {

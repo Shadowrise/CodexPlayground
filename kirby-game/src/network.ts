@@ -12,7 +12,7 @@ export class NetworkSession{
  get serverNow(){return Date.now()+this.clockOffset;}
  id='';peerCount=1;room!:RoomState;resume?:ActorState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
  onEmote?:(emote:Emote)=>void;
- onHit?:(actor:ActorState)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
+ onHit?:(actor:ActorState,target:string)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
  private requestedFestivalEnd?:number;
@@ -37,7 +37,7 @@ export class NetworkSession{
    else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.receiveActor(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}}
    else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=m.room;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
    else if(m.type==='left'){this.actors.delete(m.id);this.actorSnapshots.delete(m.id);}
-   else if(m.type==='hit'&&this.host)this.onHit?.(m.actor);
+   else if(m.type==='hit')this.onHit?.(m.actor,m.target);
    else if(m.type==='star')this.onStar?.();
    else if(m.type==='lock'){this.locks.get(m.key)?.(m.ok);this.locks.delete(m.key);}
   };

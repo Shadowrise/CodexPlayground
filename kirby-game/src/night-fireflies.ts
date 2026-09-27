@@ -110,13 +110,14 @@ export class NightFireflies {
       n.poseFirefly();
     }
   }
-  disembark(){
+  disembark(falling=false){
     const c=this.rider,bug=this.mount;if(!c||!bug)return;
-    const origin=bug.carrier.position.clone().setY(0);
+    const airborne=c.actor.position.clone();const origin=bug.carrier.position.clone().setY(0);
     const position=this.nearestGround(origin,c.actor.scale.x);
     const beside=position.clone().add(new T.Vector3(Math.cos(c.yaw),0,-Math.sin(c.yaw)).multiplyScalar(c.actor.scale.x+.8));
     const landing=this.nearestGround(beside,.65);
     c.actor.position.copy(position);c.actor.rotation.set(0,c.yaw,0);c.surfaceY=0;c.setActivity('Idle');
+    if(falling)c.actor.position.copy(airborne);
     bug.home.copy(landing);bug.phase=25-this.time;bug.carrier.position.copy(landing);bug.land=true;bug.firefly.setMode('Sit');
     const index=this.bugs.indexOf(bug);this.pendingLandings.set(index,this.networkState()[index]);
     this.rider=undefined;this.mount=undefined;this.moving=false;

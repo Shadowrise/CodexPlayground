@@ -33,7 +33,7 @@ test('NPC greets once, faces the player, waves and resumes idle after jumping', 
   npc.takeHit(); npc.takeHit(); npc.takeHit();
   for (let frame = 0; frame < 360; frame++) npc.update(1 / 30, []);
   assert.equal(npc.isDown, false);
-  assert.equal(npc.greet(player), false, 'revival does not repeat the first greeting');
+  assert.equal(npc.greet(player), false, 'rolling does not repeat the first greeting');
 });
 
 test('every selection creates the other fourteen variants with green NPC feet', async () => {
@@ -88,7 +88,7 @@ test('fourteen independent colorful NPCs use every clip and stay in the meadow',
   }
   npcs.forEach((npc, i) => {
     assert(npc.actor.position.distanceTo(initial[i]) > .1);
-    for (const clip of gltf.animations) if (clip.name !== 'Death') assert(visited[i].has(clip.name), `${i}: missing ${clip.name}`);
-    assert(!visited[i].has('Death'), 'Death is now reserved for three combat hits');
+    for (const clip of gltf.animations) if (clip.name !== 'Death') assert(visited[i].has(clip.name==='Attack'?'Push':clip.name), `${i}: missing ${clip.name}`);
+    assert(!visited[i].has('Death'), 'NPCs never sleep after pushes');
   });
 });

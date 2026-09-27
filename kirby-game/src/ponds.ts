@@ -82,9 +82,9 @@ export class Ponds {
   if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z);}
   if(fountainDistance(p.x,p.z)<11.8){height=fountain?FOUNTAIN_WATER_Y-.63*size+.045*Math.sin(this.time*2.6):.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
   this.onBridge=bridge;
-  c.swimming=wet&&!c.flight.active;
+  c.swimming=wet&&!c.flight.active&&!c.roll.active;
   // Preserve flight height relative to the support surface.
-  if(c.flight.active)p.y+=height-this.base;else p.y=height;
+  if(c.flight.active)p.y+=height-this.base;else if(!c.roll.active)p.y=height;
   c.surfaceY=height;this.base=height;
   this.ring.visible=c.swimming;
   if(c.swimming){this.ring.rotation.set(.035*Math.sin(this.time*2),0,.035*Math.cos(this.time*2.4));}

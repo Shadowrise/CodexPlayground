@@ -37,7 +37,7 @@ test('distant fruit and fruit beside a riding player are not collected',async()=
   world.update(1,player,[],true);assert(!fruit.eaten);
   world.update(.016,player,[],false);assert(fruit.eaten);
 });
-test('NPC auto-pickup grows smoothly; fallen NPCs cannot collect',async()=>{
+test('NPC auto-pickup grows smoothly; rolling NPCs cannot collect',async()=>{
   const {player,npcs,world}=await setup();isolate(world);
   player.actor.position.set(-100,0,-100);
   const npc=npcs[1];npc.actor.position.set(0,0,0);
@@ -60,18 +60,4 @@ test('player and NPC cannot both collect the same fruit',async()=>{
   world.update(.016,player,[npcs[1]]);
   assert.equal(player.fruitsEaten,1);assert.equal(npcs[1].fruitsEaten,0);
   assert.equal(world.onMap,69);
-});
-test('fallen head/body touches the ground at normal and enlarged sizes', async () => {
-  const { npcs } = await setup();
-  for (const scale of [1, 1.61]) {
-    const npc = npcs[scale === 1 ? 0 : 1]; npc.actor.scale.setScalar(scale);
-    npc.takeHit(); npc.takeHit(); npc.takeHit();
-    npc.update(1.81, []);
-    let body: Mesh | undefined;
-    npc.model.traverse(o => { if (o instanceof Mesh && o.name.startsWith('Body')) body = o; });
-    const positions = body!.geometry.getAttribute('position'), p = new Vector3();
-    let minY = Infinity;
-    for (let i = 0; i < positions.count; i++) { p.fromBufferAttribute(positions, i).applyMatrix4(body!.matrixWorld); minY = Math.min(minY, p.y); }
-    assert(Math.abs(minY + .02) < .003, `Body should rest on the floor, got ${minY}`);
-  }
 });
