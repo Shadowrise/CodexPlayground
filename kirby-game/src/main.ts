@@ -51,9 +51,14 @@ import { createNpcs, type KirbyNpc } from './npcs';
 import { cloneVariant, KIRBY_VARIANTS, type KirbyVariant } from './variants';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
+import './touch-controls.css';
+import {TouchControls} from './touch-controls';
+import {touchMotion,wantsTouchControls} from './touch-input';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
 import { createGamepadInput, stickSteering } from './gamepad';
 const gamepad = createGamepadInput();
+const mobile=wantsTouchControls(navigator.maxTouchPoints,matchMedia('(pointer: coarse)').matches,matchMedia('(hover: none)').matches);
+document.body.classList.toggle('touch-ui',mobile);
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
 const status = document.querySelector<HTMLSpanElement>('#status')!;
@@ -70,11 +75,18 @@ const audioPanel = document.querySelector<HTMLElement>('#audio-panel')!;
 const controlsPanel = document.querySelector<HTMLElement>('#controls-panel')!;
 const settingsPanels=document.createElement('div');settingsPanels.id='settings-panels';document.body.append(settingsPanels);settingsPanels.append(audioPanel,controlsPanel);
 const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
+if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
+if(mobile){
+ const help=document.createElement('div');help.dataset.controls='touch';help.hidden=true;
+ help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение; край — спринт</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыгнуть; повторные касания — полёт</span></li><li><b>✦</b><span>Атаковать</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
+ controlsPanel.append(help);
+}
 settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
   audioPanel.hidden = controlsPanel.hidden = !open;
   keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();
+  touch?.setEnabled(false);
   if(open)audioPanel.querySelector<HTMLElement>('select, button, input')?.focus();
   else if(playing)canvas.focus();
 });
@@ -195,9 +207,10 @@ const interactionOutline=new InteractionOutline();scene.add(interactionOutline.g
 scene.background = new THREE.Color('#b3d9ef');
 scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 // A less extreme depth range keeps distant ground overlays from fighting at altitude.
-const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, .75, 1200);
+const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
+const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 // Wider filtering smooths moving shadow edges on every receiver, at the same map resolution.
@@ -325,6 +338,11 @@ document.addEventListener('visibilitychange', () => { keys.clear(); pendingTurn 
 
 const followCamera = new FollowCamera();
 const canvas = renderer.domElement;
+const touch=mobile?new TouchControls(canvas,{
+ jump:()=>{pendingJump=true;},attack:()=>{pendingAttack=true;},interact:()=>{pendingBoard=true;},
+ chat:()=>{chat.show();},emote:emote=>{pendingEmote=emote;},
+ orbit:(x,y)=>followCamera.orbit(x,y),zoom:delta=>followCamera.zoom(delta),
+}):undefined;
 let dragPointer: number | undefined;
 let dragX = 0, dragY = 0;
 let dragMode:'camera'|'character'='camera';
@@ -409,7 +427,7 @@ async function loadCharacter() {
     startButton.disabled = false;
     loadButton.disabled = !hasSave;
     startButton.textContent = 'На поляну →';
-    document.querySelector('#selection-message')!.textContent = 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
+    document.querySelector('#selection-message')!.textContent = mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — атака · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — атака · E — взаимодействие';
   } catch (error) {
     console.error(error);
     status.textContent = 'Не удалось загрузить Кирби. Обновите страницу.';
@@ -513,10 +531,14 @@ renderer.setAnimationLoop((time: number) => {
   const pad=gamepad.poll();
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
-  document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(gamepad.input.active!=='keyboard'?'gamepad':'keyboard'));
+  document.querySelectorAll<HTMLElement>('[data-controls]').forEach(element=>element.hidden=element.dataset.controls!==(gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard'));
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;startupMessage.textContent=usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'';}
   if(usingPad && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
   const settingsOpen=!audioPanel.hidden || chat.open || roundFinished();
+  touch?.setEnabled(playing&&!settingsOpen&&!usingPad&&!document.hidden);
+  const usingTouch=!!touch&&!usingPad;
+  const touchBlocked=settingsOpen||!!touch?.choosing||!playing||document.hidden;
+  const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt):{forward:false,sprint:false,steer:0};
   if(usingPad&&festivalView.results.open&&pad.pressed.has(0))leaveOnline.click();
   const wasChoosing=!playing;
   const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
@@ -551,10 +573,10 @@ renderer.setAnimationLoop((time: number) => {
     followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
-  const held=(key:string)=>settingsOpen || wheelUsed || (!usingPad && editingUi)?false:usingPad?padKeys.has(key):keys.has(key);
+  const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key);
   const mouseTurning=!usingPad && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
-  const mouseSteer=mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
-  if(mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
+  const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
+  if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character && !roundFinished()) {
     syncNetworkWorld(dt);
     const achievementsBefore=character.achievements.size;
@@ -595,13 +617,14 @@ renderer.setAnimationLoop((time: number) => {
     const candidate=network?resourceKey(character):undefined;
     const occupied=!!(candidate&&network?.room.locks[candidate]&&network.room.locks[candidate]!==network.id);
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
+    touch?.setInteraction(!occupied&&interaction?.includes('E —')?interaction:undefined);
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':'E —') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
+    rideHint.textContent=interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '';
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
       usingPad && !settingsOpen && !wheelUsed ? pad.cameraX : Number(held('ArrowRight')) - Number(held('ArrowLeft')),
-      usingPad && !settingsOpen && !wheelUsed ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), dragPointer !== undefined && dragMode==='camera');
+      usingPad && !settingsOpen && !wheelUsed ? pad.cameraY : Number(held('ArrowUp')) - Number(held('ArrowDown')), (dragPointer !== undefined && dragMode==='camera') || (usingTouch && !touchBlocked && (!!touch?.looking || !!touch?.moving)));
     pendingBoard = false;
     pendingAttack = false;
     pendingTurn = undefined;
@@ -686,10 +709,11 @@ renderer.setAnimationLoop((time: number) => {
   renderer.render(scene, camera);
 });
 window.addEventListener('resize', () => {
+  camera.fov=cameraFov();
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   shadows.updateFrustums();
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.5));
   renderer.setSize(innerWidth, innerHeight);
 });
 

@@ -66,7 +66,7 @@ export function createGamepadInput() {
     if(next!==signature) {
       signature=next;
       for(const select of selectors) {
-        select.replaceChildren(new Option('Клавиатура и мышь','keyboard'),...state.available.map(d=>new Option(d.label,d.key)));
+        select.replaceChildren(new Option(document.body.classList.contains('touch-ui')?'Сенсорный экран':'Клавиатура и мышь','keyboard'),...state.available.map(d=>new Option(d.label,d.key)));
         select.value=input.active;
       }
     }

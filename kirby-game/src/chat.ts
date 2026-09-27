@@ -14,6 +14,13 @@ export class MeadowChat{
   this.input.id='chat-input';this.input.maxLength=255;this.input.autocomplete='off';this.input.placeholder='Напиши что-нибудь доброе…';
   const hint=document.createElement('small');hint.textContent='Enter — отправить · Escape — отменить · до 255 символов';
   this.composer.append(label,this.input,hint);document.body.append(this.panel,this.composer);
+  const buttons=document.createElement('div');buttons.className='touch-chat-buttons';
+  const submit=document.createElement('button');submit.type='submit';submit.textContent='Отправить';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.addEventListener('click',()=>this.close());
+  buttons.append(submit,cancel);this.composer.append(buttons);
+  if(document.body.classList.contains('touch-ui'))new ResizeObserver(()=>{
+   if(!this.panel.classList.contains('chat-scroll'))this.list.scrollTop=this.list.scrollHeight;
+  }).observe(this.list);
   this.composer.addEventListener('submit',e=>{e.preventDefault();const text=chatText(this.input.value);if(text)send(text);this.close();});
   this.input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();this.close();}if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.composer.requestSubmit();}});
  }
