@@ -706,6 +706,7 @@ renderer.setAnimationLoop((time: number) => {
   festivalTick();
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
+  fruits.syncInstances();
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);

@@ -1,4 +1,4 @@
-import { Box3, CatmullRomCurve3, ConeGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, TubeGeometry, Vector3 } from 'three';
+import { Box3, BufferGeometry, CatmullRomCurve3, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, TubeGeometry, Vector3 } from 'three';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { makeStrawberry } from './strawberry';
@@ -58,6 +58,11 @@ function makeFruit(kind: number) {
   return g;
 }
 
+function fruitMatrix(object: Object3D, target: Matrix4) {
+  object.updateMatrix();
+  return target.copy(object.matrix);
+}
+
 export class FruitWorld {
   claim?: (index:number,eater:CharacterController|KirbyNpc)=>void;
   readonly group = new Group();
@@ -65,6 +70,9 @@ export class FruitWorld {
   private npcEaten = 0;
   private pickupAfter = new WeakMap<Object3D, number>();
   private time = 0;
+  private readonly batches: { mesh: InstancedMesh; slots: { index: number; fruit: number; local: Matrix4; shown: boolean }[] }[] = [];
+  private readonly scratch = new Matrix4();
+  private readonly hiddenScale = new Vector3();
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
   constructor(obstacles:readonly FruitObstacle[]=[]) {
@@ -79,10 +87,73 @@ export class FruitWorld {
       object.name = FRUIT_TYPES[kind]; this.group.add(object);
       this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false });
     }
+    this.bakeInstances();
+  }
+  private bakeInstances() {
+    this.group.updateMatrixWorld(true);
+    const inv = new Matrix4();
+    const placed = new Matrix4();
+    const parts = new Map<string, { geometry: BufferGeometry; material: MeshStandardMaterial; items: { fruit: number; local: Matrix4 }[] }>();
+    const add = (geometry: BufferGeometry, material: MeshStandardMaterial, fruit: number, local: Matrix4) => {
+      const key = geometry.uuid + material.uuid;
+      const part = parts.get(key) ?? { geometry, material, items: [] };
+      part.items.push({ fruit, local });
+      parts.set(key, part);
+    };
+    this.fruits.forEach((fruit, fruitIndex) => {
+      fruit.object.updateMatrixWorld(true);
+      inv.copy(fruit.object.matrixWorld).invert();
+      const meshes: Mesh[] = [];
+      fruit.object.traverse(object => { if (object instanceof Mesh) meshes.push(object); });
+      for (const mesh of meshes) {
+        const source = mesh.material;
+        if (!(source instanceof MeshStandardMaterial)) continue;
+        if (mesh instanceof InstancedMesh) {
+          const instance = new Matrix4();
+          for (let i = 0; i < mesh.count; i++) {
+            mesh.getMatrixAt(i, instance);
+            add(mesh.geometry, source, fruitIndex, placed.copy(mesh.matrixWorld).multiply(instance).premultiply(inv).clone());
+          }
+        } else add(mesh.geometry, source, fruitIndex, mesh.matrixWorld.clone().premultiply(inv));
+        mesh.removeFromParent();
+      }
+    });
+    for (const part of parts.values()) {
+      const mesh = new InstancedMesh(part.geometry, part.material, part.items.length);
+      mesh.castShadow = mesh.receiveShadow = true;
+      const slots = part.items.map((item, index) => {
+        fruitMatrix(this.fruits[item.fruit].object, this.scratch).multiply(item.local);
+        mesh.setMatrixAt(index, this.scratch);
+        return { index, fruit: item.fruit, local: item.local, shown: true };
+      });
+      mesh.computeBoundingSphere();
+      mesh.instanceMatrix.needsUpdate = true;
+      this.group.add(mesh);
+      this.batches.push({ mesh, slots });
+    }
+  }
+  syncInstances() {
+    for (const batch of this.batches) {
+      let shown = false;
+      let dirty = false;
+      for (const slot of batch.slots) {
+        const visible = this.fruits[slot.fruit].object.visible;
+        shown ||= visible;
+        if (visible === slot.shown) continue;
+        slot.shown = visible;
+        dirty = true;
+        const matrix = fruitMatrix(this.fruits[slot.fruit].object, this.scratch).multiply(slot.local);
+        if (!visible) matrix.scale(this.hiddenScale);
+        batch.mesh.setMatrixAt(slot.index, matrix);
+      }
+      if (dirty) batch.mesh.instanceMatrix.needsUpdate = true;
+      batch.mesh.visible = shown;
+    }
   }
   restore(eaten:readonly boolean[],npcEaten:number) {
     this.fruits.forEach((fruit,i)=>{fruit.eaten=eaten[i];fruit.object.visible=!fruit.eaten;});
     this.npcEaten=npcEaten;this.pickupAfter=new WeakMap();
+    this.syncInstances();
   }
   get remaining() { return this.onMap; }
   update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], riding = false, playerPickupPosition?: Vector3) {
