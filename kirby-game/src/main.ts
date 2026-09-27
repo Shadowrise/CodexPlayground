@@ -647,12 +647,12 @@ renderer.setAnimationLoop((time: number) => {
     const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
-    sizeValue.textContent = `${Math.round(character.actor.scale.x * 100)}%`;
+    sizeValue.textContent = `${Math.round(character.savedSize * 100)}%`;
     npcFruitValue.textContent = String(npcs.reduce((sum,npc)=>sum+scoreOf(npc),0));
     remainingFruitValue.textContent = String(fruits.onMap);
     const message = document.querySelector<HTMLElement>('#combat-message')!;
     if (eaten) {
-      message.textContent = `${eaten.type} съеден! Размер +10% · ${Math.round(character.actor.scale.x * 100)}%`;
+      message.textContent = `${eaten.type} съеден! Размер +10% · ${Math.round(character.savedSize * 100)}%`;
       hitMessageRemaining = 2.5;
     }
     if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}

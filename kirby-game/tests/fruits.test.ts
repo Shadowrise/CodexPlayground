@@ -22,6 +22,7 @@ test('close fruit auto-picks from behind, grows smoothly and counts once',async(
   assert.equal(world.update(.016,player,[]),fruit);
   assert.equal(player.fruitsEaten,1);assert.equal(world.onMap,69);
   assert(!fruit.object.visible);assert.equal(player.actor.scale.x,1);
+  assert.equal(Math.round(player.savedSize*100),110,'the HUD size includes the fruit immediately, before visual growth');
   player.update(.2,{...idle,forward:true});
   assert(player.actor.scale.x>1 && player.actor.scale.x<1.1);
   assert(player.actor.position.z>0,'growth does not lock movement');
