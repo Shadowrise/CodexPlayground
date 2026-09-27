@@ -20,9 +20,9 @@
 .touch-tools{position:absolute;left:var(--touch-left);top:calc(max(12px,env(safe-area-inset-top)) + 56px);display:flex;gap:7px;}
 #touch-emote-menu{position:fixed;z-index:50;left:50%;top:50%;transform:translate(-50%,-50%);width:min(340px,85vw);max-height:80dvh;overflow:auto;box-sizing:border-box;padding:16px;border:1px solid #a9c4dd;border-radius:24px;background:#152438f5;display:grid;grid-template-columns:1fr 1fr;gap:10px;color:#fff;}
 #touch-emote-menu h3{grid-column:1 / 3;text-align:center;margin:0 0 6px;}
-.touch-ui #settings-toggle{top:max(12px,env(safe-area-inset-top));left:var(--touch-left);width:46px;height:46px;z-index:30;}
-.touch-ui #fps-counter{left:calc(var(--touch-left) + 52px);top:max(12px,env(safe-area-inset-top));}
-.touch-ui .right-hud{right:var(--touch-right);top:max(12px,env(safe-area-inset-top));bottom:auto;width:244px;max-width:60vw;max-height:calc(100dvh - 190px);gap:6px;z-index:16;}
+.touch-ui #settings-toggle{top:max(12px,env(safe-area-inset-top));left:calc(var(--touch-left) + 30px);width:46px;height:46px;z-index:30;}
+.touch-ui #fps-counter{left:var(--touch-left);top:calc(max(12px,env(safe-area-inset-top)) + 17px);width:25px;text-align:center;}
+.touch-ui .right-hud{right:var(--touch-right);top:max(12px,env(safe-area-inset-top));bottom:auto;width:244px;max-width:60vw;max-height:calc(100dvh - 160px);gap:6px;z-index:16;}
 .touch-ui .player-stats{min-width:0;padding:4px 8px;max-height:max(100px,24dvh);pointer-events:auto;touch-action:pan-y;}
 .touch-ui .stat-row{grid-template-columns:16px minmax(25px,1fr) 34px 24px 34px 19px;gap:4px;min-height:33px;flex-shrink:0;}
 .touch-ui .score-place{min-width:0;}
@@ -33,20 +33,20 @@
 .touch-ui .fruit-remaining{font-size:10px;padding:3px 0;gap:6px;}.touch-ui .fruit-remaining span{font-size:10px;}.touch-ui .fruit-remaining strong{font-size:13px;}
 .touch-ui #tasks-toggle{padding:8px 10px;min-height:40px;font-size:11px;gap:6px;}
 .touch-ui #task-list{max-height:25dvh;padding:0 10px 8px;}.touch-ui .task{font-size:11px;}
-.touch-ui .right-hud:has(#tasks-toggle[aria-expanded=true]){z-index:24;max-height:calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));}
-.touch-ui .right-hud:has(#tasks-toggle[aria-expanded=true]) .player-stats{display:none;}
-.touch-ui .right-hud:has(#tasks-toggle[aria-expanded=true]) #task-list{max-height:calc(100dvh - 110px - env(safe-area-inset-top) - env(safe-area-inset-bottom));}
-.touch-ui #time-dial{width:40px;height:40px;top:max(10px,env(safe-area-inset-top));left:calc(var(--touch-left) + 124px);}
+.touch-ui .right-hud:has(#tasks-toggle[aria-expanded=true]){z-index:24;bottom:var(--touch-bottom);max-height:none;}
+.touch-ui .right-hud:has(#tasks-toggle[aria-expanded=true]) #task-list{max-height:none;}
+.touch-ui #time-dial{width:40px;height:40px;top:max(10px,env(safe-area-inset-top));left:50%;}
 .touch-ui .status-cluster{top:auto;bottom:calc(var(--touch-bottom) + 7px);left:calc(50% - 100px);right:auto;width:200px;justify-content:center;transform:none;max-width:calc(100vw - 320px);}
 .touch-ui .status-cluster .status{padding:5px 8px;font-size:10px;white-space:normal;text-align:center;}
-.touch-ui #navigation-hud{top:max(12px,env(safe-area-inset-top));bottom:auto;max-width:calc(100vw - 550px);gap:5px;}
-.touch-ui #navigation-hud .route-panel{padding:6px 8px;max-width:100%;font-size:10px;}
+.touch-ui #navigation-hud{top:auto;bottom:calc(var(--touch-bottom) + 164px);max-width:calc(100vw - 340px);gap:5px;}
+.touch-ui .right-hud .route-panel{padding:6px 8px;max-width:100%;font-size:10px;}
 .touch-ui #destination-select{min-height:40px;max-width:100%;font-size:12px;}
 .touch-ui .route-panel label{min-width:0;max-width:100%;}.touch-ui #destination-select{min-width:0;}
 .touch-ui #action-hint{font-size:11px;padding:8px 10px;}
 .touch-ui:has(#touch-interact:not([hidden])) #action-hint{display:none;}
 .touch-ui .combat-message{top:calc(max(12px,env(safe-area-inset-top)) + 60px);max-width:calc(100vw - 550px);font-size:11px;padding:8px;}
-.touch-ui #meadow-chat{left:var(--touch-left);bottom:calc(var(--touch-bottom) + 174px);width:230px;max-width:34vw;padding:4px 8px;}
+.touch-ui #meadow-chat{display:none;left:var(--touch-left);bottom:calc(var(--touch-bottom) + 174px);width:230px;max-width:34vw;padding:4px 8px;}
+.touch-ui:has(#settings-toggle[aria-expanded=true]) #meadow-chat{display:block;}
 .touch-ui .chat-messages{max-height:42px;}.touch-ui .chat-messages p{font-size:11px;line-height:1.4;margin:3px 0;}
 .touch-ui #settings-panels{top:calc(max(12px,env(safe-area-inset-top)) + 56px);left:var(--touch-left);max-width:calc(100vw - var(--touch-left) - var(--touch-right));max-height:calc(100dvh - 90px - env(safe-area-inset-bottom));flex-wrap:wrap;pointer-events:auto;}
 .touch-ui #settings-panels>.panel{max-height:none;}
@@ -64,24 +64,26 @@
 .touch-ui #touch-jump::after{content:'Полёт';}.touch-ui #touch-attack::after{content:'Атака';}
 .touch-ui #starfall-hud{top:auto;bottom:calc(var(--touch-bottom) + 160px);font-size:12px;padding:8px 12px;}
 @media(orientation:portrait){
- .touch-ui .right-hud{width:220px;max-width:58vw;}
- .touch-ui #time-dial{left:calc(var(--touch-left) + 94px);}
+ .touch-ui .right-hud{top:calc(max(12px,env(safe-area-inset-top)) + 56px);width:220px;max-width:58vw;max-height:calc(100dvh - 230px);}
  .touch-ui #navigation-hud{top:auto;bottom:calc(var(--touch-bottom) + 174px);max-width:calc(100vw - 28px);width:min(320px,90vw);}
- .touch-ui #navigation-hud .route-panel{width:100%;}
  .touch-ui .status-cluster{bottom:calc(var(--touch-bottom) + 144px);max-width:80vw;}
  .touch-ui #meadow-chat{bottom:calc(var(--touch-bottom) + 270px);max-width:70vw;}
- .touch-ui .combat-message{top:calc(max(12px,env(safe-area-inset-top)) + 190px);max-width:85vw;}
+ .touch-ui .combat-message{top:auto;bottom:calc(var(--touch-bottom) + 235px);max-width:85vw;}
  .touch-ui #starfall-hud{bottom:calc(var(--touch-bottom) + 225px);width:80vw;}
  .touch-ui #meadow-chat.chat-scroll{max-width:calc(100vw - 28px);width:calc(100vw - 28px);}
 }
 @media(orientation:landscape) and (max-width:700px){
- .touch-ui .right-hud{width:200px;max-height:calc(100dvh - 170px);}
- .touch-ui #time-dial{left:calc(var(--touch-left) + 92px);width:34px;height:34px;}
- .touch-ui #navigation-hud{left:calc(50% - 14px);max-width:calc(100vw - 400px);}
- .touch-ui .route-panel label{font-size:0;gap:0;}
+ .touch-ui .right-hud{width:200px;max-height:calc(100dvh - 160px);gap:4px;}
+ .touch-ui .player-stats{max-height:76px;padding:2px 8px;}
+ .touch-ui .stat-row{min-height:24px;}
+ .touch-ui .stat-row .mini-kirby{transform:scale(.36);margin:-20px 0;}
+ .touch-ui #tasks-toggle{min-height:32px;padding:5px 8px;}
+ .touch-ui #time-dial{width:34px;height:34px;}
+ .touch-ui .right-hud .route-panel{padding:4px 6px;}
+ .touch-ui .route-panel label{font-size:10px;gap:6px;}
  .touch-ui #destination-select{font-size:11px;padding:6px;}
  .touch-ui #touch-stick{width:104px;height:104px;left:var(--touch-left);bottom:var(--touch-bottom);}
  .touch-ui #touch-stick small{left:0;width:110px;}
  .touch-ui #meadow-chat{bottom:calc(var(--touch-bottom) + 140px);max-width:33vw;}
- .touch-ui .combat-message{max-width:40vw;top:125px;}
+ .touch-ui .combat-message{left:calc(50% - 20px);max-width:calc(100vw - 420px);top:125px;}
 }

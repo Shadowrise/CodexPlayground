@@ -271,7 +271,8 @@ let balloonSeed=6173;
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}},()=>{balloonSeed=(Math.imul(balloonSeed,1664525)+1013904223)>>>0;return balloonSeed/4294967296;});scene.add(balloons.group);
 const navigationHud=document.createElement('div');navigationHud.id='navigation-hud';document.body.append(navigationHud);
 const routePanel=document.createElement('div');routePanel.className='panel route-panel';
-const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint,routePanel);
+const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint);
+document.querySelector('.tasks-panel')!.before(routePanel);
 const destinations:Destination[]=[
  {id:'fountain',name:'Радужный фонтан',x:FOUNTAIN_SITE.x,z:FOUNTAIN_SITE.z+8},
  {id:'sky-trail',name:'Небесная тропа',x:skyTrail.entry.x,z:skyTrail.entry.z,radius:4},

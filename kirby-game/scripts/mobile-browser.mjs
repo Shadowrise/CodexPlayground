@@ -4,6 +4,17 @@ const base=process.env.GAME_URL??'http://127.0.0.1:5173/';
 const safari=process.argv.includes('--webkit');
 const iphone=safari||process.argv.includes('--iphone');
 const browser=await (safari?webkit:chromium).launch(safari?{headless:true}:{executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+async function checkHud(page,mobile){
+ const stats=await page.locator('.player-stats').boundingBox(),route=await page.locator('.right-hud .route-panel').boundingBox(),tasks=await page.locator('#tasks-toggle').boundingBox();
+ assert(stats&&route&&tasks);assert(route.y>=stats.y+stats.height-1);assert(tasks.y>=route.y+route.height-1);
+ assert(Math.abs(route.x-stats.x)<1);assert(Math.abs(route.width-stats.width)<1);
+ if(mobile){
+  assert(!await page.locator('#meadow-chat').isVisible());
+  const fps=await page.locator('#fps-counter').boundingBox(),settings=await page.locator('#settings-toggle').boundingBox(),dial=await page.locator('#time-dial').boundingBox();
+  assert(fps.x+fps.width<=settings.x);assert(Math.abs(dial.x+dial.width/2-page.viewportSize().width/2)<1);
+  assert(dial.y+dial.height<=stats.y||dial.x+dial.width<=stats.x);
+ }
+}
 try{
  const page=await browser.newPage({...devices[iphone?'iPhone 13':'Pixel 7'],viewport:{width:844,height:390}});
  const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message);});
@@ -62,22 +73,27 @@ try{
  await page.evaluate(async()=>{const {MILL_LEVER}=await import('/src/watermill.ts');window.__mobileActor.setActivity('Idle');window.__mobileActor.actor.position.copy(MILL_LEVER);});
  await page.waitForFunction(()=>document.querySelector('#touch-interact').textContent.includes('шлюз'));
  await page.locator('#touch-interact').tap();await page.waitForFunction(()=>window.__mobileActor.achievements.has('mill'));
+ await checkHud(page,true);
  await page.screenshot({path:process.env.TEMP+`/kirby-mobile-${safari?'webkit':'android'}-landscape.png`});
  await page.setViewportSize({width:390,height:844});
  await page.waitForTimeout(300);
  assert.equal(await page.evaluate(()=>innerWidth),390);
+ await checkHud(page,true);
  for(const selector of ['#touch-stick','#touch-jump','#touch-attack','#touch-chat','#settings-toggle','.right-hud','#navigation-hud']){
   const b=await page.locator(selector).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=391&&b.y+b.height<=845,`${selector}: ${JSON.stringify(b)}`);
  }
  await page.screenshot({path:process.env.TEMP+`/kirby-mobile-${safari?'webkit':'android'}-portrait.png`});
  await page.setViewportSize({width:568,height:320});await page.waitForTimeout(300);
  assert.equal(await page.evaluate(()=>innerWidth),568);
+ await checkHud(page,true);
  for(const selector of ['#touch-stick','#touch-interact','#navigation-hud','#time-dial']){const b=await page.locator(selector).boundingBox();assert(b&&b.x>=0&&b.y>=0&&b.x+b.width<=569&&b.y+b.height<=321,`${selector}: ${JSON.stringify(b)}`);}
  await page.screenshot({path:process.env.TEMP+'/kirby-mobile-small-landscape.png'});
  await page.locator('#tasks-toggle').tap();assert(await page.locator('#task-list').isVisible());
  assert((await page.locator('#task-list').boundingBox()).height>100);
  await page.locator('#tasks-toggle').tap();
  await page.locator('#settings-toggle').tap();assert(await page.locator('[data-controls="touch"]').isVisible());assert(!await page.locator('[data-controls="keyboard"]').isVisible());
+ assert(await page.locator('#meadow-chat').isVisible());await page.screenshot({path:process.env.TEMP+'/kirby-mobile-settings-chat.png'});
+ await page.locator('#settings-toggle').tap();assert(!await page.locator('#meadow-chat').isVisible());
  assert.deepEqual(errors,[]);console.log(JSON.stringify({engine:safari?'WebKit':'Chromium',profile:iphone?'iPhone':'Android',multiTouch:!safari,interaction:true,errors}));
  await page.close();
  if(!safari){
@@ -87,6 +103,7 @@ try{
   assert.equal(await desktop.locator('#tasks-toggle').getAttribute('aria-expanded'),'true');
   await desktop.click('#new-game');await desktop.fill('#player-name-input','Компьютер');await desktop.click('#start-game');
   await desktop.keyboard.down('KeyW');await desktop.waitForFunction(()=>document.querySelector('#status').textContent==='Бежим');await desktop.keyboard.up('KeyW');
+  await checkHud(desktop,false);assert(await desktop.locator('#meadow-chat').isVisible());await desktop.screenshot({path:process.env.TEMP+'/kirby-desktop-hud.png'});
   await desktop.keyboard.press('Escape');assert(await desktop.locator('[data-controls="keyboard"]').isVisible());assert(!await desktop.locator('.touch-chat-buttons').isVisible());
   await desktop.screenshot({path:process.env.TEMP+'/kirby-mobile-desktop.png'});
   console.log('Desktop: keyboard controls and UI retained');
