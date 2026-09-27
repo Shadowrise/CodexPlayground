@@ -160,8 +160,9 @@ export class FruitWorld {
     this.time += dt;
     for (let i=0;i<this.fruits.length;i++) {
       const fruit=this.fruits[i];
-      if(fruit.eaten)continue;
+      if(fruit.eaten||!fruit.object.visible)continue;
       const mist=fruit.object.getObjectByName('Fruit colored mist')!;
+      if(!mist.visible)continue;
       const phase=this.time*.7+i*2.4;
       mist.position.set(Math.sin(phase)*.07,.48+Math.sin(phase*.8)*.035,0);
       mist.scale.set(2.5+Math.sin(phase)*.12,1.7+Math.cos(phase)*.07,1);

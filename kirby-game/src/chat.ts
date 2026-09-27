@@ -4,7 +4,7 @@ export class MeadowChat{
  readonly panel=document.createElement('section');
  readonly composer=document.createElement('form');
  private input=document.createElement('input');
- private list=document.createElement('div');private signature='';
+ private list=document.createElement('div');private shownIds:string[]=[];
  get open(){return !this.composer.hidden;}
  constructor(send:(text:string)=>void){
   this.panel.id='meadow-chat';this.panel.setAttribute('aria-label','Чат и события поляны');
@@ -27,13 +27,17 @@ export class MeadowChat{
  show(){this.composer.hidden=false;this.input.focus();}
  close(){this.composer.hidden=true;this.input.value='';this.input.blur();}
  render(entries:LogEntry[],settings:boolean){
-  const changedSettings=this.panel.classList.contains('chat-scroll')!==settings;this.panel.classList.toggle('chat-scroll',settings);this.list.tabIndex=settings?0:-1;
-  const latest=entries.slice(-10),signature=JSON.stringify(latest);
-  if(signature!==this.signature){
-   const hadMessages=!!this.signature;
+  const changedSettings=this.panel.classList.contains('chat-scroll')!==settings;
+  if(changedSettings){this.panel.classList.toggle('chat-scroll',settings);this.list.tabIndex=settings?0:-1;}
+  const start=Math.max(0,entries.length-10),count=entries.length-start;
+  let same=count===this.shownIds.length;
+  if(same)for(let i=0;i<count;i++)if(entries[start+i].id!==this.shownIds[i]){same=false;break;}
+  if(!same){
+   const hadMessages=this.shownIds.length>0;
+   const latest=entries.slice(start);
+   this.shownIds=latest.map(entry=>entry.id);
    const oldRows=new Map([...this.list.children].map(el=>[(el as HTMLElement).dataset.id!,el as HTMLElement]));
    const positions=new Map([...oldRows].map(([id,row])=>[id,row.getBoundingClientRect().top]));
-   this.signature=signature;
    this.list.replaceChildren(...latest.map(e=>{
     const row=oldRows.get(e.id)??document.createElement('p');row.dataset.id=e.id;
     row.style.color=KIRBY_VARIANTS[e.variant]?.[1]??'#e4edf7';

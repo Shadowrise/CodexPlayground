@@ -17,6 +17,9 @@ export class RainbowFountain {
  private bubbles:T.InstancedMesh;
  private bathing?:CharacterController;
  private water:T.ShaderMaterial;
+ private readonly view=new T.Frustum();
+ private readonly viewProjection=new T.Matrix4();
+ private readonly bounds=new T.Sphere(new T.Vector3(FOUNTAIN_SITE.x,4,FOUNTAIN_SITE.z),16);
  constructor(){
   this.group.name='Rainbow wishing fountain';this.group.position.set(FOUNTAIN_SITE.x,0,FOUNTAIN_SITE.z);
   const stone=new T.MeshStandardMaterial({color:'#e8d8bb',roughness:.66});
@@ -110,7 +113,8 @@ export class RainbowFountain {
   }
   this.update(0,1);
  }
- private jet(i:number,t:number){const a=i/14*Math.PI*2,r=2.7+4.8*t;return new T.Vector3(Math.cos(a)*r,1.25*(1-t)+.29*t+(i%2?3.6:5.2)*4*t*(1-t),Math.sin(a)*r);}
+ private readonly jetPoint=new T.Vector3();
+ private jet(i:number,t:number){const a=i/14*Math.PI*2,r=2.7+4.8*t;return this.jetPoint.set(Math.cos(a)*r,1.25*(1-t)+.29*t+(i%2?3.6:5.2)*4*t*(1-t),Math.sin(a)*r);}
  bathe(dt:number,c:CharacterController){
   if(!c.swimming||c.flight.active||!inFountain(c.actor.position.x,c.actor.position.z)){this.bathTime=0;this.bathing=undefined;return false;}
   this.bathing=c;
@@ -118,10 +122,14 @@ export class RainbowFountain {
   if(this.bathTime>=1.2)awardFirst(c,'fountain');
   return true;
  }
- update(dt:number,day:number){
+ update(dt:number,day:number,camera?:T.Camera){
   this.time+=dt;this.water.uniforms.time.value=this.time;this.water.uniforms.brightness.value=.32+.68*day;
   this.petals.rotation.y=Math.sin(this.time*.3)*.07;
-  this.bubbles.visible=!!this.bathing;
+  let seen=true;
+  if(camera){this.viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);this.view.setFromProjectionMatrix(this.viewProjection);seen=this.view.intersectsSphere(this.bounds);}
+  this.drops.visible=this.rings.visible=seen;
+  this.bubbles.visible=!!this.bathing&&seen;
+  if(!seen)return;
   if(this.bathing){const c=this.bathing,size=c.actor.scale.x;
    for(let i=0;i<21;i++){
     const t=(this.time*.42+i/21)%1,a=i*2.399+this.time*.3,r=size*(.8+.3*t);

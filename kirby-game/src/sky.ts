@@ -50,6 +50,7 @@ export function createSky(scene: THREE.Scene) {
   const dayColor=new THREE.Color('#fffaf0'),nightColor=new THREE.Color('#8394b5'),sunsetColor=new THREE.Color('#ffc19d');
   const topDay=new THREE.Color('#93c8ed'),topNight=new THREE.Color('#091127'),topDusk=new THREE.Color('#82669a'),horizonDay=new THREE.Color('#d8e9eb'),horizonNight=new THREE.Color('#182b4b'),horizonDusk=new THREE.Color('#ffc392');
   const orbit=new THREE.Vector3();
+  const starOffset=new THREE.Vector3();
   let elapsed=0;
   return (dt:number,camera:THREE.Camera,lighting:boolean|Daylight=false) => {
     elapsed+=dt;const light=typeof lighting==='boolean'?daylight(lighting?.75:.25):lighting;
@@ -68,7 +69,7 @@ export function createSky(scene: THREE.Scene) {
     rays.quaternion.copy(camera.quaternion);
     cloudMaterial.color.copy(dayColor).lerp(nightColor,night).lerp(sunsetColor,twilight*.65);
     dome.position.copy(camera.position);horizonMaterial.uniforms.top.value.copy(topDay).lerp(topNight,night).lerp(topDusk,twilight*.65);horizonMaterial.uniforms.horizon.value.copy(horizonDay).lerp(horizonNight,night).lerp(horizonDusk,twilight*.85);
-    if(stars.visible)for(let i=0;i<160;i++){const a=i*2.399,y=.12+(i%23)/26,r=Math.sqrt(1-y*y);dummy.position.copy(camera.position).add(new THREE.Vector3(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(800));dummy.scale.setScalar(.45+i%3*.25);dummy.updateMatrix();stars.setMatrixAt(i,dummy.matrix);}stars.instanceMatrix.needsUpdate=stars.visible;
+    if(stars.visible)for(let i=0;i<160;i++){const a=i*2.399,y=.12+(i%23)/26,r=Math.sqrt(1-y*y);starOffset.set(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(800);dummy.position.copy(camera.position).add(starOffset);dummy.scale.setScalar(.45+i%3*.25);dummy.updateMatrix();stars.setMatrixAt(i,dummy.matrix);}stars.instanceMatrix.needsUpdate=stars.visible;
     halo.position.copy(camera.position).addScaledVector(orbit,elevation>=0?830:-830);halo.quaternion.copy(camera.quaternion);
     for(let i=0;i<28;i++) {
       const x=((i*137.3+elapsed*(1.1+i%3*.18))%820)-410;
