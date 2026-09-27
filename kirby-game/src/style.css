@@ -149,7 +149,7 @@ button:disabled { cursor:default; }
 
 .score-help {padding:6px 0;color:var(--ui-muted);font-size:10px;}
 
-.right-hud {position:fixed;z-index:1;top:85px;right:28px;display:flex;flex-direction:column;gap:12px;max-width:calc(100vw - 88px);max-height:calc(100dvh - 185px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--ui-border) transparent;pointer-events:none;}
+.right-hud {position:fixed;z-index:1;top:28px;right:28px;display:flex;flex-direction:column;gap:12px;max-width:calc(100vw - 88px);max-height:calc(100dvh - 185px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--ui-border) transparent;pointer-events:none;}
 .choosing .right-hud {display:none;}
 .right-hud .panel {position:static;flex-shrink:0;max-width:none;}
 .tasks-panel {border-radius:18px;pointer-events:auto;overflow:hidden;}

@@ -1,7 +1,17 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {Vector3} from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {SkyTrail} from '../src/sky-trail';import {SKY_PLATFORMS as P,SKY_TRAIL_SITE as S,SKY_CHECKPOINTS,SKY_COLORS,rainbowHeight,SKY_RAINBOW_START as RS,SKY_RAINBOW_END as RE,platformThickness} from '../src/sky-trail-layout';import {CharacterController} from '../src/controller';import {scoreOf} from '../src/score';import {sceneryClearance} from '../src/landmarks';
+import {actorState,restoreNetworkPlayer} from '../src/network-actors';
 async function player(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const m=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');return new CharacterController(m.scene,m.animations);}
 const pos=(i:number)=>new Vector3(S.x+P[i].x,P[i].y,S.z+P[i].z);
+
+test('online return restores growth, rewards and checkpoint without falling through its platform',async()=>{
+ const c=await player();c.actor.position.copy(pos(SKY_CHECKPOINTS[1]));c.surfaceY=c.actor.position.y;c.skyCheckpoint=2;c.achievements.add('mill');c.grow();
+ const state=actorState(c,'Вернулся',3);state.state='Idle';state.pose=[];
+ const restored=await player(),trail=new SkyTrail();restoreNetworkPlayer(restored,state);trail.restorePosition(restored);
+ assert.equal(restored.actor.scale.x,1.1);assert.equal(restored.fruitsEaten,1);assert.equal(scoreOf(restored),4);assert.equal(restored.skyCheckpoint,2);
+ for(let i=0;i<60;i++){const previous=restored.actor.position.clone();restored.update(1/60,{forward:false,left:false,right:false});trail.apply(restored,previous,1/60);}
+ assert(restored.actor.position.distanceTo(c.actor.position)<.001);assert.equal(restored.state,'Idle');
+});
 test('rainbow has seven bands and route steps are reachable by a normal single jump',()=>{assert.equal(SKY_COLORS.length,7);for(let i=1;i<P.length;i++){assert(P[i].y-P[i-1].y<=1.45);if(i!==RE)assert(Math.hypot(P[i].x-P[i-1].x,P[i].z-P[i-1].z)<6);}assert.equal(rainbowHeight(P[RS].x),P[RS].y);assert(Math.abs(rainbowHeight(P[RE].x)!-P[RE].y)<1e-8);assert(!sceneryClearance(S.x,S.z));});
 test('jump through all platforms, walk the rainbow, collect once and return via leaves',async()=>{
  const c=await player(),trail=new SkyTrail();c.actor.position.copy(trail.entry);assert(!trail.start(c));

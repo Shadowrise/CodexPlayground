@@ -11,7 +11,14 @@ import {validAchievements} from './score';
 const round=(v:number)=>Math.round(v*1000)/1000;
 function poseNodes(c:CharacterController){return [c.animationRoot,...['Left_shoulder','Right_shoulder','Left_foot_pivot','Right_foot_pivot'].map(n=>c.actor.getObjectByName(n)!)];}
 export function actorState(c:CharacterController|KirbyNpc,name:string,variant:number):ActorState{
- return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),state:c.state,pose:c instanceof CharacterController&&c.state!=='Idle'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0};
+ return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),state:c.state,pose:c instanceof CharacterController&&c.state!=='Idle'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
+}
+/** Restore durable progress without resuming an abandoned ride or animation. */
+export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
+ c.actor.position.fromArray(a.p);c.surfaceY=a.p[1];c.actor.scale.setScalar(a.progress?.size??a.s);
+ c.yaw=new T.Euler().setFromQuaternion(new T.Quaternion().fromArray(a.q).normalize(),'YXZ').y;c.actor.rotation.set(0,c.yaw,0);
+ c.fruitsEaten=a.fruits;c.achievements.clear();for(const action of a.achievements)c.achievements.add(action as import('./score').ScoreAction);
+ c.skyCheckpoint=a.progress?.checkpoint??0;c.starRemaining=a.star;c.starBlessed=c.achievements.has('star');
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
  const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion).y;

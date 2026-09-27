@@ -97,9 +97,22 @@ try{
  await page.locator('#task-list li').last().scrollIntoViewIfNeeded();
  assert(await page.evaluate(()=>{const list=document.querySelector('#task-list'),hud=document.querySelector('.right-hud');return list.scrollTop>0||hud.scrollTop>0;}));
  assert(await page.evaluate(()=>Number(getComputedStyle(document.querySelector('.right-hud')).zIndex)>Number(getComputedStyle(document.querySelector('#touch-controls')).zIndex)));
+ // The contextual action must escape the lower movement layer and cover expanded tasks.
+ for(const viewport of [{width:844,height:260},{width:568,height:320},{width:390,height:844}]){
+  await page.setViewportSize(viewport);await page.waitForTimeout(200);
+  assert(await page.evaluate(()=>{
+   const button=document.querySelector('#touch-interact'),r=button.getBoundingClientRect();
+   if(!r.width||r.left<0||r.top<0||r.right>innerWidth||r.bottom>innerHeight)return false;
+   return [[.1,.1],[.5,.5],[.9,.9],[.1,.9],[.9,.1]].every(([x,y])=>button.contains(document.elementFromPoint(r.left+r.width*x,r.top+r.height*y)));
+  }),'Interaction is fully visible and receives touches above the task list');
+  const label=await page.locator('#touch-interact').textContent();await page.locator('#touch-interact').tap();
+  await page.waitForFunction(text=>document.querySelector('#touch-interact').textContent!==text,label);
+ }
+ await page.setViewportSize({width:844,height:260});await page.waitForTimeout(200);
  await page.screenshot({path:process.env.TEMP+'/kirby-mobile-short-tasks.png'});
  await page.locator('#tasks-toggle').tap();
  await page.locator('#settings-toggle').tap();assert(await page.locator('[data-controls="touch"]').isVisible());assert(!await page.locator('[data-controls="keyboard"]').isVisible());
+ assert(!await page.locator('#touch-interact').isVisible());
  assert(await page.locator('#meadow-chat').isVisible());await page.screenshot({path:process.env.TEMP+'/kirby-mobile-settings-chat.png'});
  if(await page.locator('#fullscreen-toggle').isVisible()){
   await page.locator('#fullscreen-toggle').tap();await page.waitForFunction(()=>document.fullscreenElement===document.documentElement);

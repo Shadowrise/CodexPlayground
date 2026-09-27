@@ -9,7 +9,7 @@ import {emoteMessage,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
-import { actorState, applyActor, RemotePlayers } from './network-actors';
+import { actorState, applyActor, restoreNetworkPlayer, RemotePlayers } from './network-actors';
 import type { WorldState, ActorState } from './network-protocol';
 import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
@@ -443,7 +443,7 @@ startButton.addEventListener('click', async () => {
   if(networkIntent){
     startButton.disabled=true;startButton.textContent='Подключаемся…';
     const session=new NetworkSession();
-    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected));network=session;}
+    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value);network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
     catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
   }
   const { scene: template, animations } = loadedModel;
@@ -454,6 +454,7 @@ startButton.addEventListener('click', async () => {
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
+  if(network?.resume){restoreNetworkPlayer(character,network.resume);skyTrail.restorePosition(character);}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
   maze.constrain(character.actor.position,character.actor.scale.x);

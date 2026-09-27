@@ -14,7 +14,7 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  const actor=(variant:number)=>({p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Игрок '+variant,variant,star:0});
  class Socket {readyState=1;data:any;messages:any[]=[];constructor(id:string,variant:number){this.data={id,variant,seen:now,visible:true,actor:actor(variant)};}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(v:string){this.messages.push(JSON.parse(v));}close(){this.readyState=3;}}
  const a=new Socket('a',0),b=new Socket('b',1),sockets=[a,b];let alarm=0,cleared=false;
- const ctx={getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
+ const ctx={blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{async put(){},async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
  const room=new GameRoom(ctx,{});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
  room.webSocketMessage(a,JSON.stringify({type:'frame',actor:{...actor(0),achievements:SCORE_ACTIONS}}));
  const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);

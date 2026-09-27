@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const base=process.env.SERVER_URL||'http://127.0.0.1:8787';
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 let nextVariant=0;
-async function join(){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-3&variant='+nextVariant++),messages=[];socket.addEventListener('message',e=>{if(e.data!=='pong')messages.push(JSON.parse(e.data));});await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve);socket.addEventListener('error',reject);});const wait=async check=>{for(let i=0;i<100;i++){const m=messages.find(check);if(m)return m;await pause(30);}throw Error('Message timed out');};const hello=await wait(m=>m.type==='welcome');return {socket,messages,hello,wait,send:obj=>socket.send(JSON.stringify(obj))};}
+async function join(name){const variant=nextVariant++;name??=variant===0?'Test':variant===1?'Second':'Test '+variant;const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-4&name='+encodeURIComponent(name)+'&variant='+variant),messages=[];socket.addEventListener('message',e=>{if(e.data!=='pong')messages.push(JSON.parse(e.data));});await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve);socket.addEventListener('error',reject);});const wait=async check=>{for(let i=0;i<100;i++){const m=messages.find(check);if(m)return m;await pause(30);}throw Error('Message timed out');};const hello=await wait(m=>m.type==='welcome');return {socket,messages,hello,wait,send:obj=>socket.send(JSON.stringify(obj))};}
 const actor={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
 const clients=[];
 try{
@@ -14,7 +14,8 @@ try{
  b.send({type:'frame',actor:{...actor,name:'Second'},events:[{type:'fruit',index:0},{type:'lock',key:'cart:0'}]});
  assert.equal((await b.wait(m=>m.type==='lock')).ok,false);
  assert.equal((await a.wait(m=>m.type==='frame'&&m.id===b.hello.playerId)).actor.variant,1);
- const duplicate=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-3&variant=0');const rejected=await new Promise(resolve=>duplicate.addEventListener('message',e=>resolve(JSON.parse(e.data)),{once:true}));assert.equal(rejected.type,'error');assert.equal((await (await fetch(base+'/room')).json()).occupiedVariants.length,2);duplicate.close();
+ const duplicate=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-4&variant=0&name=Duplicate');const rejected=await new Promise(resolve=>duplicate.addEventListener('message',e=>resolve(JSON.parse(e.data)),{once:true}));assert.equal(rejected.type,'error');assert.equal((await (await fetch(base+'/room')).json()).occupiedVariants.length,2);duplicate.close();
+ const duplicateName=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-4&variant=5&name=%20%20TEST%20');const nameError=await new Promise(resolve=>duplicateName.addEventListener('message',e=>resolve(JSON.parse(e.data)),{once:true}));assert.equal(nameError.type,'error');assert.match(nameError.message,/именем/);duplicateName.close();
  await pause(120);const world=JSON.parse(await readFile(tmpdir()+'/kirby-network-world.json','utf8'));a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world);
  const sleeping=structuredClone(world);sleeping.npcLife[0][0]=0;sleeping.npcs[0].state='Death';a.send({type:'frame',actor,world:sleeping});const sleepLog=await b.wait(m=>m.type==='log'&&m.entry.text.startsWith('уснул'));assert.equal(sleepLog.entry.variant,world.npcs[0].variant);assert.equal(sleepLog.entry.chat,false);a.send({type:'frame',actor,world:sleeping});await pause(150);assert.equal(b.messages.filter(m=>m.type==='log'&&m.entry.text.startsWith('уснул')).length,1);
 
@@ -26,8 +27,9 @@ try{
  a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world?.bugs[0][1]===78&&m.world.bugs[0][2]===12);
  const c=await join();assert.equal(c.hello.room.bugLandings['0'][1],78);clients.push(c);assert.equal(c.hello.room.log.length,10);assert(c.hello.room.log.at(-1).text.includes('приветствует'));assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
  const room=a.hello.room.id;a.socket.close();await b.wait(m=>m.type==='room'&&m.room.host!==a.hello.playerId&&!m.room.locks['cart:0']);
+ const rejoined=await join('test');clients.push(rejoined);assert.equal(rejoined.hello.playerId,a.hello.playerId);assert.equal(rejoined.hello.room.id,room);assert.equal(rejoined.hello.resume.fruits,1);assert.equal(rejoined.hello.resume.variant,0);assert.equal(rejoined.hello.resume.s,1.1);assert.equal(rejoined.hello.resume.state,'Idle');rejoined.socket.close();
  b.socket.close();c.socket.close();await pause(200);
  assert.equal((await (await fetch(base+'/players')).json()).players,0);
  const d=await join();clients.push(d);assert.notEqual(d.hello.room.id,room);assert(d.hello.room.fruits.every(x=>x===null));d.socket.close();
- console.log('PASS: shared room, peers, fruit contention, exclusive cart, late join, host migration, empty-room reset');
+ console.log('PASS: shared room, peers, fruit contention, exclusive cart, late join, host migration, duplicate names, rejoin progress, empty-room reset');
 }finally{for(const c of clients)c.socket.close();}

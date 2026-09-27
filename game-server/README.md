@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-1`) is shared with the browser in
+Protocol 2 (`build=meadow-network-4`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 ## Run locally
@@ -30,6 +30,21 @@ last state through hibernation. No database write per movement packet. Snapshots
 are bounded to stay within attachment limits. The room is cooperative: clients
 simulate movement; this is not a competitive anti-cheat server.
 
+Joining requires a non-empty `name` in the WebSocket URL. Names are normalized
+for whitespace, Unicode compatibility and case; the server reserves the name
+as soon as the socket is admitted, before its first actor frame. An already
+connected name is rejected without disturbing that player.
+
+On departure, one storage write keeps the last player state under the room ID
+and normalized name. Returning during the same occupied session restores the
+same player ID, fruit ownership, achievements, size, grounded position,
+orientation, sky checkpoint and festival rewards. Temporary star power expires
+while away. Rides are released, and a returning rider appears on the ground at
+the same horizontal location. The previous colour is restored when free;
+otherwise the new selected colour is used. Snapshots survive host migration and
+hibernation, but are deleted when the room empties or its results timer expires.
+No additional periodic requests or per-frame database writes are introduced.
+
 ## Shared rules and synchronization
 
 The same controllers, NPC AI, fruit pickup/growth, combat, score rules, flight,
@@ -46,9 +61,9 @@ smoothed. Transport riders publish the state of their leased vehicle; the host
 incorporates it into shared snapshots. Static scenery and fruit layouts use the
 same deterministic generation on every client.
 
-Online is currently a daytime cooperative meadow, without PvP. Save/load stays
+Online is a cooperative meadow with a shared day/night cycle, without PvP. Save/load stays
 offline-only. Disconnect returns the player to a visible error/leave control;
-rejoining creates a new player, without reconnect reservations. If every tab is
+rejoining by name restores progress in the current session. If every tab is
 hidden, browser simulation is suspended until a player returns. Cosmetic audio
 and some ambient/particle animation phases remain local. Host migration may
 slightly correct moving objects to their most recent snapshot.
@@ -61,10 +76,11 @@ slightly correct moving objects to their most recent snapshot.
 - `node scripts/smoke.mjs` — 20 concurrent connections, capacity 14, count API,
   room reuse and freed seats; requires an empty local server.
 - `node scripts/multiplayer-smoke.mjs` — two players, fruit contention, vehicle
-  lease, full-world late join, host migration and reset after the last player;
+  lease, full-world late join, host migration, duplicate-name rejection,
+  progress restoration and reset after the last player;
   run the client tests first to create the temporary real-world fixture.
 - `node ../kirby-game/scripts/network-browser.mjs` — two browser tabs, movement,
-  player roster, hidden save controls, exit and absence of page errors. Uses
+  player roster, hidden save controls, exit/rejoin restoration and absence of page errors. Uses
   Chrome on Windows; override `BROWSER_EXECUTABLE` or install Playwright Chromium.
 
 ## Publish

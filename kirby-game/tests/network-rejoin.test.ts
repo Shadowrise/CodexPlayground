@@ -1,0 +1,75 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import ts from 'typescript';
+import {BUILD,validActor} from '../src/network-protocol';
+import {playerNameKey} from '../src/player-name';
+import {createStarfall} from '../src/starfall';
+
+test('room restores disconnected players by name, rejects online duplicates, and forgets an empty session',async()=>{
+ const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
+  .replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,...args:any[]){} }')
+  .replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href)
+  .replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2')
+  .replaceAll('new Response(null,{status:101,webSocket:client})','({status:101,webSocket:client})');
+ const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const globals=globalThis as any,oldPair=globals.WebSocketPair,oldResponse=globals.WebSocketRequestResponsePair,oldNow=Date.now;
+ let now=100000;Date.now=()=>now;
+ class Socket {
+  readyState=1;data:any;messages:any[]=[];
+  deserializeAttachment(){return structuredClone(this.data);}
+  serializeAttachment(a:any){this.data=structuredClone(a);}
+  send(v:string){this.messages.push(JSON.parse(v));}
+  close(){this.readyState=3;}
+  accept(){}
+ }
+ let lastServer:Socket;
+ globals.WebSocketPair=class {0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class {};
+ const sockets:Socket[]=[],storage=new Map<string,unknown>();let writes=0;
+ const ctx={blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
+  storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){writes++;storage.set(key,structuredClone(value));},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
+ try{
+  const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));let room=new GameRoom(ctx,{});
+  const join=async(name:string,variant:number)=>{await room.fetch(new Request(`https://test/ws?build=${BUILD}&variant=${variant}&name=${encodeURIComponent(name)}`,{headers:{Upgrade:'websocket'}}));return lastServer!;};
+  const send=(s:Socket,actor?:any,events:any[]=[])=>room.webSocketMessage(s,JSON.stringify({type:'frame',actor,events}));
+  const first=await join('  Кирби   Друг  ',0),id=first.data.id,roomId=room.room.id;
+  const duplicate=await join('КИРБИ ДРУГ',1);assert.equal(duplicate.messages[0].type,'error');assert.match(duplicate.messages[0].message,/именем/);assert.equal(room.info().players,1);
+  assert.equal((await join('\u200b ',1)).messages[0].type,'error');
+  const second=await join('Другой',1);
+  const actor={p:[12,8,-16],q:[0,0,0,1],s:2,state:'Fly',pose:[],fruits:0,achievements:['mill','bench'],name:'Попытка сменить имя',variant:7,star:30,progress:{size:2.2,checkpoint:2,ground:4}};
+  send(first,actor,[{type:'fruit',index:0},{type:'lock',key:'bug:0'}]);
+  assert.equal(first.data.actor.name,'Кирби Друг');assert.equal(first.data.actor.variant,0);assert.equal(first.data.actor.fruits,1);assert.equal(writes,0);
+  room.room.festival=createStarfall(now,'Кирби Друг');room.room.festival.players[id]={name:'Кирби Друг',variant:0,base:7,fruits:1,size:2.3,bonus:6,collected:[0,1,2,3,4,5]};
+  await room.webSocketClose(first);
+  assert.equal(writes,1);assert.equal(room.room.host,second.data.id);assert(!room.room.locks['bug:0']);
+  // A new Durable Object instance recovers the room through the surviving host attachment.
+  room=new GameRoom(ctx,{});now+=5000;
+  const returned=await join('кирби друг',3),welcome=returned.messages.find(m=>m.type==='welcome');
+  assert.equal(welcome.playerId,id);assert.equal(welcome.room.id,roomId);assert.equal(welcome.resume.variant,0);
+  assert.equal(welcome.resume.fruits,1);assert.deepEqual(welcome.resume.achievements,['mill','bench']);
+  assert.deepEqual(welcome.resume.p,[12,4,-16]);assert.equal(welcome.resume.progress.checkpoint,2);assert.equal(welcome.resume.progress.size,2.3);
+  assert.equal(welcome.resume.state,'Idle');assert(!welcome.resume.ride);assert.equal(welcome.resume.star,25);assert(validActor(welcome.resume));
+  assert.equal(welcome.room.fruits[0],id);assert.equal(welcome.room.festival.players[id].bonus,6);
+  // Rejoining cannot claim an already-collected festival star again.
+  send(returned,welcome.resume,[{type:'festival-star',index:0}]);assert.equal(room.room.festival.players[id].bonus,6);
+  const count=writes;send(returned,welcome.resume);assert.equal(writes,count);
+  assert.equal((await join('Кирби Друг',4)).messages[0].type,'error');
+  // Riding is not restored: dismount at the same horizontal location, release the lock.
+  send(returned,{...welcome.resume,p:[22,11,33],ride:{key:'bug:0',data:Array(10).fill(0)}},[{type:'lock',key:'bug:0'}]);
+  send(returned,{...welcome.resume,p:[22,11,33],ride:{key:'bug:0',data:Array(10).fill(0)}});
+  await room.webSocketClose(returned);const colourUser=await join('Новый',0);
+  const fallback=await join('Кирби Друг',4),restored=fallback.messages[0].resume;
+  assert.equal(restored.variant,4);assert.deepEqual(restored.p,[22,0,33]);assert(!restored.ride);assert.equal(fallback.data.id,id);
+  await room.webSocketClose(second);await room.webSocketClose(colourUser);await room.webSocketClose(fallback);
+  assert.equal(room.room,undefined);assert.equal(storage.size,0);
+  const fresh=await join('Кирби Друг',0);assert.notEqual(fresh.messages[0].room.id,roomId);assert.notEqual(fresh.data.id,id);assert(!fresh.messages[0].resume);assert(fresh.messages[0].room.fruits.every((x:unknown)=>x===null));
+ }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
+});
+
+test('name identity and reconnect progress validation',()=>{
+ assert.equal(playerNameKey('  КИРБИ  друг '),playerNameKey('кирби друг'));
+ assert.equal(playerNameKey('Ｋｉｒｂｙ'),playerNameKey('Kirby'));
+ const a={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
+ for(const progress of [null,{}, {size:NaN,checkpoint:1,ground:0},{size:1,checkpoint:5,ground:0},{size:1,checkpoint:1,ground:Infinity}])assert(!validActor({...a,progress}));
+ assert(validActor({...a,progress:{size:1.4,checkpoint:3,ground:12}}));
+});

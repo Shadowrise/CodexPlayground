@@ -7,6 +7,7 @@ type Actions={jump:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
 export class TouchControls {
   readonly root=document.createElement('div');
   readonly chooser=document.createElement('div');
+  private interactionLayer=document.createElement('div');
   x=0;y=0;
   private enabled=false;
   private stickId:number|undefined;
@@ -20,6 +21,7 @@ export class TouchControls {
 
   constructor(private canvas:HTMLCanvasElement,private actions:Actions){
     this.root.id='touch-controls';this.root.hidden=true;
+    this.interactionLayer.id='touch-interaction';this.interactionLayer.hidden=true;
     this.stick.id='touch-stick';this.stick.setAttribute('aria-label','Джойстик движения');
     this.thumb.className='touch-thumb';this.stick.append(this.thumb);
     const caption=document.createElement('small');caption.textContent='Движение · край — спринт';this.stick.append(caption);
@@ -34,7 +36,8 @@ export class TouchControls {
     };
     button('touch-jump','↑','Прыжок / полёт',actions.jump);
     button('touch-attack','✦','Атака',actions.attack);
-    this.action=button('touch-interact','Действие','Взаимодействовать',actions.interact);this.action.hidden=true;
+    // Keep the contextual action above the scrollable HUD, outside the movement layer.
+    this.action=button('touch-interact','Действие','Взаимодействовать',actions.interact,this.interactionLayer);this.action.hidden=true;
     const utilities=document.createElement('div');utilities.className='touch-tools';
     button('touch-emotes','☺','Эмоции',()=>{this.reset();this.chooser.hidden=false;},utilities);
     button('touch-chat','Чат','Написать в чат',()=>{this.reset();actions.chat();},utilities);
@@ -43,7 +46,7 @@ export class TouchControls {
     const title=document.createElement('h3');title.textContent='Как настроение?';this.chooser.append(title);
     for(const emote of EMOTES){const b=document.createElement('button');b.type='button';b.textContent=`${emote.icon} ${emote.name}`;b.addEventListener('click',()=>{this.chooser.hidden=true;actions.emote(emote.id);});this.chooser.append(b);}
     const close=document.createElement('button');close.type='button';close.textContent='Закрыть';close.addEventListener('click',()=>this.chooser.hidden=true);this.chooser.append(close);
-    document.body.append(this.root,this.chooser);
+    document.body.append(this.root,this.interactionLayer,this.chooser);
     this.stick.addEventListener('pointerdown',e=>{
       if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.stickId!==undefined)return;
       e.preventDefault();this.stickId=e.pointerId;this.stick.setPointerCapture(e.pointerId);this.moveStick(e);
@@ -74,7 +77,7 @@ export class TouchControls {
     this.x=x/length;this.y=y/length;this.thumb.style.transform=`translate(${this.x*radius}px,${this.y*radius}px)`;
   }
   setEnabled(enabled:boolean){
-    if(this.enabled===enabled)return;this.enabled=enabled;this.root.hidden=!enabled;
+    if(this.enabled===enabled)return;this.enabled=enabled;this.root.hidden=this.interactionLayer.hidden=!enabled;
     if(!enabled){this.reset();this.chooser.hidden=true;}
   }
   setInteraction(text?:string){

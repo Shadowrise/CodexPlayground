@@ -63,6 +63,7 @@ export class SkyTrail{
   for(let i=0;i<16;i++){const a=i*Math.PI/8;const spring=new T.Mesh(new T.TorusGeometry(.07,.018,5,10),metal);spring.position.set(Math.cos(a)*1.44,.5,Math.sin(a)*1.44);spring.rotation.set(Math.PI/2,0,a);parent.add(spring);if(i%2===0){const leg=new T.Mesh(new T.CylinderGeometry(.055,.075,.5,7),metal);leg.position.set(Math.cos(a)*1.3,.25,Math.sin(a)*1.3);parent.add(leg);}}
  }
  contains(p:T.Vector3){return Math.hypot(p.x-SITE.x,p.z-SITE.z)<SITE.radius;}
+ restorePosition(c:CharacterController){if(this.contains(c.actor.position)){this.base=c.surfaceY;this.inCourse=true;this.fall=undefined;}}
  handles(c:CharacterController){return this.active||this.contains(c.actor.position)||(this.inCourse&&c.actor.position.y>0);}
  savePosition(c:CharacterController){return this.handles(c)?this.entry.clone():undefined;}
  prompt(c:CharacterController){if(this.active)return '';const p=c.actor.position;if(c.skyCheckpoint>0&&p.distanceTo(this.lower.position.clone().add(this.group.position))<3.4&&p.y<1&&!c.flight.active)return `E — вернуться к чекпойнту ${c.skyCheckpoint}`;const top=this.upper.position.clone().add(this.group.position);return p.distanceTo(top)<2.8&&!c.flight.active?'E — прыгнуть с вершины в листья':'';}
