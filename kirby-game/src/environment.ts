@@ -34,7 +34,7 @@ export function addEnvironment(scene: THREE.Scene) {
     }
   }
   grass.name='Meadow grass';
-  grass.receiveShadow = true;
+  grass.receiveShadow = false;
   scene.add(spatialInstances(grass));
 
   scene.add(createForest());
