@@ -1,4 +1,5 @@
 import {ADMIN_HTML} from './admin-page';
+import {ADMIN_ICON} from './admin-icon';
 import {adminCookie,adminToken,samePassword,validAdminToken} from './admin-auth';
 import {soloVisit,type HistoryFilter} from './history-store';
 import {validSoloReport} from '../../kirby-game/src/history-types';
@@ -23,7 +24,8 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
   }catch{return json({error:'Статистика временно недоступна'},503,cors);}
  }
  if(path!=='/admin'&&!path.startsWith('/admin/'))return;
- if((path==='/admin'||path==='/admin/')&&request.method==='GET')return new Response(ADMIN_HTML,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
+ if(path==='/admin/favicon.svg'&&request.method==='GET')return new Response(ADMIN_ICON,{headers:{'Content-Type':'image/svg+xml','Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}});
+ if((path==='/admin'||path==='/admin/')&&request.method==='GET')return new Response(ADMIN_HTML,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json({error:'Недопустимый источник запроса'},403);
  if(path==='/admin/api/logout'&&request.method==='POST')return json({ok:true},200,{'Set-Cookie':adminCookie('',url.protocol==='https:')});
  if(!env.ADMIN_PASSWORD)return json({error:'Пароль администратора ещё не настроен на сервере'},503);
@@ -36,6 +38,14 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  }
  const cookie=(request.headers.get('Cookie')??'').split(';').map(x=>x.trim()).find(x=>x.startsWith('kirby_admin='))?.slice(12)??'';
  if(!await validAdminToken(cookie,env.ADMIN_PASSWORD))return json({error:'Войди в админку'},401);
+ if(path==='/admin/api/online'&&request.method==='GET'){
+  try{return json(await env.ROOMS.getByName('main').adminOnline());}catch{return json({error:'Не удалось загрузить комнату'},503);}
+ }
+ if(['/admin/api/online/recreate','/admin/api/online/disconnect','/admin/api/online/starfall','/admin/api/online/finish'].includes(path)&&request.method==='POST'){
+  let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
+  if(!data||typeof data.roomId!=='string'||!data.roomId||data.roomId.length>80||path.endsWith('/disconnect')&&(typeof data.playerId!=='string'||!data.playerId||data.playerId.length>80))return json({error:'Некорректный идентификатор'},400);
+  try{const room=env.ROOMS.getByName('main'),result=path.endsWith('/recreate')?await room.adminRecreate(data.roomId):path.endsWith('/disconnect')?await room.adminDisconnect(data.roomId,data.playerId):await room.adminFestival(data.roomId,path.endsWith('/finish'));return json(result,result.ok?200:409);}catch{return json({error:'Не удалось выполнить действие. Обнови список перед повтором.'},503);}
+ }
  if(path==='/admin/api/history'&&request.method==='GET'){
   const f:HistoryFilter={name:url.searchParams.get('name')?.slice(0,24),mode:url.searchParams.get('mode')??undefined};
   for(const key of ['from','to'] as const)if(url.searchParams.has(key)){const v=Number(url.searchParams.get(key));if(!Number.isFinite(v))return json({error:'Некорректная дата'},400);f[key]=v;}

@@ -4,7 +4,7 @@ import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/hi
 import {SCORE_ACTIONS} from '../../kirby-game/src/score';
 import {historyRoutes} from './admin';
 import {initHistory,writeVisits,historyPage,type Visit,type HistoryFilter} from './history-store';
-import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from '../../kirby-game/src/starfall';
+import {allTasks,createStarfall,collectStar,finishStarfall,COLLECT_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
 import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
@@ -23,6 +23,39 @@ export class GameRoom extends DurableObject<Env>{
  constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
+ private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};}
+ adminOnline(){return this.ctx.blockConcurrencyWhile(async()=>{
+  const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
+  return {room:room?{id:room.id,createdAt:room.epoch,festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null};})};
+ });}
+ adminDisconnect(roomId:string,playerId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+  if(this.room?.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  const socket=this.players().find(s=>(s.deserializeAttachment() as Attachment).id===playerId);
+  if(!socket)return {ok:false,error:'Игрок уже отключился.'};
+  this.send(socket,{type:'error',message:'Администратор отключил тебя от комнаты.'});
+  await this.removePlayer(socket,'left','Admin disconnected');return {ok:true};
+ });}
+ adminRecreate(roomId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+  const current=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
+  if(!current||current.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  const visits=this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const visit=this.historySnapshot(a,'left');a.left=true;delete a.room;s.serializeAttachment(a);this.send(s,{type:'error',message:'Администратор пересоздал комнату. Вернись в меню и подключись к новой игре.'});try{s.close(1000,'Admin recreated room');}catch{}return visit;});
+  this.archive(visits);this.room=undefined;await this.ctx.storage.deleteAlarm();await this.ctx.storage.deleteAll();
+  // An empty replacement sleeps without an alarm until the first player joins.
+  const room=this.newRoom();await this.ctx.storage.put('prepared-room',room);return {ok:true,roomId:room.id};
+ });}
+ adminFestival(roomId:string,finish:boolean){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room;if(!r||r.id!==roomId||!this.players().length)return {ok:false,error:'Активной комнаты уже нет. Обнови список.'};
+  if(r.festival?.results||r.festival&&!finish)return {ok:false,error:'Финальный ивент уже запущен или завершён.'};
+  const now=Date.now();this.startFestival(now,'Администратор');
+  if(finish){r.festival!.endsAt=now;r.festival!.startsAt=now-COLLECT_MS;this.finishFestival(now);}
+  else this.changed();
+  await this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt+(finish?RESULTS_MS:0)));return {ok:true};
+ });}
+ private startFestival(now:number,initiator:string){
+  const r=this.room;if(!r||r.festival)return;
+  r.festival=createStarfall(now,initiator);
+  for(const peer of this.players()){const a=peer.deserializeAttachment() as Attachment;const actor=a.actor;r.festival.players[a.id]={name:a.name??actor?.name??'Кирби',variant:a.variant,base:(actor?.fruits??0)+(actor?.achievements.length??0)*3,fruits:actor?.fruits??0,size:actor?.s??1,bonus:0,collected:[]};}
+ }
  private send(s:WebSocket,v:unknown){try{s.send(JSON.stringify(v));}catch{}}
  private broadcast(v:unknown,except?:WebSocket){for(const s of this.players())if(s!==except)this.send(s,v);}
  private accountHistory(a:Attachment,now=Date.now()){
@@ -69,7 +102,7 @@ export class GameRoom extends DurableObject<Env>{
   if(saved&&!occupied.has(saved.actor.variant))variant=saved.actor.variant;
   if(occupied.has(variant))return this.reject('Этот цвет уже занят. Выбери другого Кирби.');
   const id=saved?.id??crypto.randomUUID();
-  if(first){await this.ctx.storage.deleteAll();this.room={id:crypto.randomUUID(),host:id,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};}
+  if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.room.host=id;}
   const resume=saved?{...saved.actor,name,variant,star:Math.max(0,saved.actor.star-(Date.now()-saved.savedAt)/1000)}:undefined;
   let device=deviceInfo(request.headers.get('User-Agent')??'');try{const raw=url.searchParams.get('device');if(raw&&raw.length<1024)device=sanitizeDevice(JSON.parse(raw));}catch{}
   const now=Date.now(),history:OnlineVisit={id:'online:'+crypto.randomUUID(),startedAt:now,activeMs:0,tick:now,lastWrite:now,startScore:(resume?.fruits??0)+(resume?.achievements.length??0)*3+(this.room?.festival?.players[id]?.bonus??0),seq:0,device};
@@ -121,9 +154,8 @@ export class GameRoom extends DurableObject<Env>{
    a.actor.fruits=count;
   }
   if(!r.festival&&a.actor&&allTasks(a.actor.achievements)){
-   r.festival=createStarfall(now,a.actor.name);changed=true;
-   for(const peer of this.players()){const v=peer.deserializeAttachment() as Attachment;if(v.actor)r.festival.players[v.id]={name:v.actor.name,variant:v.variant,base:v.actor.fruits+v.actor.achievements.length*3,fruits:v.actor.fruits,size:v.actor.s,bonus:0,collected:[]};}
-   void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival.endsAt));
+   this.startFestival(now,a.actor.name);changed=true;
+   void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
   }
   if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+a.actor.achievements.length*3;p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.s;}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
@@ -132,8 +164,8 @@ export class GameRoom extends DurableObject<Env>{
   if(actor||world)this.broadcast({type:'frame',id:a.id,actor,world},socket);
  }
  private remove(socket:WebSocket,status:Visit['status']='left'){return this.ctx.blockConcurrencyWhile(()=>this.removePlayer(socket,status));}
- private async removePlayer(socket:WebSocket,status:Visit['status']){
-  const a=socket.deserializeAttachment() as Attachment;if(a.left)return;a.left=true;socket.serializeAttachment(a);try{socket.close(1000,'Disconnected');}catch{}
+ private async removePlayer(socket:WebSocket,status:Visit['status'],reason='Disconnected'){
+  const a=socket.deserializeAttachment() as Attachment;if(a.left)return;a.left=true;socket.serializeAttachment(a);try{socket.close(1000,reason);}catch{}
   if(a.session&&a.session!==this.room?.id)return;
   const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(socket)?.getTime()??0);
   this.archive([this.historySnapshot(a,status,status==='lost'?seen:Date.now())]);
@@ -151,7 +183,7 @@ export class GameRoom extends DurableObject<Env>{
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
   this.broadcast({type:'left',id:a.id},socket);this.broadcast({type:'presence',count:remaining.length},socket);this.changed();
  }
- async webSocketClose(socket:WebSocket,code=1000){await this.remove(socket,code===1000?'left':'lost');}
+ async webSocketClose(socket:WebSocket,code=1000){try{socket.close(1000,'Disconnected');}catch{}await this.remove(socket,code===1000?'left':'lost');}
  async webSocketError(socket:WebSocket){await this.remove(socket,'lost');}
  async alarm(){
   this.finishFestival();

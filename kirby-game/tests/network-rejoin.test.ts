@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
 import {BUILD,validActor} from '../src/network-protocol';
 import {playerNameKey} from '../src/player-name';
-import {createStarfall} from '../src/starfall';
+import {createStarfall,validStarfall,RESULTS_MS} from '../src/starfall';
 
 test('room restores disconnected players by name, rejects online duplicates, and forgets an empty session',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
@@ -63,6 +63,30 @@ test('room restores disconnected players by name, rejects online duplicates, and
   await room.webSocketClose(second);await room.webSocketClose(colourUser);await room.webSocketClose(fallback);
   assert.equal(room.room,undefined);assert.equal(storage.size,0);
   const fresh=await join('Кирби Друг',0);assert.notEqual(fresh.messages[0].room.id,roomId);assert.notEqual(fresh.data.id,id);assert(!fresh.messages[0].resume);assert(fresh.messages[0].room.fruits.every((x:unknown)=>x===null));
+  // Admin disconnect uses normal departure cleanup, transfers host and releases rides.
+  const peer=await join('Гость',1),activeId=room.room.id;
+  send(fresh,{...actor,name:'Кирби Друг',achievements:['bench']},[{type:'lock',key:'bug:0'}]);
+  const online=await room.adminOnline();assert.equal(online.room.id,activeId);assert.equal(online.players.length,2);assert.equal(online.players.find((p:any)=>p.id===fresh.data.id).host,true);
+  assert.equal((await room.adminDisconnect('stale',fresh.data.id)).ok,false);assert.equal(fresh.readyState,1);
+  assert.equal((await room.adminDisconnect(activeId,fresh.data.id)).ok,true);assert.equal(fresh.readyState,3);assert.equal(room.room.host,peer.data.id);assert(!room.room.locks['bug:0']);
+  assert.equal((await room.adminDisconnect(activeId,fresh.data.id)).ok,false);
+  const reset=await room.adminRecreate(activeId);assert(reset.ok);assert.equal(peer.readyState,3);assert.notEqual(reset.roomId,activeId);
+  // The empty replacement survives hibernation; stale close events cannot delete it.
+  room=new GameRoom(ctx,{});await room.webSocketClose(peer);
+  assert.equal((await room.adminOnline()).room.id,reset.roomId);assert.equal((await room.adminOnline()).players.length,0);
+  assert.equal((await room.adminRecreate(activeId)).ok,false);assert.equal((await room.adminFestival(reset.roomId,false)).ok,false);
+  const nextPlayer=await join('Кирби Друг',0);assert.equal(nextPlayer.messages[0].room.id,reset.roomId);assert(!nextPlayer.messages[0].resume);assert.equal(storage.size,0);
+  // The admin uses the normal starfall, including immediate results and their deadline.
+  send(nextPlayer,{...actor,achievements:['bench'],fruits:0});
+  assert.equal((await room.adminFestival(reset.roomId,false)).ok,true);assert(validStarfall(room.room.festival));
+  assert.equal((await room.adminFestival(reset.roomId,false)).ok,false);
+  assert.equal((await room.adminFestival(reset.roomId,true)).ok,true);assert(validStarfall(room.room.festival));
+  assert.equal(room.room.festival.results[0].points,3);assert.equal(room.room.festival.endsAt,now);
+  assert(nextPlayer.messages.some(m=>m.type==='room'&&m.room.festival?.results));assert.equal((await room.adminFestival(reset.roomId,true)).ok,false);
+  now+=RESULTS_MS;await room.alarm();assert.equal((await room.adminOnline()).room,null);
+  const immediate=await join('Без ивента',2),immediateId=room.room.id;
+  assert.equal((await room.adminFestival(immediateId,true)).ok,true);assert.equal(room.room.festival.results[0].name,'Без ивента');assert.equal(room.room.festival.results[0].points,0);
+  await room.webSocketClose(immediate);assert.equal((await room.adminOnline()).room,null);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 

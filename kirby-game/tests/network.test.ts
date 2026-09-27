@@ -12,7 +12,7 @@ import {Coaster} from '../src/coaster';
 import {Balloons} from '../src/balloons';
 import {NightFireflies} from '../src/night-fireflies';
 import {actorState} from '../src/network-actors';
-import {validActor,validWorld} from '../src/network-protocol';
+import {PROTOCOL,validActor,validWorld} from '../src/network-protocol';
 async function model(name:string){const data=await readFile(new URL('../public/models/'+name,import.meta.url));return new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');}
 test('actual world fits the shared wire contract and attachment budget',async()=>{
  const [gltf,bugs]=await Promise.all([model('kirby-animated.glb'),model('firefly-animated.glb')]);
@@ -81,4 +81,18 @@ test('festival end sends one final frame using server time even when normal tick
   now++;for(let i=0;i<100;i++)session.finishFestivalIfDue();
   assert.equal(messages.length,1);assert.equal(messages[0].type,'frame');
  }finally{Date.now=original;}
+});
+
+test('admin disconnect notifies a connected client before the close handshake finishes',async()=>{
+ const original=globalThis.WebSocket;let socket:any,closes=0;
+ class FakeSocket {static OPEN=1;readyState=1;onmessage?:Function;onclose?:Function;constructor(){socket=this;}close(){closes++;}send(){}}
+ globalThis.WebSocket=FakeSocket as any;
+ const session=new NetworkSession(),reasons:string[]=[];session.onDisconnect=reason=>reasons.push(reason);
+ try{
+  const connected=session.connect('https://example.test',0,'Test');
+  socket.onmessage({data:JSON.stringify({type:'welcome',protocolVersion:PROTOCOL,playerId:'test',players:[],room:{id:'room',host:'test',epoch:0,fruits:[],starAt:0,mill:false,locks:{}}})});await connected;
+  const message='Администратор пересоздал комнату.';
+  socket.onmessage({data:JSON.stringify({type:'error',message})});assert.deepEqual(reasons,[message]);assert.equal(closes,1);
+  socket.onclose({reason:'Admin recreated room'});assert.deepEqual(reasons,[message]);
+ }finally{session.close();globalThis.WebSocket=original;}
 });

@@ -106,6 +106,31 @@ frontend build. Deploy the Worker and client together to enable collection;
 earlier visits cannot be reconstructed. Archive schema version 1 is initialized
 on its first use. No D1 resource or database migration command is needed.
 
+### Online administration
+
+The **Online** tab shows the current room ID and connected players (including
+the host), refreshed on demand to avoid background polling. Admin actions use
+the same signed session and same-origin POST checks as history/login:
+
+- `GET /admin/api/online` — room and player list.
+- `POST /admin/api/online/disconnect` with `{roomId, playerId}` — disconnects
+  a player without banning them; normal progress/history and host handover apply.
+- `POST /admin/api/online/recreate` with `{roomId}` — disconnects everyone,
+  clears room progress and prepares a fresh ID. The empty replacement sleeps
+  without alarms until someone joins. The permanent history archive is retained.
+- `POST /admin/api/online/starfall` with `{roomId}` — starts the usual final
+  starfall, using the same scoring and timing as completion of all tasks.
+- `POST /admin/api/online/finish` with `{roomId}` — immediately shows the final
+  standings, retaining earned star points. Results expire after two minutes.
+
+Stale room/player actions return 409. Destructive controls ask for confirmation.
+`/admin/favicon.svg` provides a Kirby-with-shield icon for admin browser tabs.
+
+Local interactive checks: run `npx wrangler dev --port 8791 --persist-to
+.wrangler/admin-online-tests` in this directory, then
+`node ../kirby-game/scripts/admin-online-browser.mjs`. The script uses a dedicated
+local room and never mutates a production room.
+
 ### History checks
 
 - `node scripts/history-smoke.mjs` — local auth/API, visit writes, tasks, stale
