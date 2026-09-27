@@ -214,7 +214,7 @@ scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 // Wider filtering smooths moving shadow edges on every receiver, at the same map resolution.
@@ -718,7 +718,7 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   shadows.updateFrustums();
-  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1 : 1.5));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
   renderer.setSize(innerWidth, innerHeight);
 });
 
