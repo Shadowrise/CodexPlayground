@@ -32,13 +32,13 @@ export class GameRoom extends DurableObject<Env>{
   if(this.room?.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
   const socket=this.players().find(s=>(s.deserializeAttachment() as Attachment).id===playerId);
   if(!socket)return {ok:false,error:'Игрок уже отключился.'};
-  this.send(socket,{type:'error',message:'Администратор отключил тебя от комнаты.'});
+  this.send(socket,{type:'error',message:'Ветерок отключил тебя от комнаты.'});
   await this.removePlayer(socket,'left','Admin disconnected');return {ok:true};
  });}
  adminRecreate(roomId:string){return this.ctx.blockConcurrencyWhile(async()=>{
   const current=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
   if(!current||current.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
-  const visits=this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const visit=this.historySnapshot(a,'left');a.left=true;delete a.room;s.serializeAttachment(a);this.send(s,{type:'error',message:'Администратор пересоздал комнату. Вернись в меню и подключись к новой игре.'});try{s.close(1000,'Admin recreated room');}catch{}return visit;});
+  const visits=this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const visit=this.historySnapshot(a,'left');a.left=true;delete a.room;s.serializeAttachment(a);this.send(s,{type:'error',message:'Ветерок пересоздал комнату. Вернись в меню и подключись к новой игре.'});try{s.close(1000,'Admin recreated room');}catch{}return visit;});
   this.archive(visits);this.room=undefined;await this.ctx.storage.deleteAlarm();await this.ctx.storage.deleteAll();
   // An empty replacement sleeps without an alarm until the first player joins.
   const room=this.newRoom();await this.ctx.storage.put('prepared-room',room);return {ok:true,roomId:room.id};
@@ -46,7 +46,7 @@ export class GameRoom extends DurableObject<Env>{
  adminFestival(roomId:string,finish:boolean){return this.ctx.blockConcurrencyWhile(async()=>{
   const r=this.room;if(!r||r.id!==roomId||!this.players().length)return {ok:false,error:'Активной комнаты уже нет. Обнови список.'};
   if(r.festival?.results||r.festival&&!finish)return {ok:false,error:'Финальный ивент уже запущен или завершён.'};
-  const now=Date.now();this.startFestival(now,'Администратор');
+  const now=Date.now();this.startFestival(now,'Ветерок');
   if(finish){r.festival!.endsAt=now;r.festival!.startsAt=now-COLLECT_MS;this.finishFestival(now);}
   else this.changed();
   await this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt+(finish?RESULTS_MS:0)));return {ok:true};

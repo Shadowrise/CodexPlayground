@@ -91,7 +91,7 @@ test('admin disconnect notifies a connected client before the close handshake fi
  try{
   const connected=session.connect('https://example.test',0,'Test');
   socket.onmessage({data:JSON.stringify({type:'welcome',protocolVersion:PROTOCOL,playerId:'test',players:[],room:{id:'room',host:'test',epoch:0,fruits:[],starAt:0,mill:false,locks:{}}})});await connected;
-  const message='Администратор пересоздал комнату.';
+  const message='Ветерок пересоздал комнату.';
   socket.onmessage({data:JSON.stringify({type:'error',message})});assert.deepEqual(reasons,[message]);assert.equal(closes,1);
   socket.onclose({reason:'Admin recreated room'});assert.deepEqual(reasons,[message]);
  }finally{session.close();globalThis.WebSocket=original;}

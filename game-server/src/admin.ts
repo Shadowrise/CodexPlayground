@@ -28,7 +28,7 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  if((path==='/admin'||path==='/admin/')&&request.method==='GET')return new Response(ADMIN_HTML,{headers:{...baseHeaders,'Content-Type':'text/html; charset=utf-8','X-Frame-Options':'DENY','Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"}});
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json({error:'Недопустимый источник запроса'},403);
  if(path==='/admin/api/logout'&&request.method==='POST')return json({ok:true},200,{'Set-Cookie':adminCookie('',url.protocol==='https:')});
- if(!env.ADMIN_PASSWORD)return json({error:'Пароль администратора ещё не настроен на сервере'},503);
+ if(!env.ADMIN_PASSWORD)return json({error:'Пароль Ветерка ещё не настроен на сервере'},503);
  if(path==='/admin/api/login'&&request.method==='POST'){
   try{
    if(!(await env.ADMIN_LOGIN_LIMITER.limit({key:request.headers.get('CF-Connecting-IP')??'local'})).success)return json({error:'Слишком много попыток. Попробуй через минуту.'},429);

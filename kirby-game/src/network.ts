@@ -42,7 +42,7 @@ export class NetworkSession{
    else if(m.type==='lock'){this.locks.get(m.key)?.(m.ok);this.locks.delete(m.key);}
   };
   s.onerror=()=>{clearTimeout(timeout);reject(Error('Не удалось подключиться: сервер недоступен, обновляется или комната заполнена.'));};
-  s.onclose=e=>{clearTimeout(timeout);clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();if(!this.closed)this.onDisconnect?.(e.reason==='Admin recreated room'?'Администратор пересоздал комнату. Вернись в меню и подключись к новой игре.':e.reason==='Admin disconnected'?'Администратор отключил тебя от комнаты.':'Соединение потеряно. Вернись в меню и подключись снова.');reject(Error('Соединение закрыто.'));};
+  s.onclose=e=>{clearTimeout(timeout);clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();if(!this.closed)this.onDisconnect?.(e.reason==='Admin recreated room'?'Ветерок пересоздал комнату. Вернись в меню и подключись к новой игре.':e.reason==='Admin disconnected'?'Ветерок отключил тебя от комнаты.':'Соединение потеряно. Вернись в меню и подключись снова.');reject(Error('Соединение закрыто.'));};
  });}
  event(event:Event){this.events.push(event);if(event.type==='visible')setTimeout(()=>{if(this.socket?.readyState===WebSocket.OPEN&&this.events.length)this.socket.send(JSON.stringify({type:'frame',events:this.events.splice(0,16)}));},150);}
  acquire(key:string){return new Promise<boolean>(resolve=>{if(this.locks.has(key)){resolve(false);return;}const timer=setTimeout(()=>{this.locks.delete(key);this.event({type:'release',key});resolve(false);},5000);this.locks.set(key,ok=>{clearTimeout(timer);resolve(ok);});this.event({type:'lock',key});});}
