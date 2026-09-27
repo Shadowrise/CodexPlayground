@@ -1,0 +1,2 @@
+# Local development only. Copy to .dev.vars and choose a password.
+ADMIN_PASSWORD=replace-with-your-private-password

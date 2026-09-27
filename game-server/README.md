@@ -68,7 +68,52 @@ hidden, browser simulation is suspended until a player returns. Cosmetic audio
 and some ambient/particle animation phases remain local. Host migration may
 slightly correct moving objects to their most recent snapshot.
 
-## Verification
+## Admin history
+
+Open `/admin` on the Worker (locally: `http://127.0.0.1:8787/admin`). The History
+tab supports exact nickname search, mode/date filters and cursor pagination
+through every visit. It records start/end or last contact, visible play time,
+starting/current/earned scores, **completed tasks out of the total**, device
+category, OS, browser, screen dimensions and selected control scheme. Online
+visits also retain room/player IDs, completion and final rank. Reconnecting
+creates a separate visit in the same room, retaining the initial score baseline.
+An online visit is completed when the player is still connected as results begin.
+
+History lives in the separate SQLite Durable Object `HistoryStore` (`archive`),
+created by migration `v2`; deleting a `GameRoom` never deletes the archive.
+Online snapshots are batched once per minute using the room's existing alarm,
+plus admission/departure/results. Solo clients post a full cumulative snapshot
+on entry, every minute, visibility changes and departure. Reports have monotonic
+sequence numbers; late packets cannot overwrite final records. Requests time out
+after five seconds, errors are caught, and analytics are never awaited by the
+game. Abrupt disconnects show the last received data; stale visits are shown as
+lost after 150 seconds. Device inference is approximate, not fingerprinting.
+Solo reports are client-provided analytics, not anti-cheat records.
+
+Copy `.dev.vars.example` to `.dev.vars` for local use. Choose `ADMIN_PASSWORD`;
+the real local file is ignored by Git. For production, run
+`npx wrangler secret put ADMIN_PASSWORD` before publishing the new Worker.
+There is no default production password: admin data stays inaccessible without
+the secret. The password is checked server-side; a signed 12-hour HttpOnly,
+SameSite=Strict cookie (Secure on HTTPS) authorizes history reads. Password
+rotation invalidates previous sessions. Login attempts are limited to 10 per
+minute per IP; solo ingestion is limited to 60 per minute per IP. IP addresses
+are used for rate limiting only, not stored in visit rows. Admin responses are
+not cached and do not allow cross-origin reads. Logging out removes the cookie.
+
+The admin page is served by the Worker, so it requires no game scene or separate
+frontend build. Deploy the Worker and client together to enable collection;
+earlier visits cannot be reconstructed. Archive schema version 1 is initialized
+on its first use. No D1 resource or database migration command is needed.
+
+### History checks
+
+- `node scripts/history-smoke.mjs` — local auth/API, visit writes, tasks, stale
+  packets and history surviving room disposal. Reads the local `.dev.vars`.
+- `node ../kirby-game/scripts/history-browser.mjs` — login/table/filters/logout
+  and real gameplay continuing with failed telemetry; local fixtures only.
+
+## Game verification
 
 - `npm run check` — generated Worker types and TypeScript.
 - `npm test --prefix ../kirby-game` — shared/client regression tests, including

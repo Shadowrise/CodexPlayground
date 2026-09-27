@@ -8,8 +8,8 @@ import {createStarfall} from '../src/starfall';
 
 test('room restores disconnected players by name, rejects online duplicates, and forgets an empty session',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
-  .replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,...args:any[]){} }')
-  .replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href)
+  .replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }')
+  .replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href)
   .replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2')
   .replaceAll('new Response(null,{status:101,webSocket:client})','({status:101,webSocket:client})');
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -26,7 +26,7 @@ test('room restores disconnected players by name, rejects online duplicates, and
  let lastServer:Socket;
  globals.WebSocketPair=class {0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class {};
  const sockets:Socket[]=[],storage=new Map<string,unknown>();let writes=0;
- const ctx={blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
+ const ctx={blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
   storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){writes++;storage.set(key,structuredClone(value));},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
  try{
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));let room=new GameRoom(ctx,{});

@@ -14,7 +14,9 @@ import type { WorldState, ActorState } from './network-protocol';
 import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
 import { TaskList } from './tasks';
-import { awardFirst, scoreOf } from './score';
+import { awardFirst, scoreOf, SCORE_ACTIONS } from './score';
+import {SoloHistory} from './solo-history';
+import {deviceInfo} from './history-types';
 import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
 import { FpsCounter } from './fps';
 import { EMOTES, EmoteWheel, type Emote } from './emotes';
@@ -59,6 +61,8 @@ import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './
 import { createGamepadInput, stickSteering } from './gamepad';
 const gamepad = createGamepadInput();
 const mobile=wantsTouchControls(navigator.maxTouchPoints,matchMedia('(pointer: coarse)').matches,matchMedia('(hover: none)').matches);
+const historyDevice=()=>deviceInfo(navigator.userAgent,navigator.maxTouchPoints,screen.width,screen.height,gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard');
+let soloHistory:SoloHistory|undefined;
 document.body.classList.toggle('touch-ui',mobile);
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
@@ -141,7 +145,7 @@ const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu'
 let returningToMenu=false;
 leaveOnline.addEventListener('click',()=>{
  if(returningToMenu)return;returningToMenu=true;playing=false;
- renderer.setAnimationLoop(null);keys.clear();stopDragging();network?.close();location.reload();
+ soloHistory?.stop();renderer.setAnimationLoop(null);keys.clear();stopDragging();network?.close();location.reload();
 });
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
@@ -443,7 +447,7 @@ startButton.addEventListener('click', async () => {
   if(networkIntent){
     startButton.disabled=true;startButton.textContent='Подключаемся…';
     const session=new NetworkSession();
-    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value);network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
+    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
     catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
   }
   const { scene: template, animations } = loadedModel;
@@ -467,6 +471,7 @@ startButton.addEventListener('click', async () => {
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
   playing = true;startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
+  if(!network)try{soloHistory=new SoloHistory(serverUrl,()=>({name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),score:scoreOf(character!),tasksDone:SCORE_ACTIONS.filter(t=>character!.achievements.has(t)).length,tasksTotal:SCORE_ACTIONS.length}),historyDevice);}catch{/* Statistics are optional; the game must always start. */}
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
   document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
