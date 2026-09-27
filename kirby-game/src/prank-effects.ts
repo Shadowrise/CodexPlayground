@@ -23,7 +23,7 @@ function bubbles(){
 function footprints(){
  const shape=new T.Shape();shape.moveTo(-.14,-.27);shape.bezierCurveTo(-.31,-.15,-.3,.23,-.16,.34);shape.bezierCurveTo(.02,.49,.26,.29,.22,.09);shape.bezierCurveTo(.13,-.08,.18,-.3,-.02,-.32);shape.closePath();
  const toes=Array.from({length:3},(_,i)=>{const toe=new T.Shape();toe.absellipse(-.15+i*.145,.48-Math.abs(i-1)*.045,.055,.075,0,Math.PI*2,false,0);return toe;});
- const geometry=new T.ShapeGeometry([shape,...toes],16);geometry.rotateX(-Math.PI/2);
+ const geometry=new T.ShapeGeometry([shape,...toes],16);geometry.rotateX(-Math.PI/2);geometry.rotateY(Math.PI);
  const mesh=new T.InstancedMesh(geometry,new T.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.78,depthWrite:false,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}),36);mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;mesh.count=0;const group=new T.Group();group.name='Veterok rainbow footprints';group.add(mesh);return group;
 }
 function gift(){
