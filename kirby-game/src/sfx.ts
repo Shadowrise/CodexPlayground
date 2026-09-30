@@ -91,6 +91,13 @@ export class SoundEffects {
       if (this.buzz?.source === source) this.buzz = undefined;
       cleanup?.();
     };
+    const level = gain.gain.value;
+    if (this.context && level > 0) {
+      const startAt = Math.max(this.context.currentTime, when ?? 0);
+      gain.gain.cancelScheduledValues(startAt);
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(level, startAt + .025);
+    }
     if (when === undefined) source.start(); else source.start(when);
   }
   private silence(voice: PlayingVoice) {
@@ -101,8 +108,8 @@ export class SoundEffects {
     const now = ctx.currentTime;
     voice.gain.gain.cancelScheduledValues(now);
     voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-    voice.gain.gain.linearRampToValueAtTime(0, now + .015);
-    try { voice.source.stop(now + .015); } catch { return; }
+    voice.gain.gain.linearRampToValueAtTime(0, now + .04);
+    try { voice.source.stop(now + .04); } catch { return; }
   }
 
   updateWater(dt:number,swimming:boolean,moving:boolean,available=true){
@@ -312,10 +319,11 @@ export class SoundEffects {
     const ctx = this.context!, rate = 22050;
     const duration = { jump: .32, attack: .22, death: .85, revive: .8, grow: .62, voice: .78, step: .15 }[kind];
     const buffer = ctx.createBuffer(1, Math.ceil(rate * duration), rate), data = buffer.getChannelData(0);
-    let phase = 0, seed = 97 + variant * 113, lowNoise = 0, softNoise = 0;
+    let phase = 0, seed = 97 + variant * 113, lowNoise = 0, softNoise = 0, stepIn = 0, stepOut = 0;
     for (let i = 0; i < data.length; i++) {
       const t = i / rate, u = t / duration;
-      const edge = Math.min(1, t / .012) * Math.min(1, (duration - t) / .05);
+      const release = Math.min(1, (duration - t) / .05);
+      const edge = (kind === 'step' ? T_smoothstep(t / .04) : Math.min(1, t / .012)) * release;
       seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
       const noise = seed / 4294967296 * 2 - 1;
       lowNoise = lowNoise * .8 + noise * .2;
@@ -351,7 +359,10 @@ export class SoundEffects {
       } else {
         phase += 2 * Math.PI * freq / rate;
         // Rounded, low-pass grass rustle: no pitched thump or sharp transient.
-        if (kind === 'step') value = (softNoise*.7 + Math.sin(2*Math.PI*115*t)*.075) * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.5);
+        if (kind === 'step') {
+          const raw = (softNoise*.7 + Math.sin(2*Math.PI*115*t)*.075) * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.5);
+          stepOut = raw - stepIn + .97 * stepOut; stepIn = raw; value = stepOut;
+        }
         else if (kind === 'attack') value = (.65 * lowNoise + .25 * Math.sin(phase)) * Math.exp(-u * 5) * .6;
         else if (kind === 'jump') value = (Math.sin(phase) + .12 * Math.sin(phase * 2)) * Math.exp(-u * 2) * .3;
         else if (kind === 'death') value = (Math.sin(phase) + .16 * Math.sin(phase * 2)) * (1 - u) * .23;
