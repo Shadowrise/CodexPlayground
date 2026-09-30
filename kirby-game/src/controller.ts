@@ -133,8 +133,8 @@ export class CharacterController {
     this.state = 'Push';
   }
   private beginPush(input: Input) {
-    if (this.pushArmed) this.attackHit = true;
-    this.pushArmed = true;
+    this.attackHit = true;
+    this.pushArmed = false;
     this.pushReady = .1;
     this.attackElapsed = 0;
     if (input.forward || input.backward) this.state = 'Push';

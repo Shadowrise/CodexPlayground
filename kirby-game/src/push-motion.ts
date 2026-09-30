@@ -1,5 +1,5 @@
 import {AnimationClip,Euler,Object3D,Quaternion,QuaternionKeyframeTrack,Vector3,VectorKeyframeTrack} from 'three';
-const smooth=(t:number)=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t);};
+const glide=(t:number)=>{const u=Math.min(1,Math.max(0,t));return 1-(1-u)*(1-u);};
 export const PUSH_HIT=.23,PUSH_DURATION=.62;
 const PUSH_TIMES=[0,.1,.23,.36,.62],PUSH_STRENGTH=[0,-.12,1,.8,0];
 const pushEuler=new Euler(),pushTurn=new Quaternion();
@@ -39,7 +39,7 @@ export class PushRoll{
  reset(){this.clearPose();this.state=undefined;}
  update(dt:number,actor:Object3D,ground:number){
   const r=this.state;if(!r)return false;const before=r[2];r[2]+=dt;r[4]=ground;
-  const distance=4.2*actor.scale.x*(smooth(Math.min(1,r[2]/.95))-smooth(Math.min(1,before/.95)));
+  const distance=4.2*actor.scale.x*(glide(Math.min(1,r[2]/.95))-glide(Math.min(1,before/.95)));
   actor.position.x+=r[0]*distance;actor.position.z+=r[1]*distance;
   const gravity=30*actor.scale.x;actor.position.y=Math.max(ground,actor.position.y+r[3]*dt-.5*gravity*dt*dt);r[3]-=gravity*dt;
   if(actor.position.y<=ground)r[3]=0;
@@ -47,7 +47,7 @@ export class PushRoll{
  }
  applyPose(root:Object3D,yaw:number){
   const r=this.state;if(!r)return;this.clearPose();const save=(node:Object3D)=>this.poses.push({root:node,p:node.position.clone(),q:node.quaternion.clone(),s:node.scale.clone()});save(root);
-  const axis=new Vector3(r[1],0,-r[0]).applyAxisAngle(new Vector3(0,1,0),-yaw),q=new Quaternion().setFromAxisAngle(axis,Math.PI*2*smooth(r[2]/.95)),center=new Vector3(0,1.05,0);
+  const axis=new Vector3(r[1],0,-r[0]).applyAxisAngle(new Vector3(0,1,0),-yaw),q=new Quaternion().setFromAxisAngle(axis,Math.PI*2*glide(r[2]/.95)),center=new Vector3(0,1.05,0);
   root.position.add(center.clone().sub(center.clone().applyQuaternion(q)));root.quaternion.premultiply(q);
   const spring=Math.sin(Math.min(1,r[2]/.95)*Math.PI*4)*Math.exp(-r[2]*3);root.scale.multiply(new Vector3(1+spring*.07,1-spring*.07,1+spring*.07));
   const tuck=Math.sin(Math.min(1,r[2]/.95)*Math.PI);

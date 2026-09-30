@@ -30,8 +30,8 @@ test('repeated pushes never flash red or cause sleep, and roll restores the mode
  for(let i=0;i<5;i++){assert(n.takePush(1,0));assert(!n.takePush(1,0));for(let j=0;j<20;j++)n.update(.05,[]);assert.equal(n.health,3);assert(!n.isDown);assert(!n.roll.active);assert(skin!.color.equals(color));assert.equal(n.actor.position.y,0);assert(n.animationRoot.quaternion.angleTo(new Quaternion())<.01);}
  assert(n.actor.position.x>20);
 });
-test('push has one contact at .23 seconds and recovers in .62 seconds',async()=>{
- const {player}=await setup();let time=0,hitTime=0;do{player.update(.01,{...idle,attack:true});time+=.01;if(player.attackHit)hitTime=time;}while(player.state==='Push'&&time<4);assert(Math.abs(hitTime-.23)<.02);assert(Math.abs(time-.62)<.02);
+test('push contacts on the first step and recovers in .62 seconds',async()=>{
+ const {player}=await setup();let time=0,hitTime=0;do{player.update(.01,{...idle,attack:true});time+=.01;if(player.attackHit)hitTime=time;}while(player.state==='Push'&&time<4);assert(hitTime<=.02);assert(Math.abs(time-.62)<.02);
 });
 test('one push rolls a firefly rider off without teleporting to the ground or sleeping',async()=>{
  const {player,npcs}=await setup(),n=npcs[0];n.beginFirefly(0);n.actor.position.set(0,6,2);player.attackHit=true;assert.equal(resolveAttack(player,[n]),n);assert.equal(n.state,'Roll');assert.equal(n.fireflyIndex,undefined);assert.equal(n.actor.position.y,6);
