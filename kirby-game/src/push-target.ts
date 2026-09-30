@@ -1,5 +1,5 @@
 export type PushCandidate={id:string;p:readonly number[];s:number;state:string};
-const BODY=.9,MARGIN=.2;
+const BODY=.9,MARGIN=.6;
 export function pushRadius(scale:number){return (BODY+MARGIN)*scale;}
 export function canPush(state:string){return ['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Jump','Fly','Push','Attack','Eat','Swim','Hello','Joy','Fear','Anger','Sad','FireflyRide'].includes(state)||state.startsWith('FireflyRide:')||state.startsWith('FireflyApproach:');}
 function pushReaches(p:readonly number[],yaw:number,scale:number,target:PushCandidate){
