@@ -360,8 +360,8 @@ export class SoundEffects {
         phase += 2 * Math.PI * freq / rate;
         // Rounded, low-pass grass rustle: no pitched thump or sharp transient.
         if (kind === 'step') {
-          const raw = (softNoise*.7 + Math.sin(2*Math.PI*115*t)*.075) * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.5);
-          stepOut = raw - stepIn + .97 * stepOut; stepIn = raw; value = stepOut;
+          const raw = softNoise * Math.sin(Math.PI * u) ** 2 * Math.exp(-u * 1.2);
+          stepOut = raw - stepIn + .94 * stepOut; stepIn = raw; value = stepOut;
         }
         else if (kind === 'attack') value = (.65 * lowNoise + .25 * Math.sin(phase)) * Math.exp(-u * 5) * .6;
         else if (kind === 'jump') value = (Math.sin(phase) + .12 * Math.sin(phase * 2)) * Math.exp(-u * 2) * .3;
