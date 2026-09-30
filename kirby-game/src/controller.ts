@@ -30,6 +30,8 @@ export class CharacterController {
   readonly cloud = flightCloud();
   private jumpWasHeld = false;
   private attackElapsed: number | undefined;
+  private pushReady = 0;
+  private pushArmed = false;
   private readonly pushArms:{arm:Object3D;q:Quaternion;p:Vector3;side:number}[]=[];
   private attackWasHeld = false;
   attackHit = false;
@@ -120,6 +122,24 @@ export class CharacterController {
     this.active = next;
     this.state = name;
   }
+  private replayPush() {
+    const next = this.actions.get('Push')!;
+    next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
+    next.setLoop(LoopOnce, 1);
+    next.clampWhenFinished = true;
+    next.fadeIn(.05).play();
+    if (this.active !== next) this.active?.fadeOut(.05);
+    this.active = next;
+    this.state = 'Push';
+  }
+  private beginPush(input: Input) {
+    if (this.pushArmed) this.attackHit = true;
+    this.pushArmed = true;
+    this.pushReady = .1;
+    this.attackElapsed = 0;
+    if (input.forward || input.backward) this.state = 'Push';
+    else this.replayPush();
+  }
 
   private locomotion(input: Input) {
     if(this.swimming)return 'Swim';
@@ -131,7 +151,7 @@ export class CharacterController {
     this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;this.turn=undefined;
-    this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;
+    this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
     this.play('Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
   }
@@ -170,6 +190,7 @@ export class CharacterController {
         return;
       }
     }
+    this.pushReady = Math.max(0, this.pushReady - dt);
     const eatPressed = !!input.eat && !this.eatWasHeld;
     this.eatWasHeld = !!input.eat;
     const attackPressed = !!input.attack && !this.attackWasHeld;
@@ -177,15 +198,12 @@ export class CharacterController {
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if(jumpPressed && this.flight.active)this.flight.press();
+    if (!this.turn && !this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
     if (!this.turn && !this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
       if (eatPressed) {
         this.play('Eat');
         this.eatElapsed = 0;
-      } else if (attackPressed) {
-        if(input.forward||input.backward)this.state='Push';
-        else this.play('Push');
-        this.attackElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
         this.flightBoost = this.starRemaining > 0 ? 2 : 1;
@@ -210,7 +228,7 @@ export class CharacterController {
     } else if (this.attackElapsed !== undefined) {
       const previous = this.attackElapsed;
       this.attackElapsed += dt;
-      this.attackHit = previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT;
+      if(this.pushArmed && previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT){this.attackHit=true;this.pushArmed=false;}
       const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
       if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
