@@ -1,8 +1,8 @@
 import type {StarfallState} from './starfall';
-import {PushRoll,pushClip,PUSH_HIT} from './push-motion';
+import {PushRoll,applyPushArms,pushClip,PUSH_HIT} from './push-motion';
 import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
-import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding } from 'three';
+import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
 import { constrainToMeadow } from './world-bounds';
 import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
 
@@ -30,6 +30,7 @@ export class CharacterController {
   readonly cloud = flightCloud();
   private jumpWasHeld = false;
   private attackElapsed: number | undefined;
+  private readonly pushArms:{arm:Object3D;q:Quaternion;p:Vector3;side:number}[]=[];
   private attackWasHeld = false;
   attackHit = false;
   eatBite = false;
@@ -90,7 +91,14 @@ export class CharacterController {
       });
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
-    this.actions.set('Push',this.mixer.clipAction(pushClip(clips.find(c=>c.name==='Idle')!,model)));
+    const idleClip=clips.find(c=>c.name==='Idle')!;
+    this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
+    for(const [label,side] of [['Left',-1],['Right',1]] as const){
+      const arm=model.getObjectByName(`${label}_shoulder`);if(!arm)continue;
+      const rotation=idleClip.tracks.find(track=>track.name===arm.name+'.quaternion');
+      const position=idleClip.tracks.find(track=>track.name===arm.name+'.position');
+      this.pushArms.push({arm,side,q:rotation?new Quaternion().fromArray(Array.from(rotation.values).slice(0,4)):arm.quaternion.clone(),p:position?new Vector3().fromArray(Array.from(position.values).slice(0,3)):arm.position.clone()});
+    }
     for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Push', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
@@ -175,7 +183,8 @@ export class CharacterController {
         this.play('Eat');
         this.eatElapsed = 0;
       } else if (attackPressed) {
-        this.play('Push');
+        if(input.forward||input.backward)this.state='Push';
+        else this.play('Push');
         this.attackElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
@@ -205,10 +214,14 @@ export class CharacterController {
       const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
       if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
+      const moving=!!(input.forward||input.backward);
+      if(moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
       this.mixer.update(dt);
+      if(moving)applyPushArms(this.pushArms,this.attackElapsed);
       if (this.attackElapsed >= this.actions.get('Push')!.getClip().duration - 1e-6) {
         this.attackElapsed = undefined;
-        this.play(this.locomotion(input));
+        const next=this.locomotion(input);
+        if(this.active===this.actions.get(next))this.state=next;else this.play(next);
       }
     } else if (this.flight.active) {
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;

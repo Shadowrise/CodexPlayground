@@ -1,9 +1,24 @@
 import {AnimationClip,Euler,Object3D,Quaternion,QuaternionKeyframeTrack,Vector3,VectorKeyframeTrack} from 'three';
 const smooth=(t:number)=>{t=Math.min(1,Math.max(0,t));return t*t*(3-2*t);};
 export const PUSH_HIT=.23,PUSH_DURATION=.62;
+const PUSH_TIMES=[0,.1,.23,.36,.62],PUSH_STRENGTH=[0,-.12,1,.8,0];
+const pushEuler=new Euler(),pushTurn=new Quaternion();
+export function pushStrength(t:number){
+ if(t<=PUSH_TIMES[0])return PUSH_STRENGTH[0];
+ for(let i=1;i<PUSH_TIMES.length;i++)if(t<=PUSH_TIMES[i]){const u=(t-PUSH_TIMES[i-1])/(PUSH_TIMES[i]-PUSH_TIMES[i-1]);return PUSH_STRENGTH[i-1]+(PUSH_STRENGTH[i]-PUSH_STRENGTH[i-1])*u;}
+ return 0;
+}
+export function applyPushArms(arms:{arm:Object3D;q:Quaternion;p:Vector3;side:number}[],t:number){
+ const v=pushStrength(t);
+ for(const {arm,q,p,side} of arms){
+  pushEuler.set(-.15*v,-side*1.25*v,side*.2*v);pushTurn.setFromEuler(pushEuler);
+  arm.quaternion.copy(q).multiply(pushTurn);
+  arm.position.set(p.x-side*.1*v,p.y-.03*v,p.z+.35*v);
+ }
+}
 export function pushClip(idle:AnimationClip,model:Object3D){
  const clip=idle.clone();clip.name='Push';clip.duration=PUSH_DURATION;
- const times=[0,.1,.23,.36,.62],strength=[0,-.12,1,.8,0];
+ const times=PUSH_TIMES,strength=PUSH_STRENGTH;
  for(const [label,side] of [['Left',-1],['Right',1]] as const){const arm=model.getObjectByName(label+'_shoulder');if(!arm)continue;
   const track=clip.tracks.find(t=>t.name===arm.name+'.quaternion'),base=track?new Quaternion().fromArray(Array.from(track.values).slice(0,4)):arm.quaternion.clone();
   clip.tracks=clip.tracks.filter(t=>t.name!==arm.name+'.quaternion');
