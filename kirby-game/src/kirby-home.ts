@@ -49,8 +49,11 @@ export class KirbyHome {
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
   }
   prompt(position:T.Vector3){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6 && position.y<.6 ? 'E — лечь в кровать':'';}
-  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.roof.visible=false;return true;}
-  savePosition(c:CharacterController){return this.sleeper===c?this.entrance.clone():undefined;}
+  private fit(c:CharacterController){this.group.scale.setScalar(Math.max(1,c.actor.scale.x));}
+  private bed(){const s=this.group.scale.x;return new T.Vector3(HOME_SITE.x,1.1*s,HOME_SITE.z+.7*s);}
+  private door(){return new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+6*this.group.scale.x);}
+  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c);return true;}
+  savePosition(c:CharacterController){return this.sleeper===c?this.door():undefined;}
   wake(){
     if(!this.sleeper || this.waking)return;
     this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
@@ -59,18 +62,19 @@ export class KirbyHome {
     this.windows.emissiveIntensity=.12+1.38*(this.nightAmount??Number(this.night));const c=this.sleeper;if(!c)return;
     this.elapsed+=dt;const t=this.elapsed;c.mixer.update(dt);
     if(this.waking){
-      const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.entrance,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);
+      const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.door(),u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);
       c.animationRoot.scale.setScalar(1);
       for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=1;}
-      if(t>=.65){c.actor.position.copy(this.entrance);c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;this.roof.visible=true;}
+      if(t>=.65){c.actor.position.copy(this.door());c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;this.group.scale.setScalar(1);}
       return;
     }
-    const bed=new T.Vector3(HOME_SITE.x,1.1,HOME_SITE.z+.7),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
+    this.fit(c);
+    const bed=this.bed(),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
     const u=T.MathUtils.smoothstep(t,0,1);c.actor.position.lerpVectors(this.from,bed,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,sleepRotation,u);
     if(t>=1){awardFirst(c,'sleep');for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}
   }
   constrain(p:T.Vector3,size:number){
-    const x=p.x-HOME_SITE.x,z=p.z-HOME_SITE.z,r=.6*size;
-    if(Math.abs(x)<5.3+r && z>-4.5-r && z<3.4+r){const ds=[x+5.3+r,5.3+r-x,z+4.5+r,3.4+r-z],side=ds.indexOf(Math.min(...ds));if(side<2)p.x=HOME_SITE.x+(side===0?-5.3-r:5.3+r);else p.z=HOME_SITE.z+(side===2?-4.5-r:3.4+r);}
+    const s=this.group.scale.x,x=p.x-HOME_SITE.x,z=p.z-HOME_SITE.z,r=.6*size,hx=5.3*s,hz0=4.5*s,hz1=3.4*s;
+    if(Math.abs(x)<hx+r && z>-hz0-r && z<hz1+r){const ds=[x+hx+r,hx+r-x,z+hz0+r,hz1+r-z],side=ds.indexOf(Math.min(...ds));if(side<2)p.x=HOME_SITE.x+(side===0?-hx-r:hx+r);else p.z=HOME_SITE.z+(side===2?-hz0-r:hz1+r);}
   }
 }
