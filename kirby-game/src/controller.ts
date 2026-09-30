@@ -202,6 +202,9 @@ export class CharacterController {
       const previous = this.attackElapsed;
       this.attackElapsed += dt;
       this.attackHit = previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT;
+      const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
+      if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
+      this.move(dt, input);
       this.mixer.update(dt);
       if (this.attackElapsed >= this.actions.get('Push')!.getClip().duration - 1e-6) {
         this.attackElapsed = undefined;
