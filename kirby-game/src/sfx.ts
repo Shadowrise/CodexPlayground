@@ -11,11 +11,13 @@ function T_smoothstep(value: number) {
   return t*t*(3-2*t);
 }
 
+type PlayingVoice = {source: AudioBufferSourceNode; gain: GainNode};
+
 export class SoundEffects {
   private context?: AudioContext;
   private master?: GainNode;
   private buffers = new Map<string, AudioBuffer>();
-  private active = new Set<AudioBufferSourceNode>();
+  private active = new Set<PlayingVoice>();
   private events = new SoundEvents();
   private waterEvents=new WaterSoundEvents();
   private enabled = true;
@@ -55,9 +57,12 @@ export class SoundEffects {
       if (!this.context) {
         this.context = new AudioContext();
         this.master = this.context.createGain();
+        const headroom = this.context.createGain();
+        headroom.gain.value = .35;
         const limiter = this.context.createDynamicsCompressor();
-        limiter.threshold.value = -12; limiter.ratio.value = 5;
-        this.master.connect(limiter); limiter.connect(this.context.destination);
+        limiter.threshold.value = -2; limiter.knee.value = 0; limiter.ratio.value = 20;
+        limiter.attack.value = 0; limiter.release.value = .05;
+        this.master.connect(headroom); headroom.connect(limiter); limiter.connect(this.context.destination);
         for (const kind of ['jump', 'attack', 'death', 'revive', 'grow', 'step'] as SoundKind[]) this.buffers.set(kind, this.synthesize(kind, 0));
         for (let i = 0; i < 4; i++) this.buffers.set(`voice${i}`, this.synthesize('voice', i));
         this.buffers.set('hello', this.synthesize('voice', 4));
@@ -73,7 +78,32 @@ export class SoundEffects {
     this.button.setAttribute('aria-pressed', String(this.enabled));
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }
-  private stopAll() { for (const source of this.active) source.stop(); this.active.clear(); this.buzz=undefined; this.rewardAfter=0; }
+  private stopAll() {
+    for (const voice of this.active) { try { voice.source.stop(); } catch { continue; } }
+    this.active.clear(); this.buzz=undefined; this.rewardAfter=0;
+  }
+  private begin(source: AudioBufferSourceNode, gain: GainNode, cleanup?: () => void, when?: number) {
+    const voice: PlayingVoice = {source, gain};
+    this.active.add(voice);
+    source.onended = () => {
+      this.active.delete(voice);
+      source.disconnect(); gain.disconnect();
+      if (this.buzz?.source === source) this.buzz = undefined;
+      cleanup?.();
+    };
+    if (when === undefined) source.start(); else source.start(when);
+  }
+  private silence(voice: PlayingVoice) {
+    const ctx = this.context;
+    this.active.delete(voice);
+    if (this.buzz?.source === voice.source) this.buzz = undefined;
+    if (!ctx) { try { voice.source.stop(); } catch { return; } return; }
+    const now = ctx.currentTime;
+    voice.gain.gain.cancelScheduledValues(now);
+    voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
+    voice.gain.gain.linearRampToValueAtTime(0, now + .015);
+    try { voice.source.stop(now + .015); } catch { return; }
+  }
 
   updateWater(dt:number,swimming:boolean,moving:boolean,available=true){
     const kind=this.waterEvents.update(dt,swimming,moving,available),ctx=this.context;
@@ -86,8 +116,7 @@ export class SoundEffects {
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;
     source.playbackRate.value=.96+Math.random()*.08;
     gain.gain.value=kind==='enter'?.85:kind==='exit'?.6:kind==='paddle'?.18:.08;
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
 
   updateFireflyBuzz(level:number) {
@@ -108,10 +137,9 @@ export class SoundEffects {
       }
       const source=ctx.createBufferSource(),gain=ctx.createGain();
       source.buffer=buffer;source.loop=true;gain.gain.value=0;
-      source.connect(gain);gain.connect(this.master!);this.active.add(source);
+      source.connect(gain);gain.connect(this.master!);
       this.buzz={source,gain};
-      source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();if(this.buzz?.source===source)this.buzz=undefined;};
-      source.start();
+      this.begin(source,gain);
     }
     this.buzz?.gain.gain.setTargetAtTime(volume,ctx.currentTime,.18);
   }
@@ -119,14 +147,13 @@ export class SoundEffects {
   playStarPickup(){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('grow')!;gain.gain.value=.8;
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
   playBoing(volume=1){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
     if(!this.buffers.has('push-boing')){const rate=22050,buffer=ctx.createBuffer(1,rate*.62,rate),data=buffer.getChannelData(0);let phase=0;
       for(let i=0;i<data.length;i++){const t=i/rate,u=t/.62;phase+=2*Math.PI*(170+240*Math.exp(-t*5)+110*Math.sin(t*43)*Math.exp(-t*5))/rate;data[i]=(Math.sin(phase)+.12*Math.sin(phase*2))*Math.min(1,t/.012)*Math.sin(Math.PI*u)*Math.exp(-u*2)*.32;}this.buffers.set('push-boing',buffer);}
-    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.active.add(source);source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
   playPrank(kind:import('./prank-effects').PrankSound,volume:number){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
@@ -141,7 +168,7 @@ export class SoundEffects {
         data[i]=voice*env*.23;
       }this.buffers.set(key,buffer);
     }
-    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=Math.min(1,volume);source.connect(gain);gain.connect(this.master!);this.active.add(source);source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=Math.min(1,volume);source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
   playTaskComplete(count=1){
     const ctx=this.context;
@@ -164,9 +191,8 @@ export class SoundEffects {
     }
     for(let i=0;i<count;i++){
       const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.55;
-      source.connect(gain);gain.connect(this.master!);this.active.add(source);
-      source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};
-      const start=Math.max(ctx.currentTime,this.rewardAfter);source.start(start);this.rewardAfter=start+1.25;
+      source.connect(gain);gain.connect(this.master!);
+      const start=Math.max(ctx.currentTime,this.rewardAfter);this.begin(source,gain,undefined,start);this.rewardAfter=start+1.25;
     }
   }
 
@@ -191,8 +217,7 @@ export class SoundEffects {
       this.buffers.set(key,buffer);
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.8;
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();this.voiceAfter=ctx.currentTime+2;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);this.voiceAfter=ctx.currentTime+2;
   }
 
   sayHello() {
@@ -202,9 +227,7 @@ export class SoundEffects {
     source.buffer=this.buffers.get('hello')!;
     source.playbackRate.value=.97+Math.random()*.06;
     gain.gain.value=.65;
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};
-    source.start();
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
     this.voiceAfter=ctx.currentTime+1.5;
   }
 
@@ -228,8 +251,7 @@ export class SoundEffects {
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;
     gain.gain.value=kind==='leaves'?.65:kind==='cheer'?.45:.25;
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
 
   playBalloon(kind:'burner'|'arrival'|'departure',volume:number) {
@@ -248,8 +270,7 @@ export class SoundEffects {
       this.buffers.set(key,buffer);
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=volume*(kind==='burner'?.48:.45);
-    source.connect(gain);gain.connect(this.master!);this.active.add(source);
-    source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
 
   private rideBuffer(cheer:boolean) {
@@ -276,8 +297,7 @@ export class SoundEffects {
       if(this.active.size>=6)return;
       const source=ctx.createBufferSource(),gain=ctx.createGain();
       source.buffer=this.buffers.get(name)!;source.playbackRate.value=rate;gain.gain.value=volume;
-      source.connect(gain);gain.connect(this.master!);this.active.add(source);
-      source.onended=()=>{this.active.delete(source);source.disconnect();gain.disconnect();};source.start();
+      source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
     };
     if(motion.speed>1 && ctx.currentTime>=this.wheelAfter) {
       play('wheel',.56,.92+Math.random()*.16);
@@ -363,7 +383,7 @@ export class SoundEffects {
       if (event.kind === 'voice' && ctx.currentTime < this.voiceAfter) continue;
       if (!event.actor.player && event.kind !== 'voice' && event.kind !== 'step' && ctx.currentTime < this.npcEffectAfter) continue;
       if (event.kind === 'step' && !event.actor.player && this.active.size >= 3) continue;
-      if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = this.active.values().next().value; oldest?.stop(); if (oldest) this.active.delete(oldest); }
+      if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = this.active.values().next().value; if (oldest) this.silence(oldest); }
       const source = ctx.createBufferSource(), gain = ctx.createGain(), pan = ctx.createStereoPanner();
       source.buffer = this.buffers.get(event.kind === 'voice' ? `voice${Math.floor(Math.random() * 4)}` : event.kind)!;
       source.playbackRate.value = event.kind === 'voice' || event.kind === 'step' ? .94 + Math.random() * .12 : 1;
@@ -378,9 +398,7 @@ export class SoundEffects {
       pan.pan.value = event.actor.player ? 0 : Math.max(-.8, Math.min(.8, (-Math.cos(cameraAzimuth) * dx + Math.sin(cameraAzimuth) * dz) / 12));
       if(stepFilter){source.connect(stepFilter);stepFilter.connect(gain);}else source.connect(gain);
       gain.connect(pan); pan.connect(this.master!);
-      this.active.add(source);
-      source.onended = () => { this.active.delete(source); source.disconnect(); stepFilter?.disconnect(); gain.disconnect(); pan.disconnect(); };
-      source.start();
+      this.begin(source, gain, () => { stepFilter?.disconnect(); pan.disconnect(); });
       if (event.kind === 'voice') this.voiceAfter = ctx.currentTime + 1.5;
       else if (!event.actor.player && event.kind !== 'step') this.npcEffectAfter = ctx.currentTime + .4;
     }
