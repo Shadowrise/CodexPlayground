@@ -10,9 +10,10 @@ import {allTasks,createStarfall,collectStar,finishStarfall,COLLECT_MS,RESULTS_MS
 import {chatText,emoteMessage,type LogEntry} from '../../kirby-game/src/world-log';
 import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
+import {stepBodySize} from '../../kirby-game/src/body-size';
 const MAX_PLAYERS=14,ROOM_NAME='main';
 type OnlineVisit={id:string;startedAt:number;activeMs:number;tick:number;lastWrite:number;startScore:number;seq:number;device:DeviceInfo;finished?:boolean};
-type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
+type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;adminSize?:number;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
 type DepartedPlayer={id:string;actor:ActorState;savedAt:number};
 /** Permanent archive: deliberately separate from the disposable game room. */
 export class HistoryStore extends DurableObject<Env>{
@@ -36,9 +37,22 @@ export class GameRoom extends DurableObject<Env>{
   if(r.pranks.some(p=>p.playerId===playerId))return {ok:false,error:'У этого игрока ещё идёт розыгрыш. Подожди немного.'};
   r.pranks.push(makePrank(playerId,kind,now,a.actor.p,a.actor.s));this.log(a,PRANKS[kind].text);this.changed();return {ok:true};
  });}
+ adminResize(roomId:string,playerId:string,delta:unknown){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room;if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  if(delta!==.5&&delta!==-.5)return {ok:false,error:'Некорректный шаг размера.'};
+  const socket=this.players().find(s=>(s.deserializeAttachment() as Attachment).id===playerId),a=socket?.deserializeAttachment() as Attachment|undefined;
+  if(!socket||!a?.actor)return {ok:false,error:'Игрок отключился или ещё загружается.'};
+  const current=a.actor.progress?.size??a.actor.s,next=stepBodySize(current,delta);
+  if(Math.abs(next-current)<.001)return {ok:false,error:delta>.0?'Уже максимальный размер.':'Уже минимальный размер.'};
+  a.actor.s=next;if(a.actor.progress)a.actor.progress.size=next;a.adminSize=next;socket.serializeAttachment(a);
+  this.send(socket,{type:'resize',size:next});
+  const pct=Math.round(next*100);
+  this.log(a,delta>.0?`вырос до ${pct}% — Ветерок налепил немного жирка.`:`уменьшился до ${pct}% — Ветерок сдул лишний жирок.`);
+  this.broadcast({type:'frame',id:a.id,actor:a.actor},socket);this.changed();return {ok:true,size:next};
+ });}
  adminOnline(){return this.ctx.blockConcurrencyWhile(async()=>{
   const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
-  return {room:room?{id:room.id,createdAt:room.epoch,festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null};})};
+  return {room:room?{id:room.id,createdAt:room.epoch,festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const size=a.actor?Math.round((a.actor.progress?.size??a.actor.s)*1000)/1000:1;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null,size,ready:!!a.actor};})};
  });}
  adminDisconnect(roomId:string,playerId:string){return this.ctx.blockConcurrencyWhile(async()=>{
   if(this.room?.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
@@ -132,8 +146,8 @@ export class GameRoom extends DurableObject<Env>{
   if(r.festival?.results){if(alreadyFinished)this.send(socket,{type:'room',room:r});return;}
   this.accountHistory(a,now);
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
-  let actor:ActorState|undefined,world:WorldState|undefined;
-  if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;a.actor=actor;}
+  let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
+  if(validActor(m.actor)){actor=m.actor as ActorState;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress)actor.progress.size=a.adminSize;}}a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
 
   }
@@ -169,6 +183,7 @@ export class GameRoom extends DurableObject<Env>{
    const grown=(size:number)=>Math.min(20,Math.round((size+extra*.1)*1000)/1000);
    if(extra){a.actor.s=grown(a.actor.s);if(a.actor.progress)a.actor.progress.size=grown(a.actor.progress.size);}
    a.actor.fruits=count;
+   if(a.adminSize!==undefined){const final=a.actor.progress?.size??a.actor.s;a.adminSize=final;if(reportedSize===undefined||Math.abs(reportedSize-final)>=.001)this.send(socket,{type:'resize',size:final});}
   }
   if(!r.festival&&a.actor&&allTasks(a.actor.achievements)){
    this.startFestival(now,a.actor.name);changed=true;

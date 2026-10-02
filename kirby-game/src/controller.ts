@@ -4,6 +4,7 @@ import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
 import { constrainToMeadow } from './world-bounds';
+import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
 import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
@@ -52,8 +53,14 @@ export class CharacterController {
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
   shrink(amount:number){
     if(amount<=0)return;
-    this.actor.scale.setScalar(Math.max(1,this.actor.scale.x-amount));
-    if(this.growth){this.growth.from=Math.max(1,this.growth.from-amount);this.growth.to=Math.max(1,this.growth.to-amount);}
+    const floor=(size:number)=>Math.max(MIN_BODY_SIZE,size-amount);
+    this.actor.scale.setScalar(floor(this.actor.scale.x));
+    if(this.growth){this.growth.from=floor(this.growth.from);this.growth.to=floor(this.growth.to);}
+  }
+  resizeTo(size:number){
+    const to=Math.min(MAX_BODY_SIZE,Math.max(MIN_BODY_SIZE,size));
+    if(Math.abs(this.savedSize-to)<.001)return;
+    this.growth={from:this.actor.scale.x,to,elapsed:0};
   }
   grow() {
     this.growth = { from: this.actor.scale.x, to: (this.growth?.to ?? this.actor.scale.x) + .1, elapsed: 0 };

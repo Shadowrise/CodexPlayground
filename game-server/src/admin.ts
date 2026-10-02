@@ -41,6 +41,11 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  if(path==='/admin/api/online'&&request.method==='GET'){
   try{return json(await env.ROOMS.getByName('main').adminOnline());}catch{return json({error:'Не удалось загрузить комнату'},503);}
  }
+ if(path==='/admin/api/online/resize'&&request.method==='POST'){
+  let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
+  if(!data||typeof data.roomId!=='string'||data.roomId.length>80||typeof data.playerId!=='string'||data.playerId.length>80||data.delta!==.5&&data.delta!==-.5)return json({error:'Некорректный запрос'},400);
+  try{const result=await env.ROOMS.getByName('main').adminResize(data.roomId,data.playerId,data.delta);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось изменить размер'},503);}
+ }
  if(path==='/admin/api/online/prank'&&request.method==='POST'){
   let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
   if(!data||typeof data.roomId!=='string'||data.roomId.length>80||typeof data.playerId!=='string'||data.playerId.length>80)return json({error:'Некорректный идентификатор'},400);

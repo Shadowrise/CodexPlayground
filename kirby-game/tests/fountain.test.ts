@@ -32,8 +32,8 @@ test('bathing shrinks gradually, preserves fruit points, awards once and stops o
  step(.1);assert(c.swimming);assert(c.actor.scale.x<2&&c.actor.scale.x>1.9);assert(!c.achievements.has('swim'));assert(!c.achievements.has('fountain'));
  for(let i=0;i<20;i++)step(.1);assert(c.achievements.has('fountain'));assert.equal(scoreOf(c),13);assert.equal(c.fruitsEaten,10);
  c.actor.position.x+=20;const size=c.savedSize;step(1);assert(!c.swimming);assert.equal(c.savedSize,size);
- c.actor.position.x-=20;for(let i=0;i<100;i++)step(.1);assert.equal(c.savedSize,1);assert.equal(scoreOf(c),13);
- c.grow();for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});assert(Math.abs(c.savedSize-1.1)<1e-8);assert.equal(scoreOf(c),14);
+ c.actor.position.x-=20;for(let i=0;i<100;i++)step(.1);assert.equal(c.savedSize,.1);assert.equal(scoreOf(c),13);
+ c.grow();for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});assert(Math.abs(c.savedSize-.2)<1e-8);assert.equal(scoreOf(c),14);
  assert(validAchievements([...c.achievements]));assert(validActor(actorState(c,'Кирби',0)));assert(sortedTasks(c.achievements).some(t=>t.id==='fountain'&&t.done));
 });
 test('flying over the fountain does not shrink or complete its task, and the centre is solid',async()=>{

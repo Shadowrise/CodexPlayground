@@ -491,6 +491,7 @@ startButton.addEventListener('click', async () => {
     network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.starRemaining=30;}};
+    network.onResize=size=>{if(character)character.resizeTo(size);};
     network.onHit=(a,target)=>{
       if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
       const npc=target.startsWith('npc:')?npcs[Number(target.slice(4))]:undefined;

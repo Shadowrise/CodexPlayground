@@ -12,7 +12,7 @@ export class NetworkSession{
  get serverNow(){return Date.now()+this.clockOffset;}
  id='';peerCount=1;room!:RoomState;resume?:ActorState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
  onEmote?:(emote:Emote)=>void;
- onHit?:(actor:ActorState,target:string)=>void;onStar?:()=>void;onDisconnect?:(reason:string)=>void;
+ onHit?:(actor:ActorState,target:string)=>void;onStar?:()=>void;onResize?:(size:number)=>void;onDisconnect?:(reason:string)=>void;
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
  private requestedFestivalEnd?:number;
@@ -39,6 +39,7 @@ export class NetworkSession{
    else if(m.type==='left'){this.actors.delete(m.id);this.actorSnapshots.delete(m.id);}
    else if(m.type==='hit')this.onHit?.(m.actor,m.target);
    else if(m.type==='star')this.onStar?.();
+   else if(m.type==='resize')this.onResize?.(m.size);
    else if(m.type==='lock'){this.locks.get(m.key)?.(m.ok);this.locks.delete(m.key);}
   };
   s.onerror=()=>{clearTimeout(timeout);reject(Error('Не удалось подключиться: сервер недоступен, обновляется или комната заполнена.'));};

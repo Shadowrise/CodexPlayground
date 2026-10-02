@@ -65,7 +65,7 @@ export class KirbyHome {
       const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.door(),u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);
       c.animationRoot.scale.setScalar(1);
       for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=1;}
-      if(t>=.65){c.actor.position.copy(this.door());c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;this.group.scale.setScalar(1);}
+      if(t>=.65){this.group.scale.setScalar(1);c.actor.position.copy(this.door());c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;}
       return;
     }
     this.fit(c);
