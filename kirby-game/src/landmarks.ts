@@ -9,12 +9,8 @@ import { HOME_SITE } from './home-site';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
-import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, inWater } from './pond-layout';
-export function rockHasGround(x:number,z:number,radius:number){
-  if(inWater(x,z))return false;
-  for(let i=0;i<16;i++){const a=i/16*Math.PI*2;if(inWater(x+Math.cos(a)*radius,z+Math.sin(a)*radius))return false;}
-  return true;
-}
+import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, dryGround } from './pond-layout';
+export const rockHasGround=dryGround;
 export function sceneryClearance(x:number,z:number,padding=0) {
   if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<=FOUNTAIN_SITE.radius+padding)return false;
   return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
@@ -24,7 +20,15 @@ export function outsideLandmarks(x:number,z:number,padding=0) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }
-  return outsideRivers(x,z,padding);
+  const moved=outsideRivers(x,z,padding);
+  if(sceneryClearance(moved.x,moved.z,padding))return moved;
+  // A river bank can push a point back into an attraction in a narrow gap.
+  // Search nearby dry verges instead of placing trees inside either obstacle.
+  for(let radius=2;radius<=80;radius+=2)for(let i=0;i<24;i++){
+    const a=i*Math.PI/12,px=moved.x+Math.cos(a)*radius,pz=moved.z+Math.sin(a)*radius;
+    if(sceneryClearance(px,pz,padding)&&dryGround(px,pz,padding))return {x:px,z:pz};
+  }
+  return moved;
 }
 
 /** Shared primitive meshes are batched into instances after composing each scene. */
@@ -51,6 +55,9 @@ export function createLandmarks() {
   function flowers(g:T.Group,cx:number,cz:number,count:number) {
     for(let i=0;i<count;i++) {
       const a=i*2.399,r=Math.sqrt((i+.5)/count)*5,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
+      g.updateWorldMatrix(true,false);
+      const center=g.localToWorld(new T.Vector3(x,0,z)),scale=g.getWorldScale(new T.Vector3());
+      if(!dryGround(center.x,center.z,.32*Math.max(scale.x,scale.z)))continue;
       const h=.4+(i%5)*.12;
       put(g,'pole','#477447',x,h/2,z,.025,h,.025);
       put(g,'ball','#639b47',x+.12,h*.5,z,.18,.045,.09,0,.4,.4);
@@ -90,6 +97,7 @@ export function createLandmarks() {
         put(g,'ring','#95d8d6',x,WATER_Y+.015,z,1.1,1.1,1.1,Math.PI/2);
       }
       for(let i=0;i<24;i++) {const a=i*.8,x=Math.cos(a)*12.3,z=Math.sin(a)*8.6,h=1.1+i%4*.2;
+        if(!dryGround(site.x+x*POND_SCALE,site.z+z*POND_SCALE,.12*POND_SCALE))continue;
         put(g,'pole','#5b7846',x,h/2,z,.035,h,.035);put(g,'pole','#795535',x,h,z,.09,.35,.09);}
       flowers(g,-15,-3,38);
     } else if(site.kind===1) flowers(g,0,0,120);

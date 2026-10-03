@@ -1,6 +1,8 @@
 import * as T from 'three';
 import polygonClipping from 'polygon-clipping';
 import { HOME_SITE } from './home-site';
+import {FOUNTAIN_SITE} from './fountain-site';
+import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import { MAZE_SITE } from './maze-layout';
 import { BALLOON_SITES } from './balloon-sites';
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
@@ -23,7 +25,7 @@ function contains(points:T.Vector2[],x:number,z:number){let inside=false;
  }return inside;
 }
 
-const obstacles=[...LANDMARKS.filter(s=>s.kind!==0),HOME_SITE,MAZE_SITE,{x:135,z:45,radius:25},
+const obstacles=[FOUNTAIN_SITE,SKY_TRAIL_SITE,...LANDMARKS.filter(s=>s.kind!==0),HOME_SITE,MAZE_SITE,{x:135,z:45,radius:25},
  ...BALLOON_SITES.map(s=>({...s,radius:22})),{x:-45,z:0,radius:24},{x:0,z:0,radius:12}];
 const free=(x:number,z:number)=>obstacles.every(s=>Math.hypot(x-s.x,z-s.z)>s.radius+9);
 /** A small deterministic navigation grid keeps rivers away from existing attractions. */
@@ -44,6 +46,21 @@ function riverRoute(start:T.Vector3,end:T.Vector3){
  const curve=new T.CatmullRomCurve3(points);return curve.getSpacedPoints(Math.ceil(curve.getLength()/4));
 }
 export const RIVERS=PONDS.slice(0,-1).map((s,i)=>riverRoute(new T.Vector3(s.x+streamX(20.4)*POND_SCALE,0,s.z+20.4*POND_SCALE),new T.Vector3(PONDS[i+1].x,0,PONDS[i+1].z)));
+// Close the existing lake chain along the open eastern/northern edge, not back
+// along the same diagonal. The joined water polygon now has a navigable circuit.
+const last=PONDS.at(-1)!,first=PONDS[0];
+const loopWaypoints=[new T.Vector3(last.x+streamX(20.4)*POND_SCALE,0,last.z+20.4*POND_SCALE),
+ new T.Vector3(225,0,150),new T.Vector3(225,0,-150),new T.Vector3(150,0,-225),new T.Vector3(-150,0,-225),new T.Vector3(first.x,0,first.z)];
+const closingPoints=loopWaypoints.slice(1).flatMap((p,i)=>riverRoute(loopWaypoints[i],p).slice(i?1:0));
+export const RIVER_CLOSING_ROUTE=closingPoints.map((p,i)=>{
+ if(i===0||i===closingPoints.length-1)return p;
+ const tangent=closingPoints[i+1].clone().sub(closingPoints[i-1]).normalize();
+ const bend=(Math.sin(i*.13)*2.1+Math.sin(i*.057)*1.3)*Math.min(1,i/8,(closingPoints.length-1-i)/8);
+ const x=p.x+tangent.z*bend,z=p.z-tangent.x*bend;
+ return free(x,z)?new T.Vector3(x,0,z):p;
+});
+RIVERS.push(RIVER_CLOSING_ROUTE);
+
 export const BRIDGES=[...PONDS.map(s=>({x:s.x,z:s.z+12*POND_SCALE,yaw:0})),...RIVERS.flatMap(points=>[.35,.68].map(t=>{
  const i=Math.floor((points.length-1)*t),p=points[i],d=points[i+1].clone().sub(points[i-1]);return {x:p.x,z:p.z,yaw:Math.atan2(d.x,d.z)};
 }))];
@@ -62,9 +79,56 @@ for(const points of RIVERS){
 }
 // Millimetre precision avoids nearly coincident edges in overlapping river segments.
 const snapped=pieces.map(p=>p.map(r=>r.map(([x,z])=>[Math.round(x*1000)/1000,Math.round(z*1000)/1000] as [number,number])));
-export const WATER_REGIONS=polygonClipping.union(snapped[0],...snapped.slice(1));
+/** Remove sub-4cm shoreline detail left by the union, keeping the same contour
+ * for ground holes, water, bank walls and placement/collision queries.
+ */
+function simplifyShore(ring:Ring):Ring{
+ if(ring.length<5)return ring;
+ const keep=new Set([0,ring.length-1]);
+ let split=1,farthest=0;
+ for(let i=1;i<ring.length-1;i++){const d=(ring[i][0]-ring[0][0])**2+(ring[i][1]-ring[0][1])**2;if(d>farthest){farthest=d;split=i;}}
+ keep.add(split);
+ const section=(start:number,end:number)=>{
+  const a=ring[start],b=ring[end],dx=b[0]-a[0],dz=b[1]-a[1],length=dx*dx+dz*dz;
+  let maximum=.04**2,index=-1;
+  for(let i=start+1;i<end;i++){
+   const p=ring[i],t=length?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dz)/length)):0;
+   const d=(p[0]-a[0]-t*dx)**2+(p[1]-a[1]-t*dz)**2;if(d>maximum){maximum=d;index=i;}
+  }
+  if(index!==-1){keep.add(index);section(start,index);section(index,end);}
+ };
+ section(0,split);section(split,ring.length-1);
+ const result=ring.filter((_,i)=>keep.has(i));return result.length>=4?result:ring;
+}
+export const WATER_REGIONS=polygonClipping.union(snapped[0],...snapped.slice(1)).map(region=>region.map(simplifyShore));
 const waterContours=WATER_REGIONS.map(region=>region.map(ring=>ring.map(([x,z])=>new T.Vector2(x,z))));
-export function inWater(x:number,z:number){return waterContours.some(region=>contains(region[0],x,z)&&!region.slice(1).some(hole=>contains(hole,x,z)));}
+const rawInWater=(x:number,z:number)=>waterContours.some(region=>contains(region[0],x,z)&&!region.slice(1).some(hole=>contains(hole,x,z)));
+// Cache homogeneous cells; only shoreline cells need a full polygon query.
+// Also index banks for exact footprint clearance during decoration placement.
+const waterCellSize=8,waterCells=new Map<string,boolean>();
+const waterEdges=new Map<string,{ax:number;az:number;bx:number;bz:number}[]>();
+for(const region of WATER_REGIONS)for(const ring of region)for(let i=1;i<ring.length;i++){
+ const [ax,az]=ring[i-1],[bx,bz]=ring[i],edge={ax,az,bx,bz};
+ for(let x=Math.floor(Math.min(ax,bx)/waterCellSize);x<=Math.floor(Math.max(ax,bx)/waterCellSize);x++)for(let z=Math.floor(Math.min(az,bz)/waterCellSize);z<=Math.floor(Math.max(az,bz)/waterCellSize);z++){
+  const key=`${x},${z}`;if(!waterEdges.has(key))waterEdges.set(key,[]);waterEdges.get(key)!.push(edge);
+ }
+}
+export function inWater(x:number,z:number){
+ const cx=Math.floor(x/waterCellSize),cz=Math.floor(z/waterCellSize),key=`${cx},${cz}`;
+ if(waterEdges.has(key))return rawInWater(x,z);
+ if(!waterCells.has(key))waterCells.set(key,rawInWater((cx+.5)*waterCellSize,(cz+.5)*waterCellSize));
+ return waterCells.get(key)!;
+}
+/** The whole disk must rest on land, including petals and leaning leaves. */
+export function dryGround(x:number,z:number,radius=0){
+ if(inWater(x,z))return false;
+ for(let cx=Math.floor((x-radius)/waterCellSize);cx<=Math.floor((x+radius)/waterCellSize);cx++)for(let cz=Math.floor((z-radius)/waterCellSize);cz<=Math.floor((z+radius)/waterCellSize);cz++)for(const e of waterEdges.get(`${cx},${cz}`)??[]){
+  const dx=e.bx-e.ax,dz=e.bz-e.az,length=dx*dx+dz*dz;
+  const t=length?Math.max(0,Math.min(1,((x-e.ax)*dx+(z-e.az)*dz)/length)):0;
+  if((x-e.ax-t*dx)**2+(z-e.az-t*dz)**2<=radius*radius)return false;
+ }
+ return true;
+}
 export function waterShapes(){return waterContours.map(region=>{const shape=new T.Shape(region[0].map(p=>new T.Vector2(p.x,-p.y)));for(const hole of region.slice(1))shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p.x,-p.y))));return shape;});}
 export function meadowGeometry(half:number){
  const shape=new T.Shape([new T.Vector2(-half,-half),new T.Vector2(half,-half),new T.Vector2(half,half),new T.Vector2(-half,half)]),islands:T.Shape[]=[];

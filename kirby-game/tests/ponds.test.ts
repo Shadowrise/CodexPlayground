@@ -7,7 +7,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import * as T from 'three';
 import {CharacterController} from '../src/controller';
 import {Ponds,makeSwimRing} from '../src/ponds';
-import {PONDS,WATER_Y,deckHeight,meadowGeometry,inPond,inWater,WATER_REGIONS,RIVERS,BRIDGES,pondOutline} from '../src/pond-layout';
+import {PONDS,WATER_Y,deckHeight,meadowGeometry,inPond,inWater,WATER_REGIONS,RIVERS,BRIDGES,pondOutline,RIVER_CLOSING_ROUTE,dryGround} from '../src/pond-layout';
 async function player(){const b=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url)),g=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');return new CharacterController(g.scene,g.animations);}
 const input={forward:true,left:false,right:false};
 test('swimming automatically equips a colourful ring, supports growth and exits cleanly',async()=>{
@@ -60,7 +60,7 @@ test('expanded shores support swimming outside the previous lake boundary',async
 
 
 test('distinct lakes and all river centres form one connected, recessed water surface',()=>{
- assert.equal(WATER_REGIONS.length,1);assert.equal(RIVERS.length,PONDS.length-1);assert.equal(BRIDGES.length,13);
+ assert.equal(WATER_REGIONS.length,1);assert.equal(RIVERS.length,PONDS.length);assert.equal(BRIDGES.length,PONDS.length*3);
  assert.equal(new Set(PONDS.map((_,i)=>JSON.stringify(pondOutline(i)))).size,PONDS.length);
  const geometry=meadowGeometry(255);geometry.rotateX(-Math.PI/2);const ground=new T.Mesh(geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));ground.updateMatrixWorld();
  for(const river of RIVERS)for(const p of river){assert(inWater(p.x,p.z));const ray=new T.Raycaster(new T.Vector3(p.x,10,p.z),new T.Vector3(0,-1,0));assert.equal(ray.intersectObject(ground).length,0);}
@@ -87,4 +87,19 @@ test('depot stairs and platform support walking, growth and jumping without floo
   for(let z=228;z>216;z-=.05){const previous=c.actor.position.clone();c.actor.position.z=z;ponds.apply(c,previous);assert.equal(c.actor.position.y,depotFloorHeight(0,z));}
   assert.equal(c.actor.position.y,0);
  }
+});
+
+
+test('river closes the lake chain around a substantial dry island without gaps',()=>{
+ const first=PONDS[0],last=PONDS.at(-1)!;
+ assert(RIVER_CLOSING_ROUTE[0].distanceTo(new T.Vector3(last.x,0,last.z))<40);
+ assert(RIVER_CLOSING_ROUTE.at(-1)!.distanceTo(new T.Vector3(first.x,0,first.z))<.001);
+ for(let i=1;i<RIVER_CLOSING_ROUTE.length;i++){
+  const a=RIVER_CLOSING_ROUTE[i-1],b=RIVER_CLOSING_ROUTE[i];
+  assert(a.distanceTo(b)<6);
+  for(let j=0;j<=4;j++)assert(inWater(T.MathUtils.lerp(a.x,b.x,j/4),T.MathUtils.lerp(a.z,b.z,j/4)));
+ }
+ const area=(r:number[][])=>Math.abs(r.slice(1).reduce((sum,p,i)=>sum+r[i][0]*p[1]-p[0]*r[i][1],0))/2;
+ assert(WATER_REGIONS[0].slice(1).some(r=>area(r)>10000),'A real loop must enclose a large island');
+ for(const river of RIVERS)for(const p of river)assert(!dryGround(p.x,p.z,.2));
 });
