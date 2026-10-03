@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import { BackgroundMusic, MUSIC_TRACKS } from '../src/music';
 import { readFileSync } from 'node:fs';
 
-test('all eighteen stereo tracks exist, main is triple length, audio has headroom', () => {
-  assert.equal(MUSIC_TRACKS.length,18);
+test('all sixteen stereo tracks exist, main is triple length, audio has headroom', () => {
+  assert.equal(MUSIC_TRACKS.length,16);
   for (const [index, [file]] of MUSIC_TRACKS.entries()) {
     const wav = readFileSync(new URL(`../public/audio/${file}.wav`, import.meta.url));
     assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
@@ -18,7 +18,7 @@ test('all eighteen stereo tracks exist, main is triple length, audio has headroo
   }
 });
 
-test('eighteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
+test('sixteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
   class FakeElement extends EventTarget {
     value = ''; textContent = ''; title = ''; hidden = false;
     attributes = new Map<string, string>();
@@ -44,7 +44,7 @@ test('eighteen tracks advance and wrap in both directions while preserving mute 
     music.start(); await Promise.resolve(); assert(!audio!.paused);
     volume.value = '37'; volume.dispatchEvent(new Event('input'));
     const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.split('?')[0].endsWith(`${file}.wav`));
-    assert(first >= 0);assert(label.textContent.includes('/ 18 ·'));
+    assert(first >= 0);assert(label.textContent.includes('/ 16 ·'));
     for (let i = 0; i < MUSIC_TRACKS.length; i++) {
       assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       audio!.dispatchEvent(new Event('ended'));

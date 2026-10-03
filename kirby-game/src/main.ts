@@ -28,7 +28,7 @@ import {RainbowFountain} from './fountain';
 import {FOUNTAIN_SITE} from './fountain-site';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { CSM } from 'three/addons/csm/CSM.js';
+import { StableCSM } from './stable-shadows';
 import { CharacterController } from './controller';
 import { resolveAttack } from './combat';
 import { FruitWorld } from './fruits';
@@ -221,21 +221,24 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'hi
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
-// Wider filtering smooths moving shadow edges on every receiver, at the same map resolution.
-renderer.shadowMap.type = THREE.PCFShadowMap;
+// Interpolated PCF removes discrete filter bands without larger shadow maps or
+// frame-varying noise. Keep the stable caster silhouettes and per-frame sun tracking.
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 mount.appendChild(renderer.domElement);
 
 const daySky=new THREE.Color('#b3d9ef'),nightSky=new THREE.Color('#0b1428'),sunsetSky=new THREE.Color('#dd8b9b'),dayFog=new THREE.Color('#d8e9eb'),nightFog=new THREE.Color('#182b4b'),sunsetFog=new THREE.Color('#ffc392'),whiteLight=new THREE.Color('#ffffff'),nightLight=new THREE.Color('#9db5e0'),duskLight=new THREE.Color('#ffad70'),dayGround=new THREE.Color('#779455'),nightGround=new THREE.Color('#293850'),sunLight=new THREE.Color('#fff1d7');
 const ambient=new THREE.HemisphereLight('#ffffff', '#779455', 2.4);scene.add(ambient);
-const shadows = new CSM({camera,parent:scene,cascades:2,maxFar:300,mode:'practical',
+// Concentrate the existing texels around the player: fewer distant casters and
+// smaller world-space texels, rather than cheaper but more visibly aliased filtering.
+const shadows = new StableCSM({camera,parent:scene,cascades:2,maxFar:200,mode:'practical',
   shadowMapSize:1024,lightDirection:SUN_DIRECTION.clone().negate(),lightIntensity:3.2,
   lightNear:1,lightFar:1400,lightMargin:250,shadowBias:-.00003});
 shadows.fade=true;
 shadows.updateFrustums();
 // Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
-for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;light.shadow.radius=2;}
+for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials() {
@@ -295,6 +298,7 @@ const destinations:Destination[]=[
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
 const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...coaster.supports.map(s=>({x:s.base.x,z:s.base.z,radius:2}))];
 const fruits = new FruitWorld(fruitObstacles);
+fruits.group.name='Фрукты на поляне';
 // Clear only the small footprints beneath fruit, keeping surrounding grass intact.
 const grassMatrix=new THREE.Matrix4();
 scene.getObjectByName('Meadow grass')?.traverse(object=>{
@@ -462,6 +466,7 @@ startButton.addEventListener('click', async () => {
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
   coaster.addKirbyPassengers(template,animations,network?KIRBY_VARIANTS[0]:selected);
   character = new CharacterController(cloneVariant(template, selected, false), animations);
+  character.actor.name='Игрок';
   const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
@@ -542,7 +547,11 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
 }
 const controlHints=[...document.querySelectorAll<HTMLElement>('[data-controls]')];
 let controlMode='';
+let sceneProfiler:import('./scene-profiler').SceneProfiler|undefined;
+if(new URLSearchParams(location.search).get('perf')==='1')void import('./scene-profiler').then(({SceneProfiler})=>{sceneProfiler=new SceneProfiler(renderer,scene,camera,()=>playing&&!network,shadows);});
 renderer.setAnimationLoop((time: number) => {
+  if(sceneProfiler?.busy){previousTime=time;fpsCounter.sample(time,false);return;}
+  const profileStart=sceneProfiler?performance.now():0;
   prankEffects.beginFrame();
   const dt = Math.max(0,Math.min((time - previousTime) / 1000, .05));
   previousTime = time;
@@ -724,7 +733,9 @@ renderer.setAnimationLoop((time: number) => {
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
   if(character)updateVisibility(character.actor,camera.position,true,true);
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
+  const profileRender=sceneProfiler?performance.now():0;
   renderer.render(scene, camera);
+  sceneProfiler?.frame(profileRender-profileStart,performance.now()-profileRender);
 });
 window.addEventListener('resize', () => {
   camera.fov=cameraFov();

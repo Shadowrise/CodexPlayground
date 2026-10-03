@@ -14,13 +14,11 @@ export const MUSIC_TRACKS = [
   ['coconut-bay', 'Кокосовая бухта'],
   ['roller-disco', 'Роликовое диско'],
   ['wish-lanterns', 'Фонарики желаний'],
-  ['toy-parade', 'Игрушечный парад'],
-  ['kalimba-glow', 'Свет калимбы'],
   ['accordion-stroll', 'Лёгкий аккордеон'],
   ['shore-whistle', 'Свист у берега'],
 ] as const;
 
-/** Eighteen sequential tracks, starting at a random position each session. */
+/** Sequential tracks, starting at a random position each session. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
   private enabled = true;

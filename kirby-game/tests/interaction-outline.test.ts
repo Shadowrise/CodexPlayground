@@ -23,3 +23,9 @@ test('follows moving targets and reuses the selected hulls',()=>{
   assert.equal(outline.group.children[0],hull);assert.equal(hull.matrix.elements[12],4);
   assert.equal(hull.matrix.elements[13],2);
 });
+test('shadow-only silhouettes never become visible interaction outlines',()=>{
+ const root=new T.Group(),geometry=new T.BoxGeometry();
+ root.add(new T.Mesh(geometry,new T.MeshBasicMaterial()),new T.Mesh(geometry,new T.MeshBasicMaterial({colorWrite:false,depthWrite:false})));
+ const outline=new InteractionOutline();outline.update({key:root,root});
+ assert.equal(outline.group.children.length,1);
+});

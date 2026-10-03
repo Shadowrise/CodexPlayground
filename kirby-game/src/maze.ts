@@ -3,6 +3,7 @@ import * as T from 'three';
 import type { CharacterController } from './controller';
 import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
 import { makeFruitMist } from './fruit-mist';
+import {sceneryShadowBatch} from './scenery-shadows';
 type Wall={x:number;z:number;hx:number;hz:number};
 export class HedgeMaze {
   readonly group=new T.Group();
@@ -20,6 +21,7 @@ export class HedgeMaze {
     const root=this.group;root.name='Hedge maze and golden star';root.position.set(MAZE_SITE.x,0,MAZE_SITE.z);
     const box=new T.BoxGeometry(1,1,1),leaf=new T.IcosahedronGeometry(1,1);
     const parts=new Map<string,{geo:T.BufferGeometry;colors:T.Color[];matrices:T.Matrix4[]}>();
+    const hedgeShadows:T.Matrix4[]=[];
     const put=(geo:T.BufferGeometry,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,ry=0)=>{
       const key=geo.uuid;if(!parts.has(key))parts.set(key,{geo,colors:[],matrices:[]});this.dummy.position.set(x,y,z);this.dummy.scale.set(sx,sy,sz);this.dummy.rotation.set(0,ry,0);this.dummy.updateMatrix();parts.get(key)!.matrices.push(this.dummy.matrix.clone());parts.get(key)!.colors.push(new T.Color(color));
     };
@@ -32,6 +34,9 @@ export class HedgeMaze {
     put(box,'#a9ac70',0,.015,0,70,.035,70);
     const wall=(x:number,z:number,hx:number,hz:number,cell:number,neighbor:number)=>{
       this.walls.push({x,z,hx,hz});put(box,cellColor(cell,.38),x,2.45,z,hx*2,4.9,hz*2);
+      // The dense foliage remains visible, but its shadow is a continuous hedge.
+      // Avoid redrawing thousands of overlapping leaf clumps in every cascade.
+      hedgeShadows.push(new T.Matrix4().compose(new T.Vector3(x,2.7,z),new T.Quaternion(),new T.Vector3(hx*2+.65,5.4,hz*2+.65)));
       const horizontal=hx>hz,length=Math.max(hx,hz)*2;
       // Each face follows its own passage, even when a late corridor borders the entrance.
       const face=(side:number)=>side<0 && neighbor>=0?neighbor:cell;
@@ -74,7 +79,8 @@ export class HedgeMaze {
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.textBaseline='middle';ctx.fillText('ЗВЁЗДНЫЙ ЛАБИРИНТ',384,96);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }
-    for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:'#ffffff',roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
+    for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:'#ffffff',roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.name=p.geo===leaf?'Detailed maze foliage':'Maze masonry';mesh.castShadow=p.geo!==leaf;mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
+    root.add(sceneryShadowBatch('Stable hedge shadows',box,hedgeShadows));
   }
   contains(p:T.Vector3,padding=0){return Math.abs(p.x-MAZE_SITE.x)<MAZE_HALF+padding && Math.abs(p.z-MAZE_SITE.z)<MAZE_HALF+padding;}
   private clear(x:number,z:number,r:number){return !this.walls.some(w=>Math.abs(x-w.x)<w.hx+r && Math.abs(z-w.z)<w.hz+r);}

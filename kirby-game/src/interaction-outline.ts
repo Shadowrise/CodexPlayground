@@ -38,7 +38,7 @@ export class InteractionOutline {
         target.root.traverseVisible(object=>{
           if(!(object instanceof T.Mesh) || object.parent===this.group)return;
           const materials=Array.isArray(object.material)?object.material:[object.material];
-          if(materials.every(m=>m.transparent || !m.visible))return;
+          if(materials.every(m=>m.transparent || !m.visible || !m.colorWrite))return;
           const count=object instanceof T.InstancedMesh?object.count:1;
           const selected:number[]=[];
           for(let i=0;i<count;i++){

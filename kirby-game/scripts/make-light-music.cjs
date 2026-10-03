@@ -1,37 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// Four light festive songs with their own metre, melody and timbre.
+// Two light festive songs with their own metre, melody and timbre.
 const songs = [
-  {
-    id: 'toy-parade', bpm: 100, bars: 46,
-    form: 'IIIIAAAAAAAAAAAAAAAA BBBBBBBBAAAAAAAAAAAAAAAAEE'.replaceAll(' ', ''),
-    phrases: {
-      A: [[77, 79, 81, 79], [77, 76, 74, 72], [74, 76, 77, 79], [81, 79, 77, 72], [77, 81, 84, 81], [79, 77, 76, 74], [72, 74, 76, 77], [77, 0, 0, 0]],
-      B: [[84, 81, 79, 81], [84, 86, 84, 81], [79, 81, 84, 81], [79, 76, 74, 72], [77, 79, 81, 84], [81, 79, 77, 76], [74, 76, 77, 79], [77, 0, 0, 0]],
-      E: [[77, 81, 84, 89], [89, 0, 0, 0]],
-    },
-    chords: {
-      A: ['F', 'C', 'Bb', 'F', 'F', 'C', 'C', 'F'],
-      B: ['F', 'C', 'F', 'C', 'F', 'C', 'C', 'F'],
-      E: ['F', 'F'],
-    },
-    lead: 'glock', harmony: 'clarinet', bass: true, block: false,
-  },
-  {
-    id: 'kalimba-glow', bpm: 88, bars: 40,
-    form: 'IIIIAAAAAAAAAAAAAAAA BBBBBBBBAAAAAAAAEEEE'.replaceAll(' ', ''),
-    phrases: {
-      A: [[74, 78, 81, 0], [83, 81, 78, 0], [76, 74, 69, 0], [74, 0, 0, 0], [81, 83, 86, 0], [83, 81, 78, 0], [76, 78, 81, 0], [74, 0, 0, 0]],
-      B: [[86, 83, 81, 78], [81, 78, 76, 0], [74, 76, 78, 81], [83, 0, 0, 0], [78, 81, 83, 86], [83, 81, 78, 76], [74, 69, 66, 69], [62, 0, 0, 0]],
-      E: [[74, 78, 81, 86], [86, 0, 0, 0], [74, 69, 66, 62], [62, 0, 0, 0]],
-    },
-    chords: {
-      A: ['D', 'D', 'D', 'D', 'G', 'D', 'D', 'D'],
-      B: ['D', 'G', 'D', 'G', 'D', 'G', 'D', 'D'],
-      E: ['D', 'D', 'G', 'D'],
-    },
-    lead: 'flute', harmony: 'kalimba', bass: false, block: false,
-  },
   {
     id: 'accordion-stroll', bpm: 104, bars: 48,
     form: 'IIIIAAAAAAAAAAAAAAAA BBBBBBBBAAAAAAAA BBBBBBBBEEEE'.replaceAll(' ', ''),
@@ -134,15 +104,10 @@ for (const song of songs) {
     if (song.block) {
       for (const at of [1, 3]) chord.forEach((midi, j) => note(midi, start + at * beat + j * .012, beat * .7, 'accordion', .02, (j - 1) * .35));
     }
-    if (song.id === 'kalimba-glow') {
-      [chord[0] - 12, chord[2] - 12, chord[0] - 12, chord[1] - 12].forEach((midi, i) => note(midi, start + i * beat, beat * .7, 'kalimba', early ? .05 : .034, .25));
-      if (!early && line.some(Boolean)) line.forEach((midi, i) => { if (!midi) note(chord[i % 3] + 12, start + i * beat + beat * .5, beat * .35, 'kalimba', .028, .45); });
-    }
     if (song.id === 'shore-whistle') {
       chord.forEach((midi, j) => note(midi, start + j * .02, beat * .45, 'uke', .03, .2));
       chord.forEach((midi, j) => note(midi, start + 2 * beat + j * .018, beat * .35, 'uke', .022, -.15));
     }
-    if (song.id === 'toy-parade' && !early) hit(start + beat, .004), hit(start + 3 * beat, .0035);
     if (phrase !== 'I') line.forEach((midi, i) => {
       if (!midi) return;
       const at = start + i * beat, dur = (line[i + 1] ? .92 : 1.7) * beat;

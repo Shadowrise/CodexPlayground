@@ -1,4 +1,5 @@
 import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
+import {sceneryShadowBatch} from './scenery-shadows';
 import { createCoasterCurve } from './coaster';
 import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
@@ -125,15 +126,20 @@ export function createForest() {
   }
   const leafSurface=createLeafSurface();
   const foliageMaps={leaves:leafSurface,birchLeaves:leafSurface,birchLeaves1:leafSurface,birchLeaves2:leafSurface,birchLeaves3:leafSurface,needles:createFoliageTexture('spruce')};
-  const shadowGeometry=createCanopyShadowGeometry(),shadowMaterial=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false});
+  const shadowGeometry=createCanopyShadowGeometry();
+  const woodShadow=new THREE.CylinderGeometry(.7,1,1,6),needleShadow=new THREE.ConeGeometry(1,1,8);
   for (const [kind, instances] of batches) {
     const mesh=new THREE.InstancedMesh(geometries[kind],new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,vertexColors:kind==='leaves'||kind.startsWith('birchLeaves'),side:kind==='leaves'||kind.startsWith('birchLeaves')?THREE.DoubleSide:THREE.FrontSide,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null}),instances.length);
     mesh.name=`Decorative forest ${kind}`;
     instances.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);mesh.setColorAt(i,p.color);});
     const leafy=kind==='leaves'||kind.startsWith('birchLeaves');
-    mesh.castShadow=!leafy;mesh.receiveShadow=!leafy;
+    mesh.castShadow=false;mesh.receiveShadow=!leafy;
     forest.add(spatialInstances(mesh));
-    if(leafy){const proxy=new THREE.InstancedMesh(shadowGeometry,shadowMaterial,instances.length);proxy.name=`Stable crown shadows ${kind}`;proxy.castShadow=true;instances.forEach((p,i)=>proxy.setMatrixAt(i,p.matrix));forest.add(spatialInstances(proxy));}
+    if(leafy)forest.add(sceneryShadowBatch(`Stable crown shadows ${kind}`,shadowGeometry,instances.map(p=>p.matrix)));
+    // Fine twigs, bark markings and fruit sit inside the existing crown/trunk shadow.
+    // Keep trunks and substantial boughs; needles use the same cone outline with fewer faces.
+    if(kind==='wood')forest.add(sceneryShadowBatch('Stable trunk shadows',woodShadow,instances.filter(p=>new THREE.Vector3().setFromMatrixColumn(p.matrix,0).length()>=.075).map(p=>p.matrix)));
+    if(kind==='needles')forest.add(sceneryShadowBatch('Stable needle shadows',needleShadow,instances.map(p=>p.matrix)));
   }
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);

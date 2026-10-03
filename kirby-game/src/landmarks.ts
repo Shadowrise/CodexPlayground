@@ -1,6 +1,7 @@
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import {FOUNTAIN_SITE} from './fountain-site';
 import { spatialInstances } from './spatial-instances';
+import {sceneryShadowBatch} from './scenery-shadows';
 import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
@@ -125,11 +126,30 @@ export function createLandmarks() {
     }
   }
   root.updateMatrixWorld(true);
-  const batches=new Map<string,{geometry:T.BufferGeometry; material:T.Material; matrices:T.Matrix4[]}>();
-  root.traverse(o=>{if(o instanceof T.Mesh){const key=o.geometry.uuid+(o.material as T.Material).uuid;
-    if(!batches.has(key))batches.set(key,{geometry:o.geometry,material:o.material as T.Material,matrices:[]});
-    batches.get(key)!.matrices.push(o.matrixWorld.clone());}});
+  const shadowGeometry=new Map<T.BufferGeometry,T.BufferGeometry>([
+    [geo.box,geo.box],[geo.rock,geo.rock],
+    [geo.ball,new T.SphereGeometry(1,8,6)],
+    [geo.pole,new T.CylinderGeometry(1,1,1,6)],
+    [geo.cap,new T.SphereGeometry(1,8,4,0,Math.PI*2,0,Math.PI/2)],
+  ]);
+  const shadowBatches=new Map<T.BufferGeometry,T.Matrix4[]>(),shadowSize=new T.Vector3();
+  for(const geometry of shadowGeometry.keys())geometry.computeBoundingBox();
+  const batches=new Map<string,{geometry:T.BufferGeometry; material:T.MeshStandardMaterial; matrices:T.Matrix4[];colors:T.Color[]}>();
+  root.traverse(o=>{if(o instanceof T.Mesh){const source=o.material as T.MeshStandardMaterial,key=o.geometry.uuid+':'+source.roughness;
+    // Colour is per instance: different petals/planks need no separate draw call.
+    // Keep glossy and matte surfaces separate so their original finish is retained.
+    if(!batches.has(key))batches.set(key,{geometry:o.geometry,material:new T.MeshStandardMaterial({color:0xffffff,roughness:source.roughness}),matrices:[],colors:[]});
+    batches.get(key)!.matrices.push(o.matrixWorld.clone());
+    batches.get(key)!.colors.push(source.color.clone());
+    const shadow=shadowGeometry.get(o.geometry);
+    if(shadow){o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).getSize(shadowSize);
+      // Petals and water ripples are smaller than a useful shadow-map texel.
+      if(Math.max(shadowSize.x,shadowSize.y,shadowSize.z)>=.6){if(!shadowBatches.has(shadow))shadowBatches.set(shadow,[]);shadowBatches.get(shadow)!.push(o.matrixWorld.clone());}
+    }
+  }});
   root.clear();
-  for(const b of batches.values()){const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>m.setMatrixAt(i,v));m.castShadow=true;m.receiveShadow=true;root.add(spatialInstances(m));}
+  for(const b of batches.values()){const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>{m.setMatrixAt(i,v);m.setColorAt(i,b.colors[i]);});m.receiveShadow=true;root.add(spatialInstances(m));}
+  for(const material of materials.values())material.dispose();
+  for(const [geometry,matrices] of shadowBatches)root.add(sceneryShadowBatch('Stable landmark shadows',geometry,matrices));
   return root;
 }
