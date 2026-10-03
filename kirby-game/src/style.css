@@ -6,7 +6,7 @@
 .selection-card { width: min(650px, 100%); padding: 30px; background: #171e29fa; border: 1px solid var(--ui-border); border-radius: 28px; box-shadow: 0 24px 100px #00000066; }
 .selection-card h2 { font-size: 33px; letter-spacing: -1.4px; margin: 12px 0 8px; }
 .selection-description { color: var(--ui-muted); font-size: 13px; margin: 0 0 24px; line-height: 1.6; }
-#variant-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+#variant-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .variant-button { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 9px; border-radius: 14px; background: var(--ui-raised); border: 2px solid transparent; padding: 10px 3px; color: var(--ui-text); font-size: 11px; }
 .variant-button[aria-pressed="true"] { border-color: var(--ui-accent); background: #294739; }
 .choice-check { position: absolute; right: 6px; top: 4px; opacity: 0; color: var(--ui-accent); }
@@ -20,6 +20,11 @@
 .mini-eyes::before, .mini-eyes::after { content: ''; position: absolute; top: 14px; width: 6px; height: 15px; border-radius: 50%; background: radial-gradient(ellipse at 45% 25%, white 0 21%, transparent 27%), linear-gradient(#152137 55%, #3081c5); }
 .mini-eyes::before { left: 15px; } .mini-eyes::after { right: 15px; }
 .mini-mouth { position: absolute; width: 7px; height: 5px; border-radius: 2px 2px 8px 8px; background: #81394f; top: 32px; left: 21px; }
+.rainbow-kirby { --rainbow-skin: linear-gradient(to bottom,#f04459 0% 14.2857%,#ff982f 14.2857% 28.5714%,#ffe04c 28.5714% 42.8571%,#50ca65 42.8571% 57.1429%,#45ccf5 57.1429% 71.4286%,#4263de 71.4286% 85.7143%,#a34dde 85.7143% 100%); }
+.rainbow-kirby .mini-body { background:radial-gradient(circle at 32% 20%,#ffffff55,transparent 60%),var(--rainbow-skin); }
+.rainbow-kirby .mini-body::before,.rainbow-kirby .mini-body::after { background:linear-gradient(#ffe04c,#50ca65 40%,#45ccf5); }
+.rainbow-kirby:not(.npc-avatar) .mini-feet::before,.rainbow-kirby:not(.npc-avatar) .mini-feet::after { background:#b33ee6; }
+.rainbow-kirby .mini-kirby::after { content:'';position:absolute;z-index:2;left:20px;top:-5px;width:30px;height:19px;background:radial-gradient(ellipse at 50% 78%,#62dcff 0 9%,transparent 11%),linear-gradient(115deg,#be7d18,#fff2a0 42%,#eeb638 65%,#ffdf75);clip-path:polygon(0 0,18% 37%,25% 3%,38% 37%,50% 0,62% 37%,75% 3%,82% 37%,100% 0,89% 100%,11% 100%);filter:drop-shadow(0 1px 1px #51391d); }
 .selection-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; gap: 16px; }
 .selection-bottom strong { display: block; font-size: 18px; margin-top: 5px; }
 .spawn-option { display: flex; align-items: center; gap: 9px; margin-top: 20px; font-size: 13px; color: var(--ui-text); cursor: pointer; }

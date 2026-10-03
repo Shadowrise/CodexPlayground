@@ -17,9 +17,11 @@ async function model(name:string){const data=await readFile(new URL('../public/m
 test('actual world fits the shared wire contract and attachment budget',async()=>{
  const [gltf,bugs]=await Promise.all([model('kirby-animated.glb'),model('firefly-animated.glb')]);
  const npcs=createNpcs(gltf.scene,gltf.animations,KIRBY_VARIANTS[0]),coaster=new Coaster(),balloons=new Balloons(),fireflies=new NightFireflies(bugs);
+ npcs[0].greet(npcs[0].actor.position.clone().setX(npcs[0].actor.position.x+20));npcs[0].update(.4,[]);
  const round=(rows:number[][])=>rows.map(row=>row.map(x=>Math.round(x*1000)/1000));
  const w={npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(r=>r.map(x=>typeof x==='number'?Math.round(x*1000)/1000:x)),bugs:round(fireflies.networkState())};
  assert(validWorld(w));assert(new TextEncoder().encode(JSON.stringify(w)).length<11000);
+ assert.equal(w.npcs[0].state,'Hello');assert.equal(w.npcs[0].pose.length,5);
  await writeFile(tmpdir()+'/kirby-network-world.json',JSON.stringify(w));
  assert(!validWorld({...w,npcLife:[[]]}));assert(!validActor({...w.npcs[0],p:[Infinity,0,0]}));
  coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies.networkApply(w.bugs);

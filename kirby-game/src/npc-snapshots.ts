@@ -18,8 +18,12 @@ export class NpcSnapshots {
    // Teleports (respawning/boarding) should not sweep across the meadow.
    if(Math.hypot(...to.p.map((v,j)=>v-from.p[j]))>30)return blend<1?from:to;
    const state=blend<1?from:to;
+   const pose=from.state===to.state&&from.pose.length===to.pose.length?from.pose.map((v,i)=>{
+    const end=to.pose[i],q=new Quaternion().fromArray(v.slice(3,7)).normalize().slerp(new Quaternion().fromArray(end.slice(3,7)).normalize(),blend).toArray();
+    return [...v.slice(0,3).map((n,j)=>n+(end[j]-n)*blend),...q,...v.slice(7).map((n,j)=>n+(end[j+7]-n)*blend)];
+   }):state.pose;
    const roll=from.roll&&to.roll&&from.state==='Roll'&&to.state==='Roll'?from.roll.map((v,j)=>v+(to.roll![j]-v)*blend):state.roll;
-   return {...state,roll,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
+   return {...state,roll,pose,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
     q:new Quaternion().fromArray(from.q).normalize().slerp(new Quaternion().fromArray(to.q).normalize(),blend).toArray()};
   });
  }

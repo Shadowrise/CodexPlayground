@@ -7,7 +7,7 @@ const get = async path => {
   return response.json();
 };
 const join = (query = '?variant=14') => new Promise((resolve, reject) => {
-  const socket = new WebSocket(base.replace(/^http/, 'ws') + '/ws?build=meadow-network-4&name=Smoke' + sockets.length + query.replace('?', '&'));
+  const socket = new WebSocket(base.replace(/^http/, 'ws') + '/ws?build=meadow-network-5&name=Smoke' + sockets.length + query.replace('?', '&'));
   sockets.push(socket);
   const timer = setTimeout(() => { socket.close(); reject(new Error('Join timed out')); }, 5000);
   socket.addEventListener('message', event => { clearTimeout(timer);const welcome=JSON.parse(event.data);if(welcome.type==='error')reject(new Error('Join rejected'));else resolve({socket,welcome}); }, { once: true });

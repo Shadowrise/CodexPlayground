@@ -75,9 +75,10 @@ export class NightFireflies {
     for(const [i,n] of this.npcRiders){if(!n.approachingFirefly)continue;const b=this.bugs[i];
       if(b===this.mount||this.networkBlocked.has(i)||n.fireflyRideTime>45){n.endBalloon();this.npcCooldown.set(n,30);this.npcRiders.delete(i);continue;}
       const delta=b.home.clone().sub(n.actor.position);delta.y=0;const distance=delta.length();
-      if(distance<2.5){if(b.land)n.beginFirefly(i);continue;}
+      if(distance<2.5){if(b.land)n.beginFirefly(i);else n.networkAnimate(n.state,0,false);continue;}
       const next=n.actor.position.clone().addScaledVector(delta,Math.min(distance,4*n.actor.scale.x*dt)/distance);
-      if(!inWater(next.x,next.z)&&sceneryClearance(next.x,next.z,n.actor.scale.x)){n.actor.position.copy(next);n.yaw=Math.atan2(delta.x,delta.z);n.actor.rotation.y=n.yaw;}
+      if(!inWater(next.x,next.z)&&sceneryClearance(next.x,next.z,n.actor.scale.x)){n.actor.position.copy(next);n.yaw=Math.atan2(delta.x,delta.z);n.actor.rotation.y=n.yaw;n.networkAnimate(n.state,0,true);}
+      else {n.endBalloon();this.npcCooldown.set(n,30);this.npcRiders.delete(i);}
     }
     this.npcAfter-=dt;if(this.npcAfter>0||this.npcRiders.size>=4)return;
     this.npcAfter=4+Math.random()*4;

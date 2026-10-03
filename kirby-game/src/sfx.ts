@@ -12,7 +12,7 @@ function T_smoothstep(value: number) {
   return t*t*(3-2*t);
 }
 
-type PlayingVoice = {source: AudioBufferSourceNode; gain: GainNode};
+type PlayingVoice = {source: AudioBufferSourceNode; gain: GainNode; protected?:boolean};
 
 export class SoundEffects {
   private context?: AudioContext;
@@ -88,8 +88,8 @@ export class SoundEffects {
     for (const voice of this.active) { try { voice.source.stop(); } catch { continue; } }
     this.active.clear(); this.buzz=undefined; this.rewardAfter=0;
   }
-  private begin(source: AudioBufferSourceNode, gain: GainNode, cleanup?: () => void, when?: number) {
-    const voice: PlayingVoice = {source, gain};
+  private begin(source: AudioBufferSourceNode, gain: GainNode, cleanup?: () => void, when?: number, protectedVoice=false) {
+    const voice: PlayingVoice = {source, gain,protected:protectedVoice};
     this.active.add(voice);
     source.onended = () => {
       this.active.delete(voice);
@@ -230,17 +230,17 @@ export class SoundEffects {
       this.buffers.set(key,buffer);
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.8;
-    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);this.voiceAfter=ctx.currentTime+2;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);this.voiceAfter=ctx.currentTime+2;
   }
 
-  sayHello() {
+  sayHello(volume=1) {
     const ctx=this.context;
     if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
     const source=ctx.createBufferSource(),gain=ctx.createGain();
     source.buffer=this.buffers.get('hello')!;
     source.playbackRate.value=.97+Math.random()*.06;
-    gain.gain.value=.65;
-    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
+    gain.gain.value=.65*volume;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);
     this.voiceAfter=ctx.currentTime+1.5;
   }
 
@@ -321,7 +321,7 @@ export class SoundEffects {
     }
   }
 
-  private synthesize(kind: Exclude<SoundKind,'eat'>, variant: number) {
+  private synthesize(kind: Exclude<SoundKind,'eat'|'hello'>, variant: number) {
     const ctx = this.context!, rate = 22050;
     const duration = { jump: .32, attack: .22, death: .85, revive: .8, grow: .62, voice: .78, step: .15 }[kind];
     const buffer = ctx.createBuffer(1, Math.ceil(rate * duration), rate), data = buffer.getChannelData(0);
@@ -396,11 +396,14 @@ export class SoundEffects {
     for (const event of events) {
       const dx = event.actor.x - player.actor.position.x, dz = event.actor.z - player.actor.position.z;
       const distance = Math.hypot(dx, dz);
+      // Greetings accompany the visible wave, including the full 24m greeting
+      // radius. They must not be dropped by ambient voice/footstep limits.
+      if(event.kind==='hello'){if(distance<=32)this.sayHello(Math.max(.35,1-distance/40));continue;}
       if (!event.actor.player && distance > 18) continue;
       if (event.kind === 'voice' && ctx.currentTime < this.voiceAfter) continue;
       if (!event.actor.player && event.kind !== 'voice' && event.kind !== 'step' && ctx.currentTime < this.npcEffectAfter) continue;
       if (event.kind === 'step' && !event.actor.player && this.active.size >= 3) continue;
-      if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = this.active.values().next().value; if (oldest) this.silence(oldest); }
+      if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = [...this.active].find(voice=>!voice.protected); if (oldest) this.silence(oldest);else continue; }
       const buffer=this.buffers.get(event.kind === 'voice' ? `voice${Math.floor(Math.random() * 4)}` : event.kind);
       if(!buffer)continue;
       const source = ctx.createBufferSource(), gain = ctx.createGain(), pan = ctx.createStereoPanner();

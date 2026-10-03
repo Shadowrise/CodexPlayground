@@ -24,6 +24,7 @@ import { Wayfinder, type Destination } from './navigation';
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 import { BALLOON_SITES } from './balloon-sites';
 import { Ponds } from './ponds';
+import {NpcSwimming} from './npc-swimming';
 import {RainbowFountain} from './fountain';
 import {FOUNTAIN_SITE} from './fountain-site';
 import * as THREE from 'three';
@@ -50,7 +51,7 @@ import { SoundEffects } from './sfx';
 import { MEADOW_HALF_SIZE, MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
 import { addEnvironment } from './environment';
 import { createNpcs, type KirbyNpc } from './npcs';
-import { cloneVariant, KIRBY_VARIANTS, type KirbyVariant } from './variants';
+import { cloneVariant, KIRBY_VARIANTS, styleVariant, type KirbyVariant } from './variants';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
 import './touch-controls.css';
@@ -190,7 +191,7 @@ for (const variant of KIRBY_VARIANTS) {
   button.type = 'button';
   button.setAttribute('aria-label', variant[0]);
   button.setAttribute('aria-pressed', String(variant === selected));
-  button.style.setProperty('--kirby-color', variant[1]);
+  styleVariant(button,variant);
   button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${variant[0]}</span><span class="choice-check" aria-hidden="true">✓</span>`;
   button.addEventListener('click', () => {
     selected = variant;
@@ -269,6 +270,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 addEnvironment(scene);
 const ponds=new Ponds();scene.add(ponds.group);
+const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
 const coaster=new Coaster();scene.add(coaster.group);
 const watermill=new Watermill();scene.add(watermill.group);
@@ -488,7 +490,7 @@ startButton.addEventListener('click', async () => {
   if(!network)try{soloHistory=new SoloHistory(serverUrl,()=>({name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),score:scoreOf(character!),tasksDone:SCORE_ACTIONS.filter(t=>character!.achievements.has(t)).length,tasksTotal:SCORE_ACTIONS.length}),historyDevice);}catch{/* Statistics are optional; the game must always start. */}
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
-  document.querySelector<HTMLElement>('#player-avatar')!.style.setProperty('--kirby-color',selected[1]);
+  styleVariant(document.querySelector<HTMLElement>('#player-avatar')!,selected);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
     remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
@@ -584,7 +586,7 @@ renderer.setAnimationLoop((time: number) => {
       if(pad.pressed.has(2))loadButton.click();
       else if(pad.pressed.has(0))newGameButton.click();
     } else if(!playing) {
-      if(repeat){const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*5+15)%15;(variantGrid.children[i] as HTMLButtonElement).click();}
+      if(repeat){const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length;const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*columns+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;(variantGrid.children[i] as HTMLButtonElement).click();}
       if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
       if(pad.pressed.has(0))startButton.click();
     } else {
@@ -624,7 +626,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
-    balloons.update(dt,!network||network.host?npcs:[],character);
+    balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
@@ -663,15 +665,22 @@ renderer.setAnimationLoop((time: number) => {
     viewScale = THREE.MathUtils.lerp(viewScale, character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraLook.set(position.x, position.y + .9 * viewScale, position.z);
     cameraTarget.lerp(cameraLook, 1 - Math.exp(-8 * dt));
-    const neighbors = [character.actor.position, ...npcs.map(npc => npc.actor.position)];
+    const people=[character.actor.position,...Array.from(remotePlayers?.players.values()??[],p=>p.actor.position)];
+    const neighbors = [...people, ...npcs.map(npc => npc.actor.position)];
     greetingCooldown=Math.max(0,greetingCooldown-dt);
     if((!network||network.host) && !coaster.riding && greetingCooldown===0) {
       const nearby=[...npcs].sort((a,b)=>a.actor.position.distanceToSquared(position)-b.actor.position.distanceToSquared(position));
-      for(const npc of nearby)if(npc.actor.position.distanceTo(position)<24 && npc.greet(position)){greetingCooldown=3;break;}
+      for(const npc of nearby){const person=people.find(p=>npc.actor.position.distanceTo(p)<24);if(person&&npc.greet(person)){greetingCooldown=3;break;}}
     }
+    if(!network||network.host)npcSwimming.update(dt,npcs,constrainNpc);
     fireflies?.prepareNpcs(npcs,!network||network.host,dt,character.actor.position);
-    if(!network||network.host)for (const npc of npcs) {npcPrevious.copy(npc.actor.position);if(!balloons.owns(npc))npc.update(dt, neighbors);if(npc.state!=='Balloon'&&npc.fireflyIndex===undefined){watermill.constrain(npc.actor.position,npc.actor.scale.x);treehouse.constrain(npc.actor.position,npc.actor.scale.x);maze.constrain(npc.actor.position,npc.actor.scale.x,npcPrevious);home.constrain(npc.actor.position,npc.actor.scale.x);}}
-    if(npcs.some(n=>n.hello))sounds.sayHello();
+    if(!network||network.host)for (const npc of npcs) {
+      npcPrevious.copy(npc.actor.position);
+      if(!balloons.owns(npc))npc.update(dt,neighbors,constrainNpc);
+      const onFoot=npc.state!=='Balloon'&&npc.fireflyIndex===undefined;
+      if(onFoot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);
+      ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
+    }
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
     const fireflyPickup=fireflies?.fruitPickupPosition;
@@ -796,6 +805,9 @@ function applyRide(a:ActorState){
  if(kind==='balloon'){const rows=balloons.networkState();rows[i]=a.ride.data;balloons.networkApply(rows,npcs);}
 
 }
+function constrainNpc(position:THREE.Vector3,size:number,previous:THREE.Vector3){
+ watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);
+}
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
  const r=network.room;
@@ -853,7 +865,7 @@ function updateNetwork(dt:number){
   const rows=entries.map(entry=>{
    let row=entry.id===network!.id?playerStatsRow:remoteStatRows.get(entry.id);
    if(!row){row=playerStatsRow.cloneNode(true) as HTMLElement;row.removeAttribute('id');row.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));row.classList.add('remote-stat-row');row.dataset.playerId=entry.id;remoteStatRows.set(entry.id,row);}
-   row.style.setProperty('--kirby-color',KIRBY_VARIANTS[entry.actor.variant][1]);
+   styleVariant(row,KIRBY_VARIANTS[entry.actor.variant]);
    row.querySelector('.stat-name')!.textContent=entry.actor.name;
    const values=row.querySelectorAll('strong');values[0].textContent=String(entry.points);values[1].textContent=`${Math.round(entry.actor.s*100)}%`;
    row.querySelector<HTMLElement>('.host-badge')!.hidden=entry.id!==network!.room.host;

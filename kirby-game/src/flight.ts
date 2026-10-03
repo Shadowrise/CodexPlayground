@@ -79,6 +79,12 @@ export function flightClip(idle:AnimationClip,model:Object3D,name='Fly') {
   return clip;
 }
 
+export function swimClip(idle:AnimationClip,model:Object3D){
+  const clip=flightClip(idle,model,'Swim');clip.duration*=3;
+  for(const track of clip.tracks)for(let i=0;i<track.times.length;i++)track.times[i]*=3;
+  return clip;
+}
+
 export function flightCloud() {
   const cloud=new Group();
   cloud.name='Flight cloud';cloud.position.set(0,.05,-.25);cloud.visible=false;

@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {STAR_COUNT,STAR_INTERVAL,STAR_LIFE,STAR_LIMIT,CELEBRATE_MS,RESULTS_MS,starValue,starfallPhase,type StarfallState} from './starfall';
-import {KIRBY_VARIANTS} from './variants';
+import {KIRBY_VARIANTS,styleVariant} from './variants';
 import {sceneryClearance} from './landmarks';
 const COLORS=['#ff668f','#ffc640','#63ed95','#52dfff','#9d83ff','#ff87eb','#ff974d'];
 function texture(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d')!,g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#ffffff');g.addColorStop(.14,'#ffffffe0');g.addColorStop(.4,'#ffffff40');g.addColorStop(1,'#ffffff00');x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c);}
@@ -65,7 +65,7 @@ export class StarfallView {
     const list=document.createElement('ol');
     for(const r of s.results){
       const place=1+s.results.filter(v=>v.points>r.points).length,row=document.createElement('li');row.className='festival-result-row';
-      row.style.setProperty('--kirby-color',KIRBY_VARIANTS[r.variant]?.[1]??'#ff8fbb');if(r.id==='npc')row.classList.add('npc-avatar');
+      styleVariant(row,KIRBY_VARIANTS[r.variant]??KIRBY_VARIANTS[0]);if(r.id==='npc')row.classList.add('npc-avatar');
       const rank=document.createElement('span');rank.className='festival-rank';rank.setAttribute('aria-label',`${place} место`);
       if(place<=3){
         const [metal,shade,shine]=[['#f5bf42','#a76b20','#fff1ad'],['#cbd9e6','#738699','#f5faff'],['#ce8a54','#854622','#ffd0a0']][place-1];

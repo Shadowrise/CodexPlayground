@@ -6,7 +6,7 @@ import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
 import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
-import { Flight, flightClip, flightCloud, updateFlightCloud } from './flight';
+import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
@@ -113,9 +113,7 @@ export class CharacterController {
     for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Push', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
-    const swim=flightClip(clips.find(c=>c.name==='Idle')!,model,'Swim');
-    swim.duration*=3;for(const track of swim.tracks)for(let i=0;i<track.times.length;i++)track.times[i]*=3;
-    this.actions.set('Swim',this.mixer.clipAction(swim));
+    this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
     this.play('Idle');
   }
 

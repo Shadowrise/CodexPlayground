@@ -1,3 +1,4 @@
+import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
 import {pushTarget,PUSH_COOLDOWN_MS} from '../../kirby-game/src/push-target';
 import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-landing';
 import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-name';
@@ -120,7 +121,7 @@ export class GameRoom extends DurableObject<Env>{
   if(this.players().length>=MAX_PLAYERS)return Response.json({error:'ROOM_FULL'},{status:503});
   if(this.room?.festival&&Date.now()>=this.room.festival.endsAt&&this.players().length)return new Response('Celebration finished. Try again shortly.',{status:409});
   let variant=Number(url.searchParams.get('variant'));
-  if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=15)return new Response('Invalid variant',{status:400});
+  if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=KIRBY_VARIANTS.length)return new Response('Invalid variant',{status:400});
   const first=this.players().length===0;
   const saved=!first&&this.room?await this.ctx.storage.get<DepartedPlayer>(`player:${this.room.id}:${key}`):undefined;
   const occupied=new Set(this.players().map(s=>(s.deserializeAttachment() as Attachment).variant));

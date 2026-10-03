@@ -6,6 +6,7 @@ import type { CharacterController } from '../src/controller';
 import { readFile } from 'node:fs/promises';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KIRBY_VARIANTS } from '../src/variants';
+import {dryGround} from '../src/pond-layout';
 
 test('short station stops keep all twelve carts circulating without overlap',()=>{
   const c=new Coaster();
@@ -126,6 +127,7 @@ test('every track support joins an actual rail to a ground footing, including ba
  for(const support of c.supports){
   const pose=c.pose(support.distance),rail=new Vector3(support.side*1.2,0,0).applyQuaternion(pose.q).add(pose.p);
   assert(support.rail.distanceTo(rail)<1e-8);assert.equal(support.base.y,-.02);
+  assert(dryGround(support.base.x,support.base.z,1.6),'entire footing rests on a dry bank');
   assert.equal(support.base.x,support.elbow.x);assert.equal(support.base.z,support.elbow.z);assert(support.elbow.y>.4);
   const opposite=c.supports.find(s=>s.distance===support.distance&&s.side!==support.side);
   if(opposite&&Math.abs(opposite.rail.y-support.rail.y)>.3)unequalPair=true;

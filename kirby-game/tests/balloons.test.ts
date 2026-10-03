@@ -8,6 +8,14 @@ import { createNpcs } from '../src/npcs';
 import { Balloons, BALLOON_SITES, type BalloonSound } from '../src/balloons';
 import { sceneryClearance } from '../src/landmarks';
 async function model(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}
+
+test('NPC does not start a balloon approach through a blocking wall',async()=>{
+ const gltf=await model(),npc=createNpcs(gltf.scene,gltf.animations)[0],world=new Balloons(()=>{},()=>.1),dock=world.balloons[0].group.position;
+ npc.actor.position.copy(dock).add(new Vector3(0,-.28,12));npc.endBalloon();const start=npc.actor.position.clone();
+ const constrain=(p:Vector3)=>{if(p.z<dock.z+6)p.z=dock.z+6;};
+ for(let i=0;i<100;i++)world.update(.5,[npc],undefined,constrain);
+ assert.equal(npc.state,'Walk');assert(npc.actor.position.equals(start));assert(!world.owns(npc));
+});
 test('player boards smoothly, travels above the trees, lands elsewhere and regains controls',async()=>{
   const gltf=await model(),c=new CharacterController(gltf.scene,gltf.animations),events:BalloonSound[]=[],world=new Balloons(k=>events.push(k),()=>.2);
   c.actor.scale.setScalar(2);c.actor.position.copy(world.balloons[0].group.position).add(new Vector3(0,-.28,4));

@@ -1,4 +1,4 @@
-export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'eat' | 'voice' | 'step';
+export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'eat' | 'voice' | 'step' | 'hello';
 export type SoundActor = { id: string; state: string; down: boolean; size: number; x: number; z: number; player?: boolean; fruitsEaten?: number };
 export type SoundEvent = { kind: SoundKind; actor: SoundActor };
 
@@ -19,6 +19,7 @@ export class SoundEvents {
     const steps: SoundActor[] = [];
     for (const actor of actors) {
       const before = this.previous.get(actor.id);
+      if(!actor.player&&actor.state==='Hello'&&before?.state!=='Hello')events.push({kind:'hello',actor});
       if (before) {
         const distance = Math.hypot(actor.x - before.x, actor.z - before.z);
         const walking = !actor.down && ['Walk', 'Run', 'WalkBackward'].includes(actor.state);

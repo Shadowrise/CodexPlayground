@@ -17,15 +17,17 @@ test('swimming automatically equips a colourful ring, supports growth and exits 
  c.actor.scale.setScalar(4);ponds.apply(c,c.actor.position.clone());assert(Math.abs(c.actor.position.y+.63*4-WATER_Y)<.06);
  c.actor.position.set(s.x+20,0,s.z);ponds.apply(c,c.actor.position.clone());assert(!c.swimming);assert.equal(c.actor.position.y,0);assert(!c.actor.getObjectByName('Rainbow swim ring')!.visible);
  c.update(.1,input);assert.equal(c.state,'Run');
- const ring=makeSwimRing(),colors=new Set<string>();ring.traverse(o=>{if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial)colors.add(o.material.color.getHexString());});assert(colors.size>=8);
+ const ring=makeSwimRing(),colors=new Set<string>();let meshes=0;ring.traverse(o=>{if(o instanceof T.Mesh){meshes++;const attr=o.geometry.getAttribute('color');for(let i=0;i<attr.count;i++)colors.add(new T.Color().fromBufferAttribute(attr,i).getHexString());}});assert(colors.size>=8);assert.equal(meshes,1);
 });
 test('both bridge ramps support walking and rails block sideways movement',async()=>{
  for(const side of [-1,1]){
-  const c=await player(),ponds=new Ponds(),s=PONDS[0];c.actor.position.set(s.x+side*5.1*POND_SCALE,0,s.z+12*POND_SCALE);
+  const c=await player(),ponds=new Ponds(),s=BRIDGES[0],cos=Math.cos(s.yaw),sin=Math.sin(s.yaw);
+  const place=(x:number,z=0)=>c.actor.position.set(s.x+(x*cos+z*sin)*POND_SCALE,c.actor.position.y,s.z+(-x*sin+z*cos)*POND_SCALE);
+  place(side*5.1);
   for(let i=1;i<=102;i++){
-   const old=c.actor.position.clone();c.actor.position.x=s.x+side*(5.1-i*.1)*POND_SCALE;ponds.apply(c,old);
-   assert(!c.swimming);assert(Math.abs(c.actor.position.y-(Math.abs((c.actor.position.x-s.x)/POND_SCALE)<=5?deckHeight((c.actor.position.x-s.x)/POND_SCALE):0))<1e-6);
-   if(i===51){const prev=c.actor.position.clone();c.actor.position.z+=POND_SCALE;ponds.apply(c,prev);assert(c.actor.position.z<s.z+13*POND_SCALE);c.actor.position.z=s.z+12*POND_SCALE;}
+   const old=c.actor.position.clone(),x=side*(5.1-i*.1);place(x);ponds.apply(c,old);
+   assert(!c.swimming);assert(Math.abs(c.actor.position.y-deckHeight(x))<1e-6);
+   if(i===51){const prev=c.actor.position.clone();place(x,1);ponds.apply(c,prev);const z=((c.actor.position.x-s.x)*sin+(c.actor.position.z-s.z)*cos)/POND_SCALE;assert(z<1);place(x);}
   }
  }
 });
@@ -60,18 +62,27 @@ test('expanded shores support swimming outside the previous lake boundary',async
 
 
 test('distinct lakes and all river centres form one connected, recessed water surface',()=>{
- assert.equal(WATER_REGIONS.length,1);assert.equal(RIVERS.length,PONDS.length);assert.equal(BRIDGES.length,PONDS.length*3);
+ assert.equal(WATER_REGIONS.length,1);assert.equal(RIVERS.length,PONDS.length);assert.equal(BRIDGES.length,3);
  assert.equal(new Set(PONDS.map((_,i)=>JSON.stringify(pondOutline(i)))).size,PONDS.length);
  const geometry=meadowGeometry(255);geometry.rotateX(-Math.PI/2);const ground=new T.Mesh(geometry,new T.MeshBasicMaterial({side:T.DoubleSide}));ground.updateMatrixWorld();
  for(const river of RIVERS)for(const p of river){assert(inWater(p.x,p.z));const ray=new T.Raycaster(new T.Vector3(p.x,10,p.z),new T.Vector3(0,-1,0));assert.equal(ray.intersectObject(ground).length,0);}
  assert(geometry.index!.count/3<2000,'Keep terrain affordable');
 });
 test('every additional rotated bridge supports crossing in both directions',async()=>{
- for(const site of BRIDGES.slice(PONDS.length))for(const side of [-1,1]){
+ for(const site of BRIDGES)for(const side of [-1,1]){
   const c=await player(),ponds=new Ponds(),cos=Math.cos(site.yaw),sin=Math.sin(site.yaw);
   const position=(x:number)=>{c.actor.position.x=site.x+x*cos*POND_SCALE;c.actor.position.z=site.z-x*sin*POND_SCALE;};
   position(side*5.1);
   for(let i=1;i<=102;i++){const old=c.actor.position.clone(),x=side*(5.1-i*.1);position(x);ponds.apply(c,old);assert(!c.swimming);assert(Math.abs(c.actor.position.y-deckHeight(x))<1e-6);}
+ }
+});
+
+test('three separated bridges have dry full-width landings, with one beside the mill',()=>{
+ assert.equal(BRIDGES.length,3);assert(BRIDGES.some(s=>Math.hypot(s.x-32,s.z-34)<25));assert(deckHeight(0)>3.4);
+ for(const [i,s] of BRIDGES.entries()){
+  assert(inWater(s.x,s.z));for(const other of BRIDGES.slice(i+1))assert(Math.hypot(s.x-other.x,s.z-other.z)>110);
+  const cos=Math.cos(s.yaw),sin=Math.sin(s.yaw);
+  for(const side of [-1,1])for(let x=4.6;x<=6.2;x+=.2)for(let z=-1.6;z<=1.6;z+=.2)assert(dryGround(s.x+(side*x*cos+z*sin)*POND_SCALE,s.z+(-side*x*sin+z*cos)*POND_SCALE,.3));
  }
 });
 

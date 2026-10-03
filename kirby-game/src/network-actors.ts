@@ -1,5 +1,5 @@
 import type {PlayerSnapshots} from './player-snapshots';
-import {makeSwimRing} from './ponds';
+import {makeSwimRing,showSwimRing} from './ponds';
 import {updateFlightCloud} from './flight';
 import * as T from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
@@ -9,9 +9,9 @@ import type {KirbyNpc} from './npcs';
 import type {ActorState} from './network-protocol';
 import {validAchievements} from './score';
 const round=(v:number)=>Math.round(v*1000)/1000;
-function poseNodes(c:CharacterController){return [c.animationRoot,...['Left_shoulder','Right_shoulder','Left_foot_pivot','Right_foot_pivot'].map(n=>c.actor.getObjectByName(n)!)];}
+function poseNodes(c:CharacterController|KirbyNpc){return [c.animationRoot,...['Left_shoulder','Right_shoulder','Left_foot_pivot','Right_foot_pivot'].map(n=>c.actor.getObjectByName(n)!)];}
 export function actorState(c:CharacterController|KirbyNpc,name:string,variant:number):ActorState{
- return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:c instanceof CharacterController&&c.state!=='Idle'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
+ return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
 }
 /** Restore durable progress without resuming an abandoned ride or animation. */
 export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
@@ -22,13 +22,20 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
  c.roll.clearPose();c.roll.state=a.roll?[...a.roll]:undefined;
+ const previousX=c.actor.position.x,previousZ=c.actor.position.z;
  const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion).y;
  c.fruitsEaten=a.fruits;if(validAchievements(a.achievements)){c.achievements.clear();for(const v of a.achievements)c.achievements.add(v);}
  if(c instanceof CharacterController){
   if(c.state!==a.state){c.setActivity(a.state);c.actions.forEach(x=>x.stop());const action=c.actions.get(a.state)??c.actions.get('Idle');action?.reset().play();}
   c.mixer.update(dt);poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
   c.flight.active=a.state==='Jump'||a.state==='Fly';c.flight.height=c.flight.active?Math.max(0,a.p[1]/a.s):0;updateFlightCloud(c.cloud,c.flight);
- }else {c.networkAnimate(a.state,dt);if(c.roll.active)c.roll.applyPose(c.animationRoot,c.yaw);updateFlightCloud(c.cloud,c.flight);}
+ }else {
+  c.swimming=a.state==='Swim';c.surfaceY=a.p[1];
+  c.networkAnimate(a.state,dt,Math.hypot(c.actor.position.x-previousX,c.actor.position.z-previousZ)>.00001);
+  showSwimRing(c.actor,c.swimming,c.mixer.time);
+  if(a.state==='Hello')poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
+  if(c.roll.active)c.roll.applyPose(c.animationRoot,c.yaw);updateFlightCloud(c.cloud,c.flight);
+ }
 }
 export class RemotePlayers{
  readonly players=new Map<string,CharacterController>();

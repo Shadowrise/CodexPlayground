@@ -1,7 +1,7 @@
 import { awardFirst } from './score';
 import * as T from 'three';
 import { CharacterController } from './controller';
-import type { KirbyNpc } from './npcs';
+import type { KirbyNpc,NpcConstraint } from './npcs';
 import { BALLOON_SITES } from './balloon-sites';
 export { BALLOON_SITES } from './balloon-sites';
 type Passenger=CharacterController|KirbyNpc;
@@ -120,7 +120,7 @@ export class Balloons {
     passenger.cloud.visible=false;passenger.flight.reset();
   }
   private launch(b:Balloon,index:number){if(!b.passenger)return;b.start.copy(this.dock(b.station,index));b.end.copy(this.dock(b.destination,index));b.phase='flying';b.time=0;b.nextSound=0;this.sound('departure',b.group.position);}
-  update(dt:number,npcs:readonly KirbyNpc[]=[],player?:CharacterController){
+  update(dt:number,npcs:readonly KirbyNpc[]=[],player?:CharacterController,constrain?:NpcConstraint){
     this.clock+=dt;this.npcAfter-=dt;
     for(const [index,b] of this.balloons.entries()){
       // A departed remote passenger can leave an enlarged or exiting snapshot behind.
@@ -164,14 +164,23 @@ export class Balloons {
       else {
         const delta=b.group.position.clone().sub(npc.actor.position);delta.y=0;const distance=delta.length();
         if(distance<3){this.boardPassenger(b,npc);this.approach=undefined;}
-        else {npc.yaw=Math.atan2(delta.x,delta.z);npc.actor.rotation.y=npc.yaw;npc.actor.position.addScaledVector(delta,Math.min(distance,2.4*npc.actor.scale.x*dt)/distance);npc.mixer.update(dt);}
+        else {
+          const previous=npc.actor.position.clone(),next=previous.clone().addScaledVector(delta,Math.min(distance,2.4*npc.actor.scale.x*dt)/distance),target=next.clone();
+          constrain?.(next,npc.actor.scale.x,previous);
+          if(next.distanceToSquared(target)>.000001){npc.endBalloon();this.approach=undefined;}
+          else {npc.yaw=Math.atan2(delta.x,delta.z);npc.actor.rotation.y=npc.yaw;npc.actor.position.copy(next);npc.mixer.update(dt);}
+        }
       }
     }
     if(!this.approach && this.npcAfter<=0 && !this.balloons.some(b=>b.passenger && !(b.passenger instanceof CharacterController))){
       this.npcAfter=35+this.random()*25;
       const candidates=this.balloons.filter(b=>b.phase==='parked' && !this.networkBlocked.has(this.balloons.indexOf(b)) && (!player || player.actor.position.distanceTo(b.group.position)>12));
       for(const b of candidates){const npc=[...npcs].filter(n=>n.canBoardBalloon && !this.owns(n) && n.actor.position.distanceTo(b.group.position)<100).sort((a,c)=>a.actor.position.distanceToSquared(b.group.position)-c.actor.position.distanceToSquared(b.group.position))[0];
-        if(npc){npc.beginBalloon(true);this.approach={npc,balloon:b,health:npc.health,elapsed:0};break;}}
+        if(npc){
+          let clear=true;const previous=npc.actor.position.clone(),distance=previous.distanceTo(b.group.position),steps=Math.ceil(distance/2);
+          for(let i=1;i<=steps;i++){const next=npc.actor.position.clone().lerp(b.group.position,i/steps),target=next.clone();constrain?.(next,npc.actor.scale.x,previous);if(next.distanceToSquared(target)>.000001){clear=false;break;}previous.copy(next);}
+          if(clear){npc.beginBalloon(true);this.approach={npc,balloon:b,health:npc.health,elapsed:0};break;}
+        }}
     }
   }
   nearestDistance(position:T.Vector3){return Math.round(Math.min(...BALLOON_SITES.map(p=>Math.hypot(position.x-p.x,position.z-p.z))));}
