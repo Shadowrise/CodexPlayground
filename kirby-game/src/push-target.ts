@@ -1,3 +1,4 @@
+export const PUSH_COOLDOWN_MS = 100;
 export type PushCandidate={id:string;p:readonly number[];s:number;state:string};
 const BODY=.9,MARGIN=.6;
 export function pushRadius(scale:number){return (BODY+MARGIN)*scale;}

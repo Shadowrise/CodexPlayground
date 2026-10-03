@@ -1,5 +1,6 @@
 import type {StarfallState} from './starfall';
 import {PushRoll,applyPushArms,pushClip,PUSH_HIT} from './push-motion';
+import {PUSH_COOLDOWN_MS} from './push-target';
 import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
@@ -142,7 +143,7 @@ export class CharacterController {
   private beginPush(input: Input) {
     this.attackHit = true;
     this.pushArmed = false;
-    this.pushReady = .1;
+    this.pushReady = PUSH_COOLDOWN_MS / 1000;
     this.attackElapsed = 0;
     if (input.forward || input.backward) this.state = 'Push';
     else this.replayPush();

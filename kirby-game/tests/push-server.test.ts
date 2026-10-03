@@ -22,6 +22,10 @@ test('server chooses exactly one human or NPC target and broadcasts it to all cl
   const ctx={getWebSockets:()=>sockets,setWebSocketAutoResponse(){},storage:{setAlarm:async()=>{}}};const room=new GameRoom(ctx,{});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{'bug:0':'b'},world:{npcs:[actor(2.7)]}};
   room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'},{type:'hit'}]}));
   for(const s of sockets){const hits=s.messages.filter(m=>m.type==='hit');assert.equal(hits.length,1);assert.equal(hits[0].target,'b');}
+  now+=99;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));
+  for(const s of sockets)assert.equal(s.messages.filter(m=>m.type==='hit').length,1);
+  now+=1;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));
+  for(const s of sockets){const hits=s.messages.filter(m=>m.type==='hit');assert.equal(hits.length,2);assert.equal(hits[1].target,'b');}
   b.data.actor.state='Roll';now+=500;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));assert.equal(a.messages.filter(m=>m.type==='hit').at(-1).target,'npc:0');
   assert(validActor({...actor(0),state:'Roll',roll:[1,0,.5,-5,0]}));assert(!validActor({...actor(0),roll:[NaN,0,.5,-5,0]}));
  }finally{Date.now=original;(globalThis as any).WebSocketRequestResponsePair=saved;}

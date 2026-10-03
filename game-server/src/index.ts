@@ -1,4 +1,4 @@
-import {pushTarget} from '../../kirby-game/src/push-target';
+import {pushTarget,PUSH_COOLDOWN_MS} from '../../kirby-game/src/push-target';
 import {validBugLanding,reconcileBugLanding} from '../../kirby-game/src/firefly-landing';
 import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-name';
 import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/history-types';
@@ -170,7 +170,7 @@ export class GameRoom extends DurableObject<Env>{
     if(e.key.startsWith('bug:')&&validBugLanding(e.bugState)){const i=e.key.split(':')[1];(r.bugLandings??={})[i]=[...e.bugState];if(r.world)r.world.bugs[Number(i)]=[...e.bugState];}
     delete r.locks[e.key];changed=true;
    }
-   else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>450){
+   else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const actor=a.actor,q=actor.q,yaw=Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1]));
     const humans=this.players().map(s=>s.deserializeAttachment() as Attachment).filter(p=>p.id!==a.id&&p.actor).map(p=>({id:p.id,...p.actor!}));
     const targets=[...humans,...(r.world?.npcs??[]).map((n,i)=>({id:'npc:'+i,...n}))];
