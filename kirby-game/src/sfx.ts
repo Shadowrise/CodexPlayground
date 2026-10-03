@@ -5,6 +5,7 @@ import { readAudioSettings, saveAudioSettings } from './audio-settings';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { footstepProfile } from './footsteps';
+import {createSoundOutput} from './sound-output';
 
 function T_smoothstep(value: number) {
   const t=Math.max(0,Math.min(1,value));
@@ -17,6 +18,9 @@ export class SoundEffects {
   private context?: AudioContext;
   private master?: GainNode;
   private buffers = new Map<string, AudioBuffer>();
+  // Fetch once while the menu loads; an unavailable effect must never block play.
+  private readonly fruitBiteData=fetch(`${import.meta.env.BASE_URL}audio/apple-bite.wav`)
+    .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private active = new Set<PlayingVoice>();
   private events = new SoundEvents();
   private waterEvents=new WaterSoundEvents();
@@ -56,22 +60,24 @@ export class SoundEffects {
     try {
       if (!this.context) {
         this.context = new AudioContext();
-        this.master = this.context.createGain();
-        const headroom = this.context.createGain();
-        headroom.gain.value = .35;
-        const limiter = this.context.createDynamicsCompressor();
-        limiter.threshold.value = -2; limiter.knee.value = 0; limiter.ratio.value = 20;
-        limiter.attack.value = 0; limiter.release.value = .05;
-        this.master.connect(headroom); headroom.connect(limiter); limiter.connect(this.context.destination);
-        for (const kind of ['jump', 'attack', 'death', 'revive', 'grow', 'step'] as SoundKind[]) this.buffers.set(kind, this.synthesize(kind, 0));
+        const {master,limiter}=createSoundOutput(this.context);
+        this.master=master;limiter.connect(this.context.destination);
+        for (const kind of ['jump', 'attack', 'death', 'revive', 'grow', 'step'] as const) this.buffers.set(kind, this.synthesize(kind, 0));
         for (let i = 0; i < 4; i++) this.buffers.set(`voice${i}`, this.synthesize('voice', i));
         this.buffers.set('hello', this.synthesize('voice', 4));
         this.buffers.set('wheel',this.rideBuffer(false));
         this.buffers.set('cheer',this.rideBuffer(true));
+        void this.loadFruitBite(this.context);
       }
       void this.context.resume().catch(() => { this.enabled = false; this.sync(); });
       this.sync();
     } catch { this.enabled = false; this.sync(); }
+  }
+  private async loadFruitBite(context:AudioContext){
+    try{
+      const bytes=await this.fruitBiteData;
+      if(bytes)this.buffers.set('eat',await context.decodeAudioData(bytes));
+    }catch{/* Keep all other sounds available if downloading or decoding fails. */}
   }
   private sync() {
     this.button.textContent = this.enabled ? '♪ Звуки: вкл' : '♪ Звуки: выкл';
@@ -315,7 +321,7 @@ export class SoundEffects {
     }
   }
 
-  private synthesize(kind: SoundKind, variant: number) {
+  private synthesize(kind: Exclude<SoundKind,'eat'>, variant: number) {
     const ctx = this.context!, rate = 22050;
     const duration = { jump: .32, attack: .22, death: .85, revive: .8, grow: .62, voice: .78, step: .15 }[kind];
     const buffer = ctx.createBuffer(1, Math.ceil(rate * duration), rate), data = buffer.getChannelData(0);
@@ -395,9 +401,11 @@ export class SoundEffects {
       if (!event.actor.player && event.kind !== 'voice' && event.kind !== 'step' && ctx.currentTime < this.npcEffectAfter) continue;
       if (event.kind === 'step' && !event.actor.player && this.active.size >= 3) continue;
       if (this.active.size >= 4) { if (!event.actor.player) continue; const oldest = this.active.values().next().value; if (oldest) this.silence(oldest); }
+      const buffer=this.buffers.get(event.kind === 'voice' ? `voice${Math.floor(Math.random() * 4)}` : event.kind);
+      if(!buffer)continue;
       const source = ctx.createBufferSource(), gain = ctx.createGain(), pan = ctx.createStereoPanner();
-      source.buffer = this.buffers.get(event.kind === 'voice' ? `voice${Math.floor(Math.random() * 4)}` : event.kind)!;
-      source.playbackRate.value = event.kind === 'voice' || event.kind === 'step' ? .94 + Math.random() * .12 : 1;
+      source.buffer = buffer;
+      source.playbackRate.value = event.kind === 'eat' ? .96 + Math.random() * .08 : event.kind === 'voice' || event.kind === 'step' ? .94 + Math.random() * .12 : 1;
       gain.gain.value = event.actor.player ? .8 : .36 * (1 - distance / 18);
       let stepFilter: BiquadFilterNode | undefined;
       if (event.kind === 'step') {

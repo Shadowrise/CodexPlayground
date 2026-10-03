@@ -108,7 +108,7 @@ export class HedgeMaze {
     this.clock+=dt;this.star.position.y=2.25+Math.sin(this.clock*1.7)*.25;this.star.rotation.y=this.clock*.65;
     if(!player)return false;let collected=false;
     player.starRemaining=Math.max(0,player.starRemaining-dt);player.starCooldown=Math.max(0,player.starCooldown-dt);
-    if(player.starCooldown===0 && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x-this.rewardPosition.x,player.actor.position.z-MAZE_SITE.z-this.rewardPosition.z)<2){awardFirst(player,'star');player.starBlessed=true;player.starRemaining=30;player.starCooldown=120;collected=true;}
+    if(player.starCooldown===0 && available && player.actor.position.y<.5 && Math.hypot(player.actor.position.x-MAZE_SITE.x-this.rewardPosition.x,player.actor.position.z-MAZE_SITE.z-this.rewardPosition.z)<2){awardFirst(player,'star');player.starBlessed=true;player.activateStarPower();player.starCooldown=120;collected=true;}
     this.star.visible=player.starCooldown===0;
     if(player.starRemaining>0){
       if(!this.aura)this.bless(player);

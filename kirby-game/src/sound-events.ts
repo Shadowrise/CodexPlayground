@@ -1,4 +1,4 @@
-export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'voice' | 'step';
+export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'eat' | 'voice' | 'step';
 export type SoundActor = { id: string; state: string; down: boolean; size: number; x: number; z: number; player?: boolean; fruitsEaten?: number };
 export type SoundEvent = { kind: SoundKind; actor: SoundActor };
 
@@ -36,7 +36,9 @@ export class SoundEvents {
           if (actor.state === 'Jump' || actor.state === 'Fly') events.push({ kind: 'jump', actor });
           if (actor.state === 'Push') events.push({ kind: 'attack', actor });
         }
-        if (actor.fruitsEaten !== undefined ? actor.fruitsEaten > (before.fruitsEaten ?? actor.fruitsEaten) : actor.size > before.size + .001) events.push({ kind: 'grow', actor });
+        if (actor.fruitsEaten !== undefined) {
+          if(actor.fruitsEaten > (before.fruitsEaten ?? actor.fruitsEaten)) events.push({kind:'eat',actor});
+        } else if(actor.size > before.size + .001) events.push({kind:'grow',actor});
       }
       this.previous.set(actor.id, { ...actor });
     }

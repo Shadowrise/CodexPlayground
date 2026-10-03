@@ -1,5 +1,40 @@
 # Память проекта Kirby
 
+## Щелчки шагов в Firefox: воспроизведены и исправлены — 2026-10-03
+
+Предыдущие оптимизации/тени/удаление музыки опубликованы коммитом `29f2b10`
+в origin/main. Новый звуковой фикс ниже пока локальный.
+
+Пользователь сообщил: любой голос/эффект щёлкает поверх шагов, при ходьбе хуже,
+чем при спринте. Уточнил: только Firefox, в Chrome чисто. Причина подтверждена
+реальным браузерным тестом Firefox157: шаги проходят через StereoPanner, прочие
+звуки часто mono. GainNode по умолчанию max, compressor clamped-max: подключение
+и удаление шагов переключало общий тракт 1↔2 канала. Firefox при этом пересоздаёт
+DynamicsCompressor и теряет содержимое look-ahead, обрывая ВСЕ текущие эффекты.
+Источник: https://searchfox.org/firefox-main/source/dom/media/webaudio/DynamicsCompressorNode.cpp
+в ProcessBlock при смене channelCount создаётся новый компрессор.
+
+- Новый `src/sound-output.ts`: общий stereo bus, channelCount=2,
+  channelCountMode=explicit, channelInterpretation=speakers на master/headroom/
+  limiter. `sfx.ts` использует эту функцию при создании контекста.
+- Громкости, threshold/knee/ratio/attack/release, синтез шагов/эмоций и панорама
+  не менялись. Не возвращать очередное приглушение как решение этого бага.
+- `scripts/audio-mix-browser.mjs`: тест реального AudioContext, без GPU-сцены
+  и без вывода звука в динамики. Тихий постоянный mono сигнал + почти неслышные
+  stereo подключения/отключения, регистрация через ScriptProcessor (только тест).
+  В production нет ScriptProcessor, фонового пробного тона, таймеров или записи.
+- Firefox: старый mono контроль —0 провалов; старый смешанный тракт —5120
+  провалившихся samples из76800, скачок .035917; исправленный —0 провалов,
+  max скачок0. Chrome154 во всех трёх случаях0. Значит причина изолирована
+  от clipping, волн шагов, FPS сцены и громкости.
+- Запуск: Vite5173, `node scripts/audio-mix-browser.mjs` (Chrome), либо
+  PowerShell `$env:AUDIO_BROWSER='firefox'; node scripts/audio-mix-browser.mjs`.
+  Firefox запускается headless с отдельным временным профилем, пользовательский
+  профиль не изменяется. Временные профили остаются в TEMP, процесс закрывается.
+- 8 tests sound-events/audio-settings/water-sounds и production build прошли.
+  Пользователю осталось оценить исправленную игру в своём Firefox; локальный
+  браузерный тест подтвердил исчезновение именно воспроизведённых разрывов.
+
 ## Удаление двух мелодий — 2026-10-03
 
 Пользователь подтвердил, что последние изменения теней «гораздо лучше».
@@ -365,3 +400,31 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 Сначала читать этот файл и сравнивать будущую историю с последней отмеченной точкой.
 Не отменять перечисленные самостоятельные изменения пользователя при следующих
 правках. Не хранить пароли, токены и содержимое `.dev.vars` в памяти/репозитории.
+
+## 2026-10-03 — HUD alignment and mobile chat
+- Desktop day/night dial now shares a flex corner container with the statistics/sidebar: aligned top edges, 12px gap, dial immediately on the left. Layout is CSS-only; no per-frame measurements. Touch layout keeps its original dial position.
+- Mobile message history is inside the Chat composer, below input/actions, with the latest 10 messages scrollable. Settings no longer reveals history and closes the mobile composer when opened. Desktop chat behavior is preserved.
+- Mobile composer tracks visualViewport height/offset while open to fit above the software keyboard.
+- Validation: client build passed; Playwright Chrome checked desktop alignment (28px top, 12px gap), touch Chat/settings visibility, sending messages, 10-message cap/overflow, landscape 844x390, portrait 390x844 and a short 844x260 viewport. No page errors. Actual iPhone/Android keyboard remains a device check.
+- User confirmed the preceding Firefox stereo bus audio fix eliminated the clicks. Both audio and these UI changes remain local; no commit/push requested in this UI turn.
+
+## 2026-10-03 — Sky Trail summit star power
+- Collecting the summit star now calls the same CharacterController.activateStarPower() as the solo/network maze star: existing sparkle aura, double movement speed and jump height for 30 seconds. Existing starRemaining serialization carries the effect through network state/saves without protocol/server changes.
+- Sky reward remains one-time and independent of maze completion/cooldown; standing at the summit cannot keep refreshing the bonus.
+- Validation: 12 Sky Trail/maze tests passed, including power expiry, aura visibility, network state restore and independent achievements; client production build passed.
+
+## 2026-10-03 — Fruit bite sound
+- Fruit counter increases now emit a separate eat sound event (player and NPC), using a cached 0.42s apple-like crunch in fruit-bite.ts: rounded noise grains, softer chew, DC filtering and faded tail, slight playback-rate variation.
+- Star pickups still use the original grow/bell buffer. No changes to task rewards/other effects or the fixed stereo Firefox output bus. Resizing alone does not trigger eating.
+- Validation: 9 sound/audio-settings/water tests passed; sample peak 0.614, RMS 0.105, near-zero DC, silent boundaries; production build passed. Listening preference remains for user review in game.
+
+## 2026-10-03 — Size-aware Sky Trail support
+- Replaced centre-point cube/rainbow support with a rotated elliptical standing footprint derived from neutral GLB feet bounds (x ±0.95, z -0.45..0.81). It follows actual actor scale, including growth/shrink, and yaw; animation does not change support to avoid footstep jitter.
+- Exact ellipse/rectangle edge tests avoid phantom square-corner support. Cheap axis bounds reject distant platforms first. Sky Trail broad-phase bounds also include actor size; one-way vertical landing checks are unchanged.
+- Validation: all 11 Sky Trail tests passed, including 700% edge landings, rotated footprint, rainbow edges, shrink causing loss of support and no landing from below; production build passed. Client only, no server protocol changes.
+
+## 2026-10-03 — Replace synthetic fruit crunch with a CC0 recording
+- User disliked the synthesized bite. Replaced it with Apple Bite by AntumDeluge (OpenGameArt), an excerpt of sonicmariobrotha's apple bite (Freesound #333825). Both source pages explicitly license it CC0. Provenance/license links recorded in kirby-game/ASSET_CREDITS.md.
+- Downloaded https://opengameart.org/sites/default/files/apple_bite_0.ogg; converted to mono 22050 Hz PCM WAV, trimmed quiet edges, peak .55, 6ms fade-in/35ms fade-out. public/audio/apple-bite.wav is 34,806 bytes, ~0.788s.
+- Removed unused synthetic fruit-bite.ts. Fetch recording once during menu creation, decode/cache on audio start. Failed download/decode silently skips only eating audio, never blocks game/other effects. Separate eat event retained; stars still use original grow chime. Fixed Firefox stereo output bus preserved.
+- Validation: build, six sound-event/settings tests, browser WAV decoding + separate chime buffers + aborted audio-download fallback passed. No commit/push requested.

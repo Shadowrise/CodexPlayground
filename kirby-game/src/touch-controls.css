@@ -45,8 +45,6 @@
 .touch-ui #action-hint{font-size:11px;padding:8px 10px;}
 .touch-ui:has(#touch-interact:not([hidden])) #action-hint{display:none;}
 .touch-ui .combat-message{top:calc(max(12px,env(safe-area-inset-top)) + 60px);max-width:calc(100vw - 550px);font-size:11px;padding:8px;}
-.touch-ui #meadow-chat{display:none;left:var(--touch-left);bottom:calc(var(--touch-bottom) + 174px);width:230px;max-width:34vw;padding:4px 8px;}
-.touch-ui:has(#settings-toggle[aria-expanded=true]) #meadow-chat{display:block;}
 .touch-ui .chat-messages{max-height:42px;}.touch-ui .chat-messages p{font-size:11px;line-height:1.4;margin:3px 0;}
 .touch-ui #settings-panels{top:calc(max(12px,env(safe-area-inset-top)) + 56px);left:var(--touch-left);max-width:calc(100vw - var(--touch-left) - var(--touch-right));max-height:calc(100dvh - 90px - env(safe-area-inset-bottom));flex-wrap:wrap;pointer-events:auto;}
 .touch-ui #settings-panels>.panel{max-height:none;}
@@ -57,9 +55,6 @@
 .touch-ui #fullscreen-toggle[hidden]{display:none;}
 .touch-ui #fullscreen-hint{margin:8px 0 0;color:var(--ui-muted);font-size:12px;line-height:1.5;}
 .touch-ui:has(#settings-toggle[aria-expanded=true]) .right-hud,.touch-ui:has(#settings-toggle[aria-expanded=true]) #navigation-hud{visibility:hidden;}
-.touch-ui #meadow-chat.chat-scroll{bottom:var(--touch-bottom);max-width:40vw;max-height:20dvh;z-index:26;left:auto;right:var(--touch-right);}
-.touch-ui .chat-scroll .chat-messages{max-height:15dvh;}
-.touch-ui #chat-composer{top:12%;transform:translateX(-50%);padding:16px;max-height:75dvh;overflow:auto;}
 .touch-ui #chat-composer small{display:none;}
 .touch-ui .touch-chat-buttons{display:flex;gap:10px;}.touch-chat-buttons button{flex:1;min-height:44px;background:#315442;color:#fff;border:1px solid #a3c2b4;border-radius:10px;font:600 15px system-ui;}
 .touch-ui #character-select{padding:max(12px,env(safe-area-inset-top)) var(--touch-right) var(--touch-bottom) var(--touch-left);place-items:start center;}
@@ -72,10 +67,8 @@
  .touch-ui .right-hud{width:220px;max-width:58vw;}
  .touch-ui #navigation-hud{top:auto;bottom:calc(var(--touch-bottom) + 174px);max-width:calc(100vw - 28px);width:min(320px,90vw);}
  .touch-ui .status-cluster{bottom:calc(var(--touch-bottom) + 144px);max-width:80vw;}
- .touch-ui #meadow-chat{bottom:calc(var(--touch-bottom) + 270px);max-width:70vw;}
  .touch-ui .combat-message{top:auto;bottom:calc(var(--touch-bottom) + 235px);max-width:85vw;}
  .touch-ui #starfall-hud{bottom:calc(var(--touch-bottom) + 225px);width:80vw;}
- .touch-ui #meadow-chat.chat-scroll{max-width:calc(100vw - 28px);width:calc(100vw - 28px);}
 }
 @media(orientation:landscape) and (max-width:700px){
  .touch-ui .right-hud{width:200px;gap:4px;}
@@ -89,6 +82,14 @@
  .touch-ui #destination-select{font-size:11px;padding:6px;}
  .touch-ui #touch-stick{width:104px;height:104px;left:var(--touch-left);bottom:var(--touch-bottom);}
  .touch-ui #touch-stick small{left:0;width:110px;}
- .touch-ui #meadow-chat{bottom:calc(var(--touch-bottom) + 140px);max-width:33vw;}
  .touch-ui .combat-message{left:calc(50% - 20px);max-width:calc(100vw - 420px);top:125px;}
 }
+
+/* On phones, history belongs to Chat rather than the settings overlay. */
+.touch-ui #chat-composer {top:calc(var(--chat-viewport-top, 0px) + 12px);transform:translateX(-50%);display:flex;flex-direction:column;padding:14px;max-height:calc(var(--chat-viewport-height, 100dvh) - 24px);overflow:hidden;}
+.touch-ui #chat-composer[hidden] {display:none;}
+.touch-ui #chat-composer > :not(#meadow-chat) {flex-shrink:0;}
+.touch-ui #chat-input {margin:10px 0;}
+.touch-ui #chat-composer #meadow-chat {position:static;display:flex;flex-direction:column;flex:1 1 auto;min-height:0;width:100%;max-width:none;margin-top:12px;padding:8px 10px;pointer-events:auto;}
+.touch-ui #chat-composer .chat-messages {min-height:0;max-height:min(360px,44dvh);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;}
+.touch-ui #chat-composer .chat-messages p {font-size:13px;line-height:1.45;}

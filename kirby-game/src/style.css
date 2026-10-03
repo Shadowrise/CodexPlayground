@@ -310,3 +310,11 @@ button:disabled { cursor:default; }
 #time-dial {position:fixed;top:var(--day-dial-top);left:50%;transform:translateX(-50%);width:var(--day-dial-size);height:var(--day-dial-size);box-sizing:content-box;}
 .combat-message {top:calc(var(--day-dial-top) + var(--day-dial-size) + 22px);bottom:auto;}
 @media(max-width:760px){:root{--day-dial-size:56px;--day-dial-top:12px;}}
+
+/* Share the desktop corner layout so the dial follows the actual sidebar width. */
+.hud-corner {display:contents;}
+body:not(.touch-ui) .hud-corner {position:fixed;top:28px;right:28px;bottom:16px;display:flex;gap:12px;z-index:3;pointer-events:none;}
+body:not(.touch-ui) .hud-corner .status-cluster {position:static;align-self:flex-start;flex-shrink:0;}
+body:not(.touch-ui) .hud-corner #time-dial {position:static;transform:none;}
+body:not(.touch-ui) .hud-corner .right-hud {position:static;min-width:0;max-width:calc(100vw - 108px - var(--day-dial-size));}
+@media(max-width:760px){body:not(.touch-ui) .hud-corner{top:16px;right:16px;}}

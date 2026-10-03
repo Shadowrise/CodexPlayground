@@ -49,6 +49,7 @@ export class CharacterController {
   starBlessed = false;
   starRemaining = 0;
   starCooldown = 0;
+  activateStarPower(){this.starRemaining=30;}
   private flightBoost = 1;
   private growth?: { from: number; to: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }

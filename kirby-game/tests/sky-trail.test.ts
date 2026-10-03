@@ -1,5 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {Vector3} from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {SkyTrail} from '../src/sky-trail';import {SKY_PLATFORMS as P,SKY_TRAIL_SITE as S,SKY_CHECKPOINTS,SKY_COLORS,rainbowHeight,SKY_RAINBOW_START as RS,SKY_RAINBOW_END as RE,platformThickness} from '../src/sky-trail-layout';import {CharacterController} from '../src/controller';import {scoreOf} from '../src/score';import {sceneryClearance} from '../src/landmarks';
+import {SkyTrail} from '../src/sky-trail';import {SKY_PLATFORMS as P,SKY_TRAIL_SITE as S,SKY_CHECKPOINTS,SKY_COLORS,rainbowHeight,SKY_RAINBOW_START as RS,SKY_RAINBOW_END as RE,platformThickness,skySurfaces} from '../src/sky-trail-layout';import {CharacterController} from '../src/controller';import {scoreOf} from '../src/score';import {sceneryClearance} from '../src/landmarks';
+import {HedgeMaze} from '../src/maze';
 import {actorState,restoreNetworkPlayer} from '../src/network-actors';
 async function player(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const m=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');return new CharacterController(m.scene,m.animations);}
 const pos=(i:number)=>new Vector3(S.x+P[i].x,P[i].y,S.z+P[i].z);
@@ -55,4 +56,52 @@ test('decorations are hollow geometric ornaments outside the platforms, with the
  const trail=new SkyTrail(),ornaments=trail.group.children.filter(o=>o.name==='Sky Trail decorative ornament');assert.equal(ornaments.length,56);
  assert(ornaments[0].position.y>=10);
  for(const o of ornaments){assert(Math.hypot(o.position.x,o.position.z)>=20.99);assert.equal((o as any).geometry.type,'TorusGeometry');for(const p of P)assert(Math.hypot(o.position.x-p.x,o.position.z-p.z)>p.size/Math.sqrt(2)+1);}
+});
+
+
+test('summit star grants the maze power and glow for 30 seconds without unlocking the maze reward',async()=>{
+ const c=await player(),trail=new SkyTrail(),maze=new HedgeMaze(),speed=c.speed;
+ c.actor.position.copy(pos(P.length-1));c.surfaceY=c.actor.position.y;trail.restorePosition(c);
+ trail.apply(c,c.actor.position.clone(),0);
+ assert(c.achievements.has('skyStar'));assert(!c.achievements.has('star'));assert(!c.starBlessed);assert.equal(c.starCooldown,0);
+ assert.equal(c.starRemaining,30);assert.equal(c.speed,speed*2);
+ maze.update(0,c,false);
+ const aura=c.actor.getObjectByName('Golden star blessing');assert(aura?.visible);
+ const restored=await player();restoreNetworkPlayer(restored,actorState(c,'Summit',0));
+ assert.equal(restored.starRemaining,30);assert.equal(restored.speed,speed*2);assert(!restored.starBlessed);
+ maze.update(10,c,false);trail.apply(c,c.actor.position.clone(),0);
+ assert.equal(c.starRemaining,20);assert.equal(scoreOf(c),3);
+ maze.update(20,c,false);assert.equal(c.starRemaining,0);assert.equal(c.speed,speed);assert(!aura.visible);
+});
+
+
+test('support follows a 700% Kirby footprint on platform edges and rainbow, including turns',()=>{
+ const i=P.length-1,p=P[i],edge=p.x+p.size/2;
+ const on=(x:number,z:number,size:number,yaw=0)=>skySurfaces(x,z,size,yaw).some(s=>s.index===i);
+ assert(on(edge+4,p.z,7));assert(!on(edge+4,p.z,1));
+ assert(on(edge+6,p.z,7));assert(!on(edge+6,p.z,7,Math.PI/2));
+ assert(!on(edge+7,p.z,7));
+ // A diagonal corner outside the rounded footprint must not create phantom ground.
+ assert(!on(edge+6,p.z+p.size/2+5,7));
+ assert(skySurfaces(0,P[RS].z+4,7).some(s=>s.index===-1));
+ assert(!skySurfaces(0,P[RS].z+4,1).some(s=>s.index===-1));
+});
+
+test('large Kirby lands with feet overlapping an edge and falls when shrinking removes contact',async()=>{
+ const c=await player(),trail=new SkyTrail(),top=P.at(-1)!;
+ c.actor.scale.setScalar(7);c.actor.position.copy(pos(P.length-1));c.actor.position.x+=top.size/2+4;
+ c.flight.press();const previous=c.actor.position.clone();previous.y+=.5;c.actor.position.y-=.1;
+ trail.apply(c,previous,1/60);assert.equal(c.actor.position.y,top.y);assert(!c.flight.active);
+ for(let i=0;i<60;i++)trail.apply(c,c.actor.position.clone(),1/60);
+ assert.equal(c.actor.position.y,top.y);
+ c.actor.scale.setScalar(1);
+ for(let i=0;i<10;i++)trail.apply(c,c.actor.position.clone(),1/60);
+ assert(c.actor.position.y<top.y-.1);
+});
+
+test('expanded footprint still cannot land from below or while rising through a platform',async()=>{
+ const c=await player(),trail=new SkyTrail(),top=P.at(-1)!;
+ c.actor.scale.setScalar(7);c.actor.position.copy(pos(P.length-1));c.actor.position.x+=top.size/2+4;c.flight.press();
+ const previous=c.actor.position.clone();previous.y=top.y-1;c.actor.position.y=top.y+.1;
+ trail.apply(c,previous,1/60);assert.equal(c.actor.position.y,top.y+.1);assert(c.flight.active);
 });

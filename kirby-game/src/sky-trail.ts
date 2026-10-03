@@ -67,9 +67,9 @@ export class SkyTrail{
   for(let i=0;i<16;i++){const a=i*Math.PI/8;const spring=new T.Mesh(springGeometry,metal);spring.position.set(Math.cos(a)*1.44,.5,Math.sin(a)*1.44);spring.rotation.set(Math.PI/2,0,a);parent.add(spring);parts.push(spring);if(i%2===0){const leg=new T.Mesh(legGeometry,metal);leg.position.set(Math.cos(a)*1.3,.25,Math.sin(a)*1.3);parent.add(leg);parts.push(leg);}}
   mergeSkyMetal(parent,parts,metal);springGeometry.dispose();legGeometry.dispose();
  }
- contains(p:T.Vector3){return Math.hypot(p.x-SITE.x,p.z-SITE.z)<SITE.radius;}
- restorePosition(c:CharacterController){if(this.contains(c.actor.position)){this.base=c.surfaceY;this.inCourse=true;this.fall=undefined;}}
- handles(c:CharacterController){return this.active||this.contains(c.actor.position)||(this.inCourse&&c.actor.position.y>0);}
+ contains(p:T.Vector3,padding=0){return Math.hypot(p.x-SITE.x,p.z-SITE.z)<SITE.radius+padding;}
+ restorePosition(c:CharacterController){if(this.contains(c.actor.position,c.actor.scale.x)){this.base=c.surfaceY;this.inCourse=true;this.fall=undefined;}}
+ handles(c:CharacterController){return this.active||this.contains(c.actor.position,c.actor.scale.x)||(this.inCourse&&c.actor.position.y>0);}
  savePosition(c:CharacterController){return this.handles(c)?this.entry.clone():undefined;}
  prompt(c:CharacterController){if(this.active)return '';const p=c.actor.position;if(c.skyCheckpoint>0&&p.distanceTo(this.lower.position.clone().add(this.group.position))<3.4&&p.y<1&&!c.flight.active)return `E — вернуться к чекпойнту ${c.skyCheckpoint}`;const top=this.upper.position.clone().add(this.group.position);return p.distanceTo(top)<2.8&&!c.flight.active?'E — прыгнуть с вершины в листья':'';}
  target(c:CharacterController){return c.actor.position.y>10?this.upper:this.lower;}
@@ -95,7 +95,7 @@ export class SkyTrail{
   if(this.active)return;
   if(!this.handles(c)){this.base=0;this.fall=undefined;this.inCourse=false;return;}
   this.inCourse=true;c.swimming=false;const p=c.actor.position,localX=p.x-SITE.x,localZ=p.z-SITE.z;
-  const surfaces=[{height:0,index:-2},...skySurfaces(localX,localZ)].sort((a,b)=>b.height-a.height);
+  const surfaces=[{height:0,index:-2},...skySurfaces(localX,localZ,c.actor.scale.x,c.yaw)].sort((a,b)=>b.height-a.height);
   if(this.fall!==undefined){c.flight.reset();c.cloud.visible=false;this.fall-=24*dt;p.y=previous.y+this.fall*dt;}
   let support=surfaces.find(s=>previous.y>=s.height-.03&&p.y<=s.height+.03&&p.y<=previous.y+.01);
   if(this.fall===undefined&&!c.flight.active){support=surfaces.find(s=>Math.abs(s.height-this.base)<.65&&Math.abs(previous.y-this.base)<.08);}
@@ -103,7 +103,7 @@ export class SkyTrail{
    p.y=support.height;c.surfaceY=this.base=support.height;this.fall=undefined;
    if(c.flight.active){c.setActivity('Idle');c.surfaceY=support.height;}
    const checkpoint=CHECKPOINTS.indexOf(support.index)+1;if(checkpoint>c.skyCheckpoint){c.skyCheckpoint=checkpoint;this.sound('checkpoint');}
-   if(support.index===PLATFORMS.length-1&&Math.hypot(localX-this.star.position.x,localZ-this.star.position.z)<2.8&&awardFirst(c,'skyStar'))this.sound('star');
+   if(support.index===PLATFORMS.length-1&&Math.hypot(localX-this.star.position.x,localZ-this.star.position.z)<2.8&&awardFirst(c,'skyStar')){c.activateStarPower();this.sound('star');}
   }else if(!c.flight.active&&this.fall===undefined){this.fall=0;c.surfaceY=0;}
   else if(c.flight.active)c.surfaceY=this.base;
   if(p.y<=0&&!c.flight.active){p.y=0;c.surfaceY=this.base=0;this.fall=undefined;this.inCourse=this.contains(p);}

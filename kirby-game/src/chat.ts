@@ -4,6 +4,7 @@ export class MeadowChat{
  readonly panel=document.createElement('section');
  readonly composer=document.createElement('form');
  private input=document.createElement('input');
+ private readonly mobile=document.body.classList.contains('touch-ui');
  private list=document.createElement('div');private shownIds:string[]=[];
  get open(){return !this.composer.hidden;}
  constructor(send:(text:string)=>void){
@@ -18,17 +19,27 @@ export class MeadowChat{
   const submit=document.createElement('button');submit.type='submit';submit.textContent='Отправить';
   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.addEventListener('click',()=>this.close());
   buttons.append(submit,cancel);this.composer.append(buttons);
-  if(document.body.classList.contains('touch-ui'))new ResizeObserver(()=>{
-   if(!this.panel.classList.contains('chat-scroll'))this.list.scrollTop=this.list.scrollHeight;
-  }).observe(this.list);
+  if(this.mobile){
+   this.composer.append(this.panel);
+   // The visual viewport follows the on-screen keyboard on iOS and Android.
+   window.visualViewport?.addEventListener('resize',()=>this.fitViewport());
+   window.visualViewport?.addEventListener('scroll',()=>this.fitViewport());
+  }
   this.composer.addEventListener('submit',e=>{e.preventDefault();const text=chatText(this.input.value);if(text)send(text);this.close();});
   this.input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();this.close();}if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.composer.requestSubmit();}});
  }
- show(){this.composer.hidden=false;this.input.focus();}
+ private fitViewport(){
+  if(!this.mobile||!this.open)return;
+  const viewport=window.visualViewport;
+  this.composer.style.setProperty('--chat-viewport-height',`${viewport?.height??window.innerHeight}px`);
+  this.composer.style.setProperty('--chat-viewport-top',`${viewport?.offsetTop??0}px`);
+ }
+ show(){this.composer.hidden=false;this.fitViewport();this.input.focus({preventScroll:true});this.list.scrollTop=this.list.scrollHeight;}
  close(){this.composer.hidden=true;this.input.value='';this.input.blur();}
  render(entries:LogEntry[],settings:boolean){
-  const changedSettings=this.panel.classList.contains('chat-scroll')!==settings;
-  if(changedSettings){this.panel.classList.toggle('chat-scroll',settings);this.list.tabIndex=settings?0:-1;}
+  const scrollable=this.mobile?this.open:settings;
+  const changedSettings=this.panel.classList.contains('chat-scroll')!==scrollable;
+  if(changedSettings){this.panel.classList.toggle('chat-scroll',scrollable);this.list.tabIndex=scrollable?0:-1;}
   const start=Math.max(0,entries.length-10),count=entries.length-start;
   let same=count===this.shownIds.length;
   if(same)for(let i=0;i<count;i++)if(entries[start+i].id!==this.shownIds[i]){same=false;break;}

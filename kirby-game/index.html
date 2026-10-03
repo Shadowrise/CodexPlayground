@@ -37,6 +37,7 @@
     </section>
     <main id="game" aria-label="Игровая сцена с Кирби"></main>
     <button id="settings-toggle" class="panel settings-toggle" type="button" aria-label="Настройки и управление" aria-expanded="false" aria-controls="audio-panel controls-panel" title="Настройки и управление">⚙</button>
+    <div class="hud-corner">
     <div class="status-cluster"><div id="time-dial" class="panel time-dial" role="img" aria-label="Время суток"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="dial-day"><stop stop-color="#ffd88a"/><stop offset="1" stop-color="#e99655"/></linearGradient><linearGradient id="dial-night"><stop stop-color="#263655"/><stop offset="1" stop-color="#546ba5"/></linearGradient></defs><circle cx="32" cy="32" r="28" fill="url(#dial-night)"/><path d="M32 4a28 28 0 0 1 0 56Z" fill="url(#dial-day)"/><circle cx="32" cy="32" r="28" fill="none" stroke="#c4cfe5" stroke-opacity=".6"/><path d="M32 20a12 12 0 0 1 0 24Z" fill="#fff3b3"/><path d="M28 20a12 12 0 0 0 0 24c-8-5-8-19 0-24Z" fill="#dcecff"/><path d="m47 16 2 2m2 14h4m-8 16 2-2" stroke="#fff5c4" stroke-width="2" stroke-linecap="round"/><path d="m14 18 1 3 3 1-3 1-1 3-1-3-3-1 3-1Z" fill="#fff"/><circle cx="17" cy="43" r="1.3" fill="#fff"/><g id="time-needle"><path d="M32 6 25 19h4v14h6V19h4Z" fill="none" stroke="#fff5e9" stroke-width="5" stroke-linejoin="round"/><path d="M32 6 25 19h4v14h6V19h4Z" fill="#ff3978" stroke="#111c34" stroke-width="2.5" stroke-linejoin="round"/></g><circle cx="32" cy="32" r="4" fill="#ff3978" stroke="#111c34" stroke-width="2"/></svg></div></div>
     <div class="right-hud">
     <aside class="panel player-stats" aria-label="Статистика фруктов и игрока">
@@ -48,6 +49,7 @@
       <button id="tasks-toggle" type="button" aria-expanded="true" aria-controls="task-list"><span>Задачи</span><span id="task-count" aria-live="polite">0 / 12</span><span class="tasks-chevron" aria-hidden="true">⌃</span></button>
       <ol id="task-list"></ol>
     </aside>
+    </div>
     </div>
     <div id="combat-message" class="panel combat-message" role="status" hidden></div>
     <div id="audio-panel" class="panel music-controls" hidden><div class="audio-row"><button id="music-toggle" type="button" aria-pressed="true">♫ Музыка: вкл</button><input id="music-volume" type="range" min="0" max="100" value="25" aria-label="Громкость музыки" /></div><div class="audio-row"><button id="sounds-toggle" type="button" aria-pressed="true">♪ Звуки: вкл</button><input id="sounds-volume" type="range" min="0" max="100" value="45" aria-label="Громкость звуков" /></div><div class="music-library"><span class="label">ПЛЕЙЛИСТ · 14 МЕЛОДИЙ</span><div class="track-navigation"><button id="music-previous" type="button" aria-label="Предыдущий трек" title="Предыдущий трек">←</button><span id="music-track" role="status"></span><button id="music-next" type="button" aria-label="Следующий трек" title="Следующий трек">→</button></div></div></div>

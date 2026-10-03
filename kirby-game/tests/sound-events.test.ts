@@ -3,13 +3,13 @@ import { test } from 'node:test';
 import { SoundEvents, type SoundActor } from '../src/sound-events';
 const actor = (id: string): SoundActor => ({ id, state: 'Idle', down: false, size: 1, x: 0, z: 0 });
 
-test('smooth player growth sounds once per swallowed fruit',()=>{
+test('fruit bite sounds once per swallowed fruit during smooth growth',()=>{
   const events=new SoundEvents(),player={...actor('player'),player:true,fruitsEaten:0};
   events.update(.016,[player],player);player.fruitsEaten=1;
   let count=0;
   for(let i=0;i<30;i++){
     player.size=1+i/290;
-    count+=events.update(1/60,[player],player).filter(e=>e.kind==='grow').length;
+    count+=events.update(1/60,[player],player).filter(e=>e.kind==='eat').length;
   }
   assert.equal(count,1);
 });
@@ -66,4 +66,16 @@ test('ambient voices have global spacing, per-NPC cooldown, and exclude distant 
     }
   }
   assert(count > 0 && count <= 20);
+});
+
+
+test('only eating fruit makes a bite sound, including nearby NPCs',()=>{
+ const events=new SoundEvents(),player={...actor('player'),player:true,fruitsEaten:0},npc={...actor('npc'),fruitsEaten:0};
+ const update=()=>events.update(.016,[player,npc],player);
+ assert.deepEqual(update(),[]);
+ player.size=2;npc.size=1.5;assert.deepEqual(update(),[]);
+ npc.fruitsEaten=1;assert.deepEqual(update().map(e=>[e.kind,e.actor.id]),[['eat','npc']]);
+ assert.deepEqual(update(),[]);
+ player.fruitsEaten=1;assert.deepEqual(update().map(e=>[e.kind,e.actor.id]),[['eat','player']]);
+ player.size=1;npc.size=1;assert.deepEqual(update(),[]);
 });
