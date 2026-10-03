@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
+import {skyGlass,mergeSkyDetails,mergeSkyMetal,SkyMovingDetails} from './sky-trail-visuals';
 import type {CharacterController} from './controller';
 import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHECKPOINTS,SKY_COLORS as COLORS,rainbowHeight,skySurfaces,SKY_RAINBOW_START,SKY_RAINBOW_END,platformThickness} from './sky-trail-layout';
 export type SkySound='bounce'|'checkpoint'|'star'|'leaves';
@@ -9,23 +10,23 @@ export class SkyTrail{
  readonly group=new T.Group();readonly entry=new T.Vector3(SITE.x+PLATFORMS[0].x,0,SITE.z+PLATFORMS[0].z-6);
  readonly landing=new T.Vector3(SITE.x,0,SITE.z);
  readonly lower=new T.Group();readonly upper=new T.Group();
- private leaves=new LeafPile(4.7,4.2);private star=new T.Group();private cores:T.Object3D[]=[];private time=0;private flags:{mesh:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;checkpoint:number}[]=[];
+ private leaves=new LeafPile(4.7,4.2);private star=new T.Group();private cores:T.Mesh[]=[];private moving:SkyMovingDetails;private time=0;private flags:{mesh:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;checkpoint:number}[]=[];
  private fall:number|undefined;private base=0;private inCourse=false;
  private rider?:CharacterController;private travel?:{from:T.Vector3;to:T.Vector3;elapsed:number;duration:number;leaves:boolean;landed:boolean;pad:T.Vector3;trampoline:T.Group;launched:boolean};
  get active(){return !!this.rider;}
  constructor(private sound:(kind:SkySound)=>void=()=>{}){
   this.group.name='Небесная тропа — сияющие ступени';this.group.position.set(SITE.x,0,SITE.z);
   const cube=new T.BoxGeometry(1,1,1),edges=new T.EdgesGeometry(cube),crystal=new T.OctahedronGeometry(.5),star=starGeometry();
-  const glowing=COLORS.map(color=>new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.9,roughness:.22,metalness:.15}));
-  const glass=COLORS.map(color=>new T.MeshPhysicalMaterial({color,transparent:true,opacity:.32,roughness:.12,metalness:.1,clearcoat:1,depthWrite:false}));
+  const glowing=COLORS.map(color=>new T.MeshBasicMaterial({color}));
+  const glass=COLORS.map(skyGlass),details:T.Mesh[]=[],frames:T.LineSegments[]=[];
+  const ringGeometry=new T.TorusGeometry(.68,.025,5,28),beadGeometry=new T.SphereGeometry(.07,6,4);
   PLATFORMS.forEach((p,i)=>{
    const thickness=platformThickness(i),lift=thickness/2;
    const g=new T.Group();g.position.set(p.x,p.y-lift,p.z);this.group.add(g);
    const body=new T.Mesh(cube,glass[i%7]);body.scale.set(p.size,thickness,p.size);g.add(body);
-   const frame=new T.LineSegments(edges,new T.LineBasicMaterial({color:COLORS[i%7],transparent:true,opacity:.9}));frame.scale.copy(body.scale);g.add(frame);
-   const top=new T.Mesh(new T.PlaneGeometry(p.size-.12,p.size-.12),new T.MeshStandardMaterial({color:COLORS[i%7],emissive:COLORS[i%7],emissiveIntensity:.22,transparent:true,opacity:.4,side:T.DoubleSide,depthWrite:false}));top.rotation.x=-Math.PI/2;top.position.y=lift+.005;g.add(top);
+   const frame=new T.LineSegments(edges,new T.LineBasicMaterial({color:COLORS[i%7],transparent:true,opacity:.9}));frame.scale.copy(body.scale);g.add(frame);frames.push(frame);
    const core=new T.Mesh(crystal,glowing[i%7]);core.scale.set(.7,.9,.7);g.add(core);this.cores.push(core);
-   const ring=new T.Mesh(new T.TorusGeometry(.68,.025,5,28),glowing[(i+2)%7]);ring.rotation.x=Math.PI/2;g.add(ring);
+   const ring=new T.Mesh(ringGeometry,glowing[(i+2)%7]);ring.rotation.x=Math.PI/2;g.add(ring);details.push(ring);
    if(CHECKPOINTS.includes(i)){
     const pole=new T.Mesh(new T.CylinderGeometry(.045,.055,2.2,8),glowing[i%7]);pole.position.set(-p.size/2+.35,lift+1.05,-p.size/2+.3);g.add(pole);
     const flag=new T.Mesh(new T.PlaneGeometry(1.2,.65),new T.MeshBasicMaterial({color:'#fff2b8',side:T.DoubleSide}));flag.position.copy(pole.position).add(new T.Vector3(.55,.7,0));g.add(flag);this.flags.push({mesh:flag,checkpoint:CHECKPOINTS.indexOf(i)+1});
@@ -38,9 +39,9 @@ export class SkyTrail{
    const points:number[]=[],indices:number[]=[];
    for(let j=0;j<=48;j++){const x=T.MathUtils.lerp(start.x,end.x,j/48),y=rainbowHeight(x)!;for(const side of [0,1])points.push(x,y,start.z-1.75+(lane+side)*.5);if(j<48){const k=j*2;indices.push(k,k+1,k+2,k+1,k+3,k+2);}}
    const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(points,3));geo.setIndex(indices);geo.computeVertexNormals();
-   const ribbon=new T.Mesh(geo,new T.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.48,roughness:.24,side:T.DoubleSide}));this.group.add(ribbon);
+   const ribbon=new T.Mesh(geo,new T.MeshBasicMaterial({color,side:T.DoubleSide}));this.group.add(ribbon);details.push(ribbon);
   });
-  for(let j=0;j<=12;j++)for(const side of [-1,1]){const x=T.MathUtils.lerp(start.x,end.x,j/12),s=new T.Mesh(new T.SphereGeometry(.07,6,4),glowing[j%7]);s.position.set(x,rainbowHeight(x)!+.1,start.z+side*1.8);this.group.add(s);}
+  for(let j=0;j<=12;j++)for(const side of [-1,1]){const x=T.MathUtils.lerp(start.x,end.x,j/12),s=new T.Mesh(beadGeometry,glowing[j%7]);s.position.set(x,rainbowHeight(x)!+.1,start.z+side*1.8);this.group.add(s);details.push(s);}
   // Hollow ornaments stay outside the jump route; only the summit reward is a star.
   const ornaments=[new T.TorusGeometry(.55,.07,7,32),new T.TorusGeometry(.55,.07,7,4),new T.TorusGeometry(.55,.07,7,6)];
   for(let i=0;i<56;i++){const a=i*2.399,r=21+(i%3)*.6;const m=new T.Mesh(ornaments[i%3],glowing[i%7]);m.name='Sky Trail decorative ornament';m.position.set(Math.cos(a)*r,10+i*.63,Math.sin(a)*r);m.scale.setScalar(.85);this.group.add(m);this.cores.push(m);}
@@ -51,6 +52,8 @@ export class SkyTrail{
   const entrance=new T.Group();entrance.name='Sky Trail entrance sign';entrance.position.set(PLATFORMS[0].x,0,PLATFORMS[0].z-3.6);entrance.rotation.y=Math.PI;this.group.add(entrance);
   const sign=new T.Mesh(new T.BoxGeometry(7,.9,.2),new T.MeshStandardMaterial({color:'#263d66',roughness:.65}));sign.position.set(0,4,0);entrance.add(sign);this.label(entrance,'НЕБЕСНАЯ ТРОПА',[0,4,.12],6.7,.65);
   for(const x of [-3,3]){const post=new T.Mesh(new T.CylinderGeometry(.07,.07,4,8),glowing[3]);post.position.set(x,2,0);entrance.add(post);}
+  mergeSkyDetails(this.group,details);mergeSkyDetails(this.group,frames,true);
+  this.moving=new SkyMovingDetails(this.group,this.cores);
  }
  private label(parent:T.Group,text:string,position:number[],width:number,height:number){
   if(typeof document==='undefined')return;const c=document.createElement('canvas');c.width=768;c.height=96;const ctx=c.getContext('2d');if(!ctx)return;ctx.fillStyle='#fff8dd';ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,384,48,750);
@@ -60,7 +63,9 @@ export class SkyTrail{
   const metal=new T.MeshStandardMaterial({color:'#adbdcf',metalness:.7,roughness:.25});
   const rim=new T.Mesh(new T.TorusGeometry(1.55,.16,10,40),new T.MeshStandardMaterial({color:'#ffc45f',emissive:'#ad6616',emissiveIntensity:.2}));rim.rotation.x=Math.PI/2;rim.position.y=.55;parent.add(rim);
   const pad=new T.Mesh(new T.CylinderGeometry(1.4,1.4,.08,40),new T.MeshStandardMaterial({color:'#6056a1',roughness:.8}));pad.name='Spring pad';pad.position.y=.52;parent.add(pad);
-  for(let i=0;i<16;i++){const a=i*Math.PI/8;const spring=new T.Mesh(new T.TorusGeometry(.07,.018,5,10),metal);spring.position.set(Math.cos(a)*1.44,.5,Math.sin(a)*1.44);spring.rotation.set(Math.PI/2,0,a);parent.add(spring);if(i%2===0){const leg=new T.Mesh(new T.CylinderGeometry(.055,.075,.5,7),metal);leg.position.set(Math.cos(a)*1.3,.25,Math.sin(a)*1.3);parent.add(leg);}}
+  const parts:T.Mesh[]=[],springGeometry=new T.TorusGeometry(.07,.018,5,10),legGeometry=new T.CylinderGeometry(.055,.075,.5,7);
+  for(let i=0;i<16;i++){const a=i*Math.PI/8;const spring=new T.Mesh(springGeometry,metal);spring.position.set(Math.cos(a)*1.44,.5,Math.sin(a)*1.44);spring.rotation.set(Math.PI/2,0,a);parent.add(spring);parts.push(spring);if(i%2===0){const leg=new T.Mesh(legGeometry,metal);leg.position.set(Math.cos(a)*1.3,.25,Math.sin(a)*1.3);parent.add(leg);parts.push(leg);}}
+  mergeSkyMetal(parent,parts,metal);springGeometry.dispose();legGeometry.dispose();
  }
  contains(p:T.Vector3){return Math.hypot(p.x-SITE.x,p.z-SITE.z)<SITE.radius;}
  restorePosition(c:CharacterController){if(this.contains(c.actor.position)){this.base=c.surfaceY;this.inCourse=true;this.fall=undefined;}}
@@ -71,6 +76,7 @@ export class SkyTrail{
  start(c:CharacterController){if(!this.prompt(c)||this.active)return false;const down=c.actor.position.y>10;const i=c.skyCheckpoint?CHECKPOINTS[c.skyCheckpoint-1]:0,p=PLATFORMS[i];const to=down?this.landing.clone():new T.Vector3(SITE.x+p.x,p.y,SITE.z+p.z);this.rider=c;this.travel={from:c.actor.position.clone(),to,elapsed:0,duration:down?3.2:2.6,leaves:down,landed:false,pad:(down?this.upper:this.lower).position.clone().add(this.group.position).add(new T.Vector3(0,.56,0)),trampoline:down?this.upper:this.lower,launched:false};c.setActivity('Trampoline');this.fall=undefined;return true;}
  update(dt:number,c?:CharacterController){
   this.time+=dt;this.leaves.update(dt);for(const f of this.flags)f.mesh.material.color.set((c?.skyCheckpoint??0)>=f.checkpoint?'#65ffb5':'#fff2b8');for(const core of this.cores){core.rotation.y+=dt*.5;core.rotation.z=Math.sin(this.time*.6+core.id)*.18;}
+  this.moving.update();
   this.star.rotation.y+=dt*.8;this.star.position.y=PLATFORMS.at(-1)!.y+2+Math.sin(this.time*2)*.22;this.star.visible=!c?.achievements.has('skyStar');
   const rider=this.rider,t=this.travel;if(!rider||!t)return;
   t.elapsed+=dt;rider.mixer.update(dt);
