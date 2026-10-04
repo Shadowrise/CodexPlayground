@@ -201,7 +201,39 @@ export class Watermill {
       part(root,'cylinder','#967048',20.8+i*.75,.55,4.1,.37,1.05,.37);
       for(const y of [.2,.85])part(root,'ring','#35474b',20.8+i*.75,y,4.1,.38,.38,.38,Math.PI/2);
     }
-    for(let i=0;i<5;i++)part(root,'ball','#c8b789',20.8+(i%2)*.6,.55+Math.floor(i/2)*.62,5.7,.42,.6,.36);
+    // Open grain crates replace the featureless stack of pale sacks.
+    // All details reuse the mill geometry/material batches; no textures or lights.
+    for(const [cx,cz] of [[20.5,5.8],[22.1,6.3]]){
+      box('#624631',cx,.08,cz,1.42,.16,1.18);
+      box('#795631',cx,.72,cz,1.22,.12,.98);
+      for(let row=0;row<3;row++){
+        const y=.27+row*.28,color=row%2?'#aa8150':'#967048';
+        for(const side of [-1,1]){
+          box(color,cx,y,cz+side*.55,1.4,.24,.1);
+          box(color,cx+side*.66,y,cz,.1,.24,1.04);
+        }
+      }
+      for(const sx of [-1,1])for(const sz of [-1,1]){
+        box('#624631',cx+sx*.65,.56,cz+sz*.55,.12,1.04,.12);
+        for(const y of [.22,.79])part(root,'ball','#35474b',cx+sx*.65,y,cz+sz*.62,.035,.035,.018);
+      }
+      // Slim iron straps wrap the planked sides, rather than floating above them.
+      for(const y of [.19,.82]){
+        for(const side of [-1,1]){
+          box('#35474b',cx,y,cz+side*.611,1.44,.045,.024);
+          box('#35474b',cx+side*.711,y,cz,.024,.045,1.22);
+        }
+      }
+      for(let ix=0;ix<8;ix++)for(let iz=0;iz<6;iz++){
+        const x=(ix-3.5)*.15,z=(iz-2.5)*.16;
+        const y=.9+.1*Math.max(0,1-(x/.64)**2-(z/.51)**2);
+        part(root,'ball',(ix+iz)%3?'#e3c58a':'#c5a568',cx+x,y,cz+z,.085,.04,.057,0,(ix*7+iz*3)*.47);
+      }
+      // Small wheat emblem on the front makes the contents legible from the path.
+      box('#624631',cx,.51,cz+.616,.4,.49,.035);
+      box('#e3c58a',cx,.52,cz+.64,.025,.34,.016);
+      for(let i=0;i<3;i++)for(const side of [-1,1])part(root,'ball','#e3c58a',cx+side*.065,.43+i*.085,cz+.655,.056,.028,.018,0,0,side*.5);
+    }
     box('#817a68',20,10.75,-3,1.1,3.3,1.1);box('#b2a589',20,12.42,-3,1.35,.24,1.35);
     // A small painted sign remains legible without external assets.
     if(typeof document!=='undefined') {

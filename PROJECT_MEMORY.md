@@ -525,3 +525,6 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 
 ### Grounded mill hopper (2026-10-04)
 - Lowered funnel bowl/rim by0.35m (rim1.55m), outlet now touches y0 and overlaps bowl neck. Four posts extended to1.42m so they physically enter cone wall; moved rivets and delivery drop animation with lowered bowl. Client visual change only.
+
+### Mill grain crates (2026-10-04, local)
+- Replaced five pale egg-like decorative sacks left of hopper with two open wooden grain crates: individual planks, corner posts, iron straps/rivets, wheat emblems and48 visible grain kernels per crate. Reuses existing mill instanced geometry/material batches; no new textures/lights.

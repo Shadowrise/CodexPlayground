@@ -5,7 +5,7 @@ export const MILL_BRANCHES=[[42.8,-.12,34.5],[42.8,-.12,37.5],[42.8,-.12,40.5]] 
 export const MILL_BAGS=[[68,0,54],[53,0,65],[76,0,69]] as const;
 export const MILL_HOPPER=[56.5,0,39] as const;
 export const MILL_COLORS=['#ef6579','#f4c64c','#61b9ee'] as const;
-export const MILL_COLOR_NAMES=['розовый','золотой','голубой'] as const;
+export const MILL_COLOR_NAMES=['красный','золотой','голубой'] as const;
 export const MILL_RUN_MS=60000,MILL_IDLE_MS=180000;
 export type MillStage='idle'|'clear'|'flow'|'bags'|'running';
 export type MillQuest={stage:MillStage;owner:string;startedAt:number;updatedAt:number;branches:number[];gate:number;steadyAt:number;order:number[];delivered:number;deliveredAt:number;carried:number;rejected:number;rejectedAt:number;runningUntil:number};
