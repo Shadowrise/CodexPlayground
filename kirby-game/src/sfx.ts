@@ -198,15 +198,28 @@ export class SoundEffects {
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
     const key='mill-'+kind;
     if(!this.buffers.has(key)){
-      const rate=22050,duration=kind==='finish'?2.1:kind==='branch'?.4:.35,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);
-      let noise=0;const notes=kind==='finish'?[523.25,659.25,783.99,1046.5,987.77,1046.5]:kind==='bag'?[659.25,880]:[220,330];
+      const rate=22050,duration=kind==='finish'?2.8:kind==='branch'?.4:.35,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);
+      let noise=0;const notes=kind==='finish'?[523.25,659.25,783.99,1046.5]:kind==='bag'?[659.25,880]:[220,330];
       for(let i=0;i<data.length;i++){const t=i/rate,u=t/duration;let v=0;noise=noise*.91+(Math.random()*2-1)*.09;
         for(let j=0;j<notes.length;j++){const age=t-j*(kind==='finish'?.22:.07);if(age<0)continue;v+=Math.sin(2*Math.PI*notes[j]*age)*T_smoothstep(age/.018)*Math.exp(-age*7)*.14;}
+        if(kind==='finish'){
+          v=0;
+          for(let j=0;j<notes.length;j++){
+            const age=t-j*.19;if(age<0)continue;
+            const phase=2*Math.PI*notes[j]*age,env=T_smoothstep(age/.025)*Math.exp(-age*4.4);
+            v+=(Math.sin(phase)+.2*Math.sin(phase*2))*env*.21;
+          }
+          const age=t-.86;
+          if(age>=0)for(const hz of [261.63,523.25,659.25,783.99,1046.5]){
+            const phase=2*Math.PI*hz*age,env=T_smoothstep(age/.045)*Math.exp(-age*2.1);
+            v+=(Math.sin(phase)+.12*Math.sin(phase*2))*env*.08;
+          }
+        }
         if(kind==='branch')v=noise*.7*Math.sin(Math.PI*u)**2;
         data[i]=v*T_smoothstep((duration-t)/.1);
       }this.buffers.set(key,buffer);
     }
-    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=kind==='finish'?.45:.55;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=kind==='finish'?.85:.55;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
 
   playTaskComplete(count=1){

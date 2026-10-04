@@ -17,7 +17,7 @@ test('water descends continuously and follows the outer scoops without crossing 
       assert(Math.hypot(y-3.65,z+1)>3.4,'segments also clear rotating paddle corners');}
   }
   assert(Math.abs(positions.getY(0)-7.05)<1e-5);
-  assert(Math.abs(positions.getY(positions.count-1)-.11)<1e-5);
+  assert(Math.abs(positions.getY(positions.count-1)+.31)<1e-5);
 });
 
 test('mill requires proximity; gate and wheel accelerate and settle when stopped',()=>{

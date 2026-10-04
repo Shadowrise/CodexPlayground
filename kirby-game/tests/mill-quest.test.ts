@@ -15,7 +15,7 @@ test('quest requires nearby lever, owner, three directed pushes and stable corre
  let q=newMillQuest();assert.equal(applyMill(q,{kind:'start'},actor([0,0,0]),1000),q);
  q=applyMill(q,{kind:'start'},actor(),1000);assert.equal(q.stage,'clear');
  assert.equal(applyMill(q,{kind:'push',index:0},actor(MILL_BRANCHES[0],'b'),1100),q);
- const behind=actor([44,0,45]);behind.yaw=Math.PI;assert.equal(millPushTarget(q,behind),-1);
+ const behind=actor([42.8,0,32.5]);behind.yaw=Math.PI;assert.equal(millPushTarget(q,behind),-1);
  q=clear();assert.equal(q.stage,'flow');assert.equal(advanceMill(q,4000).stage,'flow');
  q=applyMill(q,{kind:'gate'},actor(),4000);assert.equal(q.gate,2);assert.equal(advanceMill(q,8000).stage,'flow');
  q=applyMill(q,{kind:'gate'},actor(),8100);assert.equal(q.gate,1);assert.equal(advanceMill(q,11099).stage,'flow');assert.equal(advanceMill(q,11100).stage,'bags');
@@ -48,4 +48,19 @@ test('quest pickup and delivery locations stand on dry banks; solo and server sh
  const a=JSON.parse(JSON.stringify(bags())) as MillQuest,b=bags();assert.deepEqual(a,b);
  for(const size of [1,7,20]){const mill=new Watermill(),position=new Vector3(...MILL_QUEST_LEVER);mill.constrain(position,size);assert(mill.action({...actor(position.toArray()),size}),'enlarged Kirby can reach the lever outside the wall');}
  for(const size of [1,7,20])assert(applyMill(a,{kind:'pick',index:0},{...actor(MILL_BAGS[0]),size},9000).carried===0);
+});
+
+// A rejected blue sack must not count toward the following yellow delivery.
+test('blue instead of yellow, then yellow, advances by exactly one sack',()=>{
+ let q={...bags(),order:[1,2,0]};
+ q=applyMill(q,{kind:'pick',index:2},actor(MILL_BAGS[2]),8000);
+ q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),8100);
+ assert.equal(q.delivered,0);assert.equal(q.stage,'bags');assert.equal(q.carried,-1);
+ q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),8200);
+ assert.equal(q.delivered,0);
+ q=applyMill(q,{kind:'pick',index:1},actor(MILL_BAGS[1]),9500);
+ q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),9600);
+ assert.equal(q.delivered,1);assert.equal(q.stage,'bags');assert.equal(q.order[q.delivered],2);
+ q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),9700);
+ assert.equal(q.delivered,1);
 });

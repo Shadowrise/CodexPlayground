@@ -14,7 +14,7 @@ export function createWheelWaterGeometry() {
     const angle=T.MathUtils.lerp(entry,exit,i/64);
     points.push(new T.Vector3(0,3.65+radius*Math.cos(angle),-1+radius*Math.sin(angle)));
   }
-  points.push(new T.Vector3(0,.11,points[points.length-1].z));
+  points.push(new T.Vector3(0,-.31,points[points.length-1].z));
   const lengths=[0];
   for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+points[i].distanceTo(points[i-1]));
   const positions:number[]=[],uvs:number[]=[],indices:number[]=[];
@@ -237,7 +237,7 @@ export class Watermill {
     const q=this.quest,action=this.action(actor);
     if(action?.kind==='start')return 'E — запустить квест «Радужная мельница» · 6 очков';
     if(action?.kind==='gate')return `E — переключить шлюз · ${['Мало воды','Верно! Подожди 3 секунды','Слишком сильно!'][q.gate]}`;
-    if(action?.kind==='deliver')return `E — положить мешочек · Нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
+    if(action?.kind==='deliver')return `E — положить ${MILL_COLOR_NAMES[q.carried]} мешочек · Нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
     return '';
   }
   hint(actor:MillActor){
