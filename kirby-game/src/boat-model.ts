@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {makeBoatWake} from './boat-wake';
 
 export const BOAT_COLORS=['#f16a71','#f4ab38','#6ac980','#50c8cf','#519beb','#a576e8','#ed85bd','#eb7750'];
 let hull:T.BufferGeometry|undefined,details:T.BufferGeometry|undefined;
@@ -72,18 +73,9 @@ function build(){
  }
 }
 const canopyMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.75,side:T.DoubleSide});
-const wakeGeometry=new T.BufferGeometry();
-const wakePoints:number[]=[];
-for(const side of [-1,1])for(let i=0;i<5;i++){
- const z=-1.7-i*.43,next=z-.37,x=side*(.56+i*.17),nx=x+side*.15,w=.035;
- wakePoints.push(x-w,.09,z,x+w,.09,z,nx+w,.09,next,x-w,.09,z,nx+w,.09,next,nx-w,.09,next);
-}
-wakeGeometry.setAttribute('position',new T.Float32BufferAttribute(wakePoints,3));wakeGeometry.computeVertexNormals();
-const wakeMaterial=new T.MeshLambertMaterial({color:'#d2f4ed',transparent:true,opacity:.28,depthWrite:false,side:T.DoubleSide});
 export function makeBoat(index:number){
  if(!hull)build();
  const group=new T.Group();group.name=`River boat ${index+1}`;
  const shell=new T.Mesh(hull,paints[index]),trim=new T.Mesh(details,woodMaterial),umbrella=new T.Mesh(umbrellas[index],canopyMaterial);
- const wake=new T.Mesh(wakeGeometry,wakeMaterial);wake.name='Boat wake';
- group.add(shell,trim,umbrella,wake);group.traverse(o=>{if(o instanceof T.Mesh)o.receiveShadow=true;});return group;
+ group.add(shell,trim,umbrella);group.traverse(o=>{if(o instanceof T.Mesh)o.receiveShadow=true;});group.add(makeBoatWake());return group;
 }

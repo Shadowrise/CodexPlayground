@@ -7,6 +7,7 @@ import {insideMeadow} from './world-bounds';
 import {showSwimRing} from './ponds';
 import {BOAT_COUNT,BOAT_OCCUPIED,BOAT_ROUTE_LENGTH,boatDistance,boatPose} from './boat-route';
 import {makeBoat} from './boat-model';
+import {updateBoatWake} from './boat-wake';
 import {lightenBoatPassenger} from './boat-passenger';
 
 type Ride={player:CharacterController;index:number;start:number;from:T.Vector3;elapsed:number;leaving?:T.Vector3};
@@ -95,6 +96,7 @@ export class RiverBoats {
  }
  update(dt:number,seconds:number,camera?:T.Vector3){
   this.seconds=seconds;
+  updateBoatWake(seconds);
   for(let i=0;i<this.boats.length;i++){
    const b=this.boats[i],yaw=boatPose(boatDistance(i,seconds),b.position);
    b.position.y=WATER_Y+Math.sin(seconds*1.6+i)*.025;
