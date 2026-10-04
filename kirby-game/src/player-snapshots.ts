@@ -23,6 +23,6 @@ export class PlayerSnapshots{
   // Bug carrier and rider share the same presentation time, including changing seat height.
   let ride=from.ride;
   if(ride?.key.startsWith('bug:')&&ride.key===to.ride?.key){const data=[...ride.data];for(const i of [4,5,6,9])data[i]=mix(ride.data[i] as number,to.ride.data[i] as number,t);ride={key:ride.key,data};}
-  return {...from,p:vector(from.p,to.p,t),q:rotation(from.q,to.q,t),s:mix(from.s,to.s,t),pose,ride};
+  return {...from,p:vector(from.p,to.p,t),q:rotation(from.q,to.q,t),s:mix(from.s,to.s,t),fit:mix(from.fit??1,to.fit??1,t),pose,ride};
  }
 }

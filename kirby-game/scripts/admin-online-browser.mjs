@@ -14,7 +14,7 @@ const sockets=[];
 
 const wait=async fn=>{for(let i=0;i<100;i++){const value=await fn();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw Error('Timed out');};
 
-async function join(name,variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-6&name='+encodeURIComponent(name)+'&variant='+variant),messages=[];sockets.push(socket);socket.onmessage=e=>{if(e.data!=='pong'){const m=JSON.parse(e.data);messages.push(m);if(m.type==='error')socket.close();}};const welcome=await wait(()=>messages.find(m=>m.type==='welcome'));return {socket,messages,welcome};}
+async function join(name,variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-7&name='+encodeURIComponent(name)+'&variant='+variant),messages=[];sockets.push(socket);socket.onmessage=e=>{if(e.data!=='pong'){const m=JSON.parse(e.data);messages.push(m);if(m.type==='error')socket.close();}};const welcome=await wait(()=>messages.find(m=>m.type==='welcome'));return {socket,messages,welcome};}
 
 try{
 

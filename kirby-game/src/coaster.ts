@@ -1,3 +1,4 @@
+import {fitRider,restoreRider} from './rider-size';
 import { DEPOT_PLATFORM, DEPOT_STEPS } from './depot-floor';
 import {dryGround} from './pond-layout';
 import {MEADOW_HALF_SIZE} from './world-bounds';
@@ -216,7 +217,7 @@ export class Coaster {
   networkBlocked=new Set<number>();
   networkKey(player:CharacterController){const cart=this.ridden??this.carts.find(c=>c.wait>0&&!c.occupied&&!this.networkBlocked.has(this.carts.indexOf(c)));return cart?'cart:'+this.carts.indexOf(cart):undefined;}
   networkState(){return this.carts.map(c=>[c.distance,c.wait,c.speed,c.group.scale.x]);}
-  networkApply(rows:number[][]){rows.forEach((v,i)=>{const c=this.carts[i];if(!c||!v||c===this.ridden)return;[c.distance,c.wait,c.speed]=v;c.distance=T.MathUtils.clamp(c.distance,0,this.length-.021);c.group.scale.setScalar(v[3]);});}
+  networkApply(rows:number[][]){rows.forEach((v,i)=>{const c=this.carts[i];if(!c||!v||c===this.ridden)return;[c.distance,c.wait,c.speed]=v;c.distance=T.MathUtils.clamp(c.distance,0,this.length-.021);c.group.scale.setScalar(1);});}
   prompt(player:CharacterController) {
     if(this.riding)return 'E — выйти из тележки в депо';
     if(player.actor.position.distanceTo(STATION)>12* Math.min(player.actor.scale.x,2))return '';
@@ -227,13 +228,13 @@ export class Coaster {
     const cart=this.carts.find(c=>c.wait>0 && !c.occupied && !this.networkBlocked.has(this.carts.indexOf(c)));if(!cart)return false;
     player.update(0,{forward:false,left:false,right:false});
     this.rider=player;this.ridden=cart;this.riderParent=player.actor.parent!;
-    cart.wait=1.2;cart.speed=0;cart.group.scale.setScalar(Math.max(1,player.actor.scale.x));return true;
+    cart.wait=1.2;cart.speed=0;cart.group.scale.setScalar(1);fitRider(player,.9);return true;
   }
   disembark() {
     if(!this.rider || !this.ridden)return;
     const player=this.rider;this.riderParent!.add(player.actor);
     player.actor.position.set(0,0,214);player.actor.quaternion.identity();player.yaw=0;
-    this.ridden.group.scale.setScalar(1);
+    this.ridden.group.scale.setScalar(1);restoreRider(player);
     this.rider=undefined;this.ridden=undefined;this.rideMotion.speed=0;
   }
   update(dt:number) {
@@ -241,7 +242,7 @@ export class Coaster {
     for(const mixer of this.passengerMixers)mixer.update(dt);
     this.rideMotion.speed=0;this.rideMotion.slope=0;this.rideMotion.inverted=false;this.rideMotion.turn=0;
     for(const cart of this.carts) {
-      if(cart!==this.ridden&&!this.networkBlocked.has(this.carts.indexOf(cart)))cart.group.scale.setScalar(1);
+      cart.group.scale.setScalar(1);
       // Network rounding and a resumed animation clock must never leave the curve domain.
       cart.distance=T.MathUtils.clamp(Number.isFinite(cart.distance)?cart.distance:0,0,this.length-.021);
       cart.speed=Math.max(0,Number.isFinite(cart.speed)?cart.speed:0);
@@ -252,7 +253,7 @@ export class Coaster {
         const cruisingSpeed=2*(remaining<35?Math.max(7,remaining):Math.max(13,32-t.y*22));
         const ahead=this.carts.filter(c=>c!==cart).map(c=>({cart:c,gap:(c.distance-cart.distance+this.length)%this.length})).sort((a,b)=>a.gap-b.gap)[0];
         const gap=ahead.gap;
-        // Five metres between ordinary cart centres; grown riders keep extra room.
+        // Fixed-size carts keep the same safe spacing for every rider.
         const spacing=1.7*(cart.group.scale.x+ahead.cart.group.scale.x)+1.6;
         const space=Math.max(0,gap-spacing);
         // Follow a moving cart at its speed instead of braking as if it were a wall.
@@ -274,7 +275,7 @@ export class Coaster {
         this.rideMotion.slope=this.curve.getTangentAt(cart.distance/this.length).y;
         this.rideMotion.turn=this.curve.getTangentAt(cart.distance/this.length).angleTo(this.curve.getTangentAt(((cart.distance+3)%this.length)/this.length))/3;
         this.rideMotion.inverted=new T.Vector3(0,1,0).applyQuaternion(pose.q).y<0;
-        const player=this.rider;
+        const player=this.rider;fitRider(player,.9);
         player.actor.position.copy(new T.Vector3(0,1.3,0).multiplyScalar(cart.group.scale.x).applyQuaternion(pose.q).add(pose.p));
         player.actor.quaternion.copy(pose.q);player.yaw=Math.atan2(this.curve.getTangentAt(cart.distance/this.length).x,this.curve.getTangentAt(cart.distance/this.length).z);
         player.mixer.update(dt);

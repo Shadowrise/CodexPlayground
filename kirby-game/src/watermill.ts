@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {MillQuestDecor} from './mill-quest-decor';
+import {newMillQuest,advanceMill,applyMill,millNear,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
 
 // The eastern bank of the existing central pond; inside its tree-free clearing.
 export const MILL_SITE = new T.Vector3(32, 0, 34);
@@ -31,7 +33,41 @@ export class Watermill {
   readonly wheel = new T.Group();
   readonly gate = new T.Group();
   readonly handle = new T.Group();
-  running = false;
+  quest:MillQuest=newMillQuest();
+  readonly decor=new MillQuestDecor();
+  now=0;
+  get running(){return this.quest.stage==='running';}
+  private requestedAt=0;
+  onFeedback?:(kind:'branch'|'gate'|'wrong'|'bag'|'finish')=>void;
+  setQuest(q:MillQuest,now:number){
+    const old=this.quest;this.now=now;
+    if(q.startedAt===old.startedAt){
+      if(q.stage==='running'&&old.stage!=='running')this.onFeedback?.('finish');
+      else if(q.rejectedAt>old.rejectedAt)this.onFeedback?.('wrong');
+      else if(q.stage==='bags'&&old.stage==='flow'||q.delivered>old.delivered||q.carried!==old.carried&&q.carried>=0)this.onFeedback?.('bag');
+      else if(q.branches.filter(Boolean).length>old.branches.filter(Boolean).length)this.onFeedback?.('branch');
+      else if(q.gate!==old.gate)this.onFeedback?.('gate');
+    }
+    this.quest=q;
+  }
+  apply(action:MillAction,actor:MillActor){const next=applyMill(this.quest,action,actor,this.now);this.setQuest(next,this.now);}
+  tickQuest(now:number,actor:MillActor,send:(a:MillAction)=>void,online=false){
+    this.now=now;if(!online)this.setQuest(advanceMill(this.quest,now),now);
+    const q=this.quest;
+    if(q.owner===actor.id&&q.stage==='bags'&&q.carried<0&&now-this.requestedAt>800){
+      const index=MILL_BAGS.findIndex((p,i)=>!q.order.slice(0,q.delivered).includes(i)&&millNear(actor,p,1.4));
+      if(index>=0){this.requestedAt=now;send({kind:'pick',index});}
+    }
+  }
+  action(actor:MillActor):MillAction|undefined{
+    const q=this.quest;
+    if(q.stage==='idle'&&millNear(actor,MILL_LEVER.toArray()))return {kind:'start'};
+    if(q.owner!==actor.id)return;
+    if(q.stage==='flow'&&millNear(actor,MILL_LEVER.toArray()))return {kind:'gate'};
+    if(q.stage==='bags'&&q.carried>=0&&millNear(actor,MILL_HOPPER))return {kind:'deliver'};
+  }
+  target(actor:MillActor){return this.action(actor)?.kind==='deliver'?this.decor.hopper:this.handle;}
+
   get flow() {return this.openness;}
   private openness = 0;
   private speed = 0;
@@ -195,18 +231,28 @@ export class Watermill {
     this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);
     this.splashes.frustumCulled=false;this.splashes.visible=false;root.add(this.splashes);
+    this.decor.group.position.copy(MILL_SITE).multiplyScalar(-1);root.add(this.decor.group);
   }
-  networkRunning(value:boolean){this.running=value;}
-  prompt(position:T.Vector3) {
-    return position.distanceTo(MILL_LEVER)<4 ? (this.running?'E — закрыть шлюз мельницы':'E — открыть шлюз мельницы') : '';
+  prompt(actor:MillActor) {
+    const q=this.quest,action=this.action(actor);
+    if(action?.kind==='start')return 'E — запустить квест «Радужная мельница» · 6 очков';
+    if(action?.kind==='gate')return `E — переключить шлюз · ${['Мало воды','Верно! Подожди 3 секунды','Слишком сильно!'][q.gate]}`;
+    if(action?.kind==='deliver')return `E — положить мешочек · Нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
+    return '';
   }
-  interact(position:T.Vector3) {
-    if(!this.prompt(position))return false;
-    this.running=!this.running;return true;
+  hint(actor:MillActor){
+    const q=this.quest;if(!millNear({...actor,p:[actor.p[0],0,actor.p[2]]},MILL_LEVER.toArray(),25))return '';
+    if(q.stage==='running')return `Мельница работает · Новый квест через ${Math.max(1,Math.ceil((q.runningUntil-this.now)/1000))} с`;
+    if(q.stage==='idle')return '';
+    if(q.owner!==actor.id)return 'Другой игрок запускает мельницу — скоро твоя очередь';
+    if(this.now-q.rejectedAt<1800)return 'Не тот цвет! Мешочек мягко вернулся на своё место';
+    if(q.stage==='clear')return `1/4 · Толкни веточки в ручейке (Q) · ${q.branches.filter(Boolean).length}/3`;
+    if(q.stage==='flow')return '2/4 · Настрой рычагом поток: зелёная зона, 3 секунды';
+    return `3/4 · ${q.carried>=0?'Неси мешочек к воронке':'Подойди к мешочку, чтобы подхватить'} · Порядок: ${q.order.map(i=>MILL_COLOR_NAMES[i]).join(' → ')}`;
   }
-  update(dt:number) {
+  update(dt:number,owner?:T.Object3D) {
     this.elapsed+=dt;
-    this.openness=T.MathUtils.damp(this.openness,this.running?1:0,2.6,dt);
+    this.openness=T.MathUtils.damp(this.openness,this.running||this.quest.stage==='bags'?1:this.quest.stage==='flow'?[.22,1,1.5][this.quest.gate]:0,2.6,dt);
     this.speed=T.MathUtils.damp(this.speed,this.openness*.65,1.4,dt);
     this.wheel.rotation.x-=this.speed*dt;
     this.gate.position.y=7.35+this.openness*.8;this.handle.rotation.x=-.55+this.openness*1.1;
@@ -219,6 +265,7 @@ export class Watermill {
       this.dummy.scale.setScalar((1-t)*.1*this.openness);this.dummy.updateMatrix();this.splashes.setMatrixAt(i,this.dummy.matrix);
     }
     this.splashes.instanceMatrix.needsUpdate=true;
+    this.decor.update(this.quest,this.now,owner);
   }
   constrain(position:T.Vector3,size:number) {
     const x=position.x-MILL_SITE.x,z=position.z-MILL_SITE.z,padding=.65*size;

@@ -42,7 +42,7 @@ test('solo checkpoints reduce messages while multiplayer keeps its update cadenc
   const session=new NetworkSession();session.id='host';session.room={id:'test',host:'host',epoch:0,fruits:[],starAt:0,mill:false,locks:{}};session.peerCount=peers;
   const messages:any[]=[];(session as any).socket={readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s))};
   for(let i=0;i<3000;i++){actor.p[0]=i/10;session.tick(.1,actor,()=>({} as any));}
-  session.event({type:'mill'});session.tick(.1,actor,()=>({} as any));assert(messages.at(-1).events.some((e:any)=>e.type==='mill'));
+  session.event({type:'mill',action:{kind:'start'}});session.tick(.1,actor,()=>({} as any));assert(messages.at(-1).events.some((e:any)=>e.type==='mill'));
   return messages.length;
  };
  assert(count(1)<=151);assert.equal(count(2),3001);
@@ -59,12 +59,12 @@ test('remote firefly follows interpolated rider and ignores conflicting world sn
  assert(bug.firefly.object.scale.x>.65&&bug.firefly.object.scale.x<2);
 });
 
-test('released remote rides restore their normal size despite stale snapshots',()=>{
+test('remote rides keep their normal size even with stale enlarged snapshots',()=>{
  const coaster=new Coaster(),balloons=new Balloons(),carts=coaster.networkState(),rows=balloons.networkState();
  carts[0][3]=4;rows[0][5]=4;rows[0][1]='exiting';
  coaster.networkBlocked.add(0);balloons.networkBlocked.add(0);
  coaster.networkApply(carts);balloons.networkApply(rows,[]);coaster.update(.01);balloons.update(.01);
- assert.equal(coaster.networkState()[0][3],4);assert.equal(balloons.balloons[0].scale,4);
+ assert.equal(coaster.networkState()[0][3],1);assert.equal(balloons.balloons[0].scale,1);
  coaster.networkBlocked.clear();balloons.networkBlocked.clear();
  for(let i=0;i<3;i++){
   coaster.networkApply(carts);balloons.networkApply(rows,[]);coaster.update(.01);balloons.update(.01);

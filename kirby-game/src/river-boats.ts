@@ -11,6 +11,7 @@ import {updateBoatWake} from './boat-wake';
 import {lightenBoatPassenger} from './boat-passenger';
 
 type Ride={player:CharacterController;index:number;start:number;from:T.Vector3;elapsed:number;leaving?:T.Vector3};
+export const BOAT_QUEST_FRACTION=.1;
 const seat=new T.Vector3(0,.39,-.18);
 const smooth=(t:number)=>{t=T.MathUtils.clamp(t,0,1);return t*t*(3-2*t);};
 /** Boats follow the room clock on every client, so they need no world snapshots. */
@@ -59,7 +60,7 @@ export class RiverBoats {
  networkKey(player:CharacterController){const i=this.ride?.index??this.nearby(player);return i>=0?`boat:${i}`:undefined;}
  outlineBoat(player:CharacterController){const i=this.nearby(player);return !this.riding&&i>=0?this.boats[i]:undefined;}
  prompt(player:CharacterController){
-  if(this.ride){if(this.ride.leaving)return 'Выходим на берег…';const percent=Math.min(100,Math.floor((boatDistance(this.ride.index,this.seconds)-this.ride.start)/BOAT_ROUTE_LENGTH*100));return `E — выйти на берег · Круг: ${percent}%`;}
+  if(this.ride){if(this.ride.leaving)return 'Выходим на берег…';const percent=Math.min(10,Math.floor((boatDistance(this.ride.index,this.seconds)-this.ride.start)/BOAT_ROUTE_LENGTH*100));return `E — выйти на берег · ${player.achievements.has('boat')?'Задача выполнена':`Проплыто: ${percent}% из 10% круга`}`;}
   return this.nearby(player)>=0?'E — сесть в лодочку':'';
  }
  board(player:CharacterController){
@@ -113,6 +114,6 @@ export class RiverBoats {
   }
   this.poseRider(r.index,r.player);
   const t=smooth(r.elapsed/.55);r.player.actor.position.lerpVectors(r.from,this.seatPosition,t);r.player.actor.position.y+=Math.sin(Math.PI*t)*.7;
-  if(boatDistance(r.index,seconds)-r.start>=BOAT_ROUTE_LENGTH)awardFirst(r.player,'boat');
+  if(boatDistance(r.index,seconds)-r.start>=BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION)awardFirst(r.player,'boat');
  }
 }

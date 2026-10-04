@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { InstancedMesh, Mesh, Vector3 } from 'three';
+import {newMillQuest} from '../src/mill-quest';
 import { Watermill, MILL_SITE, MILL_LEVER, createWheelWaterGeometry } from '../src/watermill';
 
 test('water descends continuously and follows the outer scoops without crossing the wheel',()=>{
@@ -21,15 +22,15 @@ test('water descends continuously and follows the outer scoops without crossing 
 
 test('mill requires proximity; gate and wheel accelerate and settle when stopped',()=>{
   const mill=new Watermill();
-  assert.equal(mill.interact(new Vector3(-100,0,-100)),false);
+  assert.equal(mill.action({id:'solo',p:[-100,0,-100],yaw:0,size:1}),undefined);
   mill.update(1);assert.equal(mill.wheel.rotation.x,0);
-  assert(mill.interact(MILL_LEVER));assert(mill.running);
+  mill.setQuest({...newMillQuest(),stage:'running',owner:'solo',runningUntil:61000},1000);assert(mill.running);
   mill.update(1/60);const first=Math.abs(mill.wheel.rotation.x);
   assert(first>0 && first<.001);
   for(let i=0;i<300;i++)mill.update(1/60);
   assert(mill.flow>.99);assert(mill.gate.position.y>8);
   assert(Math.abs(mill.wheel.rotation.x)>1);
-  assert(mill.interact(MILL_LEVER));assert(!mill.running);
+  mill.setQuest(newMillQuest(),61000);assert(!mill.running);
   for(let i=0;i<600;i++)mill.update(1/60);
   assert(mill.flow<.001);
   const settled=mill.wheel.rotation.x;mill.update(1);
@@ -47,5 +48,5 @@ test('mill blocks building walls at enlarged sizes and leaves the lever approach
 test('mill batches detailed parts to keep draw calls bounded',()=>{
   const mill=new Watermill();let draws=0,instances=0;
   mill.group.traverse(o=>{if(o instanceof Mesh)draws++;if(o instanceof InstancedMesh)instances+=o.count;});
-  assert(instances>600);assert(draws<90);
+  assert(instances>600);assert(draws<105);
 });

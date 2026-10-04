@@ -23,7 +23,7 @@ export class NpcSnapshots {
     return [...v.slice(0,3).map((n,j)=>n+(end[j]-n)*blend),...q,...v.slice(7).map((n,j)=>n+(end[j+7]-n)*blend)];
    }):state.pose;
    const roll=from.roll&&to.roll&&from.state==='Roll'&&to.state==='Roll'?from.roll.map((v,j)=>v+(to.roll![j]-v)*blend):state.roll;
-   return {...state,roll,pose,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
+   return {...state,roll,pose,fit:(from.fit??1)+((to.fit??1)-(from.fit??1))*blend,p:from.p.map((v,j)=>v+(to.p[j]-v)*blend),s:from.s+(to.s-from.s)*blend,
     q:new Quaternion().fromArray(from.q).normalize().slerp(new Quaternion().fromArray(to.q).normalize(),blend).toArray()};
   });
  }

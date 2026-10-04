@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {RiverBoats} from '../src/river-boats';
+import {RiverBoats,BOAT_QUEST_FRACTION} from '../src/river-boats';
 import {BOAT_ROUTE_LENGTH,BOAT_SPEED,boatPose,boatDistance} from '../src/boat-route';
 import {BRIDGES,inWater,dryGround,deckHeight} from '../src/pond-layout';
 import {POND_SCALE} from '../src/landmark-sites';
@@ -35,12 +35,13 @@ test('eight boats have four seated passengers and a bounded rendering budget',as
  b.update(1,20,new T.Vector3(10000,0,10000));assert(b.boats.every(boat=>!boat.visible));
 });
 
-test('boarding, full-lap reward, safe exit, saved size and reboarding',async()=>{
+test('boarding, ten-percent reward, safe exit, saved size and reboarding',async()=>{
+ assert.equal(BOAT_QUEST_FRACTION,.1);assert(BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED<50);
  const g=await model,b=new RiverBoats(),c=new CharacterController(cloneVariant(g.scene,KIRBY_VARIANTS[15],false),g.animations);c.actor.scale.setScalar(7);
  b.update(0,90);c.actor.position.copy(b.boats[0].position);c.actor.position.x+=2;
  assert.equal(b.networkKey(c),'boat:0');assert(b.board(c));b.update(.6,90.6);assert(b.riding);assert.equal(c.savedSize,7);assert.equal(c.animationRoot.parent!.scale.x,.9/7);
- assert(!c.achievements.has('boat'));b.update(.02,90+BOAT_ROUTE_LENGTH/BOAT_SPEED-.1);assert(!c.achievements.has('boat'));
- b.update(.2,90+BOAT_ROUTE_LENGTH/BOAT_SPEED+.1);assert(c.achievements.has('boat'));assert.equal(scoreOf(c),3);
+ assert(!c.achievements.has('boat'));b.update(.02,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED-.1);assert(!c.achievements.has('boat'));
+ b.update(.2,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED+.1);assert(c.achievements.has('boat'));assert.equal(scoreOf(c),3);
  b.update(1,90+BOAT_ROUTE_LENGTH/BOAT_SPEED*2);assert.equal(scoreOf(c),3);
  const shore=b.savePosition(c)!;assert(shore);assert(dryGround(shore.x,shore.z,2));assert(b.disembark());b.update(.8,90+BOAT_ROUTE_LENGTH/BOAT_SPEED*2+.8);
  assert(!b.riding);assert.equal(c.state,'Idle');assert.equal(c.savedSize,7);assert.equal(c.animationRoot.parent!.scale.x,1);assert(c.actor.position.distanceTo(shore)<1e-8);

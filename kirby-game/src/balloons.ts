@@ -1,3 +1,4 @@
+import {fitRider,restoreRider} from './rider-size';
 import { awardFirst } from './score';
 import * as T from 'three';
 import { CharacterController } from './controller';
@@ -20,7 +21,7 @@ export class Balloons {
   private approach?:{npc:KirbyNpc;balloon:Balloon;health:number;elapsed:number};
   get riding(){return this.balloons.some(b=>b.passenger instanceof CharacterController);}
   owns(npc:KirbyNpc){return this.approach?.npc===npc || this.balloons.some(b=>b.passenger===npc);}
-  savePosition(passenger:Passenger){const b=this.balloons.find(b=>b.passenger===passenger);return b?this.dock(b.station,this.balloons.indexOf(b)).add(new T.Vector3(0,-.28,6)):undefined;}
+  savePosition(passenger:Passenger){const b=this.balloons.find(b=>b.passenger===passenger);return b?this.dock(b.station,this.balloons.indexOf(b)).add(new T.Vector3(0,-.28,Math.max(6,passenger.actor.scale.x*.95+3))):undefined;}
   private dock(station:number,index:number){const site=BALLOON_SITES[station];return new T.Vector3(site.x+(index-1)*12,.28,site.z);}
   constructor(private sound:(kind:BalloonSound,position:T.Vector3)=>void=()=>{},private random= Math.random){
     this.group.name='Three colourful balloon ports';
@@ -108,14 +109,14 @@ export class Balloons {
   networkBlocked=new Set<number>();
   networkKey(position:T.Vector3){const b=this.balloons.find(b=>b.passenger instanceof CharacterController)??this.nearby(position);return b?'balloon:'+this.balloons.indexOf(b):undefined;}
   networkState():(number|string)[][]{return this.balloons.map(b=>[b.time,b.phase,b.station,b.destination,b.wait,b.scale,...b.start.toArray(),...b.end.toArray(),...b.group.position.toArray(),b.passenger && !(b.passenger instanceof CharacterController)?b.passenger.index:-1]);}
-  networkApply(rows:(number|string)[][],npcs:readonly KirbyNpc[]){rows.forEach((v,i)=>{const b=this.balloons[i];if(!b||!v||b.passenger instanceof CharacterController)return;b.time=v[0] as number;b.phase=v[1] as Balloon['phase'];b.station=v[2] as number;b.destination=v[3] as number;b.wait=v[4] as number;b.scale=v[5] as number;b.start.fromArray(v.slice(6,9) as number[]);b.end.fromArray(v.slice(9,12) as number[]);b.group.position.fromArray(v.slice(12,15) as number[]);b.group.scale.setScalar(b.scale);b.passenger=npcs.find(n=>n.index===v[15]);});}
+  networkApply(rows:(number|string)[][],npcs:readonly KirbyNpc[]){rows.forEach((v,i)=>{const b=this.balloons[i];if(!b||!v||b.passenger instanceof CharacterController)return;b.time=v[0] as number;b.phase=v[1] as Balloon['phase'];b.station=v[2] as number;b.destination=v[3] as number;b.wait=v[4] as number;b.scale=1;b.start.fromArray(v.slice(6,9) as number[]);b.end.fromArray(v.slice(9,12) as number[]);b.group.position.fromArray(v.slice(12,15) as number[]);b.group.scale.setScalar(b.scale);const passenger=npcs.find(n=>n.index===v[15]);if(b.passenger&&b.passenger!==passenger)restoreRider(b.passenger);b.passenger=passenger;});}
   outlineBalloon(position:T.Vector3){return this.nearby(position)?.group;}
   private nearby(position:T.Vector3){return this.balloons.find(b=>b.phase==='parked' && !this.networkBlocked.has(this.balloons.indexOf(b)) && b!==this.approach?.balloon && position.distanceTo(b.group.position)<5.5);}
   prompt(position:T.Vector3){const riding=this.balloons.find(b=>b.passenger instanceof CharacterController);if(riding)return `Летим: ${BALLOON_SITES[riding.destination].name} · посадка автоматически`;const b=this.nearby(position);return b?'E — отправиться на воздушном шаре':'';}
   board(character:CharacterController){const b=this.nearby(character.actor.position);if(!b || this.riding || character.flight.active)return false;this.boardPassenger(b,character);return true;}
   private boardPassenger(b:Balloon,passenger:Passenger){
     b.passenger=passenger;b.from.copy(passenger.actor.position);b.time=0;b.phase='boarding';b.destination=(b.station+1+Math.floor(this.random()*2))%3;
-    b.scale=Math.max(1,passenger.actor.scale.x*.85);b.group.scale.setScalar(b.scale);
+    b.scale=1;b.group.scale.setScalar(1);
     if(passenger instanceof CharacterController)passenger.setActivity('Balloon');else passenger.beginBalloon();
     passenger.cloud.visible=false;passenger.flight.reset();
   }
@@ -123,6 +124,7 @@ export class Balloons {
   update(dt:number,npcs:readonly KirbyNpc[]=[],player?:CharacterController,constrain?:NpcConstraint){
     this.clock+=dt;this.npcAfter-=dt;
     for(const [index,b] of this.balloons.entries()){
+      b.scale=1;b.group.scale.setScalar(1);
       // A departed remote passenger can leave an enlarged or exiting snapshot behind.
       if(!b.passenger&&!this.networkBlocked.has(index)){
         if(b.phase!=='parked'){
@@ -148,15 +150,16 @@ export class Balloons {
       b.flame.visible=burning;b.flame.scale.y=1+.18*Math.sin(this.clock*29);
       if(burning && this.clock>=b.nextSound){this.sound('burner',b.group.position);b.nextSound=this.clock+3.5;}
       const p=b.passenger;if(!p)continue;
+      fitRider(p,1,b.phase==='boarding'?smooth(b.time):b.phase==='exiting'?1-smooth(b.time):1);
       p.mixer.update(dt);b.group.updateWorldMatrix(true,false);
       const basket=b.group.localToWorld(new T.Vector3(0,.24,0));
       if(b.phase==='boarding')p.actor.position.lerpVectors(b.from,basket,smooth(b.time));
-      else if(b.phase==='exiting')p.actor.position.lerpVectors(basket,this.dock(b.station,index).add(new T.Vector3(0,-.28,6)),smooth(b.time));
+      else if(b.phase==='exiting')p.actor.position.lerpVectors(basket,this.dock(b.station,index).add(new T.Vector3(0,-.28,Math.max(6,p.actor.scale.x*.95+3))),smooth(b.time));
       else p.actor.position.copy(basket);
       const heading=Math.atan2(b.end.x-b.start.x,b.end.z-b.start.z);
       p.yaw+=Math.atan2(Math.sin(heading-p.yaw),Math.cos(heading-p.yaw))*(1-Math.exp(-dt*2));p.actor.rotation.set(b.group.rotation.x,p.yaw,b.group.rotation.z);
       for(const side of ['Left','Right']){const arm=p.actor.getObjectByName(`${side}_shoulder`);if(arm){arm.rotation.x=-.25;arm.rotation.z=(side==='Left'?-1:1)*(.35+.07*Math.sin(this.clock*2));}}
-      if(b.phase==='exiting' && b.time>=1){awardFirst(p,'balloon');p.actor.rotation.set(0,p.yaw,0);if(p instanceof CharacterController)p.setActivity('Idle');else {p.endBalloon();this.npcAfter=35+this.random()*25;}b.passenger=undefined;b.phase='parked';b.time=0;b.scale=1;b.group.scale.setScalar(1);}
+      if(b.phase==='exiting' && b.time>=1){restoreRider(p);awardFirst(p,'balloon');p.actor.rotation.set(0,p.yaw,0);if(p instanceof CharacterController)p.setActivity('Idle');else {p.endBalloon();this.npcAfter=35+this.random()*25;}b.passenger=undefined;b.phase='parked';b.time=0;b.scale=1;b.group.scale.setScalar(1);}
     }
     if(this.approach){
       const {npc,balloon:b,health}=this.approach;this.approach.elapsed+=dt;

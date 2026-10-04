@@ -1,3 +1,4 @@
+import {fitRider,restoreRider,riderFit} from './rider-size';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
@@ -8,6 +9,7 @@ export class KirbyHome {
   night=false;
   nightAmount?:number;
   private waking=false;
+  private wakeScale=1;
   private sleeper?:CharacterController;
   private elapsed=0;
   private from=new T.Vector3();
@@ -48,27 +50,27 @@ export class KirbyHome {
     // Merge repeated decoration into a small number of draws.
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
   }
-  prompt(position:T.Vector3){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6 && position.y<.6 ? 'E — лечь в кровать':'';}
-  private fit(c:CharacterController){this.group.scale.setScalar(Math.max(1,c.actor.scale.x));}
+  prompt(position:T.Vector3,size=1){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6+.6*size && position.y<.6 ? 'E — лечь в кровать':'';}
+  private fit(c:CharacterController,amount=1){this.group.scale.setScalar(1);fitRider(c,1,amount);}
   private bed(){const s=this.group.scale.x;return new T.Vector3(HOME_SITE.x,1.1*s,HOME_SITE.z+.7*s);}
-  private door(){return new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+6*this.group.scale.x);}
-  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c);return true;}
+  private door(){return new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+Math.max(6,3.9+.6*(this.sleeper?.actor.scale.x??1)));}
+  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position,c.actor.scale.x) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c,0);return true;}
   savePosition(c:CharacterController){return this.sleeper===c?this.door():undefined;}
   wake(){
     if(!this.sleeper || this.waking)return;
-    this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
+    this.wakeScale=riderFit(this.sleeper);this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
   }
   update(dt:number){
     this.windows.emissiveIntensity=.12+1.38*(this.nightAmount??Number(this.night));const c=this.sleeper;if(!c)return;
     this.elapsed+=dt;const t=this.elapsed;c.mixer.update(dt);
     if(this.waking){
       const u=T.MathUtils.smoothstep(t,0,.65);c.actor.position.lerpVectors(this.from,this.door(),u);c.actor.quaternion.slerpQuaternions(this.fromRotation,new T.Quaternion(),u);
-      c.animationRoot.scale.setScalar(1);
+      c.animationRoot.parent!.scale.setScalar(T.MathUtils.lerp(this.wakeScale,1,u));c.animationRoot.scale.setScalar(1);
       for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=1;}
-      if(t>=.65){this.group.scale.setScalar(1);c.actor.position.copy(this.door());c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;}
+      if(t>=.65){restoreRider(c);this.group.scale.setScalar(1);c.actor.position.copy(this.door());c.yaw=0;c.actor.rotation.set(0,0,0);c.setActivity('Idle');this.sleeper=undefined;}
       return;
     }
-    this.fit(c);
+    this.fit(c,T.MathUtils.smoothstep(t,0,1));
     const bed=this.bed(),sleepRotation=new T.Quaternion().setFromAxisAngle(new T.Vector3(1,0,0),-Math.PI/2);
     const u=T.MathUtils.smoothstep(t,0,1);c.actor.position.lerpVectors(this.from,bed,u);c.actor.quaternion.slerpQuaternions(this.fromRotation,sleepRotation,u);
     if(t>=1){awardFirst(c,'sleep');for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}

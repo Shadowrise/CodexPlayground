@@ -14,7 +14,7 @@ import type { WorldState, ActorState } from './network-protocol';
 import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
 import { TaskList } from './tasks';
-import { awardFirst, scoreOf, SCORE_ACTIONS } from './score';
+import { awardFirst, scoreOf, SCORE_ACTIONS, achievementPoints } from './score';
 import {SoloHistory} from './solo-history';
 import {deviceInfo} from './history-types';
 import { normalizePlayerName, readPlayerName, rememberPlayerName } from './player-name';
@@ -36,6 +36,7 @@ import { FruitWorld } from './fruits';
 import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
 import { Watermill, MILL_LEVER } from './watermill';
+import {millPushTarget,newMillQuest,type MillActor,type MillAction} from './mill-quest';
 import { Treehouse, TREEHOUSE_SITE } from './treehouse';
 import { Benches, BENCH_SEATS } from './benches';
 import { Balloons } from './balloons';
@@ -518,7 +519,7 @@ startButton.addEventListener('click', async () => {
 });
 
 const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
-function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+a.achievements.length*3+(id?network!.room.festival?.players[id]?.bonus??0:0);}
+function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+achievementPoints(a.achievements)+(id?network!.room.festival?.players[id]?.bonus??0:0);}
 function roundFinished(){return !!network?.room.festival&&network.serverNow>=network.room.festival.endsAt;}
 function festivalTick(){
  if(!character||!playing)return;
@@ -526,7 +527,7 @@ function festivalTick(){
  network?.finishFestivalIfDue();
  if(!network&&!character.festival&&allTasks(character.achievements))character.festival=createStarfall(now,nameInput.value);
  const f=network?.room.festival??character.festival;if(!f)return;
- if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+character.achievements.size*3;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
+ if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements);p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
  festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
  if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
@@ -615,7 +616,9 @@ renderer.setAnimationLoop((time: number) => {
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character && !roundFinished()) {
     syncNetworkWorld(dt);
-    const achievementsBefore=character.achievements.size;
+    const achievementsBefore=character.achievements.size,pointsBefore=achievementPoints(character.achievements);
+    watermill.tickQuest(network?.serverNow??Date.now(),millActor(character),sendMill,!!network);
+    if(watermill.quest.stage==='running'&&watermill.quest.owner===(network?.id??'solo'))awardFirst(character,'millQuest');
     const previousX = character.actor.position.x;
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
@@ -656,7 +659,7 @@ renderer.setAnimationLoop((time: number) => {
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
     touch?.setInteraction(!occupied&&interaction?.includes('E —')?interaction:undefined);
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    setText(rideHint,interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : '');
+    setText(rideHint,interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : watermill.hint(millActor(character)).replace('(Q)',usingPad?'(X)':usingTouch?'(Толчок)':'(Q)') || (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
@@ -667,7 +670,7 @@ renderer.setAnimationLoop((time: number) => {
     pendingTurn = undefined;
     pendingJump = false;
     const position = character.actor.position;
-    viewScale = THREE.MathUtils.lerp(viewScale, boats.riding?Math.min(1,character.actor.scale.x):character.actor.scale.x, 1 - Math.exp(-3 * dt));
+    viewScale = THREE.MathUtils.lerp(viewScale, (boats.riding||coaster.riding||balloons.riding||home.active)?Math.min(1,character.actor.scale.x):character.actor.scale.x, 1 - Math.exp(-3 * dt));
     cameraLook.set(position.x, position.y + .9 * viewScale, position.z);
     cameraTarget.lerp(cameraLook, 1 - Math.exp(-8 * dt));
     const people=[character.actor.position,...Array.from(remotePlayers?.players.values()??[],p=>p.actor.position)];
@@ -686,6 +689,7 @@ renderer.setAnimationLoop((time: number) => {
       if(onFoot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);
       ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
     }
+    if(character.attackHit&&!network){const index=millPushTarget(watermill.quest,millActor(character));if(index>=0){sendMill({kind:'push',index});character.attackHit=false;}}
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
     const fireflyPickup=fireflies?.fruitPickupPosition;
@@ -704,7 +708,7 @@ renderer.setAnimationLoop((time: number) => {
     if(maze.update(dt,character,!network && !coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playStarPickup();setText(combatMessage,'★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!');hitMessageRemaining=5;
     }
-    if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);setText(combatMessage,`+${3*(character.achievements.size-achievementsBefore)} очка за новое приключение!`);hitMessageRemaining=3;}
+    if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);setText(combatMessage,`+${achievementPoints(character.achievements)-pointsBefore} · Приключение выполнено!`);hitMessageRemaining=3;}
     taskList.update(character.achievements);
     setText(fruitValue,String(scoreOf(character)));
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
@@ -738,7 +742,7 @@ renderer.setAnimationLoop((time: number) => {
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
   ponds.update(dt);
   fountain.update(dt,lightTime.day,camera);
-  watermill.update(dt);
+  watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
   festivalTick();
   chat.render(network?.log??localLog,!audioPanel.hidden);
@@ -765,6 +769,11 @@ window.addEventListener('resize', () => {
 
 
 
+watermill.onFeedback=kind=>{if(!character||character.actor.position.distanceTo(MILL_LEVER)>32)return;sounds.playMill(kind);};
+
+function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
+function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else watermill.apply(action,millActor(character));}
+
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   const p=c.actor.position;
   if(c.roll.active)return undefined;
@@ -775,9 +784,9 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if(skyTrail.active)return undefined;
   if(skyTrail.prompt(c)&&!fireflies?.riding&&!coaster.riding && !boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active)return result(skyTrail.prompt(c),()=>skyTrail.start(c),object(skyTrail.target(c)));
   if(fireflies?.riding)return result(fireflies.prompt(c),()=>fireflies?.disembark());
-  if(home.active)return result(home.prompt(p),()=>home.wake());
+  if(home.active)return result(home.prompt(p,c.actor.scale.x),()=>home.wake());
   const free=!coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active && !trampoline.active;
-  if(free && home.prompt(p))return c.flight.active?undefined:result(home.prompt(p),()=>home.start(c),region(home,home.group,home.group.position.clone().add(new THREE.Vector3(0,1,-.6)),[4,2.2,5]));
+  if(free && home.prompt(p,c.actor.scale.x))return c.flight.active?undefined:result(home.prompt(p,c.actor.scale.x),()=>home.start(c),region(home,home.group,home.group.position.clone().add(new THREE.Vector3(0,1,-.6)),[4,2.2,5]));
   if(trampoline.active)return result(trampoline.prompt(c),()=>{});
   if(free && trampoline.prompt(c))return p.y>.5?undefined:result(trampoline.prompt(c),()=>trampoline.start(c),region(trampoline,trampoline.group,trampoline.position.clone().add(new THREE.Vector3(0,.5,0)),[4,2,4]));
   if(coaster.riding)return result(coaster.prompt(c),()=>coaster.disembark());
@@ -794,7 +803,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     const swing=p.x-TREEHOUSE_SITE.x<-7;
     return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,9.4,9.15)),[2.3,19.4,4.2]));
   }
-  if(watermill.prompt(p))return result(watermill.prompt(p),()=>{if(watermill.interact(p))awardFirst(c,'mill');},object(watermill.handle));
+  if(watermill.prompt(millActor(c)))return result(watermill.prompt(millActor(c)),()=>{const action=watermill.action(millActor(c));if(action)sendMill(action);},object(watermill.target(millActor(c))));
   if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));
   if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
   const boat=boats.outlineBoat(c);
@@ -823,7 +832,7 @@ function syncNetworkWorld(dt:number){
  if(npcSnapshotHost!==r.host){npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;}
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
  boats.networkBlocked=blocked('boat');coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');fireflies!.syncLandings(r.bugLandings??{});
- watermill.networkRunning(r.mill);
+ watermill.setQuest(r.millQuest??newMillQuest(),network.serverNow);
  if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);worldRevision=network.revision;}
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
@@ -833,11 +842,11 @@ function resourceKey(c:CharacterController){
  if(boats.riding)return boats.networkKey(c);
  if(skyTrail.active||skyTrail.prompt(c))return;
  if(coaster.riding)return coaster.networkKey(c);if(balloons.riding)return balloons.networkKey(c.actor.position);if(fireflies?.riding)return fireflies.networkKey(c);
- if(home.active||home.prompt(c.actor.position))return 'home:0';
+ if(home.active||home.prompt(c.actor.position,c.actor.scale.x))return 'home:0';
  if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
  const seat=benches.outlineSeat(c.actor.position);if(benches.active)return heldResource;if(seat&&(!treehouse.active||treehouse.canSit))return 'bench:'+BENCH_SEATS.indexOf(seat);
  if(treehouse.active||treehouse.prompt(c.actor.position))return 'tree:0';
- if(watermill.prompt(c.actor.position))return;
+ if(watermill.prompt(millActor(c)))return;
  if(balloons.prompt(c.actor.position))return balloons.networkKey(c.actor.position);
  if(coaster.prompt(c))return coaster.networkKey(c);
  return boats.networkKey(c)??fireflies?.networkKey(c);
@@ -845,7 +854,7 @@ function resourceKey(c:CharacterController){
 async function interactOnline(){
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
- if(watermill.prompt(character.actor.position)&&!heldResource&&!home.active&&!treehouse.active){network.event({type:'mill'});awardFirst(character,'mill');return;}
+ if(watermill.prompt(millActor(character))&&!heldResource&&!home.active&&!treehouse.active){action.run();return;}
  if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
@@ -869,7 +878,7 @@ function updateNetwork(dt:number){
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='boat'?boats.networkData():kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld);
  playerHostBadge.hidden=!network.host;
- const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+actor.achievements.length*3+(network!.room.festival?.players[id]?.bonus??0)}))];
+ const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+achievementPoints(actor.achievements)+(network!.room.festival?.players[id]?.bonus??0)}))];
  const teamPoints=npcs.reduce((sum,n)=>sum+scoreOf(n),0);
  const signature=JSON.stringify([network.room.host,entries.map(e=>[e.id,e.actor.name,e.actor.variant,e.actor.s,e.points]),teamPoints]);
  if(rosterSignature!==signature){

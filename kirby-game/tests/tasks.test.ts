@@ -11,7 +11,7 @@ test('task list includes every rewarded activity, incomplete first and Russian a
 });
 test('completion moves task below unfinished tasks and restoring a save reconstructs the same list',()=>{
  const done=new Set<ScoreAction>();const initial=sortedTasks(done);assert(initial.every(t=>!t.done));
- done.add('mill');const after=sortedTasks(done);assert.equal(after.at(-1)!.id,'mill');assert(after.at(-1)!.done);
+ done.add('millQuest');const after=sortedTasks(done);assert.equal(after.at(-1)!.id,'millQuest');assert(after.at(-1)!.done);
  const saved=JSON.parse(JSON.stringify([...done])) as ScoreAction[];assert.deepEqual(sortedTasks(new Set(saved)),after);
  assert(sortedTasks(new Set(SCORE_ACTIONS)).every(t=>t.done));assert.equal(Object.keys(TASK_NAMES).length,SCORE_ACTIONS.length);
 });
