@@ -14,7 +14,7 @@ export class StarfallView {
  private white=new T.SpriteMaterial({map:this.glow,depthWrite:false,blending:T.AdditiveBlending});
  private finale=new T.Group();private phase='';private resultKey='';private initialized=false;private center=new T.Vector3();
  constructor(private pickup:()=>void,private cheer:()=>void,leave:()=>void){
-  this.hud.id='starfall-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');document.body.append(this.hud);
+  this.hud.id='starfall-hud';this.hud.className='event-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');document.body.append(this.hud);
   this.results.id='starfall-results';document.body.append(this.results);this.results.addEventListener('cancel',e=>e.preventDefault());
   this.results.addEventListener('click',e=>{if((e.target as HTMLElement).closest('button'))leave();});
   this.group.name='Personal rainbow starfall';this.group.add(this.finale);this.finale.visible=false;

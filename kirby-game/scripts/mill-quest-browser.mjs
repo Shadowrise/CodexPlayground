@@ -7,18 +7,21 @@ try{
  await page.goto(process.env.GAME_URL||'http://127.0.0.1:5174/');await page.waitForSelector('#startup-loader',{state:'hidden',timeout:120000});
  await page.click('#new-game');await page.fill('#player-name-input','Мельник');await page.click('#start-game');
  await page.waitForFunction(()=>window.millTest?.character);
- const move=async(x,z,yaw=0)=>{await page.evaluate(({x,z,yaw})=>{const c=window.millTest.character;c.actor.position.set(x,0,z);c.yaw=yaw;c.actor.rotation.set(0,yaw,0);}, {x,z,yaw});await page.waitForTimeout(120);};
+ const move=async(x,z,yaw=Math.PI)=>{await page.evaluate(({x,z,yaw})=>{const c=window.millTest.character;c.actor.position.set(x,0,z);c.yaw=yaw;c.actor.rotation.set(0,yaw,0);window.millTest.followCamera.reset(yaw);}, {x,z,yaw});await page.waitForTimeout(120);};
  await move(49,42);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.stage==='clear');
- for(let i=0;i<3;i++){await move(42.8,32.5+i*3);await page.keyboard.press('q');await page.waitForFunction(i=>window.millTest.watermill.quest.branches[i]>0,i);await page.waitForTimeout(250);}
+ for(let i=0;i<3;i++){await move(42.8,32.5+i*3,0);await page.keyboard.press('q');await page.waitForFunction(i=>window.millTest.watermill.quest.branches[i]>0,i);await page.waitForTimeout(250);}
  await move(49,42);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.gate===2);await page.waitForTimeout(200);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.stage==='bags');
+ await page.waitForSelector('#mill-quest-hud:not([hidden])');assert.equal(await page.locator('.mill-bag-order span').count(),3);
  await page.screenshot({path:process.env.TEMP+'/kirby-mill-quest-game.png'});
- const order=await page.evaluate(()=>window.millTest.watermill.quest.order),places=[[58,44],[62,48],[57,53]];
+ const order=await page.evaluate(()=>window.millTest.watermill.quest.order),places=[[68,54],[53,65],[76,69]];
  const wrong=(order[0]+1)%3;await move(...places[wrong]);await page.waitForFunction(i=>window.millTest.watermill.quest.carried===i,wrong);await move(56.5,41);await page.keyboard.press('e');await page.waitForFunction(i=>window.millTest.watermill.quest.rejected===i&&window.millTest.watermill.quest.carried===-1,wrong);
  assert.equal(await page.evaluate(()=>window.millTest.watermill.quest.delivered),0);await page.waitForTimeout(1300);
  for(let n=0;n<3;n++){const i=order[n];await move(...places[i]);await page.waitForFunction(i=>window.millTest.watermill.quest.carried===i,i);await move(56.5,41);await page.keyboard.press('e');await page.waitForFunction(n=>window.millTest.watermill.quest.delivered===n+1,n);}
  await page.waitForFunction(()=>window.millTest.character.achievements.has('millQuest'));
  const result=await page.evaluate(async()=>{const {scoreOf}=await import('/src/score.ts');return {stage:window.millTest.watermill.quest.stage,points:scoreOf(window.millTest.character)};});assert(result.points>=6);
+ await page.waitForTimeout(900);
  await page.screenshot({path:process.env.TEMP+'/kirby-mill-quest-finish.png'});
+ await page.setViewportSize({width:844,height:390});await page.evaluate(()=>document.body.classList.add('touch-ui'));await page.screenshot({path:process.env.TEMP+'/kirby-mill-hud-mobile.png'});await page.evaluate(()=>document.body.classList.remove('touch-ui'));await page.setViewportSize({width:1280,height:860});
  const budget=await page.evaluate(async()=>{
   const T=await import('/node_modules/.vite/deps/three.js'),{Watermill}=await import('/src/watermill.ts');
   const scene=new T.Scene();scene.background=new T.Color('#bddce5');const m=new Watermill();scene.add(m.group);

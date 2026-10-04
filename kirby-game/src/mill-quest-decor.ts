@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {MILL_INTAKE,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_COLORS,MILL_COLOR_NAMES,type MillQuest} from './mill-quest';
+import {MILL_INTAKE,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_COLORS,type MillQuest} from './mill-quest';
 
 /** Batched, low-poly props; only the three twigs, sacks and small finale move. */
 export class MillQuestDecor {
@@ -12,8 +12,6 @@ export class MillQuestDecor {
  private lights:T.InstancedMesh;
  private needle:T.Mesh;
  private dummy=new T.Object3D();
- private label?:T.CanvasTexture;
- private signature='';
  private scratch=new T.Vector3();
  private readonly bubbleCount=96;
  constructor(){
@@ -62,18 +60,25 @@ export class MillQuestDecor {
   const gaugePos=new T.Vector3(50.7,1.5,40.5);
   for(let i=0;i<3;i++){box(pieces,['#77aadc','#78d9a0','#f18578'][i],[gaugePos.x+(i-1)*.35,gaugePos.y,gaugePos.z],[.32,.72,.18]);}
   this.needle=new T.Mesh(new T.ConeGeometry(.12,.27,3),new T.MeshStandardMaterial({color:'#fff4c9'}));this.needle.rotation.z=Math.PI;this.needle.position.copy(gaugePos).add(new T.Vector3(0,.58,.12));this.group.add(this.needle);
-  box(pieces,'#725239',[58,2.5,35],[4.9,2.5,.18]);
-  for(const x of [56,60])rod(pieces,'#725239',[x,0,35],[x,3.6,35],.075);
-  if(typeof document!=='undefined'){
-   const canvas=document.createElement('canvas');canvas.width=896;canvas.height=448;this.label=new T.CanvasTexture(canvas);this.label.colorSpace=T.SRGBColorSpace;
-   const label=new T.Mesh(new T.PlaneGeometry(4.65,2.32),new T.MeshBasicMaterial({map:this.label}));label.position.set(58,2.5,35.11);this.group.add(label);
-  }
   this.group.add(batch(pieces));
   const lightsMaterial=new T.MeshStandardMaterial({color:'#ffffff',vertexColors:false,emissive:'#fff2d0',emissiveIntensity:.35,roughness:.25});
   this.lights=new T.InstancedMesh(new T.SphereGeometry(.14,8,5),lightsMaterial,24);
   for(let i=0;i<24;i++){const a=i/24*Math.PI*2;this.dummy.position.set(41.83,3.65+Math.cos(a)*3.24,33+Math.sin(a)*3.24);this.dummy.updateMatrix();this.lights.setMatrixAt(i,this.dummy.matrix);this.lights.setColorAt(i,new T.Color().setHSL(i/24,.85,.58));}this.lights.computeBoundingSphere();this.group.add(this.lights);
-  this.bubbles=new T.InstancedMesh(new T.SphereGeometry(1,10,6),new T.MeshStandardMaterial({color:'#d7f5f6',roughness:.12,metalness:.15,transparent:true,opacity:.46,depthWrite:false}),this.bubbleCount);
-  this.bubbles.frustumCulled=false;for(let i=0;i<this.bubbleCount;i++)this.bubbles.setColorAt(i,new T.Color().setHSL(i/this.bubbleCount,.8,.7));this.group.add(this.bubbles);
+  // Unlit soap-film rims remain readable at night without lights or postprocessing.
+  const soap=new T.ShaderMaterial({transparent:true,depthWrite:false,
+   vertexShader:`varying vec3 vN;varying vec3 vEye;varying vec3 vTint;
+    void main(){vec4 p=modelViewMatrix*instanceMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vEye=-p.xyz;vTint=instanceColor;gl_Position=projectionMatrix*p;}`,
+   fragmentShader:`varying vec3 vN;varying vec3 vEye;varying vec3 vTint;
+    void main(){vec3 n=normalize(vN);float rim=pow(1.0-abs(dot(n,normalize(vEye))),2.0);
+     float shine=pow(max(0.0,dot(n,normalize(vec3(-.4,.65,.65)))),32.0);
+     vec3 film=mix(vTint,vec3(.78,.92,1.0),.1+.08*sin(n.y*12.0+n.x*6.0));
+     gl_FragColor=vec4(mix(film,vec3(1.0),shine*.9),.1+rim*.66+shine*.35);
+     #include <tonemapping_fragment>
+     #include <colorspace_fragment>
+    }`});
+  this.bubbles=new T.InstancedMesh(new T.SphereGeometry(1,16,10),soap,this.bubbleCount);
+  this.bubbles.name='Mill celebration bubbles';
+  this.bubbles.frustumCulled=false;for(let i=0;i<this.bubbleCount;i++)this.bubbles.setColorAt(i,new T.Color().setHSL(i/this.bubbleCount,.95,.48));this.group.add(this.bubbles);
  }
  update(q:MillQuest,now:number,owner?:T.Object3D){
   const seconds=now/1000;
@@ -102,14 +107,21 @@ export class MillQuestDecor {
   this.needle.position.x=T.MathUtils.damp(this.needle.position.x,50.7+(q.gate===0?-1:q.gate===2?1:0)*.35,1,1);
   const splashBranch=q.branches.findIndex(t=>t>0&&now-t<900);
   this.lights.visible=q.stage==='running';this.bubbles.visible=q.stage==='running'||q.stage==='flow'&&q.gate===2||splashBranch>=0;
-  if(this.bubbles.visible){for(let i=0;i<this.bubbleCount;i++){const t=(seconds*(.13+(i%5)*.015)+i/this.bubbleCount)%1,party=q.stage==='running';this.dummy.position.set((party?52:49)+Math.sin(i*8+t*3)*(party?2+t*4:1),party?12.5+t*8:.2+Math.sin(t*Math.PI)*1.8,(party?31:40.5)+Math.cos(i*5)*t*(party?5:2));if(!party&&splashBranch>=0){const age=(now-q.branches[splashBranch])/900;this.dummy.position.set(MILL_BRANCHES[splashBranch][0]+Math.sin(i*3)*age*1.2,MILL_BRANCHES[splashBranch][1]+Math.sin(age*Math.PI)*(.4+(i%3)*.15),MILL_BRANCHES[splashBranch][2]+Math.cos(i*5)*age+age*.6);}
-    this.dummy.scale.setScalar((party?.28:.055)*Math.sin(Math.PI*t)*(1+(i%4)*.3));this.dummy.updateMatrix();this.bubbles.setMatrixAt(i,this.dummy.matrix);}this.bubbles.instanceMatrix.needsUpdate=true;}
-  const wrong=q.rejectedAt>0&&now-q.rejectedAt<1800;
-  const signature=JSON.stringify([q.stage,q.branches.map(Boolean),q.gate,q.delivered,q.order,q.carried,wrong]);
-  if(this.label&&signature!==this.signature){this.signature=signature;const canvas=this.label.image as HTMLCanvasElement,ctx=canvas.getContext('2d')!;ctx.fillStyle='#203f43';ctx.fillRect(0,0,896,448);ctx.strokeStyle='#eed39a';ctx.lineWidth=8;ctx.strokeRect(8,8,880,432);ctx.textAlign='center';ctx.fillStyle='#fff0c9';ctx.font='bold 45px sans-serif';ctx.fillText('РАДУЖНАЯ МЕЛЬНИЦА',448,72);ctx.font='32px sans-serif';
-   const lines=q.stage==='idle'?['Запусти квест у рычага','Расчисти · настрой · загрузи','Награда: 6 очков']:q.stage==='clear'?['1 / 4 · Освободи ручей','Толкни три застрявшие веточки',`${q.branches.filter(Boolean).length} / 3`]:q.stage==='flow'?['2 / 4 · Настрой шлюз','Рычаг меняет силу потока','Удержи указатель в зелёной зоне']:q.stage==='bags'?['3 / 4 · Цветные мешочки',wrong?'Не тот цвет — мешочек возвращён':`Сейчас нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`,`Загружено: ${q.delivered} / 3`]:['4 / 4 · Ура, мельница работает!','Пузыри для всей полянки','Скоро можно будет начать снова'];
-   lines.forEach((line,i)=>ctx.fillText(line,448,142+i*52));
-   if(q.stage==='bags')q.order.forEach((color,i)=>{ctx.fillStyle=MILL_COLORS[color];ctx.beginPath();ctx.arc(300+i*148,352,42,0,Math.PI*2);ctx.fill();ctx.fillStyle='#183338';ctx.font='bold 32px sans-serif';ctx.fillText(i<q.delivered?'✓':String(i+1),300+i*148,364);if(i===q.delivered){ctx.strokeStyle='#ffffff';ctx.lineWidth=6;ctx.beginPath();ctx.arc(300+i*148,352,49,0,Math.PI*2);ctx.stroke();}});this.label.needsUpdate=true;
+  if(this.bubbles.visible){
+   const party=q.stage==='running',elapsed=Math.max(0,(now-q.deliveredAt)/1000);
+   this.bubbles.count=party?this.bubbleCount:24;
+   for(let i=0;i<this.bubbles.count;i++){
+    const t=((party?elapsed:seconds)*(.16+(i%5)*.013)+i/this.bubbles.count)%1;
+    // Emit beside the delivery funnel at eye level, in front of the facade.
+    // The old chimney plume started 12.5m up and disappeared above the camera.
+    this.dummy.position.set(MILL_HOPPER[0]+Math.sin(i*2.399+t*2)*(1.5+t*4),1.6+t*7,MILL_HOPPER[2]+1+Math.cos(i*5)*1.2+t*4);
+    if(!party){this.dummy.position.set(49+Math.sin(i*8+t*3),.2+Math.sin(t*Math.PI)*1.8,40.5+Math.cos(i*5)*t*2);
+     if(splashBranch>=0){const age=(now-q.branches[splashBranch])/900;this.dummy.position.set(MILL_BRANCHES[splashBranch][0]+Math.sin(i*3)*age*1.2,MILL_BRANCHES[splashBranch][1]+Math.sin(age*Math.PI)*(.4+(i%3)*.15),MILL_BRANCHES[splashBranch][2]+Math.cos(i*5)*age+age*.6);}
+    }
+    const fade=T.MathUtils.smoothstep(t,0,.07)*(1-T.MathUtils.smoothstep(t,.8,1));
+    this.dummy.scale.setScalar((party?.28+.075*(i%5):.055)*fade);this.dummy.updateMatrix();this.bubbles.setMatrixAt(i,this.dummy.matrix);
+   }
+   this.bubbles.instanceMatrix.needsUpdate=true;
   }
  }
 }

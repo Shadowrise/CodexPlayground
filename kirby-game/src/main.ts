@@ -1,3 +1,4 @@
+import {MillQuestHud} from './mill-quest-hud';
 import {PrankEffects} from './prank-effects';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
@@ -277,6 +278,7 @@ const fountain=new RainbowFountain();scene.add(fountain.group);
 const coaster=new Coaster();scene.add(coaster.group);
 const boats=new RiverBoats();scene.add(boats.group);
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
+const millHud=new MillQuestHud();
 const watermill=new Watermill();scene.add(watermill.group);
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
 const benches=new Benches();
@@ -659,7 +661,7 @@ renderer.setAnimationLoop((time: number) => {
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
     touch?.setInteraction(!occupied&&interaction?.includes('E —')?interaction:undefined);
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    setText(rideHint,interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : watermill.hint(millActor(character)).replace('(Q)',usingPad?'(X)':usingTouch?'(Толчок)':'(Q)') || (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
+    setText(rideHint,interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
@@ -745,6 +747,7 @@ renderer.setAnimationLoop((time: number) => {
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
   festivalTick();
+  millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'Толчок':'Q',playing&&!settingsOpen&&festivalView.hud.hidden);
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
   fruits.syncInstances();

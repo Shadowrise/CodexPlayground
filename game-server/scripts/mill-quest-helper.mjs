@@ -9,7 +9,7 @@ export async function finishMill(client,baseActor){
  send([49,0,40.5],[{type:'mill',action:{kind:'gate'}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.gate===1);
  await pause(3100);send([49,0,40.5]);
  const q=(await client.wait(m=>m.type==='room'&&m.room.millQuest?.stage==='bags')).room.millQuest;
- const positions=[[58,0,44],[62,0,48],[57,0,53]];
+ const positions=[[68,0,54],[53,0,65],[76,0,69]];
  const wrong=(q.order[0]+1)%3;send(positions[wrong],[{type:'mill',action:{kind:'pick',index:wrong}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.carried===wrong);
  send([56.5,0,39],[{type:'mill',action:{kind:'deliver'}}]);const rejected=await client.wait(m=>m.type==='room'&&m.room.millQuest?.rejected===wrong);assert.equal(rejected.room.millQuest.delivered,0);assert.equal(rejected.room.millQuest.stage,'bags');
  await pause(1250);

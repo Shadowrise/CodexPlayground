@@ -240,16 +240,6 @@ export class Watermill {
     if(action?.kind==='deliver')return `E — положить ${MILL_COLOR_NAMES[q.carried]} мешочек · Нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
     return '';
   }
-  hint(actor:MillActor){
-    const q=this.quest;if(!millNear({...actor,p:[actor.p[0],0,actor.p[2]]},MILL_LEVER.toArray(),25))return '';
-    if(q.stage==='running')return `Мельница работает · Новый квест через ${Math.max(1,Math.ceil((q.runningUntil-this.now)/1000))} с`;
-    if(q.stage==='idle')return '';
-    if(q.owner!==actor.id)return 'Другой игрок запускает мельницу — скоро твоя очередь';
-    if(this.now-q.rejectedAt<1800)return 'Не тот цвет! Мешочек мягко вернулся на своё место';
-    if(q.stage==='clear')return `1/4 · Толкни веточки в ручейке (Q) · ${q.branches.filter(Boolean).length}/3`;
-    if(q.stage==='flow')return '2/4 · Настрой рычагом поток: зелёная зона, 3 секунды';
-    return `3/4 · ${q.carried>=0?'Неси мешочек к воронке':'Подойди к мешочку, чтобы подхватить'} · Порядок: ${q.order.map(i=>MILL_COLOR_NAMES[i]).join(' → ')}`;
-  }
   update(dt:number,owner?:T.Object3D) {
     this.elapsed+=dt;
     this.openness=T.MathUtils.damp(this.openness,this.running||this.quest.stage==='bags'?1:this.quest.stage==='flow'?[.22,1,1.5][this.quest.gate]:0,2.6,dt);

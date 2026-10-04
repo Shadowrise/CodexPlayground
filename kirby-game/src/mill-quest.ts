@@ -2,7 +2,7 @@
 export const MILL_QUEST_LEVER=[49,0,40.5] as const;
 export const MILL_INTAKE=[42.8,-.12,37.7] as const;
 export const MILL_BRANCHES=[[42.8,-.12,34.5],[42.8,-.12,37.5],[42.8,-.12,40.5]] as const;
-export const MILL_BAGS=[[58,0,44],[62,0,48],[57,0,53]] as const;
+export const MILL_BAGS=[[68,0,54],[53,0,65],[76,0,69]] as const;
 export const MILL_HOPPER=[56.5,0,39] as const;
 export const MILL_COLORS=['#ef6579','#f4c64c','#61b9ee'] as const;
 export const MILL_COLOR_NAMES=['розовый','золотой','голубой'] as const;

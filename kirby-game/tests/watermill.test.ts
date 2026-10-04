@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { InstancedMesh, Mesh, Vector3 } from 'three';
+import { InstancedMesh, Matrix4, Mesh, Vector3 } from 'three';
 import {newMillQuest} from '../src/mill-quest';
 import { Watermill, MILL_SITE, MILL_LEVER, createWheelWaterGeometry } from '../src/watermill';
 
@@ -49,4 +49,15 @@ test('mill batches detailed parts to keep draw calls bounded',()=>{
   const mill=new Watermill();let draws=0,instances=0;
   mill.group.traverse(o=>{if(o instanceof Mesh)draws++;if(o instanceof InstancedMesh)instances+=o.count;});
   assert(instances>600);assert(draws<105);
+});
+
+test('celebration bubbles appear near the funnel at player height, including at completion',()=>{
+ const mill=new Watermill(),now=10000;
+ mill.setQuest({...newMillQuest(),stage:'running',deliveredAt:now,runningUntil:now+60000},now);
+ mill.update(.016);
+ const bubbles=mill.group.getObjectByName('Mill celebration bubbles') as InstancedMesh;
+ assert(bubbles.visible);assert.equal(bubbles.count,96);
+ const matrix=new Matrix4(),p=new Vector3();let low=0;
+ for(let i=0;i<bubbles.count;i++){bubbles.getMatrixAt(i,matrix);p.setFromMatrixPosition(matrix);if(p.y<4.5&&matrix.elements[0]>.1)low++;assert(p.z>=38.8);}
+ assert(low>=20,'plenty of visible bubbles near the player, not only above the roof');
 });

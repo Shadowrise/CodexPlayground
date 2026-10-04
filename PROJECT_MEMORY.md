@@ -510,3 +510,9 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 - Sack tied to animated Right_arm palm, only right shoulder posed. 96 instanced rainbow bubbles (was24), longer major-key victory fanfare.
 - Reported wrong-blue-then-yellow delivery did not reproduce in shared reducer/browser/local two-client Worker: rejected sack leaves count unchanged. Added regression and explicit board required colour / rejection / current-step outline, plus carried colour in action prompt.
 - Client build, Worker tsc, 9 targeted tests, complete browser quest (including wrong sack), two-client quest smoke passed. Visual screenshots in TEMP kirby-mill-carry/channel/bubbles.png. No commit/deploy requested for these refinements yet.
+
+### Mill field sacks and event HUD (2026-10-04, local)
+- Sacks moved to (68,54), (53,65), (76,69): 19-36m from hopper, dry ground checked. sceneryClearance reserves space around sacks for trees/decor. Client and Worker share these targets; deploy both when publishing.
+- Removed quest instruction board from scene. MillQuestHud reuses starfall event-hud CSS and shows stage, flow timing, coloured delivery sequence/rejection. Only quest owner sees it; hidden in menus/settings and while starfall banner is active; celebration message lasts8s. Action prompt remains separate.
+- Bubbles previously at chimney y12.5..20.5 outside normal view. 96 bubbles now rise beside hopper y1.6..8.6, with cheap unlit rainbow soap-film rim/highlight shader, single instanced draw, no new lights. Nonfinale splashes limited24.
+- Client build, Worker tsc, quest/watermill tests passed; real browser full quest incl wrong sack passed without shader/errors. Final camera screenshot now clearly shows bubbles; HUD checked desktop and 844x390. Test updated to assert bubbles near player height.
