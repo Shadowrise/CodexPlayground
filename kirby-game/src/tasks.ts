@@ -1,5 +1,6 @@
 import {SCORE_ACTIONS,type ScoreAction,type ActiveScoreAction} from './score';
 export const TASK_NAMES:Record<ActiveScoreAction,string>={
+ boat:'Проплыть круг на лодочке',
  fountain:'Покупаться в радужном фонтане',
  skyStar:'Добыть звёздочку Небесной тропы',mill:'Повернуть рычаг мельницы',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',trampoline:'Прыгнуть на батуте в лабиринте',star:'Найти звёздочку в лабиринте',firefly:'Покататься на светлячке',
 };

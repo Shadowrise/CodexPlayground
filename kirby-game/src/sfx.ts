@@ -118,6 +118,16 @@ export class SoundEffects {
     try { voice.source.stop(now + .04); } catch { return; }
   }
 
+  private boatWaterAfter=0;
+  updateBoat(dt:number,riding:boolean){
+    if(!riding){this.boatWaterAfter=0;return;}
+    this.boatWaterAfter-=dt;if(this.boatWaterAfter>0)return;this.boatWaterAfter=2.8+Math.random()*1.4;
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const key='boat-water';if(!this.buffers.has(key)){const samples=waterSamples('paddle'),buffer=ctx.createBuffer(1,samples.length,22050);buffer.getChannelData(0).set(samples);this.buffers.set(key,buffer);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;source.playbackRate.value=.7;gain.gain.value=.09;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
+  }
+
   updateWater(dt:number,swimming:boolean,moving:boolean,available=true){
     const kind=this.waterEvents.update(dt,swimming,moving,available),ctx=this.context;
     if(!kind || !ctx || !this.enabled || document.hidden || ctx.state!=='running')return;

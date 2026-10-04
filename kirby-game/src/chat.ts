@@ -25,8 +25,14 @@ export class MeadowChat{
    window.visualViewport?.addEventListener('resize',()=>this.fitViewport());
    window.visualViewport?.addEventListener('scroll',()=>this.fitViewport());
   }
-  this.composer.addEventListener('submit',e=>{e.preventDefault();const text=chatText(this.input.value);if(text)send(text);this.close();});
-  this.input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();this.close();}if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.composer.requestSubmit();}});
+  this.composer.addEventListener('submit',e=>{
+   e.preventDefault();const text=chatText(this.input.value);if(text)send(text);
+   if(this.mobile){
+    // Keep the conversation visible; dismiss only the on-screen keyboard.
+    this.input.value='';this.input.blur();this.fitViewport();
+   }else this.close();
+  });
+  this.input.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){e.preventDefault();if(!this.mobile)this.close();}if(e.key==='Enter'&&!e.isComposing){e.preventDefault();this.composer.requestSubmit();}});
  }
  private fitViewport(){
   if(!this.mobile||!this.open)return;

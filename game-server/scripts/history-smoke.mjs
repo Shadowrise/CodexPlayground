@@ -16,7 +16,7 @@ assert.equal((await post(report)).status,204);assert.equal((await get(name)).row
 assert.equal((await post({...report,seq:2,score:20,tasksDone:5,activeMs:40000,end:true})).status,204);
 await post({...report,seq:1});let row=(await get(name)).rows[0];assert.equal(row.score,20);assert.equal(row.active_ms,40000);assert.equal(row.tasks_done,5);assert.equal(row.status,'left');assert.equal(row.device.type,'phone');
 assert.equal((await post({...report,tasksDone:99})).status,400);
-const onlineName='Сеть '+Date.now().toString().slice(-6),socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-5&variant=14&name='+encodeURIComponent(onlineName));
+const onlineName='Сеть '+Date.now().toString().slice(-6),socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-6&variant=14&name='+encodeURIComponent(onlineName));
 const messages=[];socket.onmessage=e=>{if(e.data!=='pong')messages.push(JSON.parse(e.data));};
 const wait=async f=>{for(let i=0;i<80;i++){const value=await f();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw Error('Timed out');};
 try{

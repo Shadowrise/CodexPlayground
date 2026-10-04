@@ -1,4 +1,4 @@
-export const SCORE_ACTIONS=['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','firefly','skyStar','fountain'] as const;
+export const SCORE_ACTIONS=['mill','sleep','coaster','bench','balloon','treehouse','swing','leaves','trampoline','star','firefly','skyStar','fountain','boat'] as const;
 export type ActiveScoreAction=typeof SCORE_ACTIONS[number];
 // Keep previously earned lake points and accept older saves / connected clients.
 // The retired action is no longer awarded, listed, or required for the finale.

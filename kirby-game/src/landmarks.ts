@@ -10,6 +10,7 @@ import { HOME_SITE } from './home-site';
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
 import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, dryGround } from './pond-layout';
+import {outsideBoatRoute} from './boat-route';
 export const rockHasGround=dryGround;
 export function sceneryClearance(x:number,z:number,padding=0) {
   if(BRIDGES.some(s=>{const dx=x-s.x,dz=z-s.z,cos=Math.cos(s.yaw),sin=Math.sin(s.yaw);return Math.abs(dx*cos-dz*sin)<10+padding&&Math.abs(dx*sin+dz*cos)<2.8+padding;}))return false;
@@ -82,7 +83,8 @@ export function createLandmarks() {
         const x=i-5,y=deckHeight(x);
         put(g,'pole','#77553b',x,y+.45,z,.075,1.2,.075);
         put(g,'ball','#d8b77a',x,y+1.13,z,.12,.08,.12);
-        if(i%2===0)put(g,'pole','#634d38',x,(y-.8)/2,z,.1,y+.8,.1);
+        const wx=site.x+(x*Math.cos(site.yaw)+z*Math.sin(site.yaw))*POND_SCALE,wz=site.z+(-x*Math.sin(site.yaw)+z*Math.cos(site.yaw))*POND_SCALE;
+        if(i%2===0&&outsideBoatRoute(wx,wz,.3))put(g,'pole','#634d38',x,(y-.8)/2,z,.1,y+.8,.1);
       }
   }
   for(const site of LANDMARKS) {
@@ -93,6 +95,7 @@ export function createLandmarks() {
       for(let i=0;i<36;i++){const p=contour[Math.floor(i*80/35)];rock(g,p.x/POND_SCALE*1.045,p.y/POND_SCALE*1.045,.4+(i%4)*.12);}
       for(let i=0;i<8;i++) {
         const a=i*2.4,x=Math.cos(a)*7,z=Math.sin(a)*4;
+        if(!outsideBoatRoute(site.x+x*POND_SCALE,site.z+z*POND_SCALE,1.15*POND_SCALE))continue;
         put(g,'ball','#4b8c53',x,WATER_Y+.025,z,.7,.055,.55);
         for(let j=0;j<5;j++) {const b=j*1.256;put(g,'ball','#f4b6ca',x+Math.cos(b)*.16,WATER_Y+.14,z+Math.sin(b)*.16,.2,.12,.1,0,-b);}
         put(g,'ring','#95d8d6',x,WATER_Y+.015,z,1.1,1.1,1.1,Math.PI/2);
