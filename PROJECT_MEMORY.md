@@ -522,3 +522,6 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 
 ### Mill channel water (2026-10-04)
 - Branch channel now shares the exact wheel/millrace ShaderMaterial. Pressure drives all ripples together: idle/blocked stops, low flow drifts, excessive pressure speeds up. Integrated phase avoids snapping/backward ripples when pressure changes; near-zero flow settles fully. No new geometry/draw calls/textures. Client-only change.
+
+### Grounded mill hopper (2026-10-04)
+- Lowered funnel bowl/rim by0.35m (rim1.55m), outlet now touches y0 and overlaps bowl neck. Four posts extended to1.42m so they physically enter cone wall; moved rivets and delivery drop animation with lowered bowl. Client visual change only.

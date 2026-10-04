@@ -51,12 +51,13 @@ export class MillQuestDecor {
    for(let j=0;j<7;j++)box(pieces,'#d8bd87',[MILL_BAGS[i][0]-.65+j*.22,.052,MILL_BAGS[i][2]],[.04,.02,1.5]);
   }
   const hopperParts:T.Mesh[]=[];
-  for(const x of [-.72,.72])for(const z of [-.6,.6])rod(hopperParts,'#86613f',[x,0,z],[x,1.35,z],.1);
-  part(hopperParts,new T.CylinderGeometry(1.05,.28,.9,16,1,true),'#82b7ab',[0,1.45,0]);ring(hopperParts,'#f2d18b',[0,1.9,0],1.06,.08);
-  part(hopperParts,new T.CylinderGeometry(.25,.25,.65,12),'#aa9a6a',[0,.69,0]);
-  for(let i=0;i<12;i++){const a=i*Math.PI/6;ball(hopperParts,'#ffe3a6',[Math.sin(a)*.8,1.67,Math.cos(a)*.8],[.04,.04,.04]);}
+  // Legs enter the tapered bowl; the outlet reaches the ground without a gap.
+  for(const x of [-.72,.72])for(const z of [-.6,.6])rod(hopperParts,'#86613f',[x,0,z],[x,1.42,z],.1);
+  part(hopperParts,new T.CylinderGeometry(1.05,.28,.9,16,1,true),'#82b7ab',[0,1.1,0]);ring(hopperParts,'#f2d18b',[0,1.55,0],1.06,.08);
+  part(hopperParts,new T.CylinderGeometry(.25,.25,.66,12),'#aa9a6a',[0,.33,0]);
+  for(let i=0;i<12;i++){const a=i*Math.PI/6;ball(hopperParts,'#ffe3a6',[Math.sin(a)*.84,1.32,Math.cos(a)*.84],[.04,.04,.04]);}
   this.hopper=batch(hopperParts);(this.hopper.material as T.MeshStandardMaterial).side=T.DoubleSide;this.hopper.position.fromArray(MILL_HOPPER);this.group.add(this.hopper);
-  // Gauge with three distinct coloured zones, a pointer and a framed illustrated board.
+  // Gauge with three distinct coloured zones and a pointer.
   const gaugePos=new T.Vector3(50.7,1.5,40.5);
   for(let i=0;i<3;i++){box(pieces,['#77aadc','#78d9a0','#f18578'][i],[gaugePos.x+(i-1)*.35,gaugePos.y,gaugePos.z],[.32,.72,.18]);}
   this.needle=new T.Mesh(new T.ConeGeometry(.12,.27,3),new T.MeshStandardMaterial({color:'#fff4c9'}));this.needle.rotation.z=Math.PI;this.needle.position.copy(gaugePos).add(new T.Vector3(0,.58,.12));this.group.add(this.needle);
@@ -101,7 +102,7 @@ export class MillQuestDecor {
      arm.localToWorld(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
     }else{this.scratch.set(1.3*size,.8*size,.25*size).applyQuaternion(owner.quaternion);b.position.copy(owner.position).add(this.scratch);}
    }
-   else if(dropping){const t=(now-q.deliveredAt)/650;b.position.set(MILL_HOPPER[0],2.9-t*2,MILL_HOPPER[2]);b.scale.setScalar(1-t*.85);b.rotation.y=t*2;}
+   else if(dropping){const t=(now-q.deliveredAt)/650;b.position.set(MILL_HOPPER[0],2.55-t*2,MILL_HOPPER[2]);b.scale.setScalar(1-t*.85);b.rotation.y=t*2;}
    else if(q.rejected===i&&now-q.rejectedAt<1100){const t=(now-q.rejectedAt)/1100;b.position.lerpVectors(new T.Vector3(...MILL_HOPPER),new T.Vector3(...MILL_BAGS[i]),t);b.position.y=1.6*(1-t)+Math.sin(t*Math.PI)*2;b.rotation.z=Math.sin(t*12)*.4;}
   });
   this.needle.position.x=T.MathUtils.damp(this.needle.position.x,50.7+(q.gate===0?-1:q.gate===2?1:0)*.35,1,1);
