@@ -305,7 +305,7 @@ const destinations:Destination[]=[
  ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
-const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((s:{kind:string})=>s.kind==='bush'||s.kind==='stump'),...coaster.supports.map(s=>({x:s.base.x,z:s.base.z,radius:2}))];
+const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((s:{kind:string})=>s.kind==='bush'||s.kind==='stump')];
 const fruits = new FruitWorld(fruitObstacles);
 fruits.group.name='Фрукты на поляне';
 // Clear only the small footprints beneath fruit, keeping surrounding grass intact.

@@ -1,7 +1,5 @@
 import {fitRider,restoreRider} from './rider-size';
 import { DEPOT_PLATFORM, DEPOT_STEPS } from './depot-floor';
-import {dryGround} from './pond-layout';
-import {MEADOW_HALF_SIZE} from './world-bounds';
 import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -34,7 +32,6 @@ export class Coaster {
   readonly curve=createCoasterCurve();
   readonly length=this.curve.getLength();
   private frames:T.Quaternion[]=[];
-  readonly supports:{rail:T.Vector3;elbow:T.Vector3;base:T.Vector3;distance:number;side:number}[]=[];
   private carts:{group:T.Group; distance:number; wait:number; speed:number; wheels:T.Object3D[]; occupied:boolean}[]=[];
   private passengerMixers:T.AnimationMixer[]=[];
   private kirbysAdded=false;
@@ -111,43 +108,6 @@ export class Coaster {
     shadowGeometry.setIndex(indices);shadowGeometry.computeVertexNormals();shadowGeometry.computeBoundingSphere();
     const trackShadow=new T.Mesh(shadowGeometry,new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:T.DoubleSide}));
     trackShadow.name='Stable continuous coaster shadow';trackShadow.castShadow=true;this.group.add(trackShadow);
-    // Each assembly connects one actual rail to a grounded footing. Outboard arms
-    // keep the columns away from passengers, even when a loop is upside down.
-    const passengerHeads=Array.from({length:1200},(_,i)=>{const pose=this.pose(this.length*i/1200);return new T.Vector3(0,7.41,0).applyQuaternion(pose.q).add(pose.p);});
-    const segment=new T.Line3(),closest=new T.Vector3();
-    const clear=(a:T.Vector3,b:T.Vector3)=>{segment.set(a,b);return passengerHeads.every(p=>segment.closestPointToPoint(p,true,closest).distanceToSquared(p)>3.4**2);};
-    const dryFooting=(x:number,z:number)=>Math.max(Math.abs(x),Math.abs(z))<MEADOW_HALF_SIZE-1.6&&dryGround(x,z,1.6);
-    for(let d=0;d<this.length;d+=72){
-      const {p,q}=this.pose(d);
-      for(const side of [-1,1]){
-        const rail=p.clone().add(new T.Vector3(side*1.2,0,0).applyQuaternion(q));
-        supportSearch: for(const reach of [5.5,8,11]){
-          const elbow=p.clone().add(new T.Vector3(side*reach,0,0).applyQuaternion(q));
-          if(elbow.y<.4)continue;
-          const footings=[new T.Vector3(elbow.x,-.02,elbow.z)];
-          // Keep a vertical column on the nearest dry bank and extend its braced
-          // head back to the same rail attachment. Never leave concrete in water.
-          if(!dryFooting(elbow.x,elbow.z))for(let radius=2;radius<=28;radius+=2)for(let j=0;j<16;j++){
-            const a=j*Math.PI/8,x=elbow.x+Math.cos(a)*radius,z=elbow.z+Math.sin(a)*radius;
-            if(dryFooting(x,z))footings.push(new T.Vector3(x,-.02,z));
-          }
-          for(const base of footings){
-          if(!dryFooting(base.x,base.z))continue;
-          elbow.x=base.x;elbow.z=base.z;
-          // Nearby turns can be far apart along the track but share the same ground.
-          // Keep separate assemblies apart, while allowing the two legs of one pair.
-          if(this.supports.some(s=>Math.hypot(s.base.x-base.x,s.base.z-base.z)<(s.distance===d?3:12)))continue;
-          if(!clear(rail,elbow)||!clear(elbow,base))continue;
-          this.supports.push({rail,elbow,base,distance:d,side});
-          add(box,'#a1a39a',base.clone().setY(.12),new T.Vector3(1.7,.24,1.7));
-          beam(base,elbow,.2,'#426a70');beam(elbow,rail,.18,'#426a70');
-          const braceBase=base.clone().lerp(elbow,.78),braceEnd=elbow.clone().lerp(rail,.7);
-          if(clear(braceBase,braceEnd))beam(braceBase,braceEnd,.12,'#577e7f');
-          break supportSearch;
-          }
-        }
-      }
-    }
     // Open boarding platform: no canopy obscures the rider or follow camera.
     for(const surface of [DEPOT_PLATFORM,...DEPOT_STEPS])add(box,surface===DEPOT_PLATFORM?'#b9a582':'#a7987c',new T.Vector3(surface.x,surface.height/2,surface.z),new T.Vector3(surface.width,surface.height,surface.depth));
     for(const x of [-11,-5,5,11]) {

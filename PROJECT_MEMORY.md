@@ -516,3 +516,6 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 - Removed quest instruction board from scene. MillQuestHud reuses starfall event-hud CSS and shows stage, flow timing, coloured delivery sequence/rejection. Only quest owner sees it; hidden in menus/settings and while starfall banner is active; celebration message lasts8s. Action prompt remains separate.
 - Bubbles previously at chimney y12.5..20.5 outside normal view. 96 bubbles now rise beside hopper y1.6..8.6, with cheap unlit rainbow soap-film rim/highlight shader, single instanced draw, no new lights. Nonfinale splashes limited24.
 - Client build, Worker tsc, quest/watermill tests passed; real browser full quest incl wrong sack passed without shader/errors. Final camera screenshot now clearly shows bubbles; HUD checked desktop and 844x390. Test updated to assert bubbles near player height.
+
+### Unsupported coaster rails (2026-10-04, local)
+- User requested zero track supports. Removed entire support generation (columns, braces, concrete footings), placement search and support metadata; fruit placement no longer reserves these absent footings. Removed obsolete support-specific tests. Depot floor/sign structures and track ties remain.
