@@ -14,7 +14,7 @@ export class MillQuestDecor {
  private dummy=new T.Object3D();
  private scratch=new T.Vector3();
  private readonly bubbleCount=96;
- constructor(){
+ constructor(water:T.ShaderMaterial){
   this.group.name='Rainbow mill quest';
   const pieces:T.Mesh[]=[];
   const part=(list:T.Mesh[],g:T.BufferGeometry,color:string,p:number[],scale=[1,1,1])=>{const m=new T.Mesh(g,new T.MeshStandardMaterial({color}));m.position.fromArray(p);m.scale.fromArray(scale);list.push(m);return m;};
@@ -30,7 +30,7 @@ export class MillQuestDecor {
   const [intakeX,,intakeZ]=MILL_INTAKE;
   box(pieces,'#758b88',[intakeX,-.49,intakeZ],[2.6,.22,11.6]);
   for(const x of [intakeX-1.35,intakeX+1.35])for(let j=0;j<12;j++)box(pieces,j%2?'#9baba1':'#879b96',[x,-.23,intakeZ-5.2+j*.95],[.26,.46,.85]);
-  const stream=new T.Mesh(new T.PlaneGeometry(2.45,11.2),new T.MeshStandardMaterial({color:'#49b3c3',roughness:.23,metalness:.18,transparent:true,opacity:.86}));stream.rotation.x=-Math.PI/2;stream.position.set(intakeX,-.31,intakeZ);this.group.add(stream);
+  const stream=new T.Mesh(new T.PlaneGeometry(2.45,11.2),water);stream.name='Mill branch channel water';stream.rotation.x=-Math.PI/2;stream.position.set(intakeX,-.31,intakeZ);this.group.add(stream);
   for(let i=0;i<3;i++){
    const twig:T.Mesh[]=[];rod(twig,'#89603d',[-1.15,0,-.17],[1.15,.12,.17],.13);
    rod(twig,'#a57b4c',[-.25,.05,0],[.32,.19,.65],.065);rod(twig,'#a57b4c',[.4,.09,.08],[.75,.26,-.55],.057);

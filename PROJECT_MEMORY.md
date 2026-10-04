@@ -519,3 +519,6 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 
 ### Unsupported coaster rails (2026-10-04, local)
 - User requested zero track supports. Removed entire support generation (columns, braces, concrete footings), placement search and support metadata; fruit placement no longer reserves these absent footings. Removed obsolete support-specific tests. Depot floor/sign structures and track ties remain.
+
+### Mill channel water (2026-10-04)
+- Branch channel now shares the exact wheel/millrace ShaderMaterial. Pressure drives all ripples together: idle/blocked stops, low flow drifts, excessive pressure speeds up. Integrated phase avoids snapping/backward ripples when pressure changes; near-zero flow settles fully. No new geometry/draw calls/textures. Client-only change.

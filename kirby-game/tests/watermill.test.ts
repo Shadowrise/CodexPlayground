@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { InstancedMesh, Matrix4, Mesh, Vector3 } from 'three';
+import { InstancedMesh, Matrix4, Mesh, ShaderMaterial, Vector3 } from 'three';
 import {newMillQuest} from '../src/mill-quest';
 import { Watermill, MILL_SITE, MILL_LEVER, createWheelWaterGeometry } from '../src/watermill';
 
@@ -60,4 +60,21 @@ test('celebration bubbles appear near the funnel at player height, including at 
  const matrix=new Matrix4(),p=new Vector3();let low=0;
  for(let i=0;i<bubbles.count;i++){bubbles.getMatrixAt(i,matrix);p.setFromMatrixPosition(matrix);if(p.y<4.5&&matrix.elements[0]>.1)low++;assert(p.z>=38.8);}
  assert(low>=20,'plenty of visible bubbles near the player, not only above the roof');
+});
+
+test('channel shares wheel ripples: stopped, flowing and faster without phase jumps',()=>{
+ const mill=new Watermill();
+ const channel=mill.group.getObjectByName('Mill branch channel water') as Mesh;
+ const wheel=mill.group.getObjectByName('Water over wheel scoops') as Mesh;
+ assert.equal(channel.material,wheel.material);
+ const shader=channel.material as ShaderMaterial;
+ mill.update(1);assert.equal(shader.uniforms.phase.value,0);
+ const settle=(gate:number)=>{mill.setQuest({...newMillQuest(),stage:'flow',gate},1000);for(let i=0;i<80;i++)mill.update(.1);};
+ settle(0);let phase=shader.uniforms.phase.value;mill.update(.1);const slow=shader.uniforms.phase.value-phase;
+ settle(2);phase=shader.uniforms.phase.value;mill.update(.1);const fast=shader.uniforms.phase.value-phase;assert(fast>slow*5);
+ mill.setQuest(newMillQuest(),2000);phase=shader.uniforms.phase.value;mill.update(.1);
+ assert(shader.uniforms.phase.value>=phase,'reducing pressure cannot make water run backwards');
+ for(let i=0;i<80;i++)mill.update(.1);phase=shader.uniforms.phase.value;mill.update(2);assert.equal(shader.uniforms.phase.value,phase);
+ const uv=channel.geometry.getAttribute('uv'),position=channel.geometry.getAttribute('position');
+ assert(uv.getY(0)>uv.getY(2));assert(position.getY(0)>position.getY(2),'decreasing V goes downstream (+Z after rotation)');
 });
