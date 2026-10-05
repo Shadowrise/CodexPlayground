@@ -528,3 +528,18 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 
 ### Mill grain crates (2026-10-04, local)
 - Replaced five pale egg-like decorative sacks left of hopper with two open wooden grain crates: individual planks, corner posts, iron straps/rivets, wheat emblems and48 visible grain kernels per crate. Reuses existing mill instanced geometry/material batches; no new textures/lights.
+
+### Surface shimmer fixes (2026-10-05, local)
+- Kirby-home roof shimmer traced to differently coloured tiles overlapping in nearly coplanar planes (0.55 length at0.51 spacing). Same issue on treehouse/watermill roofs and fountain mosaic. Shared roofTileSpan/roofTilePitch adds narrow side joints and physical course step; home/treehouse have backing sheets. Fountain mosaic tiles narrowed.
+- prepareSurfaceTextures runs during existing material setup, once per static surface texture: linear magnification, trilinear mipmaps and bounded2x anisotropy (preserves existing4x; device cap). Does not touch render targets, depth, video, compressed/cube or nonbyte data textures; no per-frame traversal or postprocessing. Fixes nearest-filtered pond water too.
+- Build and12 relevant tests pass. Geometry regression inspects actual instanced tiles across3 roofs for nearly coplanar overlap. Browser isolated close-up verified (TEMP/kirby-home-stable-roof.png),29draws13986triangles, no errors. Not committed/published yet.
+
+## Hardware-filtered shadows (2026-10-05, local)
+
+- User reports large shadow edges shimmering and tiny shadows blinking. Existing texel snapping, stable orbit up vector, proxies, CSM fade and PCFSoft were already present; do not claim those were newly fixed.
+- `shadow-filter.ts`: keep 2x1024 maps, 200m distance, same casters/passes. Attach comparison DepthTextures (UnsignedInt/24bit, linear, LessEqual) instead of shadow depth renderbuffers. Retain packed RGBA target for normal Three rendering and diagnostic fallback. No extra render pass or temporal history.
+- Local material hook uses a continuous 5x5 weighted tent with 9 hardware bilinear depth comparisons instead of PCFSoft's 16 packed-depth fetch/unpacks. Hook preserves CSM and existing surface shader callbacks, leaves spot/point shadow code alone, no global shadow shader replacement. Shadows still track sun/moon continuously.
+- StableCSM owns shared filter-enabled uniform and prepared depth samplers. Optional profiler can compare previous PCFSoft; old PCF experiments now disable hardware filtering and restore it. Normal game defaults enabled.
+- Controlled 90-frame moving-sun test (big spheres and small casters), Chrome AND stock Firefox: peak pixel jump 21 ->13 (~38% reduction), summed temporal change 296448 ->295452 (largely unchanged); not proof of eliminating all shimmer. Screenshot `%TEMP%/kirby-shadow-filter.png`. Repro `scripts/shadow-filter-browser.mjs` uses a dedicated Vite5174, no main game state.
+- Full frozen-scene Chrome A/B (two views, 1280x800, gl.finish): new6.8/6.4ms vs old6.5/6.8; new12.0/12.1 vs old12.2/11.8ms. Same640/1586 draws and2.45m/6.43m triangles respectively. No meaningful measured regression on this machine; not a mobile FPS guarantee. `%TEMP%/kirby-shadow-scene.png` reviewed; errors empty.
+- Production build and9 targeted shadow/day/surface tests pass. Previous roof/texture fixes and these shadow changes are LOCAL, no commit/push requested yet. Root `.wrangler/` remains untracked and must not be committed.

@@ -32,7 +32,8 @@ export class RainbowFountain {
   mesh(new T.CylinderGeometry(11.2,11.8,.12,96),stone,0,.06);
   mesh(new T.CylinderGeometry(9.6,9.6,.09,96),new T.MeshStandardMaterial({color:'#538b9c',roughness:.32}),0,.14);
   ring(9.65,.22,.23,stone);ring(10.75,.045,.14,gold);ring(11.5,.035,.06,gold);
-  const tile=new T.BoxGeometry(.43,.035,.48),bead=new T.SphereGeometry(.1,8,6);
+  // Narrow joints keep neighbouring mosaic tiles from sharing the same top plane.
+  const tile=new T.BoxGeometry(.39,.035,.4),bead=new T.SphereGeometry(.1,8,6);
   for(let row=0;row<3;row++)for(let i=0;i<140;i++){
    const a=i/140*Math.PI*2+(row%2)*.023,r=10+row*.43;
    const m=mesh(tile,enamel[(Math.floor(i/20)+row)%7],Math.cos(a)*r,.15,Math.sin(a)*r);m.rotation.y=-a;

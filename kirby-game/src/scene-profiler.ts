@@ -1,5 +1,5 @@
 import * as T from 'three';
-import type {CSM} from 'three/addons/csm/CSM.js';
+import type {StableCSM} from './stable-shadows';
 
 type Sample={name:string;ms:number;cpuMs:number;calls:number;triangles:number;lines:number;gain?:number;baselineMs?:number;baselineAfterMs?:number;stable?:boolean};
 type Toggle={name:string;apply:()=>()=>void};
@@ -13,7 +13,7 @@ export class SceneProfiler{
  private live=document.createElement('div');
  private lastLive=0;
  private report:unknown;
- constructor(private renderer:T.WebGLRenderer,private scene:T.Scene,private camera:T.Camera,private allowed:()=>boolean,private shadows:CSM){
+ constructor(private renderer:T.WebGLRenderer,private scene:T.Scene,private camera:T.Camera,private allowed:()=>boolean,private shadows:StableCSM){
   this.panel.style.cssText='position:fixed;left:8px;top:90px;z-index:100000;max-height:70vh;overflow:auto;background:#111e;color:#fff;padding:12px;border:1px solid #87baff;border-radius:10px;font:12px/1.5 monospace;max-width:min(600px,90vw);pointer-events:auto';
   const heading=document.createElement('strong');heading.textContent='Диагностика FPS';
   const note=document.createElement('div');note.textContent='Одиночная игра: посмотри на проблемное место и запусти замер. Сцена временно замрёт.';
@@ -22,7 +22,7 @@ export class SceneProfiler{
   this.output.style.cssText='white-space:pre-wrap;margin:8px 0 0';
   this.panel.append(heading,note,this.live,run,save,this.output);document.body.append(this.panel);
   // Available to the local browser benchmark; never installed without the opt-in flag.
-  Object.assign(window,{kirbyPerformance:{run:()=>this.run(),scene,camera,renderer}});
+  Object.assign(window,{kirbyPerformance:{run:()=>this.run(),scene,camera,renderer,shadows}});
  }
  frame(updateMs:number,renderMs:number){
   if(performance.now()-this.lastLive<500)return;this.lastLive=performance.now();
@@ -38,6 +38,10 @@ export class SceneProfiler{
   const group=(name:string,objects:T.Object3D[]):Toggle=>({name,apply:()=>this.hide(objects)});
   const noCasting=(name:string,roots:T.Object3D[]):Toggle=>({name,apply:()=>{const objects=new Set<T.Object3D>();for(const root of roots)root.traverse(o=>{if(o.castShadow)objects.add(o);});objects.forEach(o=>o.castShadow=false);return ()=>objects.forEach(o=>o.castShadow=true);}});
   const cases:Toggle[]=[
+   {name:'Прежний PCFSoft без аппаратного сглаживания (сравнение)',apply:()=>{
+    const enabled=this.shadows.filterEnabled.value;this.shadows.filterEnabled.value=false;
+    return ()=>{this.shadows.filterEnabled.value=enabled;};
+   }},
    {name:'Прежняя дальность теней 300 метров (сравнение)',apply:()=>{
     const distance=this.shadows.maxFar;this.shadows.maxFar=300;this.shadows.updateFrustums();this.shadows.update();
     return ()=>{this.shadows.maxFar=distance;this.shadows.updateFrustums();this.shadows.update();};
@@ -50,15 +54,15 @@ export class SceneProfiler{
    }},
    {name:'Обычный фильтр без широкого размытия (сравнение)',apply:()=>{
     const type=this.renderer.shadowMap.type,lights=all.filter((o):o is T.DirectionalLight=>o instanceof T.DirectionalLight);
-    const radii=lights.map(light=>light.shadow.radius);
+    const radii=lights.map(light=>light.shadow.radius),enabled=this.shadows.filterEnabled.value;this.shadows.filterEnabled.value=false;
     this.renderer.shadowMap.type=T.PCFShadowMap;lights.forEach(light=>light.shadow.radius=1);
-    return ()=>{this.renderer.shadowMap.type=type;lights.forEach((light,i)=>light.shadow.radius=radii[i]);};
+    return ()=>{this.shadows.filterEnabled.value=enabled;this.renderer.shadowMap.type=type;lights.forEach((light,i)=>light.shadow.radius=radii[i]);};
    }},
    {name:'Прежний ступенчатый фильтр теней (сравнение)',apply:()=>{
     const type=this.renderer.shadowMap.type,lights=all.filter((o):o is T.DirectionalLight=>o instanceof T.DirectionalLight);
-    const radii=lights.map(light=>light.shadow.radius);
+    const radii=lights.map(light=>light.shadow.radius),enabled=this.shadows.filterEnabled.value;this.shadows.filterEnabled.value=false;
     this.renderer.shadowMap.type=T.PCFShadowMap;lights.forEach(light=>light.shadow.radius=2);
-    return ()=>{this.renderer.shadowMap.type=type;lights.forEach((light,i)=>light.shadow.radius=radii[i]);};
+    return ()=>{this.shadows.filterEnabled.value=enabled;this.renderer.shadowMap.type=type;lights.forEach((light,i)=>light.shadow.radius=radii[i]);};
    }},
    {name:'Обновление карт теней',apply:()=>{const was=this.renderer.shadowMap.autoUpdate;this.renderer.shadowMap.autoUpdate=false;return ()=>{this.renderer.shadowMap.autoUpdate=was;};}},
    {name:'Половина разрешения',apply:()=>{const ratio=this.renderer.getPixelRatio();this.renderer.setPixelRatio(ratio*.5);return ()=>this.renderer.setPixelRatio(ratio);}},

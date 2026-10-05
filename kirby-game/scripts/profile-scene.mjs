@@ -18,9 +18,9 @@ try{
   else{api.camera.position.set(50,8,-20);api.camera.lookAt(50,mountain?10:30,mountain?200:-60);}
   api.camera.updateMatrixWorld();
   const saved=[];api.scene.traverse(o=>saved.push([o,o.visible,o.castShadow,o.onBeforeShadow]));
-  const ratio=api.renderer.getPixelRatio(),autoReset=api.renderer.info.autoReset,shadows=api.renderer.shadowMap.autoUpdate,shadowType=api.renderer.shadowMap.type;
+  const ratio=api.renderer.getPixelRatio(),autoReset=api.renderer.info.autoReset,shadows=api.renderer.shadowMap.autoUpdate,shadowType=api.renderer.shadowMap.type,filterEnabled=api.shadows.filterEnabled.value;
   const report=await api.run();
-  if(saved.some(([o,visible,cast,before])=>o.visible!==visible||o.castShadow!==cast||o.onBeforeShadow!==before)||ratio!==api.renderer.getPixelRatio()||autoReset!==api.renderer.info.autoReset||shadows!==api.renderer.shadowMap.autoUpdate||shadowType!==api.renderer.shadowMap.type)throw Error('Profiler failed to restore scene');
+  if(saved.some(([o,visible,cast,before])=>o.visible!==visible||o.castShadow!==cast||o.onBeforeShadow!==before)||ratio!==api.renderer.getPixelRatio()||autoReset!==api.renderer.info.autoReset||shadows!==api.renderer.shadowMap.autoUpdate||shadowType!==api.renderer.shadowMap.type||filterEnabled!==api.shadows.filterEnabled.value)throw Error('Profiler failed to restore scene');
   if(screenshot)api.renderer.setAnimationLoop(null);
   return report;
  },{mountain:process.env.PERF_VIEW==='mountain',reference,screenshot:!!process.env.PERF_SCREENSHOT});

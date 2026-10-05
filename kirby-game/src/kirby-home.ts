@@ -1,3 +1,4 @@
+import {roofTilePitch,roofTileSpan} from './roof-tiles';
 import {fitRider,restoreRider,riderFit} from './rider-size';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -27,8 +28,13 @@ export class KirbyHome {
     for(const x of [-5,5]){part('#efd8b1',x,2.7,-.5,.28,5.3,7.5);for(const z of [-4.2,3.2])part('#976848',x,2.7,z,.3,5.5,.3);}
     part('#a4734d',0,5.4,3.25,10.4,.3,.3);
     this.group.add(this.roof);
+    this.roof.name='Kirby home tiled roof';
+    for(const side of [-1,1]){
+      const backing=part('#a4734d',side*2.75,6.54,-.465,6.27,.08,9.22,false,this.roof);
+      backing.rotation.z=-side*Math.atan2(.27,.55);
+    }
     for(const side of [-1,1])for(let row=0;row<10;row++)for(let col=0;col<18;col++){
-      const tile=part(['#b9516b','#c7687d','#a94764'][(col+row)%3],side*(row+.5)*.55,7.9-row*.27,-4.8+col*.51,.7,.15,.55,false,this.roof);tile.rotation.z=-side*.46;
+      const tile=part(['#b9516b','#c7687d','#a94764'][(col+row)%3],side*(row+.5)*.55,7.9-row*.27,-4.8+col*.51,.7,.15,roofTileSpan(.51),false,this.roof);tile.rotation.z=-side*roofTilePitch(.55,.27);
     }
     part('#e7bb81',0,8,-.3,.28,.25,9.6,false,this.roof);
     for(const x of [-3,3]){

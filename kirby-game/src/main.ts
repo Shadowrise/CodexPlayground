@@ -1,3 +1,4 @@
+import {prepareSurfaceTextures} from './texture-filtering';
 import {MillQuestHud} from './mill-quest-hud';
 import {PrankEffects} from './prank-effects';
 import {cyclePhase,daylight} from './day-cycle';
@@ -225,9 +226,10 @@ const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
 renderer.setSize(innerWidth, innerHeight);
+const surfaceAnisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
 renderer.shadowMap.enabled = true;
-// Interpolated PCF removes discrete filter bands without larger shadow maps or
-// frame-varying noise. Keep the stable caster silhouettes and per-frame sun tracking.
+// StableCSM adds hardware-filtered depth comparisons with a continuous tent.
+// Keep PCFSoft as the diagnostic fallback and the same two 1024px maps.
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
@@ -252,6 +254,7 @@ function setupShadowMaterials() {
   scene.traverse(object=>{
     if(!(object instanceof THREE.Mesh))return;
     for(const material of Array.isArray(object.material)?object.material:[object.material]) {
+      prepareSurfaceTextures(material,surfaceAnisotropy);
       if(!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial || material instanceof THREE.MeshLambertMaterial) || shadowMaterials.has(material))continue;
       const surfaceShader=material.onBeforeCompile;
       shadows.setupMaterial(material);

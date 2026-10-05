@@ -1,4 +1,6 @@
 import {Box3,Matrix4,Vector3} from 'three';
+import type {Material} from 'three';
+import {prepareShadowDepth,setupStableShadowFilter} from './shadow-filter';
 import {CSM} from 'three/addons/csm/CSM.js';
 
 /** CSM texel snapping with an orientation that remains defined at solar noon. */
@@ -13,6 +15,16 @@ export class StableCSM extends CSM {
   private center=new Vector3();
   private vertex=new Vector3();
   private origin=new Vector3();
+
+  // Exposed for the optional profiler's same-scene A/B comparison only.
+  readonly filterEnabled={value:true};
+  private depthMaps?:ReturnType<typeof prepareShadowDepth>;
+
+  override setupMaterial(material:Material){
+    super.setupMaterial(material);
+    this.depthMaps??=prepareShadowDepth(this);
+    setupStableShadowFilter(material,this.depthMaps,this.filterEnabled);
+  }
 
   override update(){
     this.camera.updateMatrixWorld();
