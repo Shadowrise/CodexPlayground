@@ -635,7 +635,8 @@ renderer.setAnimationLoop((time: number) => {
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
-    const homeWasActive=home.active;home.update(dt);
+    const homeWasActive=home.active,bedOwner=network?.room.locks['home:0'];
+    home.update(dt,bedOwner&&bedOwner!==network?.id?remotePlayers?.players.get(bedOwner):undefined);
     if(!character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);

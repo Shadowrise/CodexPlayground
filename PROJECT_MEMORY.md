@@ -543,3 +543,13 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 - Controlled 90-frame moving-sun test (big spheres and small casters), Chrome AND stock Firefox: peak pixel jump 21 ->13 (~38% reduction), summed temporal change 296448 ->295452 (largely unchanged); not proof of eliminating all shimmer. Screenshot `%TEMP%/kirby-shadow-filter.png`. Repro `scripts/shadow-filter-browser.mjs` uses a dedicated Vite5174, no main game state.
 - Full frozen-scene Chrome A/B (two views, 1280x800, gl.finish): new6.8/6.4ms vs old6.5/6.8; new12.0/12.1 vs old12.2/11.8ms. Same640/1586 draws and2.45m/6.43m triangles respectively. No meaningful measured regression on this machine; not a mobile FPS guarantee. `%TEMP%/kirby-shadow-scene.png` reviewed; errors empty.
 - Production build and9 targeted shadow/day/surface tests pass. Previous roof/texture fixes and these shadow changes are LOCAL, no commit/push requested yet. Root `.wrangler/` remains untracked and must not be committed.
+
+## Kirby home bedding (2026-10-05, local)
+
+- Previous roof/surface/hardware-shadow work published in `6ce5bc6` on origin/main.
+- User requested non-flickering blue quilt edges, smaller pillow, and covering Kirby in bed. Old quilt box shared mattress side planes; old sphere pillow scale2.5 meant width5 vs mattress3.5.
+- `bed-quilt.ts`: one 625-vertex deformable mesh, painted quilt seams/border, no separate coplanar seam strips. Top stays clear of mattress; side drape starts outside mattress width. No cast shadow/new lights; vertex/normals updates only while pose changes.
+- Home pillow now2.7m wide. Rest root height1.58, z+.4, pitch-.38pi so back rests above mattress. Quilt folds down on approach, lifts/pulls over body .8-1.55sec, settles flat on wake; partial approach cancellation works. Large Kirby still fits visually without altering saved size/house.
+- Remote bedding derives occupancy from existing home:0 lock and rendered Sleep actor near bed. Smooth visual cover/reset, no server/protocol/traffic changes.
+- Build passes; 8 targeted bedding/rider/roof tests pass (plus earlier16 night/rider/surface checks). `scripts/bed-browser.mjs` creates isolated cutaway preview on own Vite5174; screenshot `%TEMP%/kirby-bed-covered.png`, empty/awake too, inspected; browser errors empty. Isolated38 draws including detailed Kirby, not whole-scene performance benchmark.
+- Changes remain local; no commit/push requested for bedding yet. Exclude untracked root `.wrangler/` as always.
