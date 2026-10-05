@@ -1,7 +1,24 @@
 import * as T from 'three';
 
+export const BED_REST={y:1.58,z:.4,pitch:-Math.PI*.38};
+// Beyond the bottom lip, so even the breathing pose keeps the mouth uncovered.
+export const BED_COVER_FOLD=(1.15+.065)/2.05;
+const PROFILE_ROWS=64,PROFILE_STEP=2.65/PROFILE_ROWS;
+
+/** Upper surface of a reclining ellipsoid in bed coordinates. */
+function bodyHeight(x:number,z:number,cx:number,cy:number,cz:number,rx:number,ry:number,rz:number){
+  const cos=Math.cos(BED_REST.pitch),sin=Math.sin(BED_REST.pitch);
+  const dz=z-(BED_REST.z+sin*cy+cos*cz),dx=x-cx;
+  const a=cos*cos/(ry*ry)+sin*sin/(rz*rz);
+  const b=2*cos*sin*(1/(ry*ry)-1/(rz*rz))*dz;
+  const c=(sin*sin/(ry*ry)+cos*cos/(rz*rz))*dz*dz+dx*dx/(rx*rx)-1;
+  const discriminant=b*b-4*a*c;
+  return discriminant<0?0:BED_REST.y+cos*cy-sin*cz+(-b+Math.sqrt(discriminant))/(2*a);
+}
+
 /** One small deformable surface. Stitches are painted, so there are no coplanar strips. */
 export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
+  private readonly resting=new Float32Array(25*(PROFILE_ROWS+1));
   private lift=-1;
   private fold=-1;
   constructor(){
@@ -24,8 +41,28 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
     }
     super(geometry,new T.MeshStandardMaterial({color:map?'#ffffff':'#869dc4',map:map??null,roughness:1,side:T.DoubleSide}));
     this.name='Soft blue bed quilt';this.receiveShadow=true;
-    // The blanket rests above the mattress and drapes over its sides, never on
-    // the same planes. The raised envelope clears fitted Kirby's feet as well.
+    // Bake the fitted model's torso/boot envelope once. A small allowance covers
+    // the Idle breathing motion; outside the body the cloth falls onto the bed.
+    for(let row=0;row<=PROFILE_ROWS;row++)for(let col=0;col<25;col++){
+      const x=(col/24-.5)*3.9,z=-1.15+row*PROFILE_STEP;
+      this.resting[row*25+col]=Math.max(1.16,
+        bodyHeight(x,z,0,1.17,0,1.035,.99,.87)+.035,
+        bodyHeight(x,z,-.49,.245,.18,.56,.33,.71)+.035,
+        bodyHeight(x,z,.49,.245,.18,.56,.33,.71)+.035);
+    }
+    // Steep, continuous skirts bridge the silhouette to the mattress instead of
+    // leaving a tent-shaped air gap. This is initialization work, not cloth physics.
+    const dx=3.9/24,slope=2.8,diagonal=Math.hypot(dx,PROFILE_STEP)*slope;
+    for(const reverse of [false,true])for(let j=0;j<this.resting.length;j++){
+      const index=reverse?this.resting.length-1-j:j,row=Math.floor(index/25),col=index%25,sign=reverse?1:-1;
+      let height=this.resting[index];
+      if(col+sign>=0&&col+sign<25)height=Math.max(height,this.resting[index+sign]-dx*slope);
+      if(row+sign>=0&&row+sign<=PROFILE_ROWS){
+        height=Math.max(height,this.resting[index+sign*25]-PROFILE_STEP*slope);
+        for(const side of [-1,1])if(col+side>=0&&col+side<25)height=Math.max(height,this.resting[index+sign*25+side]-diagonal);
+      }
+      this.resting[index]=height;
+    }
     this.setPose(0,0);
     geometry.boundingSphere=new T.Sphere(new T.Vector3(0,1.9,0),4);
   }
@@ -37,9 +74,10 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
     for(let i=0;i<positions.count;i++){
       const u=uv.getX(i),v=1-uv.getY(i),x=(u-.5)*3.9,z=T.MathUtils.lerp(top,1.5,v);
       const sides=T.MathUtils.smoothstep(Math.abs(x),1.76,1.95);
-      const dome=(1-T.MathUtils.smoothstep(Math.abs(x),.65,1.62))*(1-T.MathUtils.smoothstep(z,.32,1.35));
-      const wrinkles=.018*Math.sin(u*Math.PI*12)*Math.sin(v*Math.PI)*lift;
-      positions.setXYZ(i,x,1.16-.37*sides+1.7*lift*dome+wrinkles,z);
+      const row=T.MathUtils.clamp((z+1.15)/PROFILE_STEP,0,PROFILE_ROWS),lo=Math.min(PROFILE_ROWS-1,Math.floor(row)),col=i%25;
+      const resting=T.MathUtils.lerp(this.resting[lo*25+col],this.resting[(lo+1)*25+col],row-lo);
+      const wrinkles=.008*Math.sin(u*Math.PI*12)*Math.sin(v*Math.PI)*lift;
+      positions.setXYZ(i,x,1.16-.37*sides+lift*(resting-1.16)+wrinkles,z);
     }
     positions.needsUpdate=true;this.geometry.computeVertexNormals();
   }

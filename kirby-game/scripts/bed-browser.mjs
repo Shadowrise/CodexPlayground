@@ -18,9 +18,11 @@ try{
   window.preview={home,c,renderer,scene,camera};renderer.render(scene,camera);
  });
  await page.screenshot({path:process.env.TEMP+'/kirby-bed-empty.png'});
- for(const state of ['covered','awake']){
-  const info=await page.evaluate(state=>{const {home,c,renderer,scene,camera}=window.preview;if(state==='covered')home.start(c);else home.wake();for(let i=0;i<120;i++)home.update(1/60);renderer.render(scene,camera);return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};},state);
+ for(const state of ['covered','uncover','stand','awake']){
+  const info=await page.evaluate(state=>{const {home,c,renderer,scene,camera}=window.preview;if(state==='covered')home.start(c);if(state==='uncover')home.wake();const frames=state==='covered'?120:state==='uncover'?18:state==='stand'?15:60;for(let i=0;i<frames;i++)home.update(1/60);renderer.render(scene,camera);return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};},state);
   await page.screenshot({path:process.env.TEMP+`/kirby-bed-${state}.png`});console.log({state,...info});
  }
+ await page.evaluate(()=>{const {home,c,renderer,scene,camera}=window.preview;c.actor.visible=false;home.group.getObjectByName('Kirby home tiled roof').visible=true;for(const o of home.group.children)if(o.isMesh)o.visible=true;camera.position.copy(home.group.position);camera.position.x+=12;camera.position.y+=7;camera.position.z+=13;camera.lookAt(home.group.position.x,5.5,home.group.position.z);renderer.render(scene,camera);});
+ await page.screenshot({path:process.env.TEMP+'/kirby-roof-side.png'});
  console.log({errors});if(errors.length)throw Error(errors.join('\n'));
 }finally{await browser.close();}

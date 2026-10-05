@@ -1,4 +1,4 @@
-import {roofTilePitch,roofTileSpan} from './roof-tiles';
+import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
 import {newMillQuest,advanceMill,applyMill,millNear,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
@@ -120,13 +120,13 @@ export class Watermill {
       for(const side of [-1,1])beam(root,'#624631',new T.Vector3(17,11.85,z+.25),new T.Vector3(17+side*4.6,8.25,z+.25),.25);
       box('#624631',17,9.85,z+.25,.25,3.5,.25);
     }
-    // Overlapping warm terracotta tiles, ridge caps and dark fascia boards.
+    // Separate warm terracotta tiles, ridge caps and dark fascia boards.
     const pitch=Math.atan(.65);
     for(const side of [-1,1]) {
       box('#5a3d2d',17+side*2.75,10.21,-1,6.6,.22,10.2,-side*pitch);
       for(let row=0;row<8;row++)for(let column=0;column<15;column++) {
         const x=side*(.35+row*.68);
-        box(['#ad563b','#bc6847','#c77a50','#a6533d'][(row*7+column*3)%4],17+x,12.04-Math.abs(x)*.65,-5.85+column*.69+(row%2)*.12,.87,.16,roofTileSpan(.69),-side*roofTilePitch(.68,.68*.65));
+        box(['#ad563b','#bc6847','#c77a50','#a6533d'][(row*7+column*3)%4],17+x,12.04-Math.abs(x)*.65,-5.85+column*.69+(row%2)*.12,roofTileLength(.68,.68*.65,.16,row===0?.7:undefined),.16,roofTileSpan(.69),-side*roofTilePitch(.68,.68*.65));
       }
     }
     for(let i=0;i<16;i++)part(root,'cylinder','#cc8659',17,12.05,-6+i*.67,.22,.71,.22,Math.PI/2);

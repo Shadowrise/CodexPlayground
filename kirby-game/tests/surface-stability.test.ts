@@ -1,16 +1,18 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
+import {OBB} from 'three/addons/math/OBB.js';
 import {KirbyHome} from '../src/kirby-home';
 import {Watermill} from '../src/watermill';
 import {Treehouse} from '../src/treehouse';
 import {prepareSurfaceTextures} from '../src/texture-filtering';
 
-test('all three detailed roofs have no overlapping nearly coplanar tile faces',()=>{
+test('all three detailed roofs have disjoint tile volumes, including side faces and ridge',()=>{
  const roofs=[{root:new KirbyHome().group,colors:['b9516b','c7687d','a94764']},
   {root:new Watermill().group,colors:['ad563b','bc6847','c77a50','a6533d']},
   {root:new Treehouse().group,colors:['386653','49755b','567c5b']}];
  for(const {root,colors} of roofs){
+  const volumes:OBB[]=[];
   const tiles:{p:T.Vector3;n:T.Vector3;x:T.Vector3;z:T.Vector3;hx:number;hz:number}[]=[];
   root.updateMatrixWorld(true);
   root.traverse(o=>{
@@ -18,11 +20,13 @@ test('all three detailed roofs have no overlapping nearly coplanar tile faces',(
    for(let i=0;i<o.count;i++){
     const m=new T.Matrix4();o.getMatrixAt(i,m);m.premultiply(o.matrixWorld);
     const p=new T.Vector3(0,.5,0).applyMatrix4(m),scale=new T.Vector3().setFromMatrixScale(m);
+    volumes.push(new OBB(new T.Vector3(),new T.Vector3(.5,.5,.5)).applyMatrix4(m));
     tiles.push({p,n:new T.Vector3(0,1,0).transformDirection(m),x:new T.Vector3(1,0,0).transformDirection(m),z:new T.Vector3(0,0,1).transformDirection(m),hx:scale.x/2,hz:scale.z/2});
    }
   });
   assert(tiles.length>=200);
   for(let i=0;i<tiles.length;i++)for(let j=i+1;j<tiles.length;j++){
+   assert(!volumes[i].intersectsOBB(volumes[j]),`${root.name}: intersecting tile sides ${i}/${j}`);
    const a=tiles[i],b=tiles[j],d=b.p.clone().sub(a.p);
    if(a.n.dot(b.n)<.99999||Math.abs(d.dot(a.n))>.005)continue;
    const overlapX=a.hx+b.hx-Math.abs(d.dot(a.x)),overlapZ=a.hz+b.hz-Math.abs(d.dot(a.z));

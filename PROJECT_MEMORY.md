@@ -553,3 +553,12 @@ TypeScript, production-сборка и 7 тестов sky-trail прошли. С
 - Remote bedding derives occupancy from existing home:0 lock and rendered Sleep actor near bed. Smooth visual cover/reset, no server/protocol/traffic changes.
 - Build passes; 8 targeted bedding/rider/roof tests pass (plus earlier16 night/rider/surface checks). `scripts/bed-browser.mjs` creates isolated cutaway preview on own Vite5174; screenshot `%TEMP%/kirby-bed-covered.png`, empty/awake too, inspected; browser errors empty. Isolated38 draws including detailed Kirby, not whole-scene performance benchmark.
 - Changes remain local; no commit/push requested for bedding yet. Exclude untracked root `.wrangler/` as always.
+
+## Fitted quilt, safe bed exit and roof side faces (2026-10-05)
+
+- Prior bedding changes published in `e354e64`. User requested closer cloth/body contact with mouth uncovered, then added remaining roof side-face flicker and walking through the quilt on wake. Commit/push requested for this batch.
+- BedQuilt now bakes a small height field from reclining torso/boot envelopes with a breathing allowance and steep skirts onto the mattress. Same625 vertices/one mesh; no new scene passes or per-frame physics. Shared BED_REST/BED_COVER_FOLD keep character pose and cloth profile aligned; edge z=.065 leaves the mouth fully exposed.
+- Wake sequencing: pull quilt past feet during0-.32s; stand during.32-.55s; move out.5-.95s, descend/restore visual size only after.7s. Spread quilt back after the body clears it. Existing actor state sends `Wake` (already allowed string field), allowing the remote bed to uncover too; no backend/protocol/request changes.
+- roofTileLength now includes thickness and tilt when leaving slope gaps, with additional ridge spacing cap for the first row. Removes intersecting coplanar END/SIDE faces on home, treehouse, mill roofs; underlying roof sheets remain. Previous fix only tested top faces.
+- Tests now verify disjoint tile OBBs across all3 roofs, mouth vs quilt edge and actual posed model vertices vs quilt triangle heights (including boots), cloth/body proximity, and delayed movement until quilt clears feet. Build and8 targeted bedding/rider/surface tests pass; earlier18 related checks also passed.
+- `bed-browser.mjs` captures covered/uncover/stand/awake plus low roof-side view. All snapshots inspected, errors empty;38 draws with Kirby unchanged. This does not constitute a full-scene FPS benchmark. Root `.wrangler/` remains local/untracked.

@@ -1,4 +1,4 @@
-import {roofTilePitch,roofTileSpan} from './roof-tiles';
+import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {oakBarkMaterial} from './oak-bark';
 import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
 import { LeafPile } from './leaf-pile';
@@ -79,7 +79,7 @@ export class Treehouse {
     box('#755137',0,12.8,.4,7.3,.3,.25);
     for(const side of [-1,1])box('#664830',side*1.935,13.48,-1.555,4.5,.08,4.72,0,0,-side*Math.atan2(.22,.43));
     for(const side of [-1,1])for(let row=0;row<9;row++)for(let col=0;col<12;col++){
-      box(['#386653','#49755b','#567c5b'][(row+col)%3],side*(row+.5)*.43,14.5-row*.22,-3.7+col*.39,.57,.12,roofTileSpan(.39),0,0,-side*roofTilePitch(.43,.22));
+      box(['#386653','#49755b','#567c5b'][(row+col)%3],side*(row+.5)*.43,14.5-row*.22,-3.7+col*.39,roofTileLength(.43,.22,.12,row===0?.43:undefined),.12,roofTileSpan(.39),0,0,-side*roofTilePitch(.43,.22));
     }
     beam([0,14.62,-4],[0,14.62,1],.13,'#bb995e');
     for(const x of [-2.1,2.1]){
