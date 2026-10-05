@@ -270,9 +270,9 @@ export class Watermill {
   }
   prompt(actor:MillActor) {
     const q=this.quest,action=this.action(actor);
-    if(action?.kind==='start')return 'E — запустить квест «Радужная мельница» · 6 очков';
-    if(action?.kind==='gate')return `E — переключить шлюз · ${['Мало воды','Верно! Подожди 3 секунды','Слишком сильно!'][q.gate]}`;
-    if(action?.kind==='deliver')return `E — положить ${MILL_COLOR_NAMES[q.carried]} мешочек · Нужен ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
+    if(action?.kind==='start')return 'E — начни задание мельницы · 6 очков';
+    if(action?.kind==='gate')return q.gate===1?`Подожди ${Math.max(0,3-Math.floor((this.now-q.steadyAt)/1000))} с — не трогай рычаг`:'E — поверни рычаг, чтобы стрелка попала в зелёную зону';
+    if(action?.kind==='deliver')return q.carried===q.order[q.delivered]?`E — положи ${MILL_COLOR_NAMES[q.carried]} мешочек в воронку`:`E — верни этот мешочек. Найди ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
     return '';
   }
   update(dt:number,owner?:T.Object3D) {
