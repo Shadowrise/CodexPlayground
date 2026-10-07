@@ -446,7 +446,8 @@ let npcs: KirbyNpc[] = [];
 
 async function loadCharacter() {
   try {
-    const [gltf,bugModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`)]);
+    const [gltf,bugModel,shibaModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`)]);
+    home.dogHouse.placeDog(shibaModel.scene);
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
     startButton.disabled = false;

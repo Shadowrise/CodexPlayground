@@ -18,3 +18,12 @@ Game file: `public/audio/apple-bite.wav`
 
 CC0 permits copying, modifying and redistributing the recording, including in
 commercial projects. Attribution is kept here for provenance.
+
+## Shiba
+
+- Game file: `public/models/shiba.glb`
+- Author: zixisun02 (https://sketchfab.com/zixisun51)
+- Source: https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c
+- License: Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
+- Changes: uniformly scaled and placed as a static decoration in a procedural dog house; original texture preserved.
+- Attribution is also displayed in the game's controls panel and supplied in `public/models/shiba-LICENSE.txt`.

@@ -1,3 +1,4 @@
+import {DogHouse} from './dog-house';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {BedQuilt,BED_REST,BED_COVER_FOLD} from './bed-quilt';
 import {fitRider,restoreRider,riderFit} from './rider-size';
@@ -7,6 +8,7 @@ import type { CharacterController } from './controller';
 import { HOME_SITE } from './home-site';
 export class KirbyHome {
   readonly group=new T.Group();
+  readonly dogHouse=new DogHouse();
   readonly entrance=new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+6);
   night=false;
   nightAmount?:number;
@@ -63,6 +65,7 @@ export class KirbyHome {
     // Merge repeated decoration into a small number of draws.
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
     this.group.add(this.quilt);
+    this.group.add(this.dogHouse);
   }
   prompt(position:T.Vector3,size=1){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6+.6*size && position.y<.6 ? 'E — лечь в кровать':'';}
   private fit(c:CharacterController,amount=1){this.group.scale.setScalar(1);fitRider(c,1,amount);}
@@ -122,6 +125,7 @@ export class KirbyHome {
     if(t>=1){awardFirst(c,'sleep');for(const side of ['Left','Right']){const eye=c.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=.06;}c.animationRoot.scale.setScalar(1+.008*Math.sin(t*4));}
   }
   constrain(p:T.Vector3,size:number){
+    this.dogHouse.constrain(p,.6*size);
     const s=this.group.scale.x,x=p.x-HOME_SITE.x,z=p.z-HOME_SITE.z,r=.6*size,hx=5.3*s,hz0=4.5*s,hz1=3.4*s;
     if(Math.abs(x)<hx+r && z>-hz0-r && z<hz1+r){const ds=[x+hx+r,hx+r-x,z+hz0+r,hz1+r-z],side=ds.indexOf(Math.min(...ds));if(side<2)p.x=HOME_SITE.x+(side===0?-hx-r:hx+r);else p.z=HOME_SITE.z+(side===2?-hz0-r:hz1+r);}
   }
