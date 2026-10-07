@@ -287,6 +287,7 @@ const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treeho
 const benches=new Benches();
 const skyTrail=new SkyTrail(kind=>{if(kind==='star')sounds.playStarPickup();else if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(skyTrail.group);
 const home=new KirbyHome();scene.add(home.group);
+const dogSoundPosition=new THREE.Vector3();
 let fireflies:NightFireflies|undefined;
 const maze=new HedgeMaze();scene.add(maze.group);
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
@@ -732,6 +733,10 @@ renderer.setAnimationLoop((time: number) => {
   constrainToMeadow(camera.position, .5);
   camera.lookAt(cameraTarget);
   camera.updateMatrixWorld();
+  if(home.dogHouse.update(dt,camera.position)&&playing&&character){
+    home.dogHouse.getWorldPosition(dogSoundPosition);
+    sounds.playDogBark(dogSoundPosition.x-character.actor.position.x,dogSoundPosition.z-character.actor.position.z,azimuth);
+  }
   wayfinder.syncPlayers(network ? Array.from(network.actors,([id,actor])=>[id,remotePlayers?.renderedStates.get(id)??actor] as const) : []);
   if(character)wayfinder.update(character.actor.position,character.actor.scale.x,camera);
   const lightTime=daylight(currentDayPhase());home.night=lightTime.night>.5;home.nightAmount=lightTime.night;

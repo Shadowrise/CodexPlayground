@@ -21,6 +21,8 @@ export class SoundEffects {
   // Fetch once while the menu loads; an unavailable effect must never block play.
   private readonly fruitBiteData=fetch(`${import.meta.env.BASE_URL}audio/apple-bite.wav`)
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
+  private readonly dogBarkData=fetch(`${import.meta.env.BASE_URL}audio/shiba-bark.wav`)
+    .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private active = new Set<PlayingVoice>();
   private events = new SoundEvents();
   private waterEvents=new WaterSoundEvents();
@@ -68,6 +70,7 @@ export class SoundEffects {
         this.buffers.set('wheel',this.rideBuffer(false));
         this.buffers.set('cheer',this.rideBuffer(true));
         void this.loadFruitBite(this.context);
+        void this.loadDogBark(this.context);
       }
       void this.context.resume().catch(() => { this.enabled = false; this.sync(); });
       this.sync();
@@ -78,6 +81,19 @@ export class SoundEffects {
       const bytes=await this.fruitBiteData;
       if(bytes)this.buffers.set('eat',await context.decodeAudioData(bytes));
     }catch{/* Keep all other sounds available if downloading or decoding fails. */}
+  }
+  private async loadDogBark(context:AudioContext){
+    try{const bytes=await this.dogBarkData;if(bytes)this.buffers.set('dog-bark',await context.decodeAudioData(bytes));}
+    catch{/* A missing decorative bark must not interrupt gameplay. */}
+  }
+  playDogBark(dx:number,dz:number,cameraAzimuth:number){
+    const ctx=this.context,buffer=this.buffers.get('dog-bark'),distance=Math.hypot(dx,dz);
+    if(!ctx||!buffer||!this.enabled||document.hidden||ctx.state!=='running'||distance>=24||this.active.size>=4)return;
+    const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
+    source.buffer=buffer;gain.gain.value=.42*(1-distance/24)**2;
+    pan.pan.value=Math.max(-.8,Math.min(.8,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/12));
+    source.connect(gain);gain.connect(pan);pan.connect(this.master!);
+    this.begin(source,gain,()=>pan.disconnect());
   }
   private sync() {
     this.button.textContent = this.enabled ? '♪ Звуки: вкл' : '♪ Звуки: выкл';

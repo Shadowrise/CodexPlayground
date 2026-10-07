@@ -1,9 +1,12 @@
+import {ShibaAnimation} from './shiba-animation';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 /** Static decoration; local coordinates relative to Kirby's home. */
 export class DogHouse extends T.Group {
   readonly dogSeat=new T.Group();
+  private animation?:ShibaAnimation;
+  private dogPosition=new T.Vector3();
   constructor(){
     super();this.name='Shiba cottage';this.position.set(8,0,2);
     const batches=new Map<string,T.BufferGeometry[]>();
@@ -47,8 +50,9 @@ export class DogHouse extends T.Group {
   }
   /** Call with the licensed asset once supplied; preserve its original textures. */
   placeDog(model:T.Object3D){
+    this.animation=new ShibaAnimation(model);
     this.dogSeat.clear();const holder=new T.Group();holder.add(model);holder.updateMatrixWorld(true);
-    const bounds=new T.Box3().setFromObject(holder),size=bounds.getSize(new T.Vector3());
+    const bounds=new T.Box3().setFromObject(holder,true),size=bounds.getSize(new T.Vector3());
     if(!Number.isFinite(size.length())||Math.min(size.x,size.y,size.z)<=0)throw new Error('Invalid Shiba bounds');
     const scale=Math.min(1.24/size.x,1.65/size.y,1.85/size.z);
     holder.scale.setScalar(scale);
@@ -56,6 +60,10 @@ export class DogHouse extends T.Group {
     holder.position.set(-center.x*scale,.335-bounds.min.y*scale,1.13-center.z*scale);
     holder.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=o.receiveShadow=true;}});
     this.dogSeat.add(holder);return holder;
+  }
+  update(dt:number,camera:T.Vector3){
+    if(this.animation&&this.getWorldPosition(this.dogPosition).distanceToSquared(camera)<80*80)return this.animation.update(dt);
+    return false;
   }
   constrain(p:T.Vector3,r:number){
     const center=this.getWorldPosition(new T.Vector3());

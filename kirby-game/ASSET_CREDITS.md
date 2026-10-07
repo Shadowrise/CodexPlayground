@@ -25,5 +25,15 @@ commercial projects. Attribution is kept here for provenance.
 - Author: zixisun02 (https://sketchfab.com/zixisun51)
 - Source: https://sketchfab.com/3d-models/shiba-faef9fe5ace445e7b2989d1c1ece361c
 - License: Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
-- Changes: uniformly scaled and placed as a static decoration in a procedural dog house; original texture preserved.
+- Changes: uniformly scaled and placed in a procedural dog house; resting haunches, animated tail/muzzle morphs, lip seam, mouth interior and tongue added; original texture preserved.
 - Attribution is also displayed in the game's controls panel and supplied in `public/models/shiba-LICENSE.txt`.
+
+## Shiba bark
+
+- Game file: `public/audio/shiba-bark.wav`
+- Sound: **Tiny Dog Bark**, by **qubodup** (https://freesound.org/people/qubodup/sounds/813120/).
+- Original recording: **Dog Shih Tzu Bark Single 06.wav**, by **Glitchedtones** (https://freesound.org/people/Glitchedtones/sounds/372527/).
+- Both sound pages specify **CC0 1.0** (https://creativecommons.org/publicdomain/zero/1.0/).
+- Downloaded the official public high-quality MP3 preview on 2026-10-07.
+- Converted to mono PCM WAV, 22050 Hz, normalized to peak 0.65, with 3 ms onset and 8 ms ending fades; duration approximately 0.223 seconds.
+- Played once as Shiba opens her mouth, with distance attenuation, stereo panning and the existing sound toggle/volume.
