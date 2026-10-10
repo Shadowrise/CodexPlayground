@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import * as T from 'three';
 import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
@@ -56,8 +57,8 @@ export class SkyTrail{
   this.moving=new SkyMovingDetails(this.group,this.cores);
  }
  private label(parent:T.Group,text:string,position:number[],width:number,height:number){
-  if(typeof document==='undefined')return;const c=document.createElement('canvas');c.width=768;c.height=96;const ctx=c.getContext('2d');if(!ctx)return;ctx.fillStyle='#fff8dd';ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,384,48,750);
-  const mesh=new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map:new T.CanvasTexture(c),transparent:true,side:T.DoubleSide,depthWrite:false}));mesh.position.fromArray(position);parent.add(mesh);
+  if(typeof document==='undefined')return;const c=document.createElement('canvas');c.width=768;c.height=96;const ctx=c.getContext('2d');if(!ctx)return;ctx.fillStyle='#fff8dd';ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';drawLocalizedText(ctx,text,384,48,750);
+  const mesh=new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map:localizedCanvasTexture(c),transparent:true,side:T.DoubleSide,depthWrite:false}));mesh.position.fromArray(position);parent.add(mesh);
  }
  private trampoline(parent:T.Group){
   const metal=new T.MeshStandardMaterial({color:'#adbdcf',metalness:.7,roughness:.25});

@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import * as T from 'three';
 import {STAR_COUNT,STAR_INTERVAL,STAR_LIFE,STAR_LIMIT,CELEBRATE_MS,RESULTS_MS,starValue,starfallPhase,type StarfallState} from './starfall';
 import {KIRBY_VARIANTS,styleVariant} from './variants';
@@ -39,9 +40,9 @@ export class StarfallView {
   const phase=starfallPhase(s,now),player=s.players[id],bonus=player?.bonus??0;
   this.hud.hidden=phase==='done'||(!online&&phase==='celebrate');
   if(phase!==this.phase){if(phase==='collect'||phase==='celebrate')this.cheer();this.phase=phase;}
-  if(phase==='countdown')this.hud.textContent=`★ ${s.initiator} выполнил все задачи! Звездопад через ${Math.ceil((s.startsAt-now)/1000)} с`;
-  if(phase==='collect')this.hud.textContent=`★ Собирай звёзды · ${Math.ceil((s.endsAt-now)/1000)} с · +${bonus}/${STAR_LIMIT} очков`;
-  if(phase==='celebrate')this.hud.textContent='★ Спасибо за чудесное приключение!';
+  if(phase==='countdown')this.hud.textContent=t(`★ ${s.initiator} выполнил все задачи! Звездопад через ${Math.ceil((s.startsAt-now)/1000)} с`);
+  if(phase==='collect')this.hud.textContent=t(`★ Собирай звёзды · ${Math.ceil((s.endsAt-now)/1000)} с · +${bonus}/${STAR_LIMIT} очков`);
+  if(phase==='celebrate')this.hud.textContent=t('★ Спасибо за чудесное приключение!');
   if(phase==='collect'){
    for(let i=0;i<STAR_COUNT;i++){const age=now-s.startsAt-i*STAR_INTERVAL;if(age>=0&&age<STAR_LIFE&&!this.stars.has(i)&&!player?.collected.includes(i))this.spawn(i,p,obstacles);}
   }
@@ -59,36 +60,36 @@ export class StarfallView {
    for(const o of this.finale.children)if(o.userData.spark!==undefined){const i=o.userData.spark,a=i*2.399,r=3+(t+i*.09)%3;o.position.set(Math.cos(a)*r,Math.sin(a)*r,0);}
   }
   if(online&&now>=s.endsAt&&s.results){
-   if(this.resultKey!==String(s.startsAt)){this.resultKey=String(s.startsAt);this.results.replaceChildren();const title=document.createElement('h2');title.textContent='★ Праздник завершён!';this.results.append(title);
+   if(this.resultKey!==String(s.startsAt)){this.resultKey=String(s.startsAt);this.results.replaceChildren();const title=document.createElement('h2');title.textContent=t('★ Праздник завершён!');this.results.append(title);
     const humans=s.results.filter(r=>r.id!=='npc');
     const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0],best=Math.max(...humans.map(r=>r.bonus));
     const list=document.createElement('ol');
     for(const r of s.results){
       const place=1+s.results.filter(v=>v.points>r.points).length,row=document.createElement('li');row.className='festival-result-row';
       styleVariant(row,KIRBY_VARIANTS[r.variant]??KIRBY_VARIANTS[0]);if(r.id==='npc')row.classList.add('npc-avatar');
-      const rank=document.createElement('span');rank.className='festival-rank';rank.setAttribute('aria-label',`${place} место`);
+      const rank=document.createElement('span');rank.className='festival-rank';rank.setAttribute('aria-label',t(`${place} место`));
       if(place<=3){
         const [metal,shade,shine]=[['#f5bf42','#a76b20','#fff1ad'],['#cbd9e6','#738699','#f5faff'],['#ce8a54','#854622','#ffd0a0']][place-1];
         rank.innerHTML=`<svg viewBox="0 0 48 56" aria-hidden="true"><path d="M12 9H4v9c0 9 8 13 14 12M36 9h8v9c0 9-8 13-14 12" fill="none" stroke="${metal}" stroke-width="4"/><path d="M12 5h24v13c0 10-5 16-12 16S12 28 12 18Z" fill="${metal}" stroke="${shade}" stroke-width="1.4"/><path d="M15 8h5v12c0 5 1 8 3 10-6-2-8-7-8-12Z" fill="${shine}" opacity=".75"/><path d="M21 33h6v11h-6zM14 44h20v6H14z" fill="${metal}"/><path d="M10 50h28v4H10z" fill="${shade}"/><path d="m24 12 2.1 4.2 4.6.7-3.3 3.3.8 4.6-4.2-2.2-4.2 2.2.8-4.6-3.3-3.3 4.6-.7Z" fill="${shine}"/></svg>`;
-        rank.title=['Золотой кубок','Серебряный кубок','Бронзовый кубок'][place-1];
+        rank.title=t(['Золотой кубок','Серебряный кубок','Бронзовый кубок'][place-1]);
       }else rank.textContent=String(place);
       const portrait=document.createElement('span');portrait.className='mini-kirby';portrait.setAttribute('aria-hidden','true');portrait.innerHTML='<i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i>';
-      const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.id==='npc'?'Другие кирби':r.name;identity.append(name);
+      const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.id==='npc'?t('Другие кирби'):r.name;identity.append(name);
       const awards:string[]=[];
       if(r.id!=='npc'){
         if(top&&r.fruits===top.fruits&&r.size===top.size)awards.push('Толстячок');
         if(r.bonus===best)awards.push('Звёздный собиратель');
         if(r.name===s.initiator)awards.push('Любитель приключений');
       }
-      for(const award of awards){const badge=document.createElement('span');badge.className='festival-award';badge.textContent=award;identity.append(badge);}
-      const points=document.createElement('strong');points.className='festival-points';points.textContent=`${r.points} очков`;
+      for(const award of awards){const badge=document.createElement('span');badge.className='festival-award';badge.textContent=t(award);identity.append(badge);}
+      const points=document.createElement('strong');points.className='festival-points';points.textContent=t(`${r.points} очков`);
       row.append(rank,portrait,identity,points);list.append(row);
     }
     this.results.append(list);
-    const countdown=document.createElement('small');countdown.id='starfall-exit-time';this.results.append(countdown);const button=document.createElement('button');button.textContent='В главное меню';this.results.append(button);this.results.showModal();button.focus();
+    const countdown=document.createElement('small');countdown.id='starfall-exit-time';this.results.append(countdown);const button=document.createElement('button');button.textContent=t('В главное меню');this.results.append(button);this.results.showModal();button.focus();
    }
    this.hud.hidden=true;
-   this.results.querySelector('small')!.textContent=`Возвращение в меню через ${Math.max(0,Math.ceil((s.endsAt+RESULTS_MS-now)/1000))} с`;
+   this.results.querySelector('small')!.textContent=t(`Возвращение в меню через ${Math.max(0,Math.ceil((s.endsAt+RESULTS_MS-now)/1000))} с`);
   }
  }
 }

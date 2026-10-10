@@ -2,13 +2,15 @@ import {BOSS_ARENA as A} from './boss-arena-site';
 
 /** Dependency-free rules and paths shared by solo play and the Cloudflare room. */
 export const CENTIPEDE_STEP=1.35*1.25, CENTIPEDE_PHASE_HITS=3, CENTIPEDE_HITS=9, CENTIPEDE_POINT_LIMIT=12;
-export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:12500,exhausted:10000,tickle:2000,gather:5000,coil:2400,stomp:15000,lower:1800,back:16000,bell:1400,rise:1800,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
+export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:12500,exhausted:10000,tickle:2000,gather:12000,coil:2400,stomp:15000,lower:1800,back:16000,bell:1400,rise:1800,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
 export const CENTIPEDE_BALLS={waves:3,perWave:5,interval:2600,launch:1450,speed:12,radius:1.05,life:5500} as const;
+export const CENTIPEDE_EMPTY_MS=10000;
+export const CENTIPEDE_REST_WALK_MS=12000;
 export type CentipedeStage=keyof typeof CENTIPEDE_TIMES;
 export type Point=[number,number];
 export type CentipedeActor={id:string;p:readonly number[];yaw:number;size:number;available:boolean;done:boolean;points:number};
 export type CentipedeParticipant={first:boolean;base:number;points:number;hits:number;dodges:number;origin:Point;bumpedCycle:number;ballBumps?:number;waveBumps?:number};
-export type CentipedeEvent={startedAt:number;stage:CentipedeStage;stageAt:number;cycle:number;hits:number;phase?:1|2|3;trail:Point[];from:Point;control:Point;to:Point;route?:Point[];players:Record<string,CentipedeParticipant>};
+export type CentipedeEvent={startedAt:number;stage:CentipedeStage;stageAt:number;emptySince?:number;cycle:number;hits:number;phase?:1|2|3;trail:Point[];from:Point;control:Point;to:Point;route?:Point[];players:Record<string,CentipedeParticipant>};
 export const centipedePhase=(q:CentipedeEvent)=>q.phase??1;
 export const centipedePhaseHits=(q:CentipedeEvent)=>Math.max(0,Math.min(3,q.hits-(centipedePhase(q)-1)*3));
 const length=(a:readonly number[],b:readonly number[])=>Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -33,8 +35,8 @@ function bound(p:Point):Point{const r=Math.hypot(p[0]-A.x,p[1]-A.z);return r>RUN
 function runCurve(q:CentipedeEvent){
  const knots=q.route??[q.from,q.control,q.to];let cached=curveCache.get(knots);if(cached)return cached;
  const points:Point[]=[knots[0]],distances=[0];let total=0;
- for(let i=0;i<knots.length-1;i++)for(let j=1;j<=16;j++){
-  const a=knots[Math.max(0,i-1)],b=knots[i],c=knots[i+1],d=knots[Math.min(knots.length-1,i+2)],t=j/16,t2=t*t,t3=t2*t;
+ for(let i=0;i<knots.length-1;i++)for(let j=1;j<=32;j++){
+  const a=knots[Math.max(0,i-1)],b=knots[i],c=knots[i+1],d=knots[Math.min(knots.length-1,i+2)],t=j/32,t2=t*t,t3=t2*t;
   const point=bound([0,1].map(axis=>.5*((2*b[axis])+(-a[axis]+c[axis])*t+(2*a[axis]-5*b[axis]+4*c[axis]-d[axis])*t2+(-a[axis]+3*b[axis]-3*c[axis]+d[axis])*t3)) as Point);
   total+=length(points.at(-1)!,point);points.push(point);distances.push(total);
  }
@@ -58,11 +60,69 @@ export function trailingPoint(path:readonly Point[],distance:number):Point{
  for(let i=path.length-1;i>0;i--){const d=length(path[i],path[i-1]);if(d<.00001)continue;if(distance<=d)return blend(path[i],path[i-1],distance/d);distance-=d;}
  const a=path[0],b=path[1],d=Math.max(.001,length(a,b));return [a[0]+(a[0]-b[0])*distance/d,a[1]+(a[1]-b[1])*distance/d];
 }
+type WalkCurve={points:Point[];distances:number[];length:number};
+const gatherCache=new WeakMap<Point[],WalkCurve>();
+const restCache=new WeakMap<Point[],{trail:Point[];curve:WalkCurve}>();
+const tau=Math.PI*2,modAngle=(a:number)=>((a%tau)+tau)%tau;
+/** Forward-only circular turns join a straight approach. The tail follows the
+ * head's travelled distance; never blend twelve unrelated body positions. */
+function walkCurve(trail:Point[],centre:Point,yaw:number):WalkCurve{
+ const start=trail.at(-1)!,back=trailingPoint(trail,2),heading=Math.atan2(start[1]-back[1],start[0]-back[0]),goal=Math.PI/2-yaw;
+ const hx=Math.sin(yaw),hz=Math.cos(yaw),entry:Point=[centre[0]-hx*14,centre[1]-hz*14],finish:Point=[centre[0]+hx*5.5*CENTIPEDE_STEP,centre[1]+hz*5.5*CENTIPEDE_STEP];
+ const candidates:WalkCurve[]=[];
+ for(const radius of [5.5,7.5,10])for(const left of [-1,1])for(const right of [-1,1]){
+  const c1:Point=[start[0]-left*radius*Math.sin(heading),start[1]+left*radius*Math.cos(heading)],c2:Point=[entry[0]-right*radius*hz,entry[1]+right*radius*hx];
+  const dx=c2[0]-c1[0],dz=c2[1]-c1[1],d=Math.hypot(dx,dz),offset=(left-right)*radius;if(d<=Math.abs(offset)+.001)continue;
+  const tangent=Math.atan2(dz,dx)+Math.asin(offset/d),first=modAngle(left*(tangent-heading)),last=modAngle(right*(goal-tangent));
+  const points:Point[]=[[...start]],distances=[0];let total=0;
+  const add=(p:Point)=>{total+=length(points.at(-1)!,p);points.push(p);distances.push(total);};
+  const arc=(c:Point,angle:number,turn:number,side:number)=>{const count=Math.max(1,Math.ceil(turn*radius/.22));for(let i=1;i<=count;i++){const a=angle+side*turn*i/count;add([c[0]+radius*Math.cos(a),c[1]+radius*Math.sin(a)]);}};
+  arc(c1,heading-left*Math.PI/2,first,left);
+  const end:Point=[c2[0]+right*radius*Math.sin(tangent),c2[1]-right*radius*Math.cos(tangent)],begin=points.at(-1)!,count=Math.max(1,Math.ceil(length(begin,end)/.22));
+  for(let i=1;i<=count;i++)add(blend(begin,end,i/count));
+  arc(c2,tangent-right*Math.PI/2,last,right);
+  // More than one body length of straight walking aligns every link before coil.
+  const straight=Math.ceil(length(entry,finish)/.22);for(let i=1;i<=straight;i++)add(blend(entry,finish,i/straight));
+  candidates.push({points,distances,length:total});
+ }
+ candidates.sort((a,b)=>a.length-b.length);
+ const safe=(curve:WalkCurve)=>{
+  if(curve.points.some(p=>Math.hypot(p[0]-A.x,p[1]-A.z)>A.playRadius-2))return false;
+  for(let d=0;d<curve.length;d+=.8){
+   const links=Array.from({length:12},(_,i)=>d-i*CENTIPEDE_STEP<0?trailingPoint(trail,i*CENTIPEDE_STEP-d):curvePoint(curve,d-i*CENTIPEDE_STEP));
+   for(let i=0;i<12;i++)for(let j=i+3;j<12;j++)if(length(links[i],links[j])<2.15)return false;
+  }return true;
+ };
+ const curve=candidates.find(safe)??candidates.find(c=>c.points.every(p=>Math.hypot(p[0]-A.x,p[1]-A.z)<A.playRadius-2))??candidates[0];
+ return curve;
+}
+function gatherCurve(q:CentipedeEvent){let curve=gatherCache.get(q.trail);if(!curve){curve=walkCurve(q.trail,[A.x,A.z],0);gatherCache.set(q.trail,curve);}return curve;}
+function restWalk(q:CentipedeEvent){
+ const key=q.route??q.trail;let path=restCache.get(key);if(path)return path;
+ const p=centipedeWheel(q,q.stageAt),hx=Math.sin(p.yaw),hz=Math.cos(p.yaw),trail=Array.from({length:12},(_,i)=>[p.x+hx*(i-5.5)*CENTIPEDE_STEP,p.z+hz*(i-5.5)*CENTIPEDE_STEP] as Point);
+ path={trail,curve:walkCurve(trail,[A.x+16,A.z+11],Math.atan2(16,11))};restCache.set(key,path);return path;
+}
+export function centipedeGatherDistance(q:CentipedeEvent,now:number){return gatherCurve(q).length*runProgress((now-q.stageAt)/CENTIPEDE_TIMES.gather);}
+export function centipedeRestDistance(q:CentipedeEvent,now:number){return restWalk(q).curve.length*runProgress((now-q.stageAt)/CENTIPEDE_REST_WALK_MS);}
 export function centipedeSegments(q:CentipedeEvent,now:number){
  const path=liveTrail(q,now);
- return Array.from({length:12},(_,i)=>{const distance=i*CENTIPEDE_STEP,p=trailingPoint(path,distance),ahead=trailingPoint(path,Math.max(0,distance-.12)),behind=trailingPoint(path,distance+.12);let yaw=Math.atan2(ahead[0]-behind[0],ahead[1]-behind[1]);
-  if(q.stage==='gather'){const u=Math.max(0,Math.min(1,(now-q.stageAt)/CENTIPEDE_TIMES.gather)),t=u*u*(3-2*u),line:Point=[A.x,A.z+(5.5-i)*CENTIPEDE_STEP];p[0]+=(line[0]-p[0])*t;p[1]+=(line[1]-p[1])*t;yaw+=Math.atan2(Math.sin(-yaw),Math.cos(-yaw))*t;}
+ const rest=q.stage==='rest'?restWalk(q):undefined,walking=rest?.curve??(q.stage==='gather'?gatherCurve(q):undefined),walked=rest?centipedeRestDistance(q,now):walking?centipedeGatherDistance(q,now):0;
+ const sample=(distance:number):Point=>walking?distance<0?trailingPoint(rest?.trail??q.trail,-distance):curvePoint(walking,Math.min(walking.length,distance)):trailingPoint(path,-distance);
+ const segments=Array.from({length:12},(_,i)=>{const distance=walked-i*CENTIPEDE_STEP,p=sample(distance),ahead=sample(distance+.12),behind=sample(distance-.12);const yaw=Math.atan2(ahead[0]-behind[0],ahead[1]-behind[1]);
   return {x:p[0],z:p[1],yaw};});
+ // Turn a connected front arc toward the centre, rather than twist only the head.
+ const u=Math.max(0,Math.min(1,(now-q.stageAt)/700)),smooth=u*u*(3-2*u);
+ const bend=q.stage==='balls'?smooth:q.stage==='exhausted'?1-smooth:0;
+ if(bend>0){
+  const anchor=segments[5],head=segments[0],heading=Math.atan2(A.x-head.x,A.z-head.z),delta=Math.atan2(Math.sin(heading-anchor.yaw),Math.cos(heading-anchor.yaw));
+  let x=anchor.x,z=anchor.z;
+  for(let i=4;i>=0;i--){
+   const yaw=anchor.yaw+delta*(5-i)/5,mid=anchor.yaw+delta*(4.5-i)/5;
+   x+=Math.sin(mid)*CENTIPEDE_STEP;z+=Math.cos(mid)*CENTIPEDE_STEP;
+   const p=segments[i];p.x+=(x-p.x)*bend;p.z+=(z-p.z)*bend;p.yaw+=Math.atan2(Math.sin(yaw-p.yaw),Math.cos(yaw-p.yaw))*bend;
+  }
+ }
+ return segments;
 }
 export function centipedeTail(q:CentipedeEvent):Point{return trailingPoint(q.trail,11*CENTIPEDE_STEP+1.4);}
 export type CentipedeBall={index:number;wave:number;x:number;y:number;z:number;dx:number;dz:number;age:number;active:boolean};
@@ -70,7 +130,7 @@ export type CentipedeBall={index:number;wave:number;x:number;y:number;z:number;d
  * Preview positions give players 1.45 seconds to see each wave before it moves. */
 export function centipedeBalls(q:CentipedeEvent,now:number):CentipedeBall[]{
  if(q.stage!=='balls')return [];
- const b=CENTIPEDE_BALLS,head=q.trail.at(-1)!,heading=Math.atan2(A.x-head[0],A.z-head[1]),elapsed=now-q.stageAt,balls:CentipedeBall[]=[];
+ const b=CENTIPEDE_BALLS,pose=centipedeSegments(q,q.stageAt+700)[0],head=[pose.x,pose.z],heading=Math.atan2(A.x-head[0],A.z-head[1]),elapsed=now-q.stageAt,balls:CentipedeBall[]=[];
  for(let wave=0;wave<b.waves;wave++){
   const age=elapsed-wave*b.interval-b.launch;
   if(age<-b.launch||age>b.life)continue;
@@ -101,12 +161,10 @@ export function centipedeWheel(q:CentipedeEvent,now:number){
 }
 /** Whole-model clips retain their accepted poses: no per-segment route override. */
 export function centipedeRoot(q:CentipedeEvent,now:number):{x:number;z:number;yaw:number}{
- if(q.stage==='rest'){const t=Math.max(0,Math.min(1,(now-q.stageAt)/6000)),u=t*t*(3-2*t);return {x:A.x+16*u,z:A.z+11*u,yaw:Math.atan2(16,11)};}
- if(['wheelWarning','wheelRoll','dizzy','ballShot','wheelHit','uncurl'].includes(q.stage)){
-  const p=centipedeWheel(q,now);
-  if(q.stage==='uncurl'){const t=Math.max(0,Math.min(1,(now-q.stageAt)/CENTIPEDE_TIMES.uncurl)),u=t*t*(3-2*t);p.x+=(A.x-p.x)*u;p.z+=(A.z-p.z)*u;p.yaw*=1-u;}
-  return p;
- }
+ if(q.stage==='rest'){const links=centipedeSegments(q,now);return {x:links.reduce((sum,p)=>sum+p.x,0)/12,z:links.reduce((sum,p)=>sum+p.z,0)/12,yaw:links[0].yaw};}
+ // Unfold and celebrate where the wheel stopped, without sliding/turning the
+ // entire body at the same time as its accepted unfolding animation.
+ if(['wheelWarning','wheelRoll','dizzy','ballShot','wheelHit','uncurl','celebrate'].includes(q.stage))return centipedeWheel(q,now);
  return {x:A.x,z:A.z,yaw:0};
 }
 /** A nearby ball is kicked toward the dizzy wheel; it is never a collectible. */
@@ -156,9 +214,17 @@ export function advanceCentipede(q:CentipedeEvent|undefined,now:number,actors:re
  if(!q)return {changed:false};
  if(q.stage==='rest'&&now-q.stageAt>=CENTIPEDE_TIMES.rest||q.stage!=='rest'&&q.stage!=='celebrate'&&now-q.startedAt>900000)return {changed:true};
  let changed=false;
+ if(q.stage!=='celebrate'&&q.stage!=='rest'){
+  const occupied=actors.some(a=>Math.hypot(a.p[0]-A.x,a.p[2]-A.z)<=A.radius);
+  if(occupied&&q.emptySince!==undefined){delete q.emptySince;changed=true;}
+  else if(!occupied){
+   if(q.emptySince===undefined){q.emptySince=now;changed=true;}
+   if(now-q.emptySince>=CENTIPEDE_EMPTY_MS)return {changed:true};
+   return {event:q,changed};
+  }
+ }
  if(q.stage!=='celebrate'&&q.stage!=='rest')for(const a of actors)if(inside(a)&&!q.players[a.id]){q.players[a.id]=member(a);changed=true;}
  if(now-q.stageAt<CENTIPEDE_TIMES[q.stage])return {event:q,changed};
- if(q.hits<CENTIPEDE_HITS&&!actors.some(a=>Math.hypot(a.p[0]-A.x,a.p[2]-A.z)<A.playRadius+2))return {changed:true};
  const previous=q.stage;
  if(previous==='invite'||previous==='tickle'||previous==='exhausted'){
   if(q.hits>=CENTIPEDE_PHASE_HITS){q.phase=2;q.stage='gather';}

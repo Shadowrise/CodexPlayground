@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import * as T from 'three';
 export type Destination={id:string;name:string;x:number;z:number;y?:number;radius?:number;group?:string};
 export class Route {
@@ -19,12 +20,12 @@ export class Wayfinder {
  private players=new Map<string,Destination>();
  private playerGroup?:HTMLOptGroupElement;
  constructor(panel:HTMLElement,scene:T.Scene,private places:Destination[]){
-  this.select.id='destination-select';this.select.setAttribute('aria-label','Точка интереса');
-  this.select.append(new Option('Выбрать место…',''));
+  this.select.id='destination-select';this.select.setAttribute('aria-label',t('Точка интереса'));
+  this.select.append(new Option(t('Выбрать место…'),''));
   const groups=new Map<string,HTMLOptGroupElement>();
-  for(const place of places){const name=place.group??'Приключения';if(!groups.has(name)){const group=document.createElement('optgroup');group.label=name;this.select.append(group);groups.set(name,group);}groups.get(name)!.append(new Option(place.name,place.id));}
-  const field=document.createElement('label');field.textContent='Куда пойдём?';field.append(this.select);panel.prepend(field);
-  const hint=document.createElement('small');hint.dataset.controls='gamepad';hint.hidden=true;hint.textContent='← / → на крестовине — выбрать место';panel.append(hint);
+  for(const place of places){const name=place.group??'Приключения';if(!groups.has(name)){const group=document.createElement('optgroup');group.label=t(name);this.select.append(group);groups.set(name,group);}groups.get(name)!.append(new Option(t(place.name),place.id));}
+  const field=document.createElement('label');field.textContent=t('Куда пойдём?');field.append(this.select);panel.prepend(field);
+  const hint=document.createElement('small');hint.dataset.controls='gamepad';hint.hidden=true;hint.textContent=t('← / → на крестовине — выбрать место');panel.append(hint);
   this.select.addEventListener('change',()=>this.route.select(this.select.value,[...this.places,...this.players.values()]));
   this.label.className='route-distance';this.label.hidden=true;document.body.append(this.label);
   const shape=new T.Shape();shape.moveTo(-.15,-.8);shape.lineTo(.15,-.8);shape.lineTo(.15,.25);shape.lineTo(.55,.25);shape.lineTo(0,1.1);shape.lineTo(-.55,.25);shape.lineTo(-.15,.25);shape.closePath();
@@ -49,8 +50,8 @@ export class Wayfinder {
   if(!changed)return;
   const selected=this.select.value;
   this.playerGroup?.remove();this.playerGroup=undefined;
-  if(this.players.size){const group=document.createElement('optgroup');group.label='Игроки онлайн';
-   for(const player of this.players.values())group.append(new Option(player.name,player.id));
+  if(this.players.size){const group=document.createElement('optgroup');group.label=t('Игроки онлайн');
+   for(const player of this.players.values()){const option=new Option(player.name,player.id);option.dataset.i18nIgnore='';group.append(option);};
    this.select.append(group);this.playerGroup=group;
   }
   this.select.value=selected;
@@ -67,6 +68,6 @@ export class Wayfinder {
   this.anchor.copy(position);this.anchor.y+=size*3.8;this.anchor.project(camera);
   this.label.hidden=this.anchor.z>1 || this.anchor.z< -1 || Math.abs(this.anchor.x)>1 || Math.abs(this.anchor.y)>1;
   this.label.style.left=`${(this.anchor.x*.5+.5)*innerWidth}px`;this.label.style.top=`${(-this.anchor.y*.5+.5)*innerHeight}px`;
-  this.label.textContent=`${Math.ceil(direction.distance)} м`;
+  this.label.textContent=t(`${Math.ceil(direction.distance)} м`);
  }
 }

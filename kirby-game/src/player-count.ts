@@ -1,3 +1,4 @@
+import {t,onLocaleChange} from './i18n';
 /** Read-only presence snapshot; this never opens a game connection. */
 export async function fetchPlayerCount(base:string,request:typeof fetch=fetch){
  const response=await request(`${base.replace(/\/$/,'')}/players`,{cache:'no-store',signal:AbortSignal.timeout(5000)});
@@ -8,14 +9,17 @@ export async function fetchPlayerCount(base:string,request:typeof fetch=fetch){
 }
 export function watchPlayerCount(label:HTMLElement,menu:HTMLElement,base:string){
  let busy=false;
+ let count:number|undefined;
+ const render=()=>{label.textContent=t(count===undefined?'— игроков':`${count} игроков`);label.title=t(count===undefined?'Сервер пока недоступен':'Сейчас подключено к сетевой игре');};
+ const offLocale=onLocaleChange(render);
  const refresh=async()=>{
   if(busy || menu.hidden || document.hidden)return;
   busy=true;
-  try{label.textContent=`${await fetchPlayerCount(base)} игроков`;label.title='Сейчас подключено к сетевой игре';}
-  catch{label.textContent='— игроков';label.title='Сервер пока недоступен';}
+  try{count=await fetchPlayerCount(base);render();}
+  catch{count=undefined;render();}
   finally{busy=false;}
  };
  void refresh();const timer=window.setInterval(()=>void refresh(),60000);
  const onVisible=()=>void refresh();document.addEventListener('visibilitychange',onVisible);
- return ()=>{clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
+ return ()=>{offLocale();clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);};
 }

@@ -1,3 +1,4 @@
+import {t,getLocale} from './i18n';
 import {KIRBY_VARIANTS} from './variants';
 import {chatText,type LogEntry} from './world-log';
 export class MeadowChat{
@@ -5,19 +6,19 @@ export class MeadowChat{
  readonly composer=document.createElement('form');
  private input=document.createElement('input');
  private readonly mobile=document.body.classList.contains('touch-ui');
- private list=document.createElement('div');private shownIds:string[]=[];
+ private list=document.createElement('div');private shownIds:string[]=[];private language='';
  get open(){return !this.composer.hidden;}
  constructor(send:(text:string)=>void){
-  this.panel.id='meadow-chat';this.panel.setAttribute('aria-label','Чат и события поляны');
+  this.panel.id='meadow-chat';this.panel.setAttribute('aria-label',t('Чат и события поляны'));
   this.list.className='chat-messages';this.list.setAttribute('role','log');this.list.setAttribute('aria-live','polite');this.panel.append(this.list);
-  this.composer.id='chat-composer';this.composer.hidden=true;this.composer.setAttribute('aria-label','Написать в чат');
-  const label=document.createElement('label');label.htmlFor='chat-input';label.textContent='Сообщение на полянку';
+  this.composer.id='chat-composer';this.composer.hidden=true;this.composer.setAttribute('aria-label',t('Написать в чат'));
+  const label=document.createElement('label');label.htmlFor='chat-input';label.textContent=t('Сообщение на полянку');
   this.input.id='chat-input';this.input.maxLength=255;this.input.autocomplete='off';this.input.placeholder='Напиши что-нибудь доброе…';
-  const hint=document.createElement('small');hint.textContent='Enter — отправить · Escape — отменить · до 255 символов';
+  const hint=document.createElement('small');hint.textContent=t('Enter — отправить · Escape — отменить · до 255 символов');
   this.composer.append(label,this.input,hint);document.body.append(this.panel,this.composer);
   const buttons=document.createElement('div');buttons.className='touch-chat-buttons';
-  const submit=document.createElement('button');submit.type='submit';submit.textContent='Отправить';
-  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.addEventListener('click',()=>this.close());
+  const submit=document.createElement('button');submit.type='submit';submit.textContent=t('Отправить');
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent=t('Отмена');cancel.addEventListener('click',()=>this.close());
   buttons.append(submit,cancel);this.composer.append(buttons);
   if(this.mobile){
    this.composer.append(this.panel);
@@ -47,7 +48,8 @@ export class MeadowChat{
   const changedSettings=this.panel.classList.contains('chat-scroll')!==scrollable;
   if(changedSettings){this.panel.classList.toggle('chat-scroll',scrollable);this.list.tabIndex=scrollable?0:-1;}
   const start=Math.max(0,entries.length-10),count=entries.length-start;
-  let same=count===this.shownIds.length;
+  const changedLanguage=this.language!==getLocale();this.language=getLocale();
+  let same=!changedLanguage&&count===this.shownIds.length;
   if(same)for(let i=0;i<count;i++)if(entries[start+i].id!==this.shownIds[i]){same=false;break;}
   if(!same){
    const hadMessages=this.shownIds.length>0;
@@ -60,8 +62,8 @@ export class MeadowChat{
     row.style.color=KIRBY_VARIANTS[e.variant]?.[1]??'#e4edf7';
     if(!oldRows.has(e.id)){
      if(e.chat){const name=document.createElement('span');name.textContent=e.name+': ';const text=document.createElement('span');text.className='chat-text';text.textContent=e.text;row.append(name,text);}
-     else row.textContent=e.name+' '+e.text;
     }
+    if(!e.chat)row.textContent=e.name+' '+t(e.text);
     return row;
    }));
    this.list.scrollTop=this.list.scrollHeight;

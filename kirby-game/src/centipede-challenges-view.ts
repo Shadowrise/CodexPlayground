@@ -9,8 +9,17 @@ export class CentipedeChallengesView{
  private position=new T.Vector3();private rotation=new T.Quaternion();private scale=new T.Vector3();private matrix=new T.Matrix4();private up=new T.Vector3(0,1,0);
  constructor(){
   const ring=(gap:number,count:number,name:string)=>{
-   const geo=new T.RingGeometry(.98,1.02,80,1,gap/2,Math.PI*2-gap);geo.rotateX(Math.PI/2);
-   const mesh=new T.InstancedMesh(geo,new T.MeshBasicMaterial({transparent:true,opacity:.72,depthWrite:false,side:T.DoubleSide}),count);mesh.name=name;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.count=0;return mesh;
+   const geo=new T.RingGeometry(.98,1.02,80,3,gap/2,Math.PI*2-gap);geo.rotateX(Math.PI/2);
+   const material=new T.MeshBasicMaterial({transparent:true,opacity:.9,depthWrite:false,side:T.DoubleSide,toneMapped:false});
+   // Fixed 1.3m width: widening a scaled ring otherwise makes distant waves huge.
+   // A shallow curved crest gives volume, still one instanced draw and no shadows.
+   material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+    float waveRadius = max(length(instanceMatrix[0].xyz), 0.001);
+    float waveEdge = (length(position.xz) - 1.0) / 0.02;
+    transformed.xz = normalize(position.xz) * (1.0 + waveEdge * 0.65 / waveRadius);
+    transformed.y += 0.22 * max(0.0, 1.0 - waveEdge * waveEdge);
+   `);};material.customProgramCacheKey=()=> 'topotushka-thick-wave-v1';
+   const mesh=new T.InstancedMesh(geo,material,count);mesh.name=name;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.count=0;return mesh;
   };
   this.stomp=ring(1.15,6,'Радужные волны топота');this.wheel=ring(.82,3,'Быстрые волны колеса');
   const geo=new T.SphereGeometry(1.1,28,18),uv=geo.getAttribute('uv'),colours:number[]=[];

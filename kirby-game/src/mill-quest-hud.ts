@@ -1,3 +1,4 @@
+import {t,getLocale} from './i18n';
 import {MILL_COLORS,MILL_COLOR_NAMES,type MillQuest} from './mill-quest';
 
 /** Same event plaque as the starfall; DOM changes only when the instruction changes. */
@@ -24,9 +25,9 @@ export class MillQuestHud {
     :q.carried!==q.order[q.delivered]?`Верни этот мешочек в воронку (${actionKey}), затем найди ${needed}`
     :`Отнеси ${needed} мешочек к воронке и нажми ${actionKey} · Загружено ${q.delivered}/3`
    :'Ты запустил мельницу! Полюбуйся радужными пузырями';
-  const signature=JSON.stringify([q.stage,text,q.order,q.delivered]);if(signature===this.signature)return;this.signature=signature;
-  this.title.textContent=q.stage==='running'?'Радужная мельница · Готово!':`Радужная мельница · Шаг ${q.stage==='clear'?1:q.stage==='flow'?2:3}/3`;
-  this.message.textContent=text;this.order.replaceChildren();this.order.hidden=q.stage!=='bags';
-  if(q.stage==='bags')q.order.forEach((color,i)=>{const chip=document.createElement('span');chip.style.setProperty('--bag-color',MILL_COLORS[color]);chip.textContent=i<q.delivered?'✓':String(i+1);chip.className=i===q.delivered?'current':'';chip.title=MILL_COLOR_NAMES[color];chip.setAttribute('aria-label',`${i+1}: ${MILL_COLOR_NAMES[color]}${i<q.delivered?', загружен':''}`);this.order.append(chip);});
+  const signature=JSON.stringify([getLocale(),q.stage,text,q.order,q.delivered]);if(signature===this.signature)return;this.signature=signature;
+  this.title.textContent=t(q.stage==='running'?'Радужная мельница · Готово!':`Радужная мельница · Шаг ${q.stage==='clear'?1:q.stage==='flow'?2:3}/3`);
+  this.message.textContent=t(text);this.order.replaceChildren();this.order.hidden=q.stage!=='bags';
+  if(q.stage==='bags')q.order.forEach((color,i)=>{const chip=document.createElement('span');chip.style.setProperty('--bag-color',MILL_COLORS[color]);chip.textContent=i<q.delivered?'✓':String(i+1);chip.className=i===q.delivered?'current':'';chip.title=t(MILL_COLOR_NAMES[color]);chip.setAttribute('aria-label',`${i+1}: ${t(MILL_COLOR_NAMES[color])}${i<q.delivered?t(', загружен'):''}`);this.order.append(chip);});
  }
 }

@@ -1,3 +1,4 @@
+import {t,createLanguageSwitcher,localizeDOM} from './i18n';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {ArenaCentipede} from './arena-centipede';
@@ -81,7 +82,7 @@ const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
 const playerPlace=document.querySelector<HTMLElement>('#player-place')!;
 const npcPlace=document.querySelector<HTMLElement>('#npc-place')!;
 const combatMessage=document.querySelector<HTMLElement>('#combat-message')!;
-function setText(element:HTMLElement,value:string){if(element.textContent!==value)element.textContent=value;}
+function setText(element:HTMLElement,value:string){value=t(value);if(element.textContent!==value)element.textContent=value;}
 const playerStatsRow=document.querySelector<HTMLElement>('#player-avatar')!;
 const playerHostBadge=createHostBadge();playerHostBadge.id='player-host-badge';playerHostBadge.hidden=true;playerStatsRow.append(playerHostBadge);
 const npcStatsRow=document.querySelector<HTMLElement>('.npc-avatar')!;
@@ -89,6 +90,10 @@ const remainingFruitValue = document.querySelector<HTMLElement>('#remaining-frui
 const settingsToggle = document.querySelector<HTMLButtonElement>('#settings-toggle')!;
 const audioPanel = document.querySelector<HTMLElement>('#audio-panel')!;
 const controlsPanel = document.querySelector<HTMLElement>('#controls-panel')!;
+const languageSetting=document.createElement('div');languageSetting.className='settings-language';
+const languageLabel=document.createElement('span');languageLabel.textContent=t('Язык');
+languageSetting.append(languageLabel,createLanguageSwitcher());
+audioPanel.querySelector('.input-device')!.after(languageSetting);
 const settingsPanels=document.createElement('div');settingsPanels.id='settings-panels';document.body.append(settingsPanels);settingsPanels.append(audioPanel,controlsPanel);
 const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
 if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
@@ -118,7 +123,7 @@ let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
 let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
-const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent='Загрузить сохранение';loadButton.disabled=true;
+const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');loadButton.disabled=true;
 const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
 const nameField=document.querySelector<HTMLElement>('#player-name-field')!;
 const nameInput=document.querySelector<HTMLInputElement>('#player-name-input')!;
@@ -129,7 +134,7 @@ nameInput.addEventListener('input',()=>{
 });
 function requirePlayerName(){
   const name=normalizePlayerName(nameInput.value);
-  nameInput.setCustomValidity(name?'':'Введи имя, чтобы войти в игру.');
+  nameInput.setCustomValidity(t(name?'':'Введи имя, чтобы войти в игру.'));
   if(!name){nameInput.setAttribute('aria-invalid','true');nameInput.focus();nameInput.reportValidity();return false;}
   nameInput.value=name;nameInput.removeAttribute('aria-invalid');
   try{rememberPlayerName(localStorage,name);}catch{}
@@ -145,8 +150,9 @@ let rosterSignature='';
 const remoteStatRows=new Map<string,HTMLElement>();
 const serverUrl=import.meta.env.VITE_GAME_SERVER_URL || (import.meta.env.DEV?'http://127.0.0.1:8787':'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=false;
-startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><h2>Добро пожаловать!</h2>';
-const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent='Новая игра';
+startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><div class="welcome-heading"><h2>Добро пожаловать!</h2></div>';
+startupCard.querySelector('.welcome-heading')!.append(createLanguageSwitcher());
+const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent=t('Новая игра');
 const soloSection=document.createElement('section');soloSection.className='startup-section';soloSection.innerHTML='<h3>Одиночная игра</h3>';soloSection.append(newGameButton,loadButton);
 const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<div class="network-heading"><h3>Сетевая игра</h3><span id="online-players" aria-live="polite">… игроков</span></div><div class="network-entry"><button type="button" id="network-join">Подключиться онлайн</button></div>';
 startupCard.append(nameField,soloSection,networkSection);
@@ -154,8 +160,8 @@ watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,s
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
 newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
-networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();document.querySelector('#selection-message')!.textContent='Общая поляна · выбери Кирби и подключайся';});
-const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent='Выйти в главное меню';audioPanel.append(leaveOnline);
+networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();document.querySelector('#selection-message')!.textContent=t('Общая поляна · выбери Кирби и подключайся');});
+const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent=t('Выйти в главное меню');audioPanel.append(leaveOnline);
 let returningToMenu=false;
 leaveOnline.addEventListener('click',()=>{
  if(returningToMenu)return;returningToMenu=true;playing=false;
@@ -164,27 +170,27 @@ leaveOnline.addEventListener('click',()=>{
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
 const onlineRoster=document.createElement('div');onlineRoster.className='online-roster';onlineRoster.hidden=true;document.body.append(onlineRoster);
-const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent='Сохранить игру';audioPanel.append(saveButton);
+const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent=t('Сохранить игру');audioPanel.append(saveButton);
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
 try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
 selectionCard.hidden=true;
-loadButton.title=hasSave?'Загрузить сохранение':'Сохранений пока нет';
+loadButton.title=t(hasSave?'Загрузить сохранение':'Сохранений пока нет');
 loadButton.addEventListener('click',()=>{
   if(!requirePlayerName())return;networkIntent=false;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
     startButton.click();
-  }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=error instanceof Error?error.message:'Не удалось загрузить сохранение.';}
+  }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
 saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
-    if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm('Сохранение уже существует. Перезаписать его текущей игрой?'))return;
+    if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
     localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase())));
-    saveMessage.textContent='Игра сохранена.';hasSave=true;loadButton.disabled=false;loadButton.title='Загрузить сохранение';
-  }catch {saveMessage.textContent='Не удалось сохранить игру: хранилище браузера недоступно или заполнено.';}
+    saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
+  }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
 const spawnNearDepot = document.querySelector<HTMLInputElement>('#spawn-near-depot')!;
@@ -198,14 +204,14 @@ for (const variant of KIRBY_VARIANTS) {
   const button = document.createElement('button');
   button.className = 'variant-button';
   button.type = 'button';
-  button.setAttribute('aria-label', variant[0]);
+  button.setAttribute('aria-label', t(variant[0]));
   button.setAttribute('aria-pressed', String(variant === selected));
   styleVariant(button,variant);
-  button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${variant[0]}</span><span class="choice-check" aria-hidden="true">✓</span>`;
+  button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${t(variant[0])}</span><span class="choice-check" aria-hidden="true">✓</span>`;
   button.addEventListener('click', () => {
     selected = variant;
     variantGrid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-    document.querySelector('#selected-name')!.textContent = variant[0];
+    document.querySelector('#selected-name')!.textContent = t(variant[0]);
   });
   variantGrid.appendChild(button);
 }
@@ -215,7 +221,7 @@ async function refreshVariantAvailability(){
  if(!networkIntent||playing||selectionCard.hidden||checkingVariants)return;
  checkingVariants=true;
  try{const response=await fetch(`${serverUrl.replace(/\/$/,'')}/room`,{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const room=await response.json();if(!networkIntent||!Array.isArray(room.occupiedVariants))return;
- const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.title=b.disabled?'Этот цвет уже занят':'';});
+ const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.title=t(b.disabled?'Этот цвет уже занят':'');});
  if(buttons[KIRBY_VARIANTS.indexOf(selected)].disabled)buttons.find(b=>!b.disabled)?.click();
  }catch{}finally{checkingVariants=false;}
 }
@@ -460,12 +466,12 @@ async function loadCharacter() {
     loadedModel = gltf;
     startButton.disabled = false;
     loadButton.disabled = !hasSave;
-    startButton.textContent = 'На поляну →';
-    document.querySelector('#selection-message')!.textContent = mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — толчок · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — толчок · E — взаимодействие';
+    startButton.textContent = t('На поляну →');
+    document.querySelector('#selection-message')!.textContent = t(mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — толчок · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — толчок · E — взаимодействие');
   } catch (error) {
     console.error(error);
-    document.querySelector('#selection-message')!.textContent = 'Не удалось загрузить персонажей. Обновите страницу.';
-    startButton.textContent = 'Загрузка не удалась';
+    document.querySelector('#selection-message')!.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');
+    startButton.textContent = t('Загрузка не удалась');
     throw error;
   }
 }
@@ -478,10 +484,10 @@ startButton.addEventListener('click', async () => {
   music.start();
   sounds.start();
   if(networkIntent){
-    startButton.disabled=true;startButton.textContent='Подключаемся…';
+    startButton.disabled=true;startButton.textContent=t('Подключаемся…');
     const session=new NetworkSession();
     try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
-    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent='Подключиться снова';document.querySelector('#selection-message')!.textContent=String(error instanceof Error?error.message:error);return;}
+    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent=t('Подключиться снова');document.querySelector('#selection-message')!.textContent=t(String(error instanceof Error?error.message:error));return;}
   }
   const { scene: template, animations } = loadedModel;
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
@@ -515,7 +521,7 @@ startButton.addEventListener('click', async () => {
     remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
-    network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=reason;onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.activateStarPower();}};
     network.onResize=size=>{if(character)character.resizeTo(size);};
@@ -552,7 +558,7 @@ function festivalTick(){
 }
 const fpsCounter=new FpsCounter();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});
-const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel.textContent='—';fpsLabel.title='Кадров в секунду';fpsLabel.setAttribute('aria-label','Кадров в секунду');document.body.append(fpsLabel);
+const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel.textContent='—';fpsLabel.title=t('Кадров в секунду');fpsLabel.setAttribute('aria-label',t('Кадров в секунду'));document.body.append(fpsLabel);
 let previousTime = performance.now();
 let greetingCooldown=0;
 let menuRepeat=0;
@@ -568,6 +574,8 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
   } else if(adjust && element instanceof HTMLInputElement) {
     element.value=String(Math.max(0,Math.min(100,Number(element.value)+adjust*5)));
     element.dispatchEvent(new Event('input'));
+  } else if(adjust && element.getAttribute('role')==='radio') {
+    element.dispatchEvent(new KeyboardEvent('keydown',{key:adjust>0?'ArrowRight':'ArrowLeft',bubbles:true}));
   }
   if(confirm && element instanceof HTMLButtonElement)element.click();
 }
@@ -670,6 +678,7 @@ renderer.setAnimationLoop((time: number) => {
     fountain.bathe(dt,character);
     if(onSkyTrail)character.surfaceY=skySurface;
     if(onSkyTrail&&!skyWasActive&&!skyTrail.active)skyTrail.apply(character,previousPosition,dt);
+    arenaCentipede?.collision.apply(character,previousPosition,dt,!onSkyTrail&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive);
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
     fireflies?.syncRider(dt);
     const availableInteraction=resolveInteraction(character);
@@ -678,7 +687,7 @@ renderer.setAnimationLoop((time: number) => {
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
     touch?.setInteraction(!occupied&&interaction?.includes('E —')?interaction:undefined);
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    setText(rideHint,interaction ? interaction.replace('E —',usingPad?'Y —':usingTouch?'Действие —':'E —') : (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
+    setText(rideHint,interaction ? t(interaction).replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —') : (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
@@ -761,7 +770,7 @@ renderer.setAnimationLoop((time: number) => {
   shadows.lightDirection.fromArray(lightTime.shadowDirection);
   shadows.update();
   renderer.toneMappingExposure=1+day*.2;
-  timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=lightTime.label;timeDial.setAttribute('aria-label',`Время суток: ${lightTime.label}`);
+  timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=t(lightTime.label);timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
@@ -808,9 +817,9 @@ function sendMill(action:MillAction){if(!character)return;if(network)network.eve
 
 function currentCentipede(){return network?network.room.centipede:soloCentipede;}
 function centipedeActor(c:CharacterController):CentipedeActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,done:c.achievements.has('centipede'),points:c.eventPoints};}
-function centipedePrompt(c:CharacterController){if(Math.hypot(c.actor.position.x-BOSS_ARENA.x,c.actor.position.z-BOSS_ARENA.z)>BOSS_ARENA.radius)return;return !currentCentipede()&&!network?.room.festival&&arenaCentipede&&nearCentipede(centipedeActor(c),arenaCentipede.startTrail(boatTime()))?'E — Поиграть с Топотушкой':undefined;}
+function centipedePrompt(c:CharacterController){if(Math.hypot(c.actor.position.x-BOSS_ARENA.x,c.actor.position.z-BOSS_ARENA.z)>BOSS_ARENA.radius)return;return !currentCentipede()&&!network?.centipedeStarting&&!network?.room.festival&&arenaCentipede&&nearCentipede(centipedeActor(c),arenaCentipede.startTrail(boatTime()))?'E — Поиграть с Топотушкой':undefined;}
 function startCentipedeGame(){
- if(!character||!arenaCentipede||currentCentipede())return;const trail=arenaCentipede.startTrail(boatTime());
+ if(!character||!arenaCentipede||!centipedePrompt(character))return;const trail=arenaCentipede.startTrail(boatTime());
  if(network)network.event({type:'centipede-start',trail});else {soloCentipede=startCentipede(trail,centipedeActor(character),Date.now());if(soloCentipede)addLocalLog('позвал Топотушку поиграть в догонялки и подружиться!');}
 }
 function centipedeSoloRewards(){
@@ -949,3 +958,5 @@ function updateNetwork(dt:number){
   for(const entry of rows){entry.row.querySelector('.score-place')!.textContent=`${1+rows.filter(r=>r.points>entry.points).length}.`;parent.insertBefore(entry.row,anchor);}
  }
 }
+
+localizeDOM();

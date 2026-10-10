@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {BOSS_ARENA as A} from '../src/boss-arena-site';
 import {ArenaCentipede,centipedeRoam,centipedeRoute} from '../src/arena-centipede';
 import {Vector3} from 'three';
-import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,centipedeSegments,centipedeTail,chargePoint,centipedeBalls,centipedeContact,centipedeTarget,centipedePhase,centipedeWheel,centipedeWaves,CENTIPEDE_BALLS,CENTIPEDE_TIMES,CENTIPEDE_STEP,type CentipedeActor,type CentipedeEvent,type Point} from '../src/centipede-event';
+import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,centipedeSegments,centipedeGatherDistance,centipedeRoot,centipedeTail,chargePoint,centipedeBalls,centipedeContact,centipedeTarget,centipedePhase,centipedeWheel,centipedeWaves,CENTIPEDE_BALLS,CENTIPEDE_TIMES,CENTIPEDE_STEP,type CentipedeActor,type CentipedeEvent,type Point} from '../src/centipede-event';
 import {centipedeSound} from '../src/centipede-sounds';
 import {CentipedeFireworks} from '../src/centipede-fireworks';
 import {CentipedeBallsView} from '../src/centipede-balls-view';
@@ -36,7 +36,60 @@ test('charge contact is a single springy bump per cycle; flying avoids it and in
  const now=q.stageAt+CENTIPEDE_TIMES.charge/2,p=chargePoint(q,.5);a.p=[p[0],0,p[1]];assert(bumpCentipede(q,a,now));assert(!bumpCentipede(q,a,now));
  assert(!bumpCentipede(q,{...a,id:'flying',p:[p[0],5,p[1]]},now));
  q=next(q,[a]);assert.equal(q.players.a.dodges,0,'a bumped player is not credited for dodging');
- assert.equal(advanceCentipede(q,q.stageAt+CENTIPEDE_TIMES.balls+1,[{...a,p:[0,0,0]}]).event,undefined);
+ const left=q.stageAt+CENTIPEDE_TIMES.balls+1;
+ assert.equal(advanceCentipede(q,left,[{...a,p:[0,0,0]}]).event,q);
+ assert.equal(advanceCentipede(q,left+10000,[{...a,p:[0,0,0]}]).event,undefined);
+});
+
+test('empty arena waits ten seconds, returning players cancel the countdown, and unavailable players still count as present',()=>{
+ const a=actor(),q=startCentipede(trail(),a,1000)!,away={...a,p:[0,0,0]};
+ assert(advanceCentipede(q,1500,[away]).changed);assert.equal(q.emptySince,1500);
+ assert(!advanceCentipede(q,11499,[away]).changed);assert.equal(q.stage,'invite');
+ assert(advanceCentipede(q,11499,[{...a,available:false}]).changed);assert.equal(q.emptySince,undefined);
+ advanceCentipede(q,12000,[away]);assert.equal(q.emptySince,12000);
+ assert.equal(advanceCentipede(q,21999,[]).event,q);
+ assert.equal(advanceCentipede(q,22000,[]).event,undefined);
+});
+
+test('sneezing turns a connected front arc toward the centre and launches balls from that head',()=>{
+ for(const seconds of [0,8,25,62,105]){
+  const a=actor('a',trail(seconds));let q=startCentipede(trail(seconds),a,1000)!;
+  q=next(q,[a]);q=next(q,[a]);q=next(q,[a]);assert.equal(q.stage,'balls');
+  const poses=centipedeSegments(q,q.stageAt+700),head=poses[0];
+  for(let i=1;i<6;i++)assert(Math.hypot(poses[i].x-poses[i-1].x,poses[i].z-poses[i-1].z)<2,'front body remains connected');
+  const direction=Math.atan2(A.x-q.trail.at(-1)![0],A.z-q.trail.at(-1)![1]);
+  assert(Math.abs(Math.atan2(Math.sin(head.yaw-direction),Math.cos(head.yaw-direction)))<.001);
+  const ball=centipedeBalls(q,q.stageAt+CENTIPEDE_BALLS.launch).find(b=>b.index===2)!;
+  assert(Math.abs(Math.hypot(ball.x-head.x,ball.z-head.z)-2.6)<.001);
+ }
+});
+test('walking into phase two follows a forward path without squeezing, crossings or teleporting the tail',()=>{
+ for(const seconds of [0,8,25,37,62,83,105]){
+  const a=actor('a',trail(seconds));let q=startCentipede(trail(seconds),a,1000)!;
+  for(let hit=0;hit<3;hit++){q=vulnerable(q,[a]);atTarget(q,a);assert(pushCentipede(q,a,q.stageAt+1));q=next(q,[a]);}
+  assert.equal(q.stage,'gather');const start=centipedeSegments({...q,stage:'tickle'},q.stageAt),first=centipedeSegments(q,q.stageAt);
+  first.forEach((p,i)=>assert(Math.hypot(p.x-start[i].x,p.z-start[i].z)<.001,'walking starts at the existing links'));
+  let previous=first,previousDistance=0;
+  for(let frame=1;frame<=120;frame++){
+   const now=q.stageAt+frame/120*CENTIPEDE_TIMES.gather,poses=centipedeSegments(q,now),distance=centipedeGatherDistance(q,now);
+   assert(distance>=previousDistance);previousDistance=distance;
+   for(let i=0;i<12;i++){
+    assert(Math.hypot(poses[i].x-A.x,poses[i].z-A.z)<A.playRadius-1,'walk stays inside arena');
+    assert(Math.hypot(poses[i].x-previous[i].x,poses[i].z-previous[i].z)<2,'no step teleports');
+    if(i)assert(Math.hypot(poses[i].x-poses[i-1].x,poses[i].z-poses[i-1].z)>1.55,'links do not collapse');
+    for(let j=i+3;j<12;j++)assert(Math.hypot(poses[i].x-poses[j].x,poses[i].z-poses[j].z)>1.95,`gather crosses itself at ${seconds}/${frame}/${i}/${j}`);
+   }previous=poses;
+  }
+  previous.forEach((p,i)=>{assert(Math.abs(p.x-A.x)<.001);assert(Math.abs(p.z-(A.z+(5.5-i)*CENTIPEDE_STEP))<.001);assert(Math.abs(p.yaw)<.001);});
+  assert.deepEqual(centipedeSegments(q,q.stageAt+4600),centipedeSegments(JSON.parse(JSON.stringify(q)),q.stageAt+4600),'late join derives the same walk');
+ }
+});
+test('the final wheel unfolds and celebrates in place; the rest walk starts where it finished',()=>{
+ const a=actor(),q=startCentipede(trail(),a,1000)!;q.phase=3;q.stage='curl';q.to=[A.x,A.z];next(q,[a]);q.stage='uncurl';q.stageAt=10000;
+ const start=centipedeRoot(q,q.stageAt);
+ assert.deepEqual(centipedeRoot(q,q.stageAt+CENTIPEDE_TIMES.uncurl),start);
+ q.stage='celebrate';q.stageAt=12400;assert.deepEqual(centipedeRoot(q,15000),start);
+ q.stage='rest';q.stageAt=22400;const resting=centipedeRoot(q,22400);assert(Math.abs(resting.x-start.x)<.001);assert(Math.abs(resting.z-start.z)<.001);
 });
 test('targeted charge paths remain inside the arena with a separated, following tail',()=>{
  for(const time of [0,8,25,37,62,83,105]){

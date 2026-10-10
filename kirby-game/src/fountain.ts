@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import type {CharacterController} from './controller';
@@ -106,8 +107,8 @@ export class RainbowFountain {
   this.bubbles.frustumCulled=false;this.bubbles.visible=false;this.group.add(this.bubbles);
   if(typeof document!=='undefined'){
    const canvas=document.createElement('canvas');canvas.width=768;canvas.height=160;const ctx=canvas.getContext('2d')!;
-   ctx.fillStyle='#235969';ctx.fillRect(0,0,768,160);ctx.strokeStyle='#edc575';ctx.lineWidth=8;ctx.strokeRect(4,4,760,152);ctx.fillStyle='#fff0cf';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 60px sans-serif';ctx.fillText('РАДУЖНЫЙ ФОНТАН',384,80);
-   const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+   ctx.fillStyle='#235969';ctx.fillRect(0,0,768,160);ctx.strokeStyle='#edc575';ctx.lineWidth=8;ctx.strokeRect(4,4,760,152);ctx.fillStyle='#fff0cf';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 60px sans-serif';drawLocalizedText(ctx,'РАДУЖНЫЙ ФОНТАН',384,80);
+   const texture=localizedCanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
    const sign=new T.Mesh(new T.BoxGeometry(5.8,1.2,.18),stone);sign.position.set(0,1.35,12.1);this.group.add(sign);
    const label=new T.Mesh(new T.PlaneGeometry(5.7,1.12),new T.MeshBasicMaterial({map:texture}));label.position.set(0,1.35,12.2);this.group.add(label);
    for(const x of [-2.4,2.4]){const post=new T.Mesh(new T.CylinderGeometry(.09,.12,1.2,8),gold);post.position.set(x,.6,12.1);this.group.add(post);}

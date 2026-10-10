@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {DogHouse} from './dog-house';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {BedQuilt,BED_REST,BED_COVER_FOLD} from './bed-quilt';
@@ -61,7 +62,7 @@ export class KirbyHome {
     part('#966b48',0,1.25,-2.9,3.8,.7,.15);part('#c892a4',0,.34,3,4,.04,1.6);
     part('#b58a58',3.1,.85,-1.8,1.25,1.15,1);part('#f3d590',3.1,1.65,-1.8,.35,.55,.35,true);
     for(let i=0;i<7;i++)part('#c5b593',0,.08,5+i*.7,3.2,.16,.57);
-    if(typeof document!=='undefined'){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#704f49';ctx.fillRect(0,0,512,128);ctx.fillStyle='#fff0c4';ctx.textAlign='center';ctx.font='bold 45px sans-serif';ctx.fillText('ДОМИК КИРБИ',256,78);const sign=new T.Mesh(new T.PlaneGeometry(4.6,1.15),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,4.7,3.44);this.group.add(sign);}}
+    if(typeof document!=='undefined'){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#704f49';ctx.fillRect(0,0,512,128);ctx.fillStyle='#fff0c4';ctx.textAlign='center';ctx.font='bold 45px sans-serif';drawLocalizedText(ctx,'ДОМИК КИРБИ',256,78);const sign=new T.Mesh(new T.PlaneGeometry(4.6,1.15),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,4.7,3.44);this.group.add(sign);}}
     // Merge repeated decoration into a small number of draws.
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
     this.group.add(this.quilt);

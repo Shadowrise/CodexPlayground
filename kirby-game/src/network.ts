@@ -1,4 +1,4 @@
-import {CENTIPEDE_TIMES} from './centipede-event';
+import {CENTIPEDE_TIMES,CENTIPEDE_EMPTY_MS} from './centipede-event';
 import {PlayerSnapshots} from './player-snapshots';
 import {emoteMessage} from './world-log';
 import type {Emote} from './emotes';
@@ -18,6 +18,8 @@ export class NetworkSession{
  private socket?:WebSocket;private events:Event[]=[];private elapsed=0;private worldElapsed=0;private lastActor='';private heartbeat?:ReturnType<typeof setInterval>;
  private locks=new Map<string,(ok:boolean)=>void>();private closed=false;
  private requestedFestivalEnd?:number;private centipedeStep='';
+ private centipedeStartPending=false;
+ get centipedeStarting(){return this.centipedeStartPending;}
  finishFestivalIfDue(){
   const f=this.room?.festival;
   if(!f||f.results||this.serverNow<f.endsAt||this.requestedFestivalEnd===f.endsAt||this.socket?.readyState!==WebSocket.OPEN)return;
@@ -39,7 +41,7 @@ export class NetworkSession{
    else if(m.type==='presence'){if(m.count>this.peerCount){this.worldElapsed=2;this.lastActor='';}this.peerCount=m.count;}
    else if(m.type==='error'){clearTimeout(timeout);if(this.id){this.close();this.onDisconnect?.(m.message);}reject(Error(m.message));}
    else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.receiveActor(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}}
-   else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=m.room;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
+   else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=m.room;this.centipedeStartPending=false;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
    else if(m.type==='left'){this.actors.delete(m.id);this.actorSnapshots.delete(m.id);}
    else if(m.type==='hit')this.onHit?.(m.actor,m.target);
    else if(m.type==='star')this.onStar?.();
@@ -49,11 +51,12 @@ export class NetworkSession{
   s.onerror=()=>{clearTimeout(timeout);reject(Error('Не удалось подключиться: сервер недоступен, обновляется или комната заполнена.'));};
   s.onclose=e=>{clearTimeout(timeout);clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();if(!this.closed)this.onDisconnect?.(e.reason==='Admin recreated room'?'Ветерок пересоздал комнату. Вернись в меню и подключись к новой игре.':e.reason==='Admin disconnected'?'Ветерок отключил тебя от комнаты.':'Соединение потеряно. Вернись в меню и подключись снова.');reject(Error('Соединение закрыто.'));};
  });}
- event(event:Event){this.events.push(event);if(event.type==='visible')setTimeout(()=>{if(this.socket?.readyState===WebSocket.OPEN&&this.events.length)this.socket.send(JSON.stringify({type:'frame',events:this.events.splice(0,16)}));},150);}
+ event(event:Event){if(event.type==='centipede-start'){if(this.room?.centipede||this.room?.festival||this.centipedeStartPending)return;this.centipedeStartPending=true;}this.events.push(event);if(event.type==='visible')setTimeout(()=>{if(this.socket?.readyState===WebSocket.OPEN&&this.events.length)this.socket.send(JSON.stringify({type:'frame',events:this.events.splice(0,16)}));},150);}
  acquire(key:string){return new Promise<boolean>(resolve=>{if(this.locks.has(key)){resolve(false);return;}const timer=setTimeout(()=>{this.locks.delete(key);this.event({type:'release',key});resolve(false);},5000);this.locks.set(key,ok=>{clearTimeout(timer);resolve(ok);});this.event({type:'lock',key});});}
  tick(dt:number,actor:ActorState,world:()=>WorldState){
   this.elapsed+=dt;this.worldElapsed+=dt;if(this.elapsed<.1||this.socket?.readyState!==WebSocket.OPEN||this.socket.bufferedAmount>64000)return;
-  this.elapsed=0;const boss=this.room?.centipede;if(this.host&&boss&&this.serverNow>=boss.stageAt+CENTIPEDE_TIMES[boss.stage]){const key=`${boss.startedAt}:${boss.stageAt}:${boss.stage}`;if(this.centipedeStep!==key){this.centipedeStep=key;this.events.push({type:'centipede-step'});}}
+  this.elapsed=0;const boss=this.room?.centipede,deadline=boss?.emptySince===undefined?boss?boss.stageAt+CENTIPEDE_TIMES[boss.stage]:Infinity:boss.emptySince+CENTIPEDE_EMPTY_MS;
+  if(this.host&&boss&&this.serverNow>=deadline){const key=`${boss.startedAt}:${boss.stageAt}:${boss.stage}:${boss.emptySince}`;if(this.centipedeStep!==key){this.centipedeStep=key;this.events.push({type:'centipede-step'});}}
   const serialized=JSON.stringify(actor),changed=serialized!==this.lastActor;
   // Solo rooms only need recovery checkpoints; keep the full multiplayer cadence.
   const sendWorld=this.host&&this.worldElapsed>=(this.peerCount>1?.2:2);

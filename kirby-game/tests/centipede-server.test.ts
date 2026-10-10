@@ -17,7 +17,7 @@ test('Worker shares all three phases, awards both participants only at the final
   class Socket{readyState=1;messages:any[]=[];constructor(public data:any){}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(m:string){this.messages.push(JSON.parse(m));}}
   const a=new Socket({id:'a',session:'room',name:'Первый',variant:0,seen:now,visible:true,announced:true,actor:actor('Первый',0)}),b=new Socket({id:'b',session:'room',name:'Второй',variant:1,seen:now,visible:true,announced:true,actor:actor('Второй',1)}),sockets=[a,b];
   const stored=new Map<string,any>(),pending:Promise<any>[]=[];
-  const ctx={getWebSockets:()=>sockets,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
+  const ctx={getWebSockets:()=>sockets,getWebSocketAutoResponseTimestamp:()=>undefined,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
   let room=new GameRoom(ctx,{});await Promise.all(pending);room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const trail=Array.from({length:12},(_,i)=>{const p=centipedeRoute(centipedeRoam(0).distance-(11-i)*CENTIPEDE_STEP,new Vector3());return [140+p.x,-45+p.z];});
   const frame=(socket:Socket,events:any[]=[])=>{now+=200;room.webSocketMessage(socket,JSON.stringify({type:'frame',actor:structuredClone(socket.data.actor),events}));};
@@ -36,7 +36,9 @@ test('Worker shares all three phases, awards both participants only at the final
    }
    while(q().stage!=='celebrate')advance();
   };
-  start();complete();
+  start();const started=q().startedAt;
+  for(const socket of [b,a,b]){frame(socket,[{type:'centipede-start',trail}]);assert.equal(q().startedAt,started);assert.equal(q().stage,'invite');assert(socket.messages.some(m=>m.type==='room'&&m.room.centipede?.startedAt===started));}
+  complete();
   for(const s of sockets){assert(s.data.actor.achievements.includes('centipede'));assert.equal(s.messages.filter(m=>m.type==='centipede-progress'&&m.completed).length,1);for(const phase of [2,3])assert(s.messages.some(m=>m.room?.centipede?.phase===phase));}
   assert.equal(a.data.actor.eventPoints,12);const points=b.data.actor.eventPoints;assert(points>0);assert(!room.room.festival);
   advance();assert.equal(q().stage,'rest');const restAt=q().stageAt,startedAt=q().startedAt;
@@ -47,5 +49,10 @@ test('Worker shares all three phases, awards both participants only at the final
   b.data.actor.p=[140,5,-45];start();complete();
   assert.equal(a.data.actor.eventPoints,12);assert.equal(b.data.actor.eventPoints,points);
   for(const s of sockets)assert.equal(s.messages.filter(m=>m.type==='centipede-progress'&&m.completed).length,1,'no duplicate completion on replay');
+  q().stage='balls';q().stageAt=now;q().hits=0;
+  a.data.actor.p=b.data.actor.p=[0,0,0];frame(a);const empty=q().emptySince!;assert.equal(empty,now);
+  now=empty+9000;b.data.actor.p=[140,0,-45];frame(b);assert.equal(q().emptySince,undefined);
+  b.data.actor.p=[0,0,0];frame(b);const deadline=q().emptySince!+10000;
+  now=deadline;await room.alarm();assert.equal(room.room.centipede,undefined,'alarm resets even when both players stop sending frames');
  }finally{Date.now=original;(globalThis as any).WebSocketRequestResponsePair=saved;}
 });

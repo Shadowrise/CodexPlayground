@@ -1,3 +1,4 @@
+import {t,onLocaleChange} from './i18n';
 import {EMOTES,type Emote} from './emotes';
 
 type Actions={jump:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
@@ -22,12 +23,12 @@ export class TouchControls {
   constructor(private canvas:HTMLCanvasElement,private actions:Actions){
     this.root.id='touch-controls';this.root.hidden=true;
     this.interactionLayer.id='touch-interaction';this.interactionLayer.hidden=true;
-    this.stick.id='touch-stick';this.stick.setAttribute('aria-label','Джойстик движения');
+    this.stick.id='touch-stick';this.stick.setAttribute('aria-label',t('Джойстик движения'));
     this.thumb.className='touch-thumb';this.stick.append(this.thumb);
-    const caption=document.createElement('small');caption.textContent='Движение · край — спринт';this.stick.append(caption);
+    const caption=document.createElement('small');caption.textContent=t('Движение · край — спринт');this.stick.append(caption);
     const buttons=document.createElement('div');buttons.className='touch-actions';
     const button=(id:string,text:string,label:string,fn:()=>void,parent:HTMLElement=buttons)=>{
-      const b=document.createElement('button');b.type='button';b.id=id;b.textContent=text;b.setAttribute('aria-label',label);
+      const b=document.createElement('button');b.type='button';b.id=id;b.textContent=t(text);b.setAttribute('aria-label',t(label));
       b.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')e.preventDefault();});
       // Activate on release so a cancelled touch never starts an interaction.
       b.addEventListener('pointerup',e=>{if(e.pointerType==='touch'&&this.enabled){e.preventDefault();fn();}});
@@ -42,10 +43,11 @@ export class TouchControls {
     button('touch-emotes','☺','Эмоции',()=>{this.reset();this.chooser.hidden=false;},utilities);
     button('touch-chat','Чат','Написать в чат',()=>{this.reset();actions.chat();},utilities);
     this.root.append(this.stick,buttons,utilities);
-    this.chooser.id='touch-emote-menu';this.chooser.hidden=true;this.chooser.setAttribute('role','dialog');this.chooser.setAttribute('aria-label','Эмоции');
-    const title=document.createElement('h3');title.textContent='Как настроение?';this.chooser.append(title);
-    for(const emote of EMOTES){const b=document.createElement('button');b.type='button';b.textContent=`${emote.icon} ${emote.name}`;b.addEventListener('click',()=>{this.chooser.hidden=true;actions.emote(emote.id);});this.chooser.append(b);}
-    const close=document.createElement('button');close.type='button';close.textContent='Закрыть';close.addEventListener('click',()=>this.chooser.hidden=true);this.chooser.append(close);
+    this.chooser.id='touch-emote-menu';this.chooser.hidden=true;this.chooser.setAttribute('role','dialog');this.chooser.setAttribute('aria-label',t('Эмоции'));
+    const title=document.createElement('h3');title.textContent=t('Как настроение?');this.chooser.append(title);
+    for(const emote of EMOTES){const b=document.createElement('button');b.type='button';b.textContent=`${emote.icon} ${t(emote.name)}`;b.addEventListener('click',()=>{this.chooser.hidden=true;actions.emote(emote.id);});this.chooser.append(b);}
+    onLocaleChange(()=>this.chooser.querySelectorAll('button').forEach((button,i)=>{if(EMOTES[i])button.textContent=`${EMOTES[i].icon} ${t(EMOTES[i].name)}`;}));
+    const close=document.createElement('button');close.type='button';close.textContent=t('Закрыть');close.addEventListener('click',()=>this.chooser.hidden=true);this.chooser.append(close);
     document.body.append(this.root,this.interactionLayer,this.chooser);
     this.stick.addEventListener('pointerdown',e=>{
       if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.stickId!==undefined)return;
@@ -81,7 +83,7 @@ export class TouchControls {
     if(!enabled){this.reset();this.chooser.hidden=true;}
   }
   setInteraction(text?:string){
-    this.action.hidden=!text;this.action.textContent=text?.replace(/^E\s*—\s*/,'')??'Действие';
+    this.action.hidden=!text;this.action.textContent=(text?t(text).replace(/^E\s*—\s*/,''):t('Действие'));
     this.action.setAttribute('aria-label',this.action.textContent);
   }
   reset(){

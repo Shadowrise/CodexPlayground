@@ -1,3 +1,4 @@
+import {t,getLocale} from './i18n';
 export type Pad = Pick<Gamepad, 'id' | 'index' | 'connected' | 'mapping' | 'axes' | 'buttons'>;
 export const INPUT_STORAGE = 'kirby-input-device-v1';
 export function deadZone(value: number, threshold = .2) {
@@ -48,25 +49,25 @@ export function createGamepadInput() {
   const input=new GamepadInput(storage);
   const selectors: HTMLSelectElement[]=[];
   for(const parent of [document.querySelector('.selection-description'),document.querySelector('#audio-panel')]) {
-    const label=document.createElement('label');label.className='input-device';label.textContent='Управление ';
-    const select=document.createElement('select');select.setAttribute('aria-label','Устройство управления');
+    const label=document.createElement('label');label.className='input-device';label.textContent=t('Управление ');
+    const select=document.createElement('select');select.setAttribute('aria-label',t('Устройство управления'));
     select.addEventListener('change',()=>input.select(select.value));
     label.append(select);selectors.push(select);
     if(parent?.id==='audio-panel')parent.prepend(label);else parent?.after(label);
   }
   const hint=document.createElement('p');hint.className='gamepad-hint';
-  hint.textContent='Подключите геймпад и нажмите на нём кнопку, чтобы он появился в списке.';
+  hint.textContent=t('Подключите геймпад и нажмите на нём кнопку, чтобы он появился в списке.');
   selectors[0].parentElement!.after(hint);
   let signature='';
   return {input, poll() {
     let pads: (Gamepad|null)[]=[];
     try {pads=Array.from(navigator.getGamepads?.()??[]);} catch {}
     const state=input.poll(pads,!document.hidden && document.hasFocus());
-    const next=JSON.stringify([state.available.map(d=>[d.key,d.label]),input.active]);
+    const next=JSON.stringify([state.available.map(d=>[d.key,d.label]),input.active,getLocale()]);
     if(next!==signature) {
       signature=next;
       for(const select of selectors) {
-        select.replaceChildren(new Option(document.body.classList.contains('touch-ui')?'Сенсорный экран':'Клавиатура и мышь','keyboard'),...state.available.map(d=>new Option(d.label,d.key)));
+        select.replaceChildren(new Option(t(document.body.classList.contains('touch-ui')?'Сенсорный экран':'Клавиатура и мышь'),'keyboard'),...state.available.map(d=>new Option(t(d.label),d.key)));
         select.value=input.active;
       }
     }

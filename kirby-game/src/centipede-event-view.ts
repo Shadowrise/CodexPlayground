@@ -1,15 +1,17 @@
+import {t,getLocale} from './i18n';
 import * as T from 'three';
 import {CentipedeFireworks} from './centipede-fireworks';
 import {CentipedeBallsView} from './centipede-balls-view';
 import {CentipedeChallengesView} from './centipede-challenges-view';
+import {roundedRunWarning} from './centipede-warning-geometry';
 import {BOSS_ARENA as A} from './boss-arena-site';
-import {chargePoint,centipedeTail,centipedePhase,centipedePhaseHits,centipedeTarget,centipedeRoot,centipedeWaves,CENTIPEDE_TIMES,CENTIPEDE_BALLS,type CentipedeEvent,type CentipedeStage} from './centipede-event';
+import {chargePoint,centipedeTail,centipedePhase,centipedePhaseHits,centipedeTarget,centipedeRoot,centipedeWaves,CENTIPEDE_TIMES,CENTIPEDE_BALLS,CENTIPEDE_EMPTY_MS,type CentipedeEvent,type CentipedeStage} from './centipede-event';
 
 /** Cheap event effects; hidden completely during ordinary arena roaming. */
 export class CentipedeEventView{
  readonly group=new T.Group();readonly hud=document.createElement('div');
  private title=document.createElement('strong');private message=document.createElement('div');
- private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({color:'#ffc259',transparent:true,opacity:.32,depthWrite:false,side:T.DoubleSide}));
+ private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide,toneMapped:false}));
  private halo=new T.Mesh(new T.TorusGeometry(1.15,.07,6,32),new T.MeshBasicMaterial({color:'#fff29b',transparent:true,opacity:.8,depthWrite:false}));
  private confetti=new T.InstancedMesh(new T.OctahedronGeometry(.13),new T.MeshBasicMaterial(),32);
  private fireworks=new CentipedeFireworks();
@@ -26,7 +28,7 @@ export class CentipedeEventView{
   this.hud.id='centipede-event-hud';this.hud.className='event-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');this.hud.append(this.title,this.message);document.body.append(this.hud);
  }
  update(q:CentipedeEvent|undefined,id:string,now:number,listener:T.Vector3,visible:boolean,pushKey:string,camera?:T.Camera){
-  const distance=Math.hypot(listener.x-A.x,listener.z-A.z);this.group.visible=!!q&&distance<120;this.hud.hidden=!q||!visible||distance>A.radius+8;
+  const distance=Math.hypot(listener.x-A.x,listener.z-A.z);this.group.visible=!!q&&distance<120;this.hud.hidden=!q||!visible||(q.emptySince===undefined&&distance>A.radius+8);
   if(!q){this.cue=this.path='';return;}
   const key=`${q.startedAt}:${q.cycle}:${q.stage}:${q.hits}`,volume=Math.max(.15,Math.min(1,1-(distance-A.playRadius)/40));
   if(this.cue!==key){this.cue=key;if(!['balls','stomp','rest'].includes(q.stage)&&visible&&distance<75)this.sound(q.stage,volume);}
@@ -39,21 +41,16 @@ export class CentipedeEventView{
   const ring=centipedeWaves(q,now).at(-1),ringKey=ring?`${key}:${ring.index}`:'';
   if(ringKey&&this.ringCue!==ringKey){this.ringCue=ringKey;if(visible&&distance<75)this.sound('stomp',volume*.8);}
   const resting=Math.max(0,Math.ceil((CENTIPEDE_TIMES.rest-(now-q.stageAt))/1000));
-  const hints:Record<CentipedeStage,string>={invite:'Давай играть! Уступай дорогу Топотушке и ищи её хвостовой бубенчик.',warning:'Сейчас будет рывок! Отойди от золотой дорожки или взлети.',charge:'Уклоняйся! После рывка Топотушка выпустит прыгучие шарики.',balls:'Апчхи! Обходи разноцветные шарики или перелетай через них. Скоро откроется бубенчик!',exhausted:`Топотушка переводит дух. Толкни бубенчик на хвосте: ${pushKey}`,tickle:'Хи-хи, щекотно! Отличный толчок — приготовься к следующему испытанию.',gather:'Второе испытание! Топотушка готовится к радужному топоту.',coil:'Сейчас побегут кольца! Перелетай волны или ищи разрывы.',stomp:'Перелетай радужные кольца или проходи через разрывы. Скоро откроется спинка!',lower:'Топотушка опускает спинку. Приготовься подлететь к бубенчику.',back:`Подлети повыше к бубенчику на спине и толкни: ${pushKey}`,bell:'Динь! Бубенчик на спине прозвенел. Готовься к новому испытанию!',rise:'Топотушка снова поднимается. Отойди и приготовься перелетать кольца.',curl:'Финальное испытание! Топотушка превращается в большое колесо.',wheelWarning:'Колесо сейчас покатится! Отойди от золотой дорожки.',wheelRoll:'Уступай дорогу колесу и перелетай кольца! Потом понадобится радужный мяч.',dizzy:`Колесо устало! Подойди к радужному мячу, повернись к Топотушке и толкни: ${pushKey}`,ballShot:'Отличный толчок! Радужный мяч летит к Топотушке.',wheelHit:'Бум-пружинка! Топотушка смеётся и готовится к следующему перекату.',uncurl:'Все испытания пройдены! Топотушка разворачивается, чтобы обнять друзей.',celebrate:'Топотушка подружилась с вами! После салюта она отдохнёт минутку.',rest:`Топотушка отдыхает. Снова поиграть можно через ${resting} с.`};
-  const text=`${centipedePhase(q)}:${q.hits}:${q.stage}:${pushKey}:${q.stage==='rest'?resting:''}`;
-  if(this.text!==text){this.text=text;this.title.textContent=q.stage==='celebrate'?'Дружба с Топотушкой!':q.stage==='rest'?'Топотушка отдыхает':`Фаза ${centipedePhase(q)}/3 · ${centipedePhaseHits(q)}/3 бубенчиков`;this.message.textContent=hints[q.stage];}
+  const hints:Record<CentipedeStage,string>={invite:'Давай играть! Уступай дорогу Топотушке и ищи её хвостовой бубенчик.',warning:'Сейчас будет рывок! Отойди от голубой дорожки или взлети.',charge:'Уклоняйся! После рывка Топотушка выпустит прыгучие шарики.',balls:'Апчхи! Обходи разноцветные шарики или перелетай через них. Скоро откроется бубенчик!',exhausted:`Топотушка переводит дух. Толкни бубенчик на хвосте: ${pushKey}`,tickle:'Хи-хи, щекотно! Отличный толчок — приготовься к следующему испытанию.',gather:'Второе испытание! Топотушка готовится к радужному топоту.',coil:'Сейчас побегут кольца! Перелетай волны или ищи разрывы.',stomp:'Перелетай радужные кольца или проходи через разрывы. Скоро откроется спинка!',lower:'Топотушка опускает спинку. Приготовься подлететь к бубенчику.',back:`Подлети повыше к бубенчику на спине и толкни: ${pushKey}`,bell:'Динь! Бубенчик на спине прозвенел. Готовься к новому испытанию!',rise:'Топотушка снова поднимается. Отойди и приготовься перелетать кольца.',curl:'Финальное испытание! Топотушка превращается в большое колесо.',wheelWarning:'Колесо сейчас покатится! Отойди от голубой дорожки.',wheelRoll:'Уступай дорогу колесу и перелетай кольца! Потом понадобится радужный мяч.',dizzy:`Колесо устало! Подойди к радужному мячу, повернись к Топотушке и толкни: ${pushKey}`,ballShot:'Отличный толчок! Радужный мяч летит к Топотушке.',wheelHit:'Бум-пружинка! Топотушка смеётся и готовится к следующему перекату.',uncurl:'Все испытания пройдены! Топотушка разворачивается, чтобы обнять друзей.',celebrate:'Топотушка подружилась с вами! После салюта она отдохнёт минутку.',rest:`Топотушка отдыхает. Снова поиграть можно через ${resting} с.`};
+  const empty=q.emptySince===undefined?undefined:Math.max(0,Math.ceil((CENTIPEDE_EMPTY_MS-(now-q.emptySince))/1000));
+  const text=`${getLocale()}:${centipedePhase(q)}:${q.hits}:${q.stage}:${pushKey}:${q.stage==='rest'?resting:''}:${empty}`;
+  if(this.text!==text){this.text=text;this.title.textContent=t(empty===undefined?q.stage==='celebrate'?'Дружба с Топотушкой!':q.stage==='rest'?'Топотушка отдыхает':`Фаза ${centipedePhase(q)}/3 · ${centipedePhaseHits(q)}/3 бубенчиков`:'Арена опустела');this.message.textContent=empty===undefined?t(hints[q.stage]):t('Вернитесь на арену! Игра сбросится через {0} с.',[empty]);}
   this.lane.visible=['warning','charge','wheelWarning','wheelRoll'].includes(q.stage);
   const pathKey=`${q.startedAt}:${q.cycle}`;
   if(this.lane.visible&&this.path!==pathKey){
-   this.path=pathKey;const points:number[]=[];
-   const sections=64,indices:number[]=[];
-   for(let i=0;i<=sections;i++){
-    const p=chargePoint(q,i/sections),before=chargePoint(q,Math.max(0,(i-1)/sections)),after=chargePoint(q,Math.min(1,(i+1)/sections));
-    const dx=after[0]-before[0],dz=after[1]-before[1],length=Math.max(.001,Math.hypot(dx,dz)),width=centipedePhase(q)===3?2.65:1.35,x=-dz/length*width,z=dx/length*width;
-    points.push(p[0]+x,.09,p[1]+z,p[0]-x,.09,p[1]-z);if(i<sections){const j=i*2;indices.push(j,j+1,j+2,j+2,j+1,j+3);}
-   }this.lane.geometry.dispose();this.lane.geometry=new T.BufferGeometry();this.lane.geometry.setAttribute('position',new T.Float32BufferAttribute(points,3));this.lane.geometry.setIndex(indices);this.lane.geometry.computeBoundingSphere();
+   this.path=pathKey;this.lane.geometry.dispose();this.lane.geometry=roundedRunWarning(u=>chargePoint(q,u),centipedePhase(q)===3?2.65:1.35);
   }
-  this.lane.material.opacity=q.stage==='warning'||q.stage==='wheelWarning'?.25+.08*Math.sin(now*.009):.15;
+  this.lane.material.opacity=q.stage==='warning'||q.stage==='wheelWarning'?.6+.025*Math.sin(now*.006):.46;
   this.halo.visible=['exhausted','back','dizzy'].includes(q.stage);if(this.halo.visible){const p=centipedeTarget(q);this.halo.position.set(p[0],q.stage==='back'?p[1]+.6:.2,p[2]);this.halo.scale.setScalar(1+.13*Math.sin(now*.005));}
   this.confetti.visible=['tickle','bell','wheelHit','celebrate'].includes(q.stage);
   if(q.stage==='celebrate'&&this.fireworksKey!==key){

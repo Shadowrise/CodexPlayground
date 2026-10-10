@@ -7,6 +7,43 @@ import {ArenaCentipede,centipedeRoam,ROAM_STAGES} from '../src/arena-centipede';
 import {BOSS_ARENA} from '../src/boss-arena-site';
 import {startCentipede,advanceCentipede,pushCentipede,centipedeTarget,centipedeWheel,CENTIPEDE_TIMES,type CentipedeActor} from '../src/centipede-event';
 
+test('finished coil and lowering clips hold their final pose during the transition instead of replaying',async()=>{
+ const b=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');
+ const model=new ArenaCentipede(gltf),trail=model.startTrail(0),head=trail.at(-1)!,a:CentipedeActor={id:'a',p:[head[0],0,head[1]],yaw:0,size:1,available:true,done:false,points:0};
+ const q=startCentipede(trail,a,1000)!;q.phase=2;
+ for(const [from,to] of [['coil','stomp'],['lower','back']] as const){
+  q.stage=from;q.stageAt=10000;model.update(10,undefined,q,10000);
+  const end=q.stageAt+CENTIPEDE_TIMES[from];model.update(end/1000,undefined,q,end);
+  const positions=Array.from({length:12},(_,i)=>model.group.getObjectByName(`Segment_${i}`)!.getWorldPosition(new Vector3()));
+  q.stage=to;q.stageAt=end;model.update(end/1000,undefined,q,end);model.update((end+70)/1000,undefined,q,end+70);
+  for(let i=0;i<12;i++)assert(model.group.getObjectByName(`Segment_${i}`)!.getWorldPosition(new Vector3()).distanceTo(positions[i])<.4,`${from} restarted segment ${i}`);
+ }
+});
+
+test('phase-two and finale transitions preserve the animated body length and continuous motion',async()=>{
+ const b=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');
+ const model=new ArenaCentipede(gltf),trail=model.startTrail(25),head=trail.at(-1)!,a:CentipedeActor={id:'a',p:[head[0]+3,0,head[1]],yaw:0,size:1,available:true,done:false,points:0};
+ let q=startCentipede(trail,a,1000)!,previous:Vector3[]|undefined,guard=0;
+ const links=Array.from({length:12},(_,i)=>model.group.getObjectByName(`Segment_${i}`)!);
+ while(q&&guard++<100){
+  const frames=Math.ceil(CENTIPEDE_TIMES[q.stage]/(1000/60));
+  for(let frame=0;frame<=frames;frame++){
+   const now=q.stageAt+frame/frames*CENTIPEDE_TIMES[q.stage];model.update(now/1000,undefined,q,now);model.group.updateMatrixWorld(true);
+   const positions=links.map(o=>o.getWorldPosition(new Vector3()));
+   if(previous&&['gather','coil','lower','back','bell','rise','curl','uncurl','celebrate','rest'].includes(q.stage)){
+    for(let i=0;i<12;i++){
+     assert(positions[i].distanceTo(previous[i])<.9,`${q.stage} segment ${i} jumped at frame ${frame}`);
+     if(i)assert(positions[i].distanceTo(positions[i-1])>1.4,`${q.stage} squeezed segment ${i} at frame ${frame}`);
+    }
+   }previous=positions;
+  }
+  if(['exhausted','back','dizzy'].includes(q.stage)){
+   const p=centipedeTarget(q);a.p=[p[0],q.stage==='back'?2.9:0,p[2]+(q.stage==='dizzy'?0:1)];const root=q.stage==='dizzy'?centipedeWheel(q,q.stageAt):{x:p[0],z:p[2]};a.yaw=Math.atan2(root.x-a.p[0],root.z-a.p[2]);assert(pushCentipede(q,a,q.stageAt+CENTIPEDE_TIMES[q.stage]));
+  }else q=advanceCentipede(q,q.stageAt+CENTIPEDE_TIMES[q.stage]+1,[a]).event!;
+ }
+ assert(guard<100);
+});
+
 test('roaming clock stops during rests and continuously accelerates, without extra network state',()=>{
  let total=0;
  for(const stage of ROAM_STAGES){

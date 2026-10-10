@@ -1,3 +1,4 @@
+import {t,onLocaleChange} from './i18n';
 import { poseFace } from './emote-face';
 import {Object3D} from 'three';
 export const EMOTES=[{id:'Hello',name:'Привет',icon:'👋'},{id:'Joy',name:'Радость',icon:'✨'},{id:'Fear',name:'Испуг',icon:'😳'},{id:'Anger',name:'Гнев',icon:'💢'},{id:'Sad',name:'Грусть',icon:'💧'}] as const;
@@ -30,10 +31,11 @@ export class EmoteWheel {
  open=false;
  selected:number|undefined;
  constructor(){
-  this.element.className='emote-wheel';this.element.hidden=true;this.element.setAttribute('role','dialog');this.element.setAttribute('aria-label','Выбор эмоции');
-  const center=document.createElement('div');center.className='emote-center';center.textContent='Эмоции';this.element.append(center);
-  EMOTES.forEach((emote,i)=>{const item=document.createElement('div');item.className='emote-choice';item.textContent=`${emote.icon} ${emote.name}`;const a=i*Math.PI*2/5;item.style.left=`${50+34*Math.sin(a)}%`;item.style.top=`${50-34*Math.cos(a)}%`;this.element.append(item);this.choices.push(item);});
-  const help=document.createElement('p');help.textContent='Стик — выбрать · отпусти LB — показать · B — отмена';this.element.append(help);document.body.append(this.element);
+  this.element.className='emote-wheel';this.element.hidden=true;this.element.setAttribute('role','dialog');this.element.setAttribute('aria-label',t('Выбор эмоции'));
+  const center=document.createElement('div');center.className='emote-center';center.textContent=t('Эмоции');this.element.append(center);
+  EMOTES.forEach((emote,i)=>{const item=document.createElement('div');item.className='emote-choice';item.textContent=`${emote.icon} ${t(emote.name)}`;const a=i*Math.PI*2/5;item.style.left=`${50+34*Math.sin(a)}%`;item.style.top=`${50-34*Math.cos(a)}%`;this.element.append(item);this.choices.push(item);});
+  const help=document.createElement('p');help.textContent=t('Стик — выбрать · отпусти LB — показать · B — отмена');this.element.append(help);document.body.append(this.element);
+  onLocaleChange(()=>this.choices.forEach((choice,i)=>choice.textContent=`${EMOTES[i].icon} ${t(EMOTES[i].name)}`));
  }
  update(held:boolean,x:number,y:number,cancel=false):Emote|undefined{
   if(cancel){this.close();return;}

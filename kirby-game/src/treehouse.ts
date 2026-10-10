@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {oakBarkMaterial} from './oak-bark';
 import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
@@ -135,8 +136,8 @@ export class Treehouse {
     for(let i=0;i<16;i++)part(root,'ball','#adab91',-4+Math.sin(i*.7)*.3,.045,12+i*.42,.85,.07,.3);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');
-      if(ctx){ctx.fillStyle='#365f51';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e8c58a';ctx.lineWidth=10;ctx.strokeRect(8,8,752,176);ctx.textAlign='center';ctx.fillStyle='#fff1cb';ctx.font='bold 62px sans-serif';ctx.textBaseline='middle';ctx.fillText('ДОМИК НА ДЕРЕВЕ',384,96);
-        const sign=new T.Mesh(new T.PlaneGeometry(6.4,1.6),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,20.45,.65);root.add(sign);}
+      if(ctx){ctx.fillStyle='#365f51';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e8c58a';ctx.lineWidth=10;ctx.strokeRect(8,8,752,176);ctx.textAlign='center';ctx.fillStyle='#fff1cb';ctx.font='bold 62px sans-serif';ctx.textBaseline='middle';drawLocalizedText(ctx,'ДОМИК НА ДЕРЕВЕ',384,96);
+        const sign=new T.Mesh(new T.PlaneGeometry(6.4,1.6),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,20.45,.65);root.add(sign);}
     }
     for(const parent of [root,this.swing]){
       const batches=new Map<string,T.Mesh[]>();

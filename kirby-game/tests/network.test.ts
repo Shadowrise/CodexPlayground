@@ -113,3 +113,18 @@ test('boss deadline wakes a solo room once per stage without streaming boss tran
  session.room.centipede!.stageAt=3;
  for(let i=0;i<4;i++)session.tick(.1,actor,()=>({} as any));assert.equal(messages.filter(m=>m.events.some((e:any)=>e.type==='centipede-step')).length,3);assert.deepEqual(messages[2].events,[{type:'centipede-step'}]);
 });
+
+test('boss start is queued once until acknowledgement and an empty-arena deadline wakes the room just once',()=>{
+ const session=new NetworkSession();session.id='host';session.peerCount=1;
+ session.room={id:'test',host:'host',epoch:0,fruits:[],starAt:0,mill:false,locks:{}};
+ const messages:any[]=[];(session as any).socket={readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s))};
+ const actor={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
+ for(let i=0;i<4;i++)session.event({type:'centipede-start',trail:[]});
+ session.tick(.1,actor,()=>({} as any));assert.equal(messages[0].events.length,1);assert(session.centipedeStarting);
+ session.event({type:'centipede-start',trail:[]});session.tick(.1,actor,()=>({} as any));assert.equal(messages.length,1);
+ (session as any).centipedeStartPending=false;
+ session.room.centipede={startedAt:1,stageAt:Date.now(),stage:'balls',emptySince:Date.now()-10001,cycle:1,hits:0,trail:[],from:[0,0],control:[0,1],to:[1,1],players:{}};
+ session.event({type:'centipede-start',trail:[]});
+ for(let i=0;i<4;i++)session.tick(.1,actor,()=>({} as any));
+ assert.equal(messages.length,2);assert.deepEqual(messages[1].events,[{type:'centipede-step'}]);
+});

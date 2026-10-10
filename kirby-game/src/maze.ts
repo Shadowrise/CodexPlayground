@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
@@ -66,7 +67,7 @@ export class HedgeMaze {
       const plaque=new T.Mesh(new T.BoxGeometry(7,2.8,.16),new T.MeshStandardMaterial({color:'#294c38',roughness:.85}));marker.add(plaque);
       const arrow=new T.Mesh(arrowGeometry,arrowMaterial);arrow.position.set(0,-.5,.1);arrow.rotation.z=direction<0?Math.PI:0;marker.add(arrow);
       if(typeof document!=='undefined'){
-        const canvas=document.createElement('canvas');canvas.width=384;canvas.height=96;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,384,96);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 66px sans-serif';ctx.fillText('ВХОД',192,73);const label=new T.Mesh(new T.PlaneGeometry(3.6,.9),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));label.position.set(0,.75,.1);marker.add(label);}
+        const canvas=document.createElement('canvas');canvas.width=384;canvas.height=96;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,384,96);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 66px sans-serif';drawLocalizedText(ctx,'ВХОД',192,73);const label=new T.Mesh(new T.PlaneGeometry(3.6,.9),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));label.position.set(0,.75,.1);marker.add(label);}
       }
       root.add(marker);
     }
@@ -77,7 +78,7 @@ export class HedgeMaze {
     const starMesh=new T.Mesh(starGeometry,new T.MeshStandardMaterial({color:'#ffd35a',metalness:.55,roughness:.22,emissive:'#ffb52e',emissiveIntensity:.65}));this.star.add(starMesh);
     const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.set('#ffdf7c');halo.material.opacity=.45;halo.position.set(0,0,-.2);halo.scale.set(5,5,1);this.star.add(halo);root.add(this.star);
     if(typeof document!=='undefined'){
-      const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.textBaseline='middle';ctx.fillText('ЗВЁЗДНЫЙ ЛАБИРИНТ',384,96);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:new T.CanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
+      const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.textBaseline='middle';drawLocalizedText(ctx,'ЗВЁЗДНЫЙ ЛАБИРИНТ',384,96);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }
     for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:'#ffffff',roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.name=p.geo===leaf?'Detailed maze foliage':'Maze masonry';mesh.castShadow=p.geo!==leaf;mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
     root.add(sceneryShadowBatch('Stable hedge shadows',box,hedgeShadows));

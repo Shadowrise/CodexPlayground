@@ -1,3 +1,4 @@
+import {t} from './i18n';
 import {centipedeSound} from './centipede-sounds';
 import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
@@ -98,7 +99,7 @@ export class SoundEffects {
     this.begin(source,gain,()=>pan.disconnect());
   }
   private sync() {
-    this.button.textContent = this.enabled ? '♪ Звуки: вкл' : '♪ Звуки: выкл';
+    this.button.textContent = t(this.enabled ? '♪ Звуки: вкл' : '♪ Звуки: выкл');
     this.button.setAttribute('aria-pressed', String(this.enabled));
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }

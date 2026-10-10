@@ -1,3 +1,4 @@
+import {t,onLocaleChange} from './i18n';
 import { readAudioSettings, saveAudioSettings } from './audio-settings';
 export const MUSIC_TRACKS = [
   ['meadow-day', 'День на поляне'],
@@ -56,9 +57,10 @@ export class BackgroundMusic {
     this.audio.addEventListener('error', () => {
       this.enabled = false;
       this.updateButton();
-      this.button.title = 'Не удалось загрузить музыку. Нажмите, чтобы повторить.';
+      this.button.title = t('Не удалось загрузить музыку. Нажмите, чтобы повторить.');
     });
     this.updateButton();
+    onLocaleChange(()=>{this.updateButton();this.updateTrackLabel();});
   }
 
   /** Event soundtrack follows the same saved music toggle and volume. */
@@ -85,8 +87,9 @@ export class BackgroundMusic {
     this.audio.pause();
     this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${MUSIC_TRACKS[this.track][0]}.wav${MUSIC_TRACKS[this.track][0]==='button-swing'?'?v=2':''}`;
     this.audio.loop = false;
-    this.trackLabel.textContent = `${this.track + 1} / ${MUSIC_TRACKS.length} · ${MUSIC_TRACKS[this.track][1]}`;
+    this.updateTrackLabel();
   }
+  private updateTrackLabel(){this.trackLabel.textContent=`${this.track+1} / ${MUSIC_TRACKS.length} · ${t(MUSIC_TRACKS[this.track][1])}`;}
 
   private async play() {
     if (!this.started || !this.enabled || document.hidden) return;
@@ -97,8 +100,8 @@ export class BackgroundMusic {
   }
 
   private updateButton() {
-    this.button.textContent = this.enabled ? '♫ Музыка: вкл' : '♫ Музыка: выкл';
+    this.button.textContent = t(this.enabled ? '♫ Музыка: вкл' : '♫ Музыка: выкл');
     this.button.setAttribute('aria-pressed', String(this.enabled));
-    this.button.title = this.enabled ? 'Выключить фоновую музыку' : 'Включить фоновую музыку';
+    this.button.title = t(this.enabled ? 'Выключить фоновую музыку' : 'Включить фоновую музыку');
   }
 }

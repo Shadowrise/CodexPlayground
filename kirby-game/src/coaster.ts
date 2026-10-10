@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {fitRider,restoreRider} from './rider-size';
 import { DEPOT_PLATFORM, DEPOT_STEPS } from './depot-floor';
 import { awardFirst } from './score';
@@ -120,9 +121,9 @@ export class Coaster {
       const ctx=canvas.getContext('2d')!;
       ctx.fillStyle='#224956';ctx.fillRect(0,0,1536,384);
       ctx.strokeStyle='#ffce66';ctx.lineWidth=16;ctx.strokeRect(15,15,1506,354);
-      ctx.textAlign='center';ctx.fillStyle='#fff4d3';ctx.font='bold 150px sans-serif';ctx.fillText('ДЕПО',768,190);
-      ctx.font='bold 58px sans-serif';ctx.fillStyle='#ffce66';ctx.fillText('АМЕРИКАНСКИЕ ГОРКИ',768,292);
-      const texture=new T.CanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
+      ctx.textAlign='center';ctx.fillStyle='#fff4d3';ctx.font='bold 150px sans-serif';drawLocalizedText(ctx,'ДЕПО',768,190);
+      ctx.font='bold 58px sans-serif';ctx.fillStyle='#ffce66';drawLocalizedText(ctx,'АМЕРИКАНСКИЕ ГОРКИ',768,292);
+      const texture=localizedCanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
       const sign=new T.Mesh(new T.PlaneGeometry(25.5,6.1),new T.MeshBasicMaterial({map:texture,side:T.DoubleSide}));
       sign.name='Depot sign';sign.position.set(0,18,227.7);sign.rotation.y=Math.PI;this.group.add(sign);
       const back=sign.clone();back.position.z=228.3;back.rotation.y=0;this.group.add(back);

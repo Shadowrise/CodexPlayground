@@ -1,3 +1,4 @@
+import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import polygonClipping from 'polygon-clipping';
@@ -26,7 +27,7 @@ export function createBossArena(){
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  ctx.fillStyle='#849f66';ctx.fillRect(0,0,256,256);
  for(let i=0;i<7000;i++){ctx.fillStyle=['#79955e','#8ca76b','#94ac75','#809961'][i%4];ctx.fillRect(random()*256,random()*256,1+random()*2,1+random()*4);}
- const turf=new T.CanvasTexture(canvas);turf.colorSpace=T.SRGBColorSpace;turf.wrapS=turf.wrapT=T.RepeatWrapping;turf.repeat.set(24,24);turf.anisotropy=2;
+ const turf=localizedCanvasTexture(canvas);turf.colorSpace=T.SRGBColorSpace;turf.wrapS=turf.wrapT=T.RepeatWrapping;turf.repeat.set(24,24);turf.anisotropy=2;
  const floorGeo=new T.RingGeometry(8.25,35.7,128);floorGeo.rotateX(-Math.PI/2);
  const floor=new T.Mesh(floorGeo,new T.MeshStandardMaterial({map:turf,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));floor.name='Arena short turf';floor.position.y=.025;floor.receiveShadow=true;root.add(floor);
  band(35.7,36,'#e7dcb2');band(36,37.1,'#c9b48b');band(38.2,40.6,'#c9b48b');band(40.6,40.85,'#e2d8b8');band(8,8.25,'#e6d4a0');
@@ -83,11 +84,11 @@ export function createBossArena(){
  tube([new T.Vector3(-.24,9.35,40.96),new T.Vector3(0,9.25,41),new T.Vector3(.24,9.35,40.96)],.045,'#8e5260');
  // Readable sign on a physical wooden board, suspended from the arch.
  for(const side of [-1,1])tube([new T.Vector3(side*5,8.53,40),new T.Vector3(side*5,7.75,40)],.055,'#9c8051',1);
- part(box,'#74583d',[0,7.23,40],[12.3,1.05,.38]);part(box,'#285b61',[0,7.23,40.22],[11.9,.83,.12]);
- const signCanvas=document.createElement('canvas');signCanvas.width=1024;signCanvas.height=128;const sc=signCanvas.getContext('2d')!;
- sc.fillStyle='#285b61';sc.fillRect(0,0,1024,128);sc.fillStyle='#fff0c6';sc.font='bold 69px "Segoe UI", sans-serif';sc.textAlign='center';sc.textBaseline='middle';sc.fillText('АРЕНА ТОПОТУШКИ',512,67);
- const signTexture=new T.CanvasTexture(signCanvas);signTexture.colorSpace=T.SRGBColorSpace;signTexture.anisotropy=2;
- const sign=new T.Mesh(new T.PlaneGeometry(11.5,.74),new T.MeshStandardMaterial({map:signTexture,roughness:1}));sign.position.set(0,7.23,40.289);root.add(sign);
+ part(box,'#74583d',[0,6.15,40],[12.3,3.2,.38]);part(box,'#285b61',[0,6.15,40.22],[11.9,2.98,.12]);
+ const signCanvas=document.createElement('canvas');signCanvas.width=1024;signCanvas.height=256;const sc=signCanvas.getContext('2d')!;
+ sc.fillStyle='#285b61';sc.fillRect(0,0,1024,256);sc.fillStyle='#fff0c6';sc.font='bold 86px "Segoe UI", sans-serif';sc.textAlign='center';sc.textBaseline='middle';drawLocalizedText(sc,'АРЕНА ТОПОТУШКИ',512,128,940);
+ const signTexture=localizedCanvasTexture(signCanvas);signTexture.colorSpace=T.SRGBColorSpace;signTexture.anisotropy=2;
+ const sign=new T.Mesh(new T.PlaneGeometry(11.5,2.875),new T.MeshStandardMaterial({map:signTexture,roughness:1}));sign.name='Arena entrance sign';sign.position.set(0,6.15,40.289);root.add(sign);
  // Eight planting tubs support short runs of bunting, clear of every entrance.
  for(let i=0;i<8;i++){
   const post=ARENA_POSTS[i+2],{x,z}=post;

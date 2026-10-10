@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/THREE|WebGL|shader/i.test(m.text()))errors.push(m.text());});
+ await page.addInitScript(()=>localStorage.setItem('kirby-language-v1','ru'));
  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+'\nwindow.centipedeTest={get character(){return character;},get event(){return currentCentipede();},get model(){return arenaCentipede;},view:centipedeView,followCamera,scene,renderer,camera,music,sounds,boatTime};'});});
- await page.goto(process.env.GAME_URL||'http://127.0.0.1:5174/');await page.waitForSelector('#startup-loader',{state:'hidden',timeout:120000});await page.click('#new-game');await page.fill('#player-name-input','Друг Топотушки');await page.click('#start-game');await page.waitForFunction(()=>window.centipedeTest?.character);
+ await page.goto(process.env.GAME_URL||'http://127.0.0.1:5174/');await page.waitForSelector('#startup-loader',{state:'hidden',timeout:120000});await page.fill('#player-name-input','Друг Топотушки');await page.click('#new-game');await page.click('#start-game');await page.waitForFunction(()=>window.centipedeTest?.character);
  async function approach(){await page.evaluate(()=>{const t=window.centipedeTest,p=t.model.startTrail(t.boatTime()).at(-1),c=t.character;c.actor.position.set(p[0]+3,0,p[1]);c.yaw=-Math.PI/2;c.actor.rotation.set(0,c.yaw,0);t.followCamera.reset(c.yaw);});await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Поиграть с Топотушкой'));await page.keyboard.press('e');await page.waitForFunction(()=>window.centipedeTest.event?.stage==='invite');}
  async function expire(){const old=await page.evaluate(()=>window.centipedeTest.event.stage);await page.evaluate(async()=>{const {CENTIPEDE_TIMES}=await import('/src/centipede-event.ts');const t=window.centipedeTest;t.character.setActivity('Idle');t.character.actor.position.set(140,5,-45);t.event.stageAt=Date.now()-CENTIPEDE_TIMES[t.event.stage]-1;});await page.waitForFunction(old=>window.centipedeTest.event?.stage!==old,old);}
  async function finish(replay=false){
@@ -30,7 +31,10 @@ try{
   while((await page.evaluate(()=>window.centipedeTest.event.stage))!=='celebrate')await expire();
   await page.waitForFunction(()=>window.centipedeTest.character.achievements.has('centipede'));
  }
- await approach();await finish();assert(await page.evaluate(()=>window.centipedeTest.character.achievements.has('centipede')));
+ await approach();
+ const centred=await page.locator('#centipede-event-hud').boundingBox();assert(centred&&Math.abs(centred.x+centred.width/2-720)<1);
+ assert(await page.evaluate(()=>!document.querySelector('#action-hint').textContent.includes('Поиграть с Топотушкой')));
+ await finish();assert(await page.evaluate(()=>window.centipedeTest.character.achievements.has('centipede')));
  const first=await page.evaluate(async()=>{const {scoreOf}=await import('/src/score.ts');const t=window.centipedeTest;return {points:scoreOf(t.character),eventPoints:t.character.eventPoints,buffers:[...t.sounds.buffers.keys()].filter(k=>k.startsWith('centipede-')),worldDraws:t.renderer.info.render.calls};});assert(first.points>=9);assert(first.buffers.includes('centipede-warning'));assert(first.buffers.includes('centipede-exhausted')&&first.buffers.includes('centipede-stomp')&&first.buffers.includes('centipede-wheelRoll'));
  assert(await page.evaluate(()=>{const t=window.centipedeTest;return t.music.eventAudio.src.endsWith('topotushka-victory.wav')&&!t.music.eventAudio.loop&&t.view.group.getObjectByName('Топотушка — радужный салют').visible;}));
  await page.waitForTimeout(2100);

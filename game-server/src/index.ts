@@ -1,4 +1,4 @@
-import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
+import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
 import {pushTarget,PUSH_COOLDOWN_MS} from '../../kirby-game/src/push-target';
@@ -112,7 +112,8 @@ export class GameRoom extends DurableObject<Env>{
   const r=this.room;if(!r?.centipede)return false;
   const players=this.players().map(socket=>({socket,a:current&&(socket.deserializeAttachment() as Attachment).id===current.id?current:socket.deserializeAttachment() as Attachment}));
   const actors=players.map(p=>this.bossActor(p.a)).filter((a):a is CentipedeActor=>!!a);
-  const result=advanceCentipede(r.centipede,now,actors);r.centipede=result.event;let changed=result.changed;
+  const emptySince=r.centipede.emptySince,result=advanceCentipede(r.centipede,now,actors);r.centipede=result.event;let changed=result.changed;
+  if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(r.centipede.emptySince+CENTIPEDE_EMPTY_MS));
   for(const {socket,a} of players){const c=a.actor,actor=this.bossActor(a);if(!c||!actor)continue;
    const direction=bumpCentipede(r.centipede,actor,now);if(direction){this.send(socket,{type:'centipede-bump',direction});changed=true;}
    const p=r.centipede?.players[a.id],complete=completedCentipede(r.centipede,a.id)&&!c.achievements.includes('centipede');
@@ -205,7 +206,12 @@ export class GameRoom extends DurableObject<Env>{
   let changed=this.advanceMill(now);if(this.advanceBoss(now,a))changed=true;
   for(const e of (Array.isArray(m.events)?m.events.slice(0,16):[]) as Event[]){
    if(!e||typeof e!=='object')continue;
-   if(e.type==='centipede-start'&&!r.centipede&&!r.festival){const boss=this.bossActor(a);if(boss){const q=startCentipede(e.trail,boss,now);if(q){r.centipede=q;this.log(a,'позвал Топотушку поиграть в догонялки и подружиться!');changed=true;}}}
+   if(e.type==='centipede-start'){
+    // A simultaneous/stale request never replaces the running event. Return the
+    // current state so the caller also removes an outdated interaction prompt.
+    if(!r.centipede&&!r.festival){const boss=this.bossActor(a);if(boss){const q=startCentipede(e.trail,boss,now);if(q){r.centipede=q;this.log(a,'позвал Топотушку поиграть в догонялки и подружиться!');changed=true;}}}
+    this.send(socket,{type:'room',room:r});
+   }
    else if(e.type==='festival-star'&&r.festival){if(collectStar(r.festival,a.id,e.index,now))changed=true;}
    else if(e.type==='chat'&&a.actor&&now-(a.lastChat??0)>=700){const text=chatText(e.text);if(text){a.lastChat=now;this.log(a,text,true);}}
    else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);this.broadcast({type:'emote',emote:e.emote,id:a.id},socket);}}
@@ -267,6 +273,7 @@ export class GameRoom extends DurableObject<Env>{
   for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];
   if(r.millQuest?.owner===a.id&&r.millQuest.stage!=='running'){r.millQuest=newMillQuest();r.mill=false;}
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
+  this.advanceBoss(Date.now());
   this.broadcast({type:'left',id:a.id},socket);this.broadcast({type:'presence',count:remaining.length},socket);this.changed();
  }
  async webSocketClose(socket:WebSocket,code=1000){try{socket.close(1000,'Disconnected');}catch{}await this.remove(socket,code===1000?'left':'lost');}
@@ -285,7 +292,7 @@ export class GameRoom extends DurableObject<Env>{
   if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+RESULTS_MS){
    for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;a.left=true;s.serializeAttachment(a);s.close(1000,'Festival finished');}this.room=undefined;await this.ctx.storage.deleteAll();await this.ctx.storage.deleteAlarm();return;
   }
-for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity));}
+for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity,this.room?.centipede?.emptySince===undefined?Infinity:this.room.centipede.emptySince+CENTIPEDE_EMPTY_MS));}
 }
 export default {async fetch(request,env):Promise<Response>{
  const history=await historyRoutes(request,env);if(history)return history;
