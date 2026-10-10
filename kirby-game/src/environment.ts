@@ -1,3 +1,4 @@
+import {createBossArena} from './boss-arena';
 import {createForest} from './forest';
 import {createLandmarks} from './landmarks';
 import {createMeadowDecor} from './meadow-decor';
@@ -9,4 +10,5 @@ export function addEnvironment(scene:THREE.Scene){
  scene.add(createMeadowDecor(forest.userData.treePositions));
  scene.add(createLandmarks());
  scene.add(createMountains());
+ scene.add(createBossArena());
 }

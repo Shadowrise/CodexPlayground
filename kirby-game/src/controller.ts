@@ -1,5 +1,5 @@
 import type {StarfallState} from './starfall';
-import {PushRoll,applyPushArms,pushClip,PUSH_HIT} from './push-motion';
+import {PushRoll,applyPushArms,pushClip,PUSH_HIT,PUSH_DURATION} from './push-motion';
 import {PUSH_COOLDOWN_MS} from './push-target';
 import type { ScoreAction } from './score';
 import { EmotePose, type Emote } from './emotes';
@@ -8,7 +8,7 @@ import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
 import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number };
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
 
 export class CharacterController {
@@ -32,6 +32,9 @@ export class CharacterController {
   readonly cloud = flightCloud();
   private jumpWasHeld = false;
   private attackElapsed: number | undefined;
+  private airPush:number|undefined;
+  private airPose:{arm:Object3D;p:Vector3;q:Quaternion}[]=[];
+  private clearAirPose(){for(const p of this.airPose){p.arm.position.copy(p.p);p.arm.quaternion.copy(p.q);}this.airPose=[];}
   private pushReady = 0;
   private pushArmed = false;
   private readonly pushArms:{arm:Object3D;q:Quaternion;p:Vector3;side:number}[]=[];
@@ -43,6 +46,7 @@ export class CharacterController {
   private eatWasHeld = false;
   fruitsEaten = 0;
   bonusPoints=0;
+  eventPoints=0;
   skyCheckpoint=0;
   festival?:StarfallState;
   readonly achievements=new Set<ScoreAction>();
@@ -155,6 +159,7 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.clearAirPose();this.airPush=undefined;
     this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;this.turn=undefined;
@@ -172,6 +177,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.clearAirPose();
     this.roll.clearPose();
     if(input.steer!==undefined)this.turn=undefined;
     if (this.growth) {
@@ -205,6 +211,7 @@ export class CharacterController {
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if(jumpPressed && this.flight.active)this.flight.press();
+    if(input.allowAirPush&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=true;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
     if (!this.turn && !this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
     if (!this.turn && !this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
@@ -255,6 +262,7 @@ export class CharacterController {
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x*this.flightBoost;
       updateFlightCloud(this.cloud,this.flight);
       this.mixer.update(dt);
+      if(this.airPush!==undefined){this.airPush+=dt;this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
       if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
     } else if (this.turn) {
       const t = this.turn;

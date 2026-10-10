@@ -26,8 +26,8 @@ test('room restores disconnected players by name, rejects online duplicates, and
  let lastServer:Socket;
  globals.WebSocketPair=class {0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class {};
  const sockets:Socket[]=[],storage=new Map<string,unknown>();let writes=0;
- const ctx={blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
-  storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){writes++;storage.set(key,structuredClone(value));},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
+ const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
+  storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){writes++;storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
  try{
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));let room=new GameRoom(ctx,{});
   const join=async(name:string,variant:number)=>{await room.fetch(new Request(`https://test/ws?build=${BUILD}&variant=${variant}&name=${encodeURIComponent(name)}`,{headers:{Upgrade:'websocket'}}));return lastServer!;};

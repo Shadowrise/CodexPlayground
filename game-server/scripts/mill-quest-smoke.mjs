@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {finishMill,pause} from './mill-quest-helper.mjs';
 const base=process.env.SERVER_URL||'http://127.0.0.1:8788',clients=[];
-async function join(variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-7&name=Mill'+variant+'&variant='+variant),messages=[];socket.onmessage=e=>{if(e.data!=='pong')messages.push(JSON.parse(e.data));};await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j;});const wait=async p=>{for(let i=0;i<150;i++){const m=messages.find(p);if(m)return m;await pause(30);}throw Error('Missing server event '+p);};const welcome=await wait(m=>m.type==='welcome'),c={socket,messages,wait,welcome};clients.push(c);return c;}
+async function join(variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-8&name=Mill'+variant+'&variant='+variant),messages=[];socket.onmessage=e=>{if(e.data!=='pong')messages.push(JSON.parse(e.data));};await new Promise((r,j)=>{socket.onopen=r;socket.onerror=j;});const wait=async p=>{for(let i=0;i<150;i++){const m=messages.find(p);if(m)return m;await pause(30);}throw Error('Missing server event '+p);};const welcome=await wait(m=>m.type==='welcome'),c={socket,messages,wait,welcome};clients.push(c);return c;}
 const actor={p:[49,0,40.5],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Mill',variant:0,star:0};
 try{
  const a=await join(0),b=await join(1);

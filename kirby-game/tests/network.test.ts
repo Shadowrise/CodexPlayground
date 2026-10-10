@@ -98,3 +98,18 @@ test('admin disconnect notifies a connected client before the close handshake fi
   socket.onclose({reason:'Admin recreated room'});assert.deepEqual(reasons,[message]);
  }finally{session.close();globalThis.WebSocket=original;}
 });
+
+test('boss deadline wakes a solo room once per stage without streaming boss transforms',()=>{
+ const session=new NetworkSession();session.id='host';session.peerCount=1;
+ session.room={id:'test',host:'host',epoch:0,fruits:[],starAt:0,mill:false,locks:{},centipede:{startedAt:1,stageAt:1,stage:'warning',cycle:1,hits:0,trail:[[0,0],[1,0]],from:[0,0],control:[0,1],to:[1,1],players:{}}};
+ const messages:any[]=[];(session as any).socket={readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s))};
+ const actor={p:[140,0,-45],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
+ for(let i=0;i<12;i++)session.tick(.1,actor,()=>({} as any));
+ assert.equal(messages.length,1);assert.deepEqual(messages[0].events,[{type:'centipede-step'}]);assert(!messages[0].world);
+ session.room.centipede!.stage='charge';session.room.centipede!.stageAt=2;
+ session.tick(.1,actor,()=>({} as any));assert.equal(messages.length,2);assert.deepEqual(messages[1].events,[{type:'centipede-step'}]);
+ session.room.centipede!.stage='balls';session.room.centipede!.stageAt=Date.now();
+ for(let i=0;i<4;i++)session.tick(.1,actor,()=>({} as any));assert.equal(messages.length,2,'ball rendering does not send trajectory frames');
+ session.room.centipede!.stageAt=3;
+ for(let i=0;i<4;i++)session.tick(.1,actor,()=>({} as any));assert.equal(messages.filter(m=>m.events.some((e:any)=>e.type==='centipede-step')).length,3);assert.deepEqual(messages[2].events,[{type:'centipede-step'}]);
+});

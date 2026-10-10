@@ -19,7 +19,7 @@ test('server chooses exactly one human or NPC target and broadcasts it to all cl
   const actor=(z:number,state='Idle')=>({p:[0,0,z],q:[0,0,0,1],s:1,state,pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0});
   class Socket{readyState=1;messages:any[]=[];constructor(public data:any){}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(m:string){this.messages.push(JSON.parse(m));}}
   const a=new Socket({id:'a',variant:0,seen:now,visible:true,actor:actor(0,'Push')}),b=new Socket({id:'b',variant:1,seen:now,visible:true,actor:actor(2,'FireflyRide')}),sockets=[a,b];
-  const ctx={getWebSockets:()=>sockets,setWebSocketAutoResponse(){},storage:{setAlarm:async()=>{}}};const room=new GameRoom(ctx,{});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{'bug:0':'b'},world:{npcs:[actor(2.7)]}};
+  const ctx={getWebSockets:()=>sockets,setWebSocketAutoResponse(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),waitUntil(){},storage:{get:async()=>undefined,delete:async()=>{},setAlarm:async()=>{}}};const room=new GameRoom(ctx,{});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{'bug:0':'b'},world:{npcs:[actor(2.7)]}};
   room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'},{type:'hit'}]}));
   for(const s of sockets){const hits=s.messages.filter(m=>m.type==='hit');assert.equal(hits.length,1);assert.equal(hits[0].target,'b');}
   now+=99;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));

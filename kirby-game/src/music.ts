@@ -15,12 +15,13 @@ export const MUSIC_TRACKS = [
   ['roller-disco', 'Роликовое диско'],
   ['wish-lanterns', 'Фонарики желаний'],
   ['accordion-stroll', 'Лёгкий аккордеон'],
-  ['shore-whistle', 'Свист у берега'],
 ] as const;
 
 /** Sequential tracks, starting at a random position each session. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
+  private eventAudio?:HTMLAudioElement;
+  private eventActive:boolean|'celebrate'=false;
   private enabled = true;
   private started = false;
   private track = Math.floor(Math.random() * MUSIC_TRACKS.length);
@@ -40,15 +41,16 @@ export class BackgroundMusic {
     button.addEventListener('click', () => {
       this.enabled = !this.enabled;
       saveAudioSettings('music', this.enabled, this.audio.volume);
-      if (this.enabled) void this.play(); else { this.playRequest++; this.audio.pause(); }
+      if (this.enabled) void this.play(); else { this.playRequest++; this.audio.pause();this.eventAudio?.pause(); }
       this.updateButton();
     });
     volume.addEventListener('input', () => {
       this.audio.volume = Number(volume.value) / 100;
+      if(this.eventAudio)this.eventAudio.volume=this.audio.volume;
       saveAudioSettings('music', this.enabled, this.audio.volume);
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) { this.playRequest++; this.audio.pause(); }
+      if (document.hidden) { this.playRequest++; this.audio.pause();this.eventAudio?.pause(); }
       else if (this.started && this.enabled) void this.play();
     });
     this.audio.addEventListener('error', () => {
@@ -59,6 +61,17 @@ export class BackgroundMusic {
     this.updateButton();
   }
 
+  /** Event soundtrack follows the same saved music toggle and volume. */
+  setEvent(active:boolean|'celebrate'){
+    if(active===this.eventActive)return;
+    this.playRequest++;this.audio.pause();this.eventAudio?.pause();this.eventActive=active;
+    if(active&&!this.eventAudio){
+      const event=this.eventAudio=new Audio();event.preload='none';event.volume=this.audio.volume;
+      event.addEventListener('error',()=>{this.eventActive=false;if(this.enabled)void this.play();});
+    }
+    if(active&&this.eventAudio){this.eventAudio.loop=active!=='celebrate';this.eventAudio.src=`${import.meta.env?.BASE_URL??'/'}audio/topotushka-${active==='celebrate'?'victory':'play'}.wav`;}
+    if(this.enabled)void this.play();
+  }
   start() { this.started = true; if (this.enabled) void this.play(); }
 
   private skip(direction: number) {
@@ -78,7 +91,7 @@ export class BackgroundMusic {
   private async play() {
     if (!this.started || !this.enabled || document.hidden) return;
     const request = ++this.playRequest;
-    try { await this.audio.play(); }
+    try { await (this.eventActive?this.eventAudio!:this.audio).play(); }
     catch { if (request === this.playRequest) this.enabled = false; }
     this.updateButton();
   }

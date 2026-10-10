@@ -1,3 +1,4 @@
+import type {CentipedeEvent,Point} from './centipede-event';
 import type {MillQuest,MillAction} from './mill-quest';
 import {KIRBY_VARIANTS} from './variant-palette';
 import type {StarfallState} from './starfall';
@@ -6,18 +7,19 @@ import type {LogEntry} from './world-log';
 import {validAchievements} from './score';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-7';
-export type ActorState={p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
+export const BUILD='meadow-network-8';
+export type ActorState={p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][]};
-export type Event={type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
-export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;millQuest?:MillQuest;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
+export type Event={type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
+export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;millQuest?:MillQuest;centipede?:CentipedeEvent;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
 export type Welcome={type:'welcome';serverNow?:number;protocolVersion:number;playerId:string;resume?:ActorState;room:RoomState;players:{id:string;actor?:ActorState}[]};
-export type ServerMessage=Welcome|{type:'emote';emote:string;id:string}|{type:'log';entry:LogEntry}|{type:'presence';count:number}|{type:'frame';id:string;actor?:ActorState;world?:WorldState}|{type:'room';room:RoomState}|{type:'left';id:string}|{type:'hit';id:string;actor:ActorState;target:string}|{type:'lock';key:string;ok:boolean}|{type:'star'}|{type:'resize';size:number}|{type:'error';message:string};
+export type ServerMessage=Welcome|{type:'centipede-progress';points:number;completed:boolean}|{type:'centipede-bump';direction:Point}|{type:'emote';emote:string;id:string}|{type:'log';entry:LogEntry}|{type:'presence';count:number}|{type:'frame';id:string;actor?:ActorState;world?:WorldState}|{type:'room';room:RoomState}|{type:'left';id:string}|{type:'hit';id:string;actor:ActorState;target:string}|{type:'lock';key:string;ok:boolean}|{type:'star'}|{type:'resize';size:number}|{type:'error';message:string};
 export function validResourceKey(key:unknown):key is string {if(typeof key!=='string')return false;const match=/^(cart|balloon|bug|bench|home|tree|trampoline|boat):(\d{1,2})$/.exec(key);return !!match&&(match[1]!=='boat'||Number(match[2])%2===0)&&Number(match[2])<({boat:8,cart:12,balloon:3,bug:40,bench:32,home:1,tree:1,trampoline:1} as Record<string,number>)[match[1]];}
 const numbers=(v:unknown,n:number)=>Array.isArray(v)&&v.length===n&&v.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<100000);
 export function validActor(v:unknown):v is ActorState{
  const a=v as ActorState;
  const progress=a?.progress;
+ if(a?.eventPoints!==undefined&&(!Number.isInteger(a.eventPoints)||a.eventPoints<0||a.eventPoints>12))return false;
  if(a?.fit!==undefined&&(!Number.isFinite(a.fit)||a.fit<.01||a.fit>1))return false;
  if(progress!==undefined&&(!progress||!Number.isFinite(progress.size)||progress.size<.1||progress.size>20||!Number.isInteger(progress.checkpoint)||progress.checkpoint<0||progress.checkpoint>4||!Number.isFinite(progress.ground)||Math.abs(progress.ground)>1000))return false;
  if(a?.roll!==undefined&&(!numbers(a.roll,5)||Math.abs(a.roll[0])>1.01||Math.abs(a.roll[1])>1.01||a.roll[2]<0||a.roll[2]>60))return false;

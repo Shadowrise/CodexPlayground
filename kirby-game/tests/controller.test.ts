@@ -6,6 +6,12 @@ import { Quaternion, Vector3 } from 'three';
 import { CharacterController, type Input } from '../src/controller';
 
 const idle: Input = { forward: false, left: false, right: false };
+test('arena air push keeps flight height and motion, then restores wing animation',async()=>{
+ const c=await create();c.update(1/60,{...idle,jump:true});advance(c,.2,idle);c.update(1/60,{...idle,jump:true});advance(c,.25,idle);
+ const height=c.actor.position.y;assert(c.flight.active);assert(height>2.7);
+ c.update(1/60,{...idle,attack:true,allowAirPush:true,forward:true});assert(c.attackHit);assert(c.flight.active);assert(c.actor.position.y>=height-.05);assert(c.actor.position.z>0);
+ advance(c,.75,{...idle,allowAirPush:true});assert(c.flight.active);assert(c.actor.position.y>2.7);assert(!c.attackHit);
+});
 
 test('analog steering runs continuously, stops immediately and scales with stick strength',async()=>{
   const c=await create();

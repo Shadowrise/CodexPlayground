@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/kirby-icon.svg"><title>Топотушка · мастерская персонажа</title></head>
+<body><aside><div class="eyebrow">МАСТЕРСКАЯ ПЕРСОНАЖЕЙ</div><h1>Топотушка<span>Босс-сороконожка</span></h1><p class="intro">Много башмачков.<br>Большое доброе сердце.</p>
+<div class="phase-tabs" role="group" aria-label="Фазы"><button data-phase="1" class="selected">01 · Хвостик</button><button data-phase="2">02 · Топот</button><button data-phase="3">03 · Колесо</button></div>
+<button id="demo" class="primary">▶ Показать фазу целиком</button><div id="clips" aria-label="Анимации"></div>
+<div class="download"><a href="/models/centipede-animated.glb" download>↓ Скачать модель GLB</a><small id="budget">Подготавливаем модель…</small></div></aside>
+<main id="stage"><div class="caption"><span id="phase-label">ЗНАКОМСТВО</span><h2 id="clip-title">Привет, Топотушка!</h2><p id="clip-description">Загрузка модели…</p></div><div class="views" aria-label="Ракурс"><button data-view="three">¾</button><button data-view="face">Лицо</button><button data-view="side">Сбоку</button><button data-view="top">Сверху</button></div><div class="playback"><button id="pause" aria-label="Приостановить">Ⅱ</button><button id="restart" aria-label="Сначала">↺</button><label>Темп <input id="speed" type="range" min=".25" max="1.5" step=".25" value="1"><output id="speed-value">1×</output></label><span>Мышь — вращение · колесо — масштаб</span></div><div id="loading">Знакомимся с Топотушкой…</div></main>
+<script type="module" src="/src/centipede-preview.ts"></script></body></html>

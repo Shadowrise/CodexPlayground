@@ -1,3 +1,7 @@
+import {CentipedeEventView} from './centipede-event-view';
+import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
+import {ArenaCentipede} from './arena-centipede';
+import {BOSS_ARENA,constrainArena,constrainNpcOutsideArena} from './boss-arena-site';
 import {prepareSurfaceTextures} from './texture-filtering';
 import {MillQuestHud} from './mill-quest-hud';
 import {PrankEffects} from './prank-effects';
@@ -112,6 +116,7 @@ function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUU
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
+let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
 const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent='Загрузить сохранение';loadButton.disabled=true;
 const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
@@ -298,6 +303,7 @@ const routePanel=document.createElement('div');routePanel.className='panel route
 const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint);
 document.querySelector('.tasks-panel')!.before(routePanel);
 const destinations:Destination[]=[
+ {id:'boss-arena',name:'Арена Топотушки',x:BOSS_ARENA.entry.x,z:BOSS_ARENA.entry.z},
  {id:'fountain',name:'Радужный фонтан',x:FOUNTAIN_SITE.x,z:FOUNTAIN_SITE.z+8},
  {id:'sky-trail',name:'Небесная тропа',x:skyTrail.entry.x,z:skyTrail.entry.z,radius:4},
  {id:'home',name:'Домик Кирби',x:home.entrance.x,z:home.entrance.z},
@@ -447,7 +453,8 @@ let npcs: KirbyNpc[] = [];
 
 async function loadCharacter() {
   try {
-    const [gltf,bugModel,shibaModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`)]);
+    const [gltf,bugModel,shibaModel,centipedeModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/centipede-animated.glb`)]);
+    arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
     home.dogHouse.placeDog(shibaModel.scene);
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
@@ -490,8 +497,8 @@ startButton.addEventListener('click', async () => {
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
   maze.constrain(character.actor.position,character.actor.scale.x);
-  home.constrain(character.actor.position,character.actor.scale.x);
-  for(const npc of npcs)maze.constrain(npc.actor.position,npc.actor.scale.x);
+  home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
+  for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -512,6 +519,8 @@ startButton.addEventListener('click', async () => {
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.activateStarPower();}};
     network.onResize=size=>{if(character)character.resizeTo(size);};
+    network.onCentipedeProgress=(points,completed)=>{if(!character)return;character.eventPoints=points;if(completed&&awardFirst(character,'centipede'))sounds.playTaskComplete();};
+    network.onCentipedeBump=direction=>{if(character?.takePush(direction[0],direction[1]))sounds.playBoing(.7);};
     network.onHit=(a,target)=>{
       if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
       const npc=target.startsWith('npc:')?npcs[Number(target.slice(4))]:undefined;
@@ -525,8 +534,10 @@ startButton.addEventListener('click', async () => {
   renderer.domElement.focus();
 });
 
+let soloCentipede:CentipedeEvent|undefined;let centipedeContactKey='';
+const centipedeView=new CentipedeEventView((stage,volume)=>sounds.playCentipede(stage,volume));scene.add(centipedeView.group);
 const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
-function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+achievementPoints(a.achievements)+(id?network!.room.festival?.players[id]?.bonus??0:0);}
+function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+achievementPoints(a.achievements)+(a.eventPoints??0)+(id?network!.room.festival?.players[id]?.bonus??0:0);}
 function roundFinished(){return !!network?.room.festival&&network.serverNow>=network.room.festival.endsAt;}
 function festivalTick(){
  if(!character||!playing)return;
@@ -534,7 +545,7 @@ function festivalTick(){
  network?.finishFestivalIfDue();
  if(!network&&!character.festival&&allTasks(character.achievements))character.festival=createStarfall(now,nameInput.value);
  const f=network?.room.festival??character.festival;if(!f)return;
- if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements);p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
+ if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements)+character.eventPoints;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
  festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
  if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
@@ -645,10 +656,10 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back',steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt);
-    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);}
+    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){
       maze.constrain(character.actor.position,character.actor.scale.x,groundPrevious.set(previousX,0,previousZ));
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
@@ -697,6 +708,8 @@ renderer.setAnimationLoop((time: number) => {
       if(onFoot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);
       ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
     }
+    centipedeTick();
+    if(character.attackHit&&!network&&pushCentipede(soloCentipede,centipedeActor(character),Date.now())){character.attackHit=false;centipedeSoloRewards();}
     if(character.attackHit&&!network){const index=millPushTarget(watermill.quest,millActor(character));if(index>=0){sendMill({kind:'push',index});character.attackHit=false;}}
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
@@ -752,12 +765,18 @@ renderer.setAnimationLoop((time: number) => {
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
+  arenaCentipede?.update(boatTime(),camera.position,currentCentipede(),network?.serverNow??Date.now());
   ponds.update(dt);
   fountain.update(dt,lightTime.day,camera);
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
   festivalTick();
-  millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden);
+  const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
+  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera);
+  if(!centipedeView.hud.hidden)combatMessage.hidden=true;
+  const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
+  music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
+  millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
   fruits.syncInstances();
@@ -787,6 +806,23 @@ watermill.onFeedback=kind=>{if(!character||character.actor.position.distanceTo(M
 function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
 function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else watermill.apply(action,millActor(character));}
 
+function currentCentipede(){return network?network.room.centipede:soloCentipede;}
+function centipedeActor(c:CharacterController):CentipedeActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,done:c.achievements.has('centipede'),points:c.eventPoints};}
+function centipedePrompt(c:CharacterController){if(Math.hypot(c.actor.position.x-BOSS_ARENA.x,c.actor.position.z-BOSS_ARENA.z)>BOSS_ARENA.radius)return;return !currentCentipede()&&!network?.room.festival&&arenaCentipede&&nearCentipede(centipedeActor(c),arenaCentipede.startTrail(boatTime()))?'E — Поиграть с Топотушкой':undefined;}
+function startCentipedeGame(){
+ if(!character||!arenaCentipede||currentCentipede())return;const trail=arenaCentipede.startTrail(boatTime());
+ if(network)network.event({type:'centipede-start',trail});else {soloCentipede=startCentipede(trail,centipedeActor(character),Date.now());if(soloCentipede)addLocalLog('позвал Топотушку поиграть в догонялки и подружиться!');}
+}
+function centipedeSoloRewards(){
+ if(!character||!soloCentipede)return;
+ character.eventPoints=Math.max(character.eventPoints,soloCentipede.players.solo?.points??0);
+ if(completedCentipede(soloCentipede,'solo')&&awardFirst(character,'centipede'))addLocalLog('подружился с Топотушкой — бубенчики звенят от радости!');
+}
+function centipedeTick(){
+ if(!character||!playing||!currentCentipede())return;const now=network?.serverNow??Date.now(),a=centipedeActor(character);
+ if(!network){soloCentipede=advanceCentipede(soloCentipede,now,[a]).event;const direction=bumpCentipede(soloCentipede,a,now);if(direction&&character.takePush(...direction))sounds.playBoing(.7);centipedeSoloRewards();}
+ else {const hit=centipedeContact(network.room.centipede,a,now);if(hit&&centipedeContactKey!==hit.key){centipedeContactKey=hit.key;network.event({type:'centipede-step'});}}
+}
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   const p=c.actor.position;
   if(c.roll.active)return undefined;
@@ -816,6 +852,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     const swing=p.x-TREEHOUSE_SITE.x<-7;
     return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,9.4,9.15)),[2.3,19.4,4.2]));
   }
+  if(free&&centipedePrompt(c))return result(centipedePrompt(c)!,startCentipedeGame,object(arenaCentipede!.group.getObjectByName('Segment_0')));
   if(watermill.prompt(millActor(c)))return result(watermill.prompt(millActor(c)),()=>{const action=watermill.action(millActor(c));if(action)sendMill(action);},object(watermill.target(millActor(c))));
   if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));
   if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
@@ -837,7 +874,7 @@ function applyRide(a:ActorState){
 
 }
 function constrainNpc(position:THREE.Vector3,size:number,previous:THREE.Vector3){
- watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);
+ watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);constrainArena(position,size);constrainNpcOutsideArena(position,size,previous);
 }
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
@@ -859,7 +896,7 @@ function resourceKey(c:CharacterController){
  if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
  const seat=benches.outlineSeat(c.actor.position);if(benches.active)return heldResource;if(seat&&(!treehouse.active||treehouse.canSit))return 'bench:'+BENCH_SEATS.indexOf(seat);
  if(treehouse.active||treehouse.prompt(c.actor.position))return 'tree:0';
- if(watermill.prompt(millActor(c)))return;
+ if(centipedePrompt(c)||watermill.prompt(millActor(c)))return;
  if(balloons.prompt(c.actor.position))return balloons.networkKey(c.actor.position);
  if(coaster.prompt(c))return coaster.networkKey(c);
  return boats.networkKey(c)??fireflies?.networkKey(c);
@@ -867,6 +904,7 @@ function resourceKey(c:CharacterController){
 async function interactOnline(){
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
+ if(centipedePrompt(character)&&!heldResource){action.run();return;}
  if(watermill.prompt(millActor(character))&&!heldResource&&!home.active&&!treehouse.active){action.run();return;}
  if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
@@ -891,7 +929,7 @@ function updateNetwork(dt:number){
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='boat'?boats.networkData():kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld);
  playerHostBadge.hidden=!network.host;
- const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+achievementPoints(actor.achievements)+(network!.room.festival?.players[id]?.bonus??0)}))];
+ const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+achievementPoints(actor.achievements)+(actor.eventPoints??0)+(network!.room.festival?.players[id]?.bonus??0)}))];
  const teamPoints=npcs.reduce((sum,n)=>sum+scoreOf(n),0);
  const signature=JSON.stringify([network.room.host,entries.map(e=>[e.id,e.actor.name,e.actor.variant,e.actor.s,e.points]),teamPoints]);
  if(rosterSignature!==signature){

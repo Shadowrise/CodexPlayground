@@ -1,3 +1,4 @@
+import {BOSS_ARENA} from './boss-arena-site';
 import {MILL_BAGS} from './mill-quest';
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import {FOUNTAIN_SITE} from './fountain-site';
@@ -14,13 +15,14 @@ import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutlin
 import {outsideBoatRoute} from './boat-route';
 export const rockHasGround=dryGround;
 export function sceneryClearance(x:number,z:number,padding=0) {
+  if(Math.hypot(x-BOSS_ARENA.x,z-BOSS_ARENA.z)<BOSS_ARENA.radius+padding)return false;
   if(MILL_BAGS.some(p=>Math.hypot(x-p[0],z-p[2])<2.3+padding))return false;
   if(BRIDGES.some(s=>{const dx=x-s.x,dz=z-s.z,cos=Math.cos(s.yaw),sin=Math.sin(s.yaw);return Math.abs(dx*cos-dz*sin)<10+padding&&Math.abs(dx*sin+dz*cos)<2.8+padding;}))return false;
   if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<=FOUNTAIN_SITE.radius+padding)return false;
   return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
-  for(const p of [FOUNTAIN_SITE,SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
+  for(const p of [BOSS_ARENA,FOUNTAIN_SITE,SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }

@@ -15,8 +15,10 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  class Socket {readyState=1;data:any;messages:any[]=[];constructor(id:string,variant:number){this.data={id,variant,seen:now,visible:true,actor:actor(variant)};}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(v:string){this.messages.push(JSON.parse(v));}close(){this.readyState=3;}}
  const a=new Socket('a',0),b=new Socket('b',1),sockets=[a,b];let alarm=0,cleared=false;const visits:any[]=[];
  for(const socket of sockets)socket.data.history={id:'online:'+socket.data.id,startedAt:now,activeMs:0,tick:now,lastWrite:now,startScore:0,seq:0,device:{}};
- const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{async put(){},async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
+ const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{async get(){return undefined;},async delete(){},async put(){},async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
  const room=new GameRoom(ctx,{HISTORY:{getByName:()=>({write:async(rows:any[])=>{visits.push(...structuredClone(rows));}})}});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
+ // The room, not the incoming actor frame, awards the two protected quests.
+ a.data.actor.achievements=['millQuest','centipede'];
  room.webSocketMessage(a,JSON.stringify({type:'frame',actor:{...actor(0),achievements:SCORE_ACTIONS}}));
  const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);
  now=f.startsAt+3000;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:0},{type:'festival-star',index:0}]}));assert.equal(f.players.b.bonus,1);

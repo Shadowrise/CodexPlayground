@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// Two light festive songs with their own metre, melody and timbre.
+// A light festive song with its own metre, melody and timbre.
 const songs = [
   {
     id: 'accordion-stroll', bpm: 104, bars: 48,
@@ -17,19 +17,7 @@ const songs = [
     },
     lead: 'violin', harmony: 'accordion', bass: true, block: true,
   },
-  {
-    id: 'shore-whistle', bpm: 92, bars: 42,
-    form: 'IIAAAAAAAAAAAAAAAA BBBBBBBBAAAAAAAAAAAAAAAA'.replaceAll(' ', ''),
-    phrases: {
-      A: [[76, 78, 81, 0], [80, 78, 76, 0], [73, 74, 76, 0], [76, 0, 0, 0], [81, 83, 85, 0], [86, 85, 83, 0], [81, 78, 76, 0], [81, 0, 0, 0]],
-      B: [[85, 83, 81, 83], [85, 86, 85, 0], [88, 86, 85, 83], [81, 80, 78, 76], [76, 78, 81, 83], [85, 83, 81, 78], [76, 74, 73, 74], [81, 0, 0, 0]],
-    },
-    chords: {
-      A: ['A', 'A', 'D', 'A', 'A', 'D', 'A', 'A'],
-      B: ['A', 'D', 'E', 'A', 'D', 'A', 'E', 'A'],
-    },
-    lead: 'whistle', harmony: 'uke', bass: false, block: false,
-  },
+
 ];
 const chords = {
   F: [65, 69, 72], C: [72, 76, 79], Bb: [70, 74, 77],
@@ -103,10 +91,6 @@ for (const song of songs) {
     }
     if (song.block) {
       for (const at of [1, 3]) chord.forEach((midi, j) => note(midi, start + at * beat + j * .012, beat * .7, 'accordion', .02, (j - 1) * .35));
-    }
-    if (song.id === 'shore-whistle') {
-      chord.forEach((midi, j) => note(midi, start + j * .02, beat * .45, 'uke', .03, .2));
-      chord.forEach((midi, j) => note(midi, start + 2 * beat + j * .018, beat * .35, 'uke', .022, -.15));
     }
     if (phrase !== 'I') line.forEach((midi, i) => {
       if (!midi) return;

@@ -70,7 +70,12 @@ export class KirbyHome {
   prompt(position:T.Vector3,size=1){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6+.6*size && position.y<.6 ? 'E — лечь в кровать':'';}
   private fit(c:CharacterController,amount=1){this.group.scale.setScalar(1);fitRider(c,1,amount);}
   private bed(){const s=this.group.scale.x;return new T.Vector3(HOME_SITE.x,BED_REST.y*s,HOME_SITE.z+BED_REST.z*s);}
-  private door(){return new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+Math.max(6,3.9+.6*(this.sleeper?.actor.scale.x??1)));}
+  private door(){
+    const size=this.sleeper?.actor.scale.x??1,p=new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+Math.max(6,3.9+.6*size));
+    // Enlarged Kirby must also clear the neighbouring dog house after waking.
+    for(let i=0;i<4;i++)this.constrain(p,size);
+    return p;
+  }
   start(c:CharacterController){if(this.active || !this.prompt(c.actor.position,c.actor.scale.x) || c.flight.active)return false;this.sleeper=c;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c,0);return true;}
   savePosition(c:CharacterController){return this.sleeper===c?this.door():undefined;}
   wake(){

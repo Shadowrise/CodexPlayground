@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-7`) is shared with the browser in
+Protocol 2 (`build=meadow-network-8`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 ## Run locally
@@ -164,3 +164,49 @@ local room and never mutates a production room.
 `npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2 was deployed on 2026-09-24 and verified through the public health
 endpoint and a secure WebSocket connection. Worker version:
 `fe9ecc10-eb53-4174-ac65-7af42440b902`. Credentials and `.wrangler/` are not tracked.
+
+## Topotushka play event
+
+All three phases form a repeatable ordinary arena event, independent of the finale.
+Rules and deterministic body/charge paths live in the shared client module
+`centipede-event.ts`. The room advances stages using existing batched frames;
+clients render the path against server time. Single-player rooms send one extra
+stage deadline frame, not a continuous boss transform stream.
+The long winding run uses eight path knots and an arc-length cache shared by
+browser and Worker; the entire body follows the same travelled path. Runs stay
+inside the arena with a four-metre margin. Warning/run/rest/victory durations are
+1.8/6/10/10 seconds. Between run and rest, a12.5-second sneeze stage releases
+three fans of striped bouncing balls. Their trajectories, warnings and collisions
+are derived from the shared stage clock, not streamed. Each wave can softly bump
+a player once; levitation avoids contact. Clearing the fans earns one dodge point
+within the existing first-only cap.
+
+After three tail bells, the second phase coils the body around the centre and
+sends six expanding stomp rings with safe gaps. Levitation clears the rings;
+players must fly up to push the back bell three times. The third phase rolls a
+tall wheel along winding routes while faster, narrower-gap rings cross the arena.
+Players dodge sideways, fly over the rings, then aim and push a rainbow ball at
+the tired wheel. Three ball hits complete the event. Whole-body animation poses,
+wheel paths, ball flight and rings derive from the same shared stage clock.
+Air pushes preserve flight during the back-bell stage.
+
+Friendship is credited only after the final wheel unfolds. Victory music and
+one-draw fireworks play at that point, followed by a full sixty-second rest.
+The event cannot be restarted during rest, even if everyone leaves the arena or
+the Durable Object hibernates. It then returns to ordinary roaming.
+
+Participants receive two points per bell hit and one per successful dodge,
+with a twelve-point participation cap and the usual three-point first task reward.
+A completed task prevents all further event points. Rewards are authoritative,
+resume with the nickname and are included in history and finale scores. The small
+quest state is stored only on changes, separately from the 16KiB socket attachment.
+
+`node scripts/centipede-smoke.mjs` checks all three shared phases, two-player
+completion, the minute cooldown, replay without points, authoritative ball bump
+deduplication, rejoin progress and the existing world snapshot. Use a local server on
+8788, and run the client network test first to create its real-world fixture.
+`node ../kirby-game/scripts/centipede-event-browser.mjs` checks actual E/Q/Space
+controls across all three phases, final music/fireworks, cooldown/replay and the
+mobile HUD against the local game on5174. The client centipede-server test also
+exercises the actual Worker class with two sockets and a controlled clock,
+including restoration of a resting event from durable storage.

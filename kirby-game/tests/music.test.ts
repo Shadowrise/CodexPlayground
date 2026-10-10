@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import { BackgroundMusic, MUSIC_TRACKS } from '../src/music';
 import { readFileSync } from 'node:fs';
 
-test('all sixteen stereo tracks exist, main is triple length, audio has headroom', () => {
-  assert.equal(MUSIC_TRACKS.length,16);
+test('all fifteen stereo tracks exist, main is triple length, audio has headroom', () => {
+  assert.equal(MUSIC_TRACKS.length,15);
   for (const [index, [file]] of MUSIC_TRACKS.entries()) {
     const wav = readFileSync(new URL(`../public/audio/${file}.wav`, import.meta.url));
     assert.equal(wav.toString('ascii', 0, 4), 'RIFF');
@@ -18,7 +18,7 @@ test('all sixteen stereo tracks exist, main is triple length, audio has headroom
   }
 });
 
-test('sixteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
+test('fifteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
   class FakeElement extends EventTarget {
     value = ''; textContent = ''; title = ''; hidden = false;
     attributes = new Map<string, string>();
@@ -44,7 +44,7 @@ test('sixteen tracks advance and wrap in both directions while preserving mute a
     music.start(); await Promise.resolve(); assert(!audio!.paused);
     volume.value = '37'; volume.dispatchEvent(new Event('input'));
     const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.split('?')[0].endsWith(`${file}.wav`));
-    assert(first >= 0);assert(label.textContent.includes('/ 16 ·'));
+    assert(first >= 0);assert(label.textContent.includes('/ 15 ·'));
     for (let i = 0; i < MUSIC_TRACKS.length; i++) {
       assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       audio!.dispatchEvent(new Event('ended'));
@@ -60,6 +60,12 @@ test('sixteen tracks advance and wrap in both directions while preserving mute a
     button.dispatchEvent(new Event('click')); await Promise.resolve(); assert(!audio!.paused);
     doc.hidden = true; doc.dispatchEvent(new Event('visibilitychange')); assert(audio!.paused);
     doc.hidden = false; doc.dispatchEvent(new Event('visibilitychange')); assert(!audio!.paused);
+    const background=audio!;music.setEvent(true);await Promise.resolve();const event=audio!;
+    assert(background.paused);assert(event.loop);assert(!event.paused);assert(event.src.endsWith('/audio/topotushka-play.wav'));assert.equal(event.volume,.37);
+    volume.value='29';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.29);assert.equal(background.volume,.29);
+    music.setEvent('celebrate');await Promise.resolve();assert(!event.loop);assert(event.src.endsWith('/audio/topotushka-victory.wav'));assert.equal(event.volume,.29);assert(!event.paused);
+    button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
+    music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);
   } finally {
     if (originalAudio) Object.defineProperty(globalThis, 'Audio', originalAudio); else Reflect.deleteProperty(globalThis, 'Audio');
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');

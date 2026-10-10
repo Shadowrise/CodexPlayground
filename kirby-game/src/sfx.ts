@@ -1,3 +1,5 @@
+import {centipedeSound} from './centipede-sounds';
+import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
 import type { Emote } from './emotes';
 import { SoundEvents, type SoundActor, type SoundKind } from './sound-events';
@@ -208,6 +210,12 @@ export class SoundEffects {
       }this.buffers.set(key,buffer);
     }
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=Math.min(1,volume);source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
+  }
+  playCentipede(stage:CentipedeStage,volume=1){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const key='centipede-'+stage;
+    if(!this.buffers.has(key)){const samples=centipedeSound(stage),buffer=ctx.createBuffer(1,samples.length,22050);buffer.getChannelData(0).set(samples);this.buffers.set(key,buffer);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.7*Math.min(1,volume);source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);
   }
   playMill(kind:'branch'|'gate'|'wrong'|'bag'|'finish'){
     if(kind==='wrong'){this.playBoing(.5);return;}
