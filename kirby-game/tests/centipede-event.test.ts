@@ -166,6 +166,30 @@ test('final wheel combines grounded and airborne hazards; rainbow ball requires 
  const view=new CentipedeChallengesView();view.update(q,q.stageAt+500);assert(view.ball.visible);assert(view.ball.position.y>3);assert(!view.ball.castShadow);view.update(undefined,0);assert(!view.group.visible);
  for(const m of [view.ball,view.stomp,view.wheel]){m.geometry.dispose();(m.material as any).dispose();}
 });
+
+test('wheel sweeps cover the arena without crossing themselves, and retries start at the previous stop',()=>{
+ const a={...actor(),p:[A.x,5,A.z]};let q=startCentipede(trail(),actor(),1000)!;
+ q.phase=3;q.hits=6;q.stage='curl';q.to=[A.x,A.z];const coverage:Point[]=[];
+ const cross=(a:Point,b:Point,c:Point)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+ for(let cycle=0;cycle<12;cycle++){
+  const from=[...q.to];q=next(q,[a]);assert.equal(q.stage,'wheelWarning');
+  const start=centipedeWheel(q,q.stageAt);assert(Math.hypot(start.x-from[0],start.z-from[1])<.001,'no teleport between rolls');
+  assert(q.route!.length<=8,'bounded, compact route over the wire');q=next(q,[a]);
+  const path=Array.from({length:161},(_,i)=>{const p=centipedeWheel(q,q.stageAt+i/160*CENTIPEDE_TIMES.wheelRoll);return [p.x,p.z] as Point;});
+  for(const p of path)assert(Math.hypot(p[0]-A.x,p[1]-A.z)<=32.001,'wheel stays inside the arena');
+  assert(path.some(p=>Math.hypot(p[0]-A.x,p[1]-A.z)>30),'reaches the outer play area');
+  assert(path.some(p=>Math.hypot(p[0]-A.x,p[1]-A.z)<24),'also visits the inner play area');
+  let travelled=0;
+  for(let i=1;i<path.length;i++){
+   travelled+=Math.hypot(path[i][0]-path[i-1][0],path[i][1]-path[i-1][1]);
+   for(let j=i+2;j<path.length;j++)assert(!(cross(path[i-1],path[i],path[j-1])*cross(path[i-1],path[i],path[j])< -1e-8&&cross(path[j-1],path[j],path[i-1])*cross(path[j-1],path[j],path[i])< -1e-8),'warning path never crosses itself');
+  }
+  assert(travelled>130,'a broad arena sweep, not a short local zigzag');coverage.push(...path);
+  assert.deepEqual(centipedeWheel(q,q.stageAt+4200),centipedeWheel(JSON.parse(JSON.stringify(q)),q.stageAt+4200),'late network clients follow exactly the same curve');
+  q=next(q,[a]);assert.equal(q.stage,'dizzy');
+ }
+ for(const axis of [0,1])assert(Math.max(...coverage.map(p=>p[axis]))-Math.min(...coverage.map(p=>p[axis]))>60,'covers both axes of the arena');
+});
 test('event soundtrack and each boss cue have headroom and soft edges',()=>{
  const wav=readFileSync(new URL('../public/audio/topotushka-play.wav',import.meta.url));assert.equal(wav.toString('ascii',0,4),'RIFF');assert.equal(wav.readUInt16LE(22),2);const duration=wav.readUInt32LE(40)/wav.readUInt32LE(28);assert(duration>60&&duration<70);
  let peak=0;for(let i=44;i<wav.length;i+=2)peak=Math.max(peak,Math.abs(wav.readInt16LE(i)));assert(peak<24000&&peak>16000);

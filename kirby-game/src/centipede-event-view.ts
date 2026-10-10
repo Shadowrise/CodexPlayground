@@ -11,7 +11,10 @@ import {chargePoint,centipedeTail,centipedePhase,centipedePhaseHits,centipedeTar
 export class CentipedeEventView{
  readonly group=new T.Group();readonly hud=document.createElement('div');
  private title=document.createElement('strong');private message=document.createElement('div');
- private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide,toneMapped:false}));
+ // The arena inlay already has a depth bias. Give its warning a stronger bias
+ // so the centre emblem cannot occlude it at grazing angles; keep depth testing
+ // enabled so the marker still sits underneath the boss and characters.
+ private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}));
  private halo=new T.Mesh(new T.TorusGeometry(1.15,.07,6,32),new T.MeshBasicMaterial({color:'#fff29b',transparent:true,opacity:.8,depthWrite:false}));
  private confetti=new T.InstancedMesh(new T.OctahedronGeometry(.13),new T.MeshBasicMaterial(),32);
  private fireworks=new CentipedeFireworks();

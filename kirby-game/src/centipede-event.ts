@@ -184,8 +184,17 @@ function resetHazards(q:CentipedeEvent,actors:readonly CentipedeActor[]){
  for(const a of actors.filter(inside)){q.players[a.id]??=member(a);q.players[a.id].origin=ground(a);}
 }
 function aimWheel(q:CentipedeEvent,actors:readonly CentipedeActor[]){
- resetHazards(q,actors);const angle=q.cycle*.9,c=Math.cos(angle),s=Math.sin(angle),from=q.to;
- q.route=[from,...[[-22,-12],[21,-15],[-19,18],[24,9],[-23,-3],[14,-20]].map(([x,z])=>[A.x+x*c-z*s,A.z+x*s+z*c] as Point)];q.from=from;q.control=q.route[1];q.to=q.route.at(-1)!;
+ const from=[...q.to] as Point,radius=Math.hypot(from[0]-A.x,from[1]-A.z);
+ const heading=q.route&&radius>4?centipedeWheel(q,q.stageAt).yaw:undefined;
+ resetHazards(q,actors);
+ const angle=radius>4?Math.atan2(from[0]-A.x,from[1]-A.z):q.cycle*.9;
+ const direction=heading===undefined?(q.cycle%2?1:-1):Math.sin(heading)*Math.cos(angle)-Math.cos(heading)*Math.sin(angle)>=0?1:-1;
+ // Sweep around the whole arena, with one broad inward bend rather than
+ // repeatedly crossing the centre. Continue from the previous stop/heading;
+ // less than a full turn keeps both the path and its wide warning separated.
+ const radii=[24,31,29,18+q.cycle%3*2,30.5,31,28];
+ q.route=[from,...radii.map((r,i)=>{const a=angle+direction*(.5+i*.8);return [A.x+Math.sin(a)*r,A.z+Math.cos(a)*r] as Point;})];
+ q.from=from;q.control=q.route[1];q.to=q.route.at(-1)!;
 }
 function dodgeReward(q:CentipedeEvent,actors:readonly CentipedeActor[],clean:(p:CentipedeParticipant)=>boolean){
  for(const a of actors){const p=q.players[a.id];if(p&&inside(a)&&clean(p)&&(length(p.origin,ground(a))>1.5||a.p[1]>1.2)){p.dodges++;reward(p);}}
