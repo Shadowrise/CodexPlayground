@@ -2,10 +2,34 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {Mesh,Vector3,Box3} from 'three';
+import {Mesh,Vector3,Box3,Quaternion} from 'three';
 import {ArenaCentipede,centipedeRoam,ROAM_STAGES} from '../src/arena-centipede';
 import {BOSS_ARENA} from '../src/boss-arena-site';
 import {startCentipede,advanceCentipede,pushCentipede,centipedeTarget,centipedeWheel,CENTIPEDE_TIMES,type CentipedeActor} from '../src/centipede-event';
+
+test('exported wheel animation rolls forward along straight and curved arena routes',async()=>{
+ const bytes=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const model=new ArenaCentipede(gltf),motion=model.group.getObjectByName('Motion')!,trail=model.startTrail(0),head=trail.at(-1)!;
+ const actor:CentipedeActor={id:'a',p:[head[0]+3,0,head[1]],yaw:0,size:1,available:true,done:false,points:0};
+ const routes=[[[-15,0],[15,0]],[[0,15],[0,-15]],[[24,0],[17,18],[-5,25],[-22,8],[-15,-18]]];
+ for(const [index,points] of routes.entries()){
+  const q=startCentipede(trail,actor,1000+index)!;
+  q.phase=3;q.stage='wheelRoll';q.stageAt=10000+index*10000;
+  q.route=points.map(([x,z])=>[BOSS_ARENA.x+x,BOSS_ARENA.z+z]);q.from=q.route[0];q.to=q.route.at(-1)!;
+  model.update(q.stageAt/1000,undefined,q,q.stageAt);
+  for(const elapsed of [800,2000,3800,6000,7500]){
+   const now=q.stageAt+elapsed,before=centipedeWheel(q,now),after=centipedeWheel(q,now+8);
+   model.update(now/1000,undefined,q,now);model.group.updateMatrixWorld(true);
+   // A material point currently at the bottom must rotate backwards relative
+   // to the wheel centre, opposing forward translation at ground contact.
+   const contact=new Vector3(0,-1,0).applyQuaternion(motion.getWorldQuaternion(new Quaternion()).invert());
+   model.update((now+8)/1000,undefined,q,now+8);model.group.updateMatrixWorld(true);
+   contact.applyQuaternion(motion.getWorldQuaternion(new Quaternion())).add(new Vector3(0,1,0));
+   const travel=new Vector3(after.x-before.x,0,after.z-before.z).normalize();
+   assert(contact.dot(travel)<-.00001,`wheel rotates against its travel on route ${index}, at ${elapsed}ms`);
+  }
+ }
+});
 
 test('finished coil and lowering clips hold their final pose during the transition instead of replaying',async()=>{
  const b=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');

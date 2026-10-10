@@ -159,7 +159,7 @@ export function createCentipede(){
   if(name==='Uncurl')wheel=1-smooth(u);
   if(['WheelRoll','WheelDizzy','WheelHit'].includes(name))wheel=1;
   motion.position.y=4.05*wheel;
-  if(name==='WheelRoll')motion.rotation.x=-phase;
+  if(name==='WheelRoll')motion.rotation.x=phase;
   if(name==='WheelDizzy')motion.rotation.z=Math.sin(phase)*.095;
   if(name==='WheelHit'){motion.scale.set(1+one*.14,1-one*.12,1+one*.1);motion.position.y+=one*.6;}
   const arenaTransition=['CoilArena','Stomp','LowerBack','Rise'].includes(name);
