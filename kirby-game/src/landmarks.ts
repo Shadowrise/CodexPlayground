@@ -8,18 +8,23 @@ import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
 import { HOME_SITE } from './home-site';
+import type {MeadowLayout,MeadowTree} from './meadow-layout';
+import {MEADOW_HALF_SIZE} from './world-bounds';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
-import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, dryGround } from './pond-layout';
+import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, flatGround as dryGround } from './pond-layout';
 import {outsideBoatRoute} from './boat-route';
 export const rockHasGround=dryGround;
-export function sceneryClearance(x:number,z:number,padding=0) {
+// Retain the original clearing so moving the sack does not reseed mature trees
+// and their connecting paths elsewhere on the meadow.
+const millBagClearings=[...MILL_BAGS,[68,0,54] as const];
+export function sceneryClearance(x:number,z:number,padding=0,shorePlants=false,ownSite?:typeof LANDMARKS[number]) {
   if(Math.hypot(x-BOSS_ARENA.x,z-BOSS_ARENA.z)<BOSS_ARENA.radius+padding)return false;
-  if(MILL_BAGS.some(p=>Math.hypot(x-p[0],z-p[2])<2.3+padding))return false;
+  if(millBagClearings.some(p=>Math.hypot(x-p[0],z-p[2])<2.3+padding))return false;
   if(BRIDGES.some(s=>{const dx=x-s.x,dz=z-s.z,cos=Math.cos(s.yaw),sin=Math.sin(s.yaw);return Math.abs(dx*cos-dz*sin)<10+padding&&Math.abs(dx*sin+dz*cos)<2.8+padding;}))return false;
   if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<=FOUNTAIN_SITE.radius+padding)return false;
-  return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && riverClearance(x,z,padding) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>Math.hypot(x-p.x,z-p.z)>p.radius+padding);
+  return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && (shorePlants||riverClearance(x,z,padding)) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>p===ownSite||(shorePlants&&p.kind===0)||Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
 export function outsideLandmarks(x:number,z:number,padding=0) {
   for(const p of [BOSS_ARENA,FOUNTAIN_SITE,SKY_TRAIL_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
@@ -38,8 +43,32 @@ export function outsideLandmarks(x:number,z:number,padding=0) {
 }
 
 /** Shared primitive meshes are batched into instances after composing each scene. */
-export function createLandmarks() {
+export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]=[]) {
   const root=new T.Group(); root.name='Ponds, flowers, mushrooms, rocks, picnics and ruins';
+  const sites:{x:number;z:number;radius:number;kind:string;fromX:number;fromZ:number;moved:boolean}[]=[];
+  root.userData.scenerySites=sites;
+  const world=new T.Vector3(),scale=new T.Vector3();
+  const place=(g:T.Group,x:number,z:number,radius:number,kind:string)=>{
+    g.updateWorldMatrix(true,false);world.set(x,0,z);g.localToWorld(world);g.getWorldScale(scale);
+    const r=radius*Math.max(scale.x,scale.z),fromX=world.x,fromZ=world.z;
+    if(!dryGround(fromX,fromZ,r))return undefined;
+    if(layout&&(!layout.clearOfTrails(fromX,fromZ,r)||sites.some(p=>p.moved&&Math.hypot(fromX-p.x,fromZ-p.z)<r+p.radius+.12))){
+      const own=g.userData.landmarkSite as typeof LANDMARKS[number]|undefined;
+      const target=layout.moveOffTrail(fromX,fromZ,r,(px,pz)=>{
+        if(Math.max(Math.abs(px),Math.abs(pz))+r>MEADOW_HALF_SIZE-2||!dryGround(px,pz,r+.1)||!sceneryClearance(px,pz,r,true,own))return false;
+        if(trees.some(t=>Math.hypot(px-t.x,pz-t.z)<r+.7)||sites.some(p=>Math.hypot(px-p.x,pz-p.z)<r+p.radius+.12))return false;
+        if(own?.kind===4){
+          if(Math.abs(px-own.x)<2.8+r&&Math.abs(pz-own.z)<2+r)return false;
+          if([[0,4],[-5,-2]].some(([x,z])=>Math.abs(px-own.x-x)<1.7+r&&Math.abs(pz-own.z-z)<.85+r))return false;
+        }
+        return true;
+      });
+      if(!target)return undefined;
+      world.set(target.x,0,target.z);
+    }
+    sites.push({x:world.x,z:world.z,radius:r,kind,fromX,fromZ,moved:Math.hypot(world.x-fromX,world.z-fromZ)>.01});
+    g.worldToLocal(world);return {x:world.x,z:world.z};
+  };
   const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,12,8),rock:new T.IcosahedronGeometry(1,1),
     pole:new T.CylinderGeometry(1,1,1,10),cap:new T.SphereGeometry(1,16,8,0,Math.PI*2,0,Math.PI/2),
     ring:new T.TorusGeometry(1,.025,4,32)};
@@ -51,19 +80,16 @@ export function createLandmarks() {
   const rock=(g:T.Group,x:number,z:number,s=1)=>{
     // Use the final union of lakes and rivers, including confluences and widened banks.
     // Skip the entire stone (moss and markings too), so no fragments remain afloat.
-    g.updateWorldMatrix(true,false);
-    const center=g.localToWorld(new T.Vector3(x,0,z)),scale=g.getWorldScale(new T.Vector3());
-    if(!rockHasGround(center.x,center.z,1.3*s*Math.max(scale.x,scale.z)))return;
+    const p=place(g,x,z,1.45*s,'rock');if(!p)return;x=p.x;z=p.z;
     put(g,'rock','#838779',x,.6*s,z,1.2*s,.85*s,s,0,x, .14);
     put(g,'rock','#526846',x-.15*s,1.19*s,z,.8*s,.17*s,.65*s);
     put(g,'box','#585f53',x,.93*s,z+.79*s,.045*s,.42*s,.04*s,0,.3,.45);
   };
   function flowers(g:T.Group,cx:number,cz:number,count:number) {
     for(let i=0;i<count;i++) {
-      const a=i*2.399,r=Math.sqrt((i+.5)/count)*5,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;
-      g.updateWorldMatrix(true,false);
-      const center=g.localToWorld(new T.Vector3(x,0,z)),scale=g.getWorldScale(new T.Vector3());
-      if(!dryGround(center.x,center.z,.32*Math.max(scale.x,scale.z)))continue;
+      const a=i*2.399,r=Math.sqrt((i+.5)/count)*5;
+      const p=place(g,cx+Math.cos(a)*r,cz+Math.sin(a)*r,.32,'flower');if(!p)continue;
+      const {x,z}=p;
       const h=.4+(i%5)*.12;
       put(g,'pole','#477447',x,h/2,z,.025,h,.025);
       put(g,'ball','#639b47',x+.12,h*.5,z,.18,.045,.09,0,.4,.4);
@@ -92,7 +118,7 @@ export function createLandmarks() {
       }
   }
   for(const site of LANDMARKS) {
-    const g=new T.Group();g.position.set(site.x,0,site.z);root.add(g);
+    const g=new T.Group();g.position.set(site.x,0,site.z);g.userData.landmarkSite=site;root.add(g);
     if(site.kind===0) {
       g.scale.set(POND_SCALE,1,POND_SCALE);
       const contour=pondOutline(LANDMARKS.filter(s=>s.kind===0).indexOf(site));
@@ -106,7 +132,8 @@ export function createLandmarks() {
       }
       for(let i=0;i<24;i++) {const a=i*.8,x=Math.cos(a)*12.3,z=Math.sin(a)*8.6,h=1.1+i%4*.2;
         if(!dryGround(site.x+x*POND_SCALE,site.z+z*POND_SCALE,.12*POND_SCALE))continue;
-        put(g,'pole','#5b7846',x,h/2,z,.035,h,.035);put(g,'pole','#795535',x,h,z,.09,.35,.09);}
+        const p=place(g,x,z,.12,'reed');if(!p)continue;
+        put(g,'pole','#5b7846',p.x,h/2,p.z,.035,h,.035);put(g,'pole','#795535',p.x,h,p.z,.09,.35,.09);}
       flowers(g,-15,-3,38);
     } else if(site.kind===1) flowers(g,0,0,120);
     else if(site.kind===2) {
@@ -115,21 +142,27 @@ export function createLandmarks() {
       for(const r of [.4,.7,.95])put(g,'ring','#8c6646',-2,1.34,0,r,r,r,Math.PI/2);
       put(g,'pole','#75503b',3,.65,1,.65,6,.65,0,0,Math.PI/2);
       for(const x of [0,6])put(g,'pole','#c9a574',x,.65,1,.57,.04,.57,0,0,Math.PI/2);
-      for(let i=0;i<30;i++) {const a=i*2.4,r=2+Math.sqrt(i/30)*6,x=Math.cos(a)*r,z=Math.sin(a)*r,h=.25+(i%4)*.16;
+      for(let i=0;i<30;i++) {const a=i*2.4,r=2+Math.sqrt(i/30)*6,h=.25+(i%4)*.16;
+        const p=place(g,Math.cos(a)*r,Math.sin(a)*r,h*.8+.08,'mushroom');if(!p)continue;const {x,z}=p;
         put(g,'pole','#ebdab4',x,h/2,z,.09,h,.09);
         put(g,'cap',i%3?'#b34035':'#9b744d',x,h,z,h*.8,h*.45,h*.8);
         for(let j=0;j<4;j++) {const b=j*1.57;put(g,'ball','#f7e5cf',x+Math.cos(b)*h*.4,h+h*.34,z+Math.sin(b)*h*.4,.055,.025,.055);}
       }
-      for(let i=0;i<6;i++)put(g,'rock','#607949',Math.sin(i*2)*4,.1,Math.cos(i*2)*4,1.1,.15,.7);
+      for(let i=0;i<6;i++){const p=place(g,Math.sin(i*2)*4,Math.cos(i*2)*4,1.15,'moss');if(p)put(g,'rock','#607949',p.x,.1,p.z,1.1,.15,.7);}
     } else if(site.kind===3) {
       for(let i=0;i<10;i++)rock(g,Math.sin(i*2.4)*(2+i*.5),Math.cos(i*2.4)*(2+i*.5),.5+(i%4)*.5);
       flowers(g,4,-4,25);
     } else if(site.kind===4) {
-      for(let i=0;i<8;i++)for(let j=0;j<6;j++)put(g,'box',(i+j)%2?'#fff0da':'#c97773',(i-3.5)*.6,.025,(j-2.5)*.6,.6,.045,.6);
-      put(g,'box','#aa7945',1,.48,.7,1.1,.8,.75);
-      for(let i=0;i<5;i++)put(g,'box','#d0a46b',1,.16+i*.15,.7,1.16,.05,.79);
-      put(g,'ring','#8f623b',1,1.04,.7,.5,.48,.4);
-      for(let i=0;i<3;i++)put(g,'ball',['#d4573e','#e5a836','#8eaa47'][i],.7+i*.27,.94,.7,.2,.19,.2);
+      const p=place(g,0,0,3,'picnic');
+      if(p){
+        // Blanket and basket move together; the interactive benches retain
+        // their shared seat coordinates and the path's actual destinations.
+        for(let i=0;i<8;i++)for(let j=0;j<6;j++)put(g,'box',(i+j)%2?'#fff0da':'#c97773',p.x+(i-3.5)*.6,.025,p.z+(j-2.5)*.6,.6,.045,.6);
+        put(g,'box','#aa7945',p.x+1,.48,p.z+.7,1.1,.8,.75);
+        for(let i=0;i<5;i++)put(g,'box','#d0a46b',p.x+1,.16+i*.15,p.z+.7,1.16,.05,.79);
+        put(g,'ring','#8f623b',p.x+1,1.04,p.z+.7,.5,.48,.4);
+        for(let i=0;i<3;i++)put(g,'ball',['#d4573e','#e5a836','#8eaa47'][i],p.x+.7+i*.27,.94,p.z+.7,.2,.19,.2);
+      }
       bench(g,0,4);bench(g,-5,-2);flowers(g,5,-5,32);
     } else {
       const stone='#a3a48d';

@@ -110,6 +110,16 @@ test('targeted charge paths remain inside the arena with a separated, following 
   for(const axis of [0,1])assert(Math.max(...coverage.map(p=>p[axis]))-Math.min(...coverage.map(p=>p[axis]))>57,'runs cover the arena in both directions');
  }
 });
+test('the tail bell opens promptly after the final sneeze, retaining all three ball fans',()=>{
+ const a=actor();let q=startCentipede(trail(),a,1)!;q=next(q,[a]);q=next(q,[a]);q=next(q,[a]);
+ const finish=q.stageAt+CENTIPEDE_BALLS.waves*CENTIPEDE_BALLS.interval;
+ const lastFan=centipedeBalls(q,finish).filter(b=>b.wave===CENTIPEDE_BALLS.waves-1);
+ assert(lastFan.some(b=>b.active),'the final sneeze still launches its balls');
+ atTail(q,a);assert(!pushCentipede(q,a,finish),'bell stays shut during the sneezing stage');
+ q=advanceCentipede(q,finish+750,[a]).event!;assert.equal(q.stage,'exhausted');
+ assert(pushCentipede(q,a,finish+751),'the player can ring the bell within a second of the last sneeze');
+});
+
 test('three telegraphed ball fans are deterministic; each wave bumps once and levitation avoids them',()=>{
  const a=actor(),b={...actor('b'),p:[A.x,5,A.z]};let q=startCentipede(trail(),a,1)!;
  q=next(q,[a,b]);q=next(q,[a,b]);q=next(q,[a,b]);assert.equal(q.stage,'balls');

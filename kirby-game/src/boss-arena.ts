@@ -4,7 +4,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import polygonClipping from 'polygon-clipping';
 import {BOSS_ARENA,ARENA_POSTS} from './boss-arena-site';
 
-const COLORS=['#df6064','#eea45a','#e4cf6c','#82b975','#59bdbd','#6b91cf','#ae86c7'];
+const COLORS=['#bf5d62','#c58f59','#bbac67','#739867','#549f9e','#6382ae','#9775ac'];
 /** Static arena: merged opaque decoration, tiled ground, no update loop/lights. */
 export function createBossArena(){
  const root=new T.Group();root.name='Арена Топотушки';root.position.set(BOSS_ARENA.x,0,BOSS_ARENA.z);
@@ -25,13 +25,13 @@ export function createBossArena(){
  // Mipmapped repeating turf: close-up detail without a giant arena-sized texture.
  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d')!;let seed=9271;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- ctx.fillStyle='#849f66';ctx.fillRect(0,0,256,256);
- for(let i=0;i<7000;i++){ctx.fillStyle=['#79955e','#8ca76b','#94ac75','#809961'][i%4];ctx.fillRect(random()*256,random()*256,1+random()*2,1+random()*4);}
+ ctx.fillStyle='#4b613a';ctx.fillRect(0,0,256,256);
+ for(let i=0;i<7000;i++){ctx.fillStyle=['#435932','#536941','#5a7047','#495e37'][i%4];ctx.fillRect(random()*256,random()*256,1+random()*2,1+random()*4);}
  const turf=localizedCanvasTexture(canvas);turf.colorSpace=T.SRGBColorSpace;turf.wrapS=turf.wrapT=T.RepeatWrapping;turf.repeat.set(24,24);turf.anisotropy=2;
  const floorGeo=new T.RingGeometry(8.25,35.7,128);floorGeo.rotateX(-Math.PI/2);
  const floor=new T.Mesh(floorGeo,new T.MeshStandardMaterial({map:turf,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));floor.name='Arena short turf';floor.position.y=.025;floor.receiveShadow=true;root.add(floor);
- band(35.7,36,'#e7dcb2');band(36,37.1,'#c9b48b');band(38.2,40.6,'#c9b48b');band(40.6,40.85,'#e2d8b8');band(8,8.25,'#e6d4a0');
- oval('#b3c58e',0,0,8,8,.025);
+ band(35.7,36,'#b5b09a');band(36,37.1,'#a39475');band(38.2,40.6,'#a39475');band(40.6,40.85,'#beb59d');band(8,8.25,'#b7ae8f');
+ oval('#657b50',0,0,8,8,.025);
  // An inlaid centipede emblem, not a collectible star.
  for(let i=0;i<7;i++){
   const z=3.6-i*1.12,x=Math.sin(i*.55)*.55;

@@ -3,7 +3,9 @@ import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,fountainDistance,inFountain} from './foun
 import { POND_SCALE } from './landmark-sites';
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import { WATER_Y, deckHeight, inWater, waterShapes, WATER_REGIONS, BRIDGES } from './pond-layout';
+import {BankSupport} from './bank-support';
+import {createWaterSurface} from './water-surface';
+import { WATER_Y, deckHeight, inWater, waterShapes, BANK_REGIONS, BRIDGES,bankHeight } from './pond-layout';
 type Swimmer={actor:T.Group;swimming:boolean;surfaceY:number;flight:{active:boolean};roll:{active:boolean}};
 let ringGeometry:T.BufferGeometry|undefined;
 const ringMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.3,metalness:.08});
@@ -44,26 +46,22 @@ export class Ponds {
  readonly group=new T.Group();
  private time=0;
  private texture:T.DataTexture;
+ private bankSupport:BankSupport;
  private supports=new WeakMap<Swimmer,{onBridge:boolean;base:number}>();
- constructor(){
+ constructor(groundMaterial?:T.Material){
   this.group.name='Swimmable lakes';
-  const data=new Uint8Array(128*128*4);
-  for(let y=0;y<128;y++)for(let x=0;x<128;x++){
-   const wave=Math.sin(x/128*Math.PI*8+Math.sin(y/128*Math.PI*4)*2)*Math.sin(y/128*Math.PI*6+x/128*Math.PI*4),v=Math.max(0,wave-.45)*50,i=(y*128+x)*4;
-   data.set([44+v,148+v,174+v,255],i);
-  }
-  this.texture=new T.DataTexture(data,128,128);this.texture.colorSpace=T.SRGBColorSpace;this.texture.wrapS=this.texture.wrapT=T.RepeatWrapping;this.texture.repeat.set(.18,.18);this.texture.needsUpdate=true;
-  const water=new T.MeshStandardMaterial({map:this.texture,roughness:.2,metalness:.22});
-  const surface=new T.Mesh(new T.ShapeGeometry(waterShapes()),water);surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;this.group.add(surface);
-  const vertices:number[]=[],indices:number[]=[];
-  for(const region of WATER_REGIONS)for(const ring of region){
-   for(let i=0;i<ring.length-1;i++){
-    const a=ring[i],b=ring[i+1],n=vertices.length/3;
-    vertices.push(a[0],-.012,a[1],b[0],-.012,b[1],a[0],-1.3,a[1],b[0],-1.3,b[1]);indices.push(n,n+1,n+2,n+1,n+3,n+2);
-   }
-  }
-  const geo=new T.BufferGeometry();geo.setAttribute('position',new T.Float32BufferAttribute(vertices,3));geo.setIndex(indices);geo.computeVertexNormals();
-  const bank=new T.Mesh(geo,new T.MeshStandardMaterial({color:'#b4a379',roughness:1,side:T.DoubleSide}));bank.receiveShadow=true;this.group.add(bank);
+  const water=createWaterSurface();this.texture=water.texture;
+  const surface=new T.Mesh(new T.ShapeGeometry(waterShapes()),water.material);surface.name='Lake and river water';surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;this.group.add(surface);
+  const shapes=BANK_REGIONS.map(region=>{
+   const shape=new T.Shape(region[0].map(([x,z])=>new T.Vector2(x,-z)));
+   for(const ring of region.slice(1))shape.holes.push(new T.Path(ring.map(([x,z])=>new T.Vector2(x,-z))));return shape;
+  });
+  const geo=new T.ShapeGeometry(shapes);geo.rotateX(-Math.PI/2);
+  const positions=geo.attributes.position;
+  for(let i=0;i<positions.count;i++)positions.setY(i,Math.min(-.012,bankHeight(positions.getX(i),positions.getZ(i))));
+  geo.computeVertexNormals();
+  this.bankSupport=new BankSupport(geo);
+  const bank=new T.Mesh(geo,groundMaterial??new T.MeshStandardMaterial({color:'#87916c',roughness:1}));bank.name='Soft sloping river banks';bank.receiveShadow=true;this.group.add(bank);
 
  }
  update(dt:number){this.time+=dt;this.texture.offset.set(this.time*.015,this.time*.009);}
@@ -91,7 +89,7 @@ export class Ponds {
     p.x=previous.x;p.z=previous.z;
    }
   }
-  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z);}
+  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z)||this.bankSupport.height(p.x,p.z);}
   if(fountainDistance(p.x,p.z)<11.8){height=fountain?FOUNTAIN_WATER_Y-.63*size+.045*Math.sin(this.time*2.6):.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
   support.onBridge=bridge;
   c.swimming=wet&&!c.flight.active&&!c.roll.active;

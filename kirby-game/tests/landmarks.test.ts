@@ -19,10 +19,11 @@ test('landmarks cover all six themes without overlapping sites or world edges', 
 
 test('forest canopy instances stay clear of landmarks and decor is instanced', () => {
   const forest=createForest(), matrix=new Matrix4(), position=new Vector3();
+  forest.updateMatrixWorld(true);
   forest.traverse(mesh=>{
     if(!(mesh instanceof InstancedMesh) || !['Decorative forest leaves','Decorative forest needles'].includes(mesh.name))return;
     for(let i=0;i<mesh.count;i++) {
-      mesh.getMatrixAt(i,matrix);position.setFromMatrixPosition(matrix);
+      mesh.getMatrixAt(i,matrix);matrix.premultiply(mesh.matrixWorld);position.setFromMatrixPosition(matrix);
       assert(sceneryClearance(position.x,position.z,1),'Canopies need room around each composition');
     }
   });

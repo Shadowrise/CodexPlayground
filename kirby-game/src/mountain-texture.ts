@@ -16,7 +16,7 @@ export function createMountainTexture(size=512){
     const layers=Math.sin((v+warp)*Math.PI*32);
     const seams=Math.pow(Math.max(0,layers),18);
     const fractures=Math.pow(Math.max(0,1-Math.abs(noise(u,v,16)-.5)*35),3);
-    const value=T.MathUtils.clamp(.81+(broad-.5)*.15+(medium-.5)*.15+(fine-.5)*.09-seams*.12-fractures*.055,0,1);
+    const value=T.MathUtils.clamp(.86+(broad-.5)*.11+(medium-.5)*.1+(fine-.5)*.055-seams*.075-fractures*.04,0,1);
     const i=(y*size+x)*4;
     data[i]=data[i+1]=data[i+2]=Math.round(value*255);data[i+3]=255;
   }

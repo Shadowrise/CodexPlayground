@@ -2,8 +2,32 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {AnimationMixer,Mesh,LoopOnce,Vector3} from 'three';
+import {AnimationMixer,Box3,Mesh,LoopOnce,Vector3} from 'three';
 import {CENTIPEDE_CLIPS} from '../src/centipede-clips';
+
+test('stationary boots stay on the ground while the body breathes and the face animates',async()=>{
+ const bytes=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url));
+ const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const mixer=new AnimationMixer(gltf.scene),box=new Box3(),boots:Mesh[]=[];
+ gltf.scene.traverse(o=>{if(o instanceof Mesh&&o.parent!.name.startsWith('Boot_')){o.geometry.computeBoundingBox();boots.push(o);}});
+ assert.equal(boots.length,22);
+ for(const name of ['Idle','Exhausted','Sneeze']){
+  mixer.stopAllAction();const clip=gltf.animations.find(c=>c.name===name)!,action=mixer.clipAction(clip);action.setLoop(LoopOnce,1).play();action.clampWhenFinished=true;
+  let previous:Vector3[]|undefined,bodyMin=Infinity,bodyMax=-Infinity;
+  for(let i=0;i<=60;i++){
+   action.time=clip.duration*i/60;mixer.update(0);gltf.scene.updateMatrixWorld(true);
+   const positions=boots.map(b=>b.getWorldPosition(new Vector3()));
+   for(const [index,boot] of boots.entries()){
+    box.copy(boot.geometry.boundingBox!).applyMatrix4(boot.matrixWorld);
+    assert(Math.abs(box.min.y-.02)<.003,`${name} sole ${index} floating at ${box.min.y}`);
+    if(previous)assert(positions[index].distanceTo(previous[index])<.003,`${name} boot slides while stationary`);
+   }
+   previous=positions;
+   const scale=gltf.scene.getObjectByName('Segment_3')!.scale.y;bodyMin=Math.min(bodyMin,scale);bodyMax=Math.max(bodyMax,scale);
+  }
+  assert(bodyMax-bodyMin>.01,'body breathing must remain visible');
+ }
+});
 
 test('exported centipede: complete clips, independent targets, blink and grounded rolling',async()=>{
  const bytes=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url));

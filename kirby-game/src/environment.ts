@@ -7,8 +7,8 @@ import {createMountains} from './mountains';
 
 export function addEnvironment(scene:THREE.Scene){
  const forest=createForest();scene.add(forest);
- scene.add(createMeadowDecor(forest.userData.treePositions));
- scene.add(createLandmarks());
+ scene.add(createMeadowDecor(forest.userData.treePositions,forest.userData.meadowLayout));
+ scene.add(createLandmarks(forest.userData.meadowLayout,forest.userData.treePositions));
  scene.add(createMountains());
  scene.add(createBossArena());
 }

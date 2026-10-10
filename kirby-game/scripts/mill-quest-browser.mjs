@@ -13,7 +13,7 @@ try{
  await move(49,42);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.gate===2);await page.waitForTimeout(200);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.stage==='bags');
  await page.waitForSelector('#mill-quest-hud:not([hidden])');assert.equal(await page.locator('.mill-bag-order span').count(),3);
  await page.screenshot({path:process.env.TEMP+'/kirby-mill-quest-game.png'});
- const order=await page.evaluate(()=>window.millTest.watermill.quest.order),places=[[68,54],[53,65],[76,69]];
+ const order=await page.evaluate(()=>window.millTest.watermill.quest.order),places=await page.evaluate(async()=>{const {MILL_BAGS}=await import('/src/mill-quest.ts');return MILL_BAGS.map(p=>[p[0],p[2]]);});
  const wrong=(order[0]+1)%3;await move(...places[wrong]);await page.waitForFunction(i=>window.millTest.watermill.quest.carried===i,wrong);await move(56.5,41);await page.keyboard.press('e');await page.waitForFunction(i=>window.millTest.watermill.quest.rejected===i&&window.millTest.watermill.quest.carried===-1,wrong);
  assert.equal(await page.evaluate(()=>window.millTest.watermill.quest.delivered),0);await page.waitForTimeout(1300);
  for(let n=0;n<3;n++){const i=order[n];await move(...places[i]);await page.waitForFunction(i=>window.millTest.watermill.quest.carried===i,i);await move(56.5,41);await page.keyboard.press('e');await page.waitForFunction(n=>window.millTest.watermill.quest.delivered===n+1,n);}

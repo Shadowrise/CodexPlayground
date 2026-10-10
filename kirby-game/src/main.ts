@@ -286,7 +286,7 @@ ground.position.y = -.02;
 ground.receiveShadow = true;
 scene.add(ground);
 addEnvironment(scene);
-const ponds=new Ponds();scene.add(ponds.group);
+const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
 const coaster=new Coaster();scene.add(coaster.group);

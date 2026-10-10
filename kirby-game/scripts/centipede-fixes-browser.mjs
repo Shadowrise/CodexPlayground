@@ -5,7 +5,7 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/THREE|WebGL|shader/i.test(m.text()))errors.push(m.text());});
  await page.addInitScript(()=>localStorage.setItem('kirby-language-v1','ru'));
- await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+'\nwindow.bossFix={get c(){return character},get q(){return currentCentipede()},get model(){return arenaCentipede},view:centipedeView,scene,renderer,camera,followCamera,boatTime,set day(v){dayStart=Date.now();dayStartPhase=v}};'});});
+ await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+'\nwindow.bossFix={get c(){return character},get q(){return currentCentipede()},get model(){return arenaCentipede},view:centipedeView,scene,renderer,camera,shadows,followCamera,boatTime,set day(v){dayStart=Date.now();dayStartPhase=v}};'});});
  await page.goto(process.env.GAME_URL||'http://127.0.0.1:5174/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
  await page.locator('#player-name-input').fill('Друг');await page.locator('#new-game').click();await page.locator('#start-game').click();
  await page.waitForFunction(()=>window.bossFix.c);
@@ -24,6 +24,11 @@ try{
  await page.evaluate(()=>{window.bossFix.q.stageAt=Date.now()-6100;});await page.waitForFunction(()=>window.bossFix.q.stage==='balls');
  await page.evaluate(async()=>{const t=window.bossFix,{centipedeSegments}=await import('/src/centipede-event.ts'),head=centipedeSegments(t.q,Date.now()+700)[0];t.c.setActivity('Idle');t.c.actor.position.set(head.x+Math.sin(head.yaw)*7,0,head.z+Math.cos(head.yaw)*7);t.c.yaw=head.yaw+Math.PI;t.followCamera.reset(t.c.yaw);});
  await page.waitForTimeout(900);await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-bent-head.png'});
+ // The real solo loop opens the bell promptly, and the ordinary push rings it.
+ await page.evaluate(async()=>{const {CENTIPEDE_TIMES}=await import('/src/centipede-event.ts');window.bossFix.q.stageAt=Date.now()-CENTIPEDE_TIMES.balls+150;});
+ await page.waitForFunction(()=>window.bossFix.q.stage==='exhausted',{},{timeout:1500});
+ await page.evaluate(async()=>{const t=window.bossFix,{centipedeTarget}=await import('/src/centipede-event.ts'),p=centipedeTarget(t.q);t.c.setActivity('Idle');t.c.actor.position.set(p[0],0,p[2]+2);t.c.yaw=Math.PI;});
+ await page.keyboard.press('q');await page.waitForFunction(()=>window.bossFix.q.stage==='tickle');
  // Use the real animated back surfaces and the game's ordinary ground pass.
  await page.evaluate(()=>{const t=window.bossFix;t.q.phase=2;t.q.hits=3;t.q.stage='back';t.q.stageAt=Date.now();t.c.setActivity('Idle');t.c.actor.position.set(140,5,-45);});
  await page.waitForTimeout(220);
@@ -65,5 +70,21 @@ try{
  await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-rounded-run.png'});
  await page.evaluate(()=>{const t=window.bossFix,q=window.transitionSample;q.stage='balls';q.stageAt=131000;t.model.update(131,t.camera.position,q,131000);t.view.update(q,'test',131300,t.c.actor.position.clone().set(140,0,-45),true,'Q',t.camera);t.renderer.render(t.scene,t.camera);});
  await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-rounded-balls.png'});
- assert.deepEqual(errors,[]);console.log('PASS centred HUD, rounded warnings, natural phase transitions, actual back landing/jump, far-away countdown, returning/empty reset and arena sign');
+ const restingFeet=await page.evaluate(async()=>{
+  const t=window.bossFix,{Box3,Vector3}=await import('/node_modules/.vite/deps/three.js');t.view.group.visible=false;
+  t.model.update(22,t.camera.position,undefined,500000);t.model.update(22,t.camera.position,undefined,500500);t.model.group.updateMatrixWorld(true);
+  const boots=[];t.model.group.traverse(o=>{if(o.isMesh&&o.parent.name.startsWith('Boot_')){o.geometry.computeBoundingBox();boots.push(o);}});
+  const initial=boots.map(o=>o.getWorldPosition(new Vector3()));let groundError=0,slide=0;
+  for(let i=0;i<=30;i++){
+   t.model.update(22+i/30,t.camera.position,undefined,500500+i/30*1000);t.model.group.updateMatrixWorld(true);
+   boots.forEach((o,index)=>{groundError=Math.max(groundError,Math.abs(new Box3().copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld).min.y-.025));slide=Math.max(slide,o.getWorldPosition(new Vector3()).distanceTo(initial[index]));});
+  }
+  const centre=t.model.group.getObjectByName('Segment_5').getWorldPosition(new Vector3());t.camera.position.copy(centre).add(new Vector3(17,4,9));t.camera.lookAt(centre);t.camera.updateMatrixWorld();t.shadows?.update();t.renderer.render(t.scene,t.camera);
+  return {boots:boots.length,groundError,slide};
+ });
+ assert.equal(restingFeet.boots,22);assert(restingFeet.groundError<.004);assert(restingFeet.slide<.004);
+ await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-planted-feet.png'});
+ await page.evaluate(()=>{const t=window.bossFix;t.camera.position.set(140,75,-20);t.camera.lookAt(140,0,-45);t.camera.updateMatrixWorld();t.renderer.render(t.scene,t.camera);});
+ await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-dark-arena.png'});
+ assert.deepEqual(errors,[]);console.log('PASS centred HUD, rounded warnings, natural phase transitions, actual back landing/jump, far-away countdown, returning/empty reset, arena sign, prompt tail push and planted feet',JSON.stringify(restingFeet));
 }finally{await browser.close();}

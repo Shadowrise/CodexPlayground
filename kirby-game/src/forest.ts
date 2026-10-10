@@ -4,6 +4,10 @@ import { createCoasterCurve } from './coaster';
 import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
 import { meadowGeometry } from './pond-layout';
+import {BIOME_STYLE} from './biome-style';
+import {MeadowLayout} from './meadow-layout';
+import {growForestGroves} from './forest-groves';
+import {forestInstances,type ForestPart} from './forest-lod';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H } from './world-bounds';
 import { outsideLandmarks, sceneryClearance } from './landmarks';
@@ -33,25 +37,82 @@ export function createForest() {
     fruit: new THREE.SphereGeometry(1, 10, 8),
   };
   type Part = keyof typeof geometries;
-  const batches = new Map<Part, { matrix: THREE.Matrix4; color: THREE.Color }[]>();
+  const batches = new Map<Part, ForestPart[]>();
   const dummy = new THREE.Object3D();
   const track=createCoasterCurve().getPoints(1800);
-  function part(kind: Part, x: number, y: number, z: number, sx: number, sy: number, sz: number, color: THREE.ColorRepresentation, yaw = 0) {
+  function part(kind: Part, x: number, y: number, z: number, sx: number, sy: number, sz: number, color: THREE.ColorRepresentation, yaw = 0,detail=0) {
     dummy.position.set(x,y,z); dummy.scale.set(sx,sy,sz); dummy.rotation.set(0,yaw,0); dummy.updateMatrix();
     if (!batches.has(kind)) batches.set(kind, []);
-    batches.get(kind)!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
+    batches.get(kind)!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color),detail });
   }
-  function branch(from: THREE.Vector3, to: THREE.Vector3, radius: number, color: string) {
+  function branch(from: THREE.Vector3, to: THREE.Vector3, radius: number, color: string,detail=1) {
     dummy.position.copy(from).add(to).multiplyScalar(.5);
     dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), to.clone().sub(from).normalize());
     dummy.scale.set(radius, from.distanceTo(to), radius); dummy.updateMatrix();
     if (!batches.has('wood')) batches.set('wood', []);
-    batches.get('wood')!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color) });
+    batches.get('wood')!.push({ matrix: dummy.matrix.clone(), color: new THREE.Color(color),detail });
+  }
+  function grow(x:number,z:number,biome:Biome,s:number,yaw:number,i:number,spread=1){
+    const h=(biome==='spruce'?7.5:biome==='birch'?10.2:8.3)*s;
+    const trunk=biome==='birch'?'#eee9d5':biome==='spruce'?'#69513b':'#866044';
+    const thickness=(biome==='birch'?.16:.25)*s;
+    part('wood',x,h*.38,z,thickness,h*.76,thickness,trunk,yaw);
+    if (biome==='birch') {
+      for (let b=0;b<12;b++) part('bark',x,h*(.05+b*.052),z,thickness*1.015*(1-.3*(.05+b*.052)/.76),(.035+random()*.07)*s,thickness*1.015*(1-.3*(.05+b*.052)/.76),'#514b43',random()*Math.PI*2,2);
+    }
+    if (biome==='spruce') {
+      const hue=.33+random()*.035;
+      for (let tier=0;tier<7;tier++) {
+        const y=h*(.22+tier*.1), width=(1-tier*.115)*2*s;
+        part('needles',x,y+.8*s,z,width,2.7*s,width,new THREE.Color().setHSL(hue,.48,.19+tier*.006,THREE.SRGBColorSpace),yaw+tier*.5);
+        for (let arm=0;arm<5;arm++) {
+          const a=yaw+arm*Math.PI*2/5+tier*.55;
+          const tx=x+Math.cos(a)*width*.65,tz=z+Math.sin(a)*width*.65;
+          branch(new THREE.Vector3(x,y,z),new THREE.Vector3(tx,y-.13*s,tz),.045*s,trunk);
+          part('needles',tx,y+.12*s,tz,width*.38,1.05*s,width*.38,new THREE.Color().setHSL(hue,.5,.24,THREE.SRGBColorSpace),a,1);
+        }
+      }
+      return;
+    }
+    const fruitKind=i%3;
+    const pink=biome==='autumn' && i%4===3;
+    const hue=biome==='autumn'?[.035,.09,.14,.96][i%4]:biome==='birch'?.27+random()*.025:.29+random()*.035;
+    const crownRadius=(biome==='birch'?4.0:2.85)*s*spread;
+    const crownY=h*.73;
+    const birchKind=(['birchLeaves','birchLeaves1','birchLeaves2','birchLeaves3'] as const)[i%4];
+    const widthVariation=biome==='birch'?.9+.2*((i*37%101)/100):1;
+    const depthVariation=biome==='birch'?.9+.2*((i*61%101)/100):1;
+    part(biome==='birch'?birchKind:'leaves',x,crownY,z,crownRadius*widthVariation,(biome==='birch'?2.85+.8*((i*43%101)/100):2.5)*s,crownRadius*depthVariation,
+      new THREE.Color().setHSL(hue,pink?.6:BIOME_STYLE[biome].canopySaturation,pink?.48:BIOME_STYLE[biome].canopyLightness,THREE.SRGBColorSpace),yaw);
+    // Crooked forks split into tapered boughs and finer twigs underneath one crown.
+    for (let limb=0;limb<9;limb++) {
+      const a=yaw+limb*2.4;
+      const cx=x+Math.cos(a)*crownRadius*.67,cz=z+Math.sin(a)*crownRadius*.67;
+      const cy=crownY+Math.sin(limb*3.1)*s;
+      const fork=new THREE.Vector3(x+Math.cos(a)*.55*s,h*(.38+limb%3*.08),z+Math.sin(a)*.55*s);
+      branch(new THREE.Vector3(x,h*.28,z),fork,.13*s,trunk);
+      branch(fork,new THREE.Vector3(cx,cy,cz),.08*s,trunk);
+      for(let twig=0;twig<3;twig++){
+        const angle=a+(twig-1)*.6;
+        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(cx+Math.cos(angle)*.65*s,cy+.65*s,cz+Math.sin(angle)*.65*s),.025*s,trunk,2);
+      }
+      if (biome==='orchard') for (let f=0;f<3;f++) {
+        // Place fruit inside the canopy, rather than beyond the tip of a limb.
+        const fa=a+(f-1)*.32, fruitRadius=crownRadius*(.60+f*.06);
+        const fx=x+Math.cos(fa)*fruitRadius, fz=z+Math.sin(fa)*fruitRadius;
+        const fy=cy-.45*s, fs=(.16+random()*.035)*s;
+        const fc=['#e74b39','#f9a52d','#b8cf46'][fruitKind];
+        part('fruit',fx,fy,fz,fs,fs*(fruitKind===2?1.35:.95),fs,fc,0,2);
+        if(fruitKind===2) part('fruit',fx,fy+fs*.8,fz,fs*.58,fs*.65,fs*.58,fc,0,2);
+        const stemBottom=fy+fs*(fruitKind===2?1.15:.8),stemTop=fy+fs*1.5+.15*s;
+        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(fx,stemTop,fz),.025*s,trunk,2);
+        branch(new THREE.Vector3(fx,stemBottom,fz),new THREE.Vector3(fx,stemTop,fz),.018*s,'#69503a',2);
+      }
+    }
   }
   let foothillTrees=0;
-  // Aim for three times the original 51 foothill trees, keeping crown and track clearance.
+  // Preserve the mature anchors and their established routes/attraction clearings.
   for (let i=0; i<20000 && (i<800 || foothillTrees<153); i++) {
-    // Keep all four species visible near the starting clearing as well as across the map.
     const angle=random()*Math.PI*2, radius=17+Math.sqrt(random())*75;
     let x=i<140 ? Math.cos(angle)*radius : (random()*2-1)*(H-10);
     let z=i<140 ? Math.sin(angle)*radius : (random()*2-1)*(H-10);
@@ -67,84 +128,34 @@ export function createForest() {
     if(track.some(p=>Math.hypot(x-p.x,z-p.z)<crownRadiusLimit+5))continue;
     treePositions.push({x,z,crownRadius:crownRadiusLimit});
     if(Math.max(Math.abs(x),Math.abs(z))>218)foothillTrees++;
-    const h=(biome==='spruce'?7.5:biome==='birch'?10.2:8.3)*s;
-    const trunk=biome==='birch'?'#eee9d5':biome==='spruce'?'#69513b':'#866044';
-    const thickness=(biome==='birch'?.16:.25)*s;
-    part('wood',x,h*.38,z,thickness,h*.76,thickness,trunk,yaw);
-    if (biome==='birch') {
-      for (let b=0;b<12;b++) part('bark',x,h*(.05+b*.052),z,thickness*1.015*(1-.3*(.05+b*.052)/.76),(.035+random()*.07)*s,thickness*1.015*(1-.3*(.05+b*.052)/.76),'#514b43',random()*Math.PI*2);
-    }
-    if (biome==='spruce') {
-      const hue=.33+random()*.035;
-      for (let tier=0;tier<7;tier++) {
-        const y=h*(.22+tier*.1), width=(1-tier*.115)*2*s;
-        part('needles',x,y+.8*s,z,width,2.7*s,width,new THREE.Color().setHSL(hue,.48,.19+tier*.006,THREE.SRGBColorSpace),yaw+tier*.5);
-        for (let arm=0;arm<5;arm++) {
-          const a=yaw+arm*Math.PI*2/5+tier*.55;
-          const tx=x+Math.cos(a)*width*.65,tz=z+Math.sin(a)*width*.65;
-          branch(new THREE.Vector3(x,y,z),new THREE.Vector3(tx,y-.13*s,tz),.045*s,trunk);
-          part('needles',tx,y+.12*s,tz,width*.38,1.05*s,width*.38,new THREE.Color().setHSL(hue,.5,.24,THREE.SRGBColorSpace),a);
-        }
-      }
-      continue;
-    }
-    const fruitKind=i%3;
-    const pink=biome==='autumn' && i%4===3;
-    const hue=biome==='autumn'?[.035,.09,.14,.96][i%4]:biome==='birch'?.24+random()*.035:.29+random()*.035;
-    const crownRadius=(biome==='birch'?4.0:2.85)*s;
-    const crownY=h*.73;
-    const birchKind=(['birchLeaves','birchLeaves1','birchLeaves2','birchLeaves3'] as const)[i%4];
-    const widthVariation=biome==='birch'?.9+.2*((i*37%101)/100):1;
-    const depthVariation=biome==='birch'?.9+.2*((i*61%101)/100):1;
-    part(biome==='birch'?birchKind:'leaves',x,crownY,z,crownRadius*widthVariation,(biome==='birch'?2.85+.8*((i*43%101)/100):2.5)*s,crownRadius*depthVariation,
-      new THREE.Color().setHSL(hue,biome==='autumn'?.6:.48,pink?.48:.36,THREE.SRGBColorSpace),yaw);
-    // Crooked forks split into tapered boughs and finer twigs underneath one crown.
-    for (let limb=0;limb<9;limb++) {
-      const a=yaw+limb*2.4;
-      const cx=x+Math.cos(a)*crownRadius*.67,cz=z+Math.sin(a)*crownRadius*.67;
-      const cy=crownY+Math.sin(limb*3.1)*s;
-      const fork=new THREE.Vector3(x+Math.cos(a)*.55*s,h*(.38+limb%3*.08),z+Math.sin(a)*.55*s);
-      branch(new THREE.Vector3(x,h*.28,z),fork,.13*s,trunk);
-      branch(fork,new THREE.Vector3(cx,cy,cz),.08*s,trunk);
-      for(let twig=0;twig<3;twig++){
-        const angle=a+(twig-1)*.6;
-        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(cx+Math.cos(angle)*.65*s,cy+.65*s,cz+Math.sin(angle)*.65*s),.025*s,trunk);
-      }
-      if (biome==='orchard') for (let f=0;f<3;f++) {
-        // Place fruit inside the canopy, rather than beyond the tip of a limb.
-        const fa=a+(f-1)*.32, fruitRadius=crownRadius*(.60+f*.06);
-        const fx=x+Math.cos(fa)*fruitRadius, fz=z+Math.sin(fa)*fruitRadius;
-        const fy=cy-.45*s, fs=(.16+random()*.035)*s;
-        const fc=['#e74b39','#f9a52d','#b8cf46'][fruitKind];
-        part('fruit',fx,fy,fz,fs,fs*(fruitKind===2?1.35:.95),fs,fc);
-        if(fruitKind===2) part('fruit',fx,fy+fs*.8,fz,fs*.58,fs*.65,fs*.58,fc);
-        const stemBottom=fy+fs*(fruitKind===2?1.15:.8),stemTop=fy+fs*1.5+.15*s;
-        branch(new THREE.Vector3(cx,cy,cz),new THREE.Vector3(fx,stemTop,fz),.025*s,trunk);
-        branch(new THREE.Vector3(fx,stemBottom,fz),new THREE.Vector3(fx,stemTop,fz),.018*s,'#69503a');
-      }
-    }
+    grow(x,z,biome,s,yaw,i);
   }
+  const layout=new MeadowLayout(treePositions),baseTrees=treePositions.length;
+  const groves=growForestGroves(treePositions,layout,track,biomeAt);
+  layout.fruitClearings.push(...groves.fruitClearings);
+  groves.trees.forEach((tree,i)=>{treePositions.push(tree);grow(tree.x,tree.z,tree.biome,tree.scale,tree.yaw,baseTrees+i,tree.spread);});
+  forest.userData.baseTreeCount=baseTrees;forest.userData.groves=groves.groves;forest.userData.trailGroves=groves.trailGroves;
+  forest.userData.meadowLayout=layout;
   const leafSurface=createLeafSurface();
   const foliageMaps={leaves:leafSurface,birchLeaves:leafSurface,birchLeaves1:leafSurface,birchLeaves2:leafSurface,birchLeaves3:leafSurface,needles:createFoliageTexture('spruce')};
   const shadowGeometry=createCanopyShadowGeometry();
   const woodShadow=new THREE.CylinderGeometry(.7,1,1,6),needleShadow=new THREE.ConeGeometry(1,1,8);
   for (const [kind, instances] of batches) {
-    const mesh=new THREE.InstancedMesh(geometries[kind],new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,vertexColors:kind==='leaves'||kind.startsWith('birchLeaves'),side:kind==='leaves'||kind.startsWith('birchLeaves')?THREE.DoubleSide:THREE.FrontSide,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null}),instances.length);
-    mesh.name=`Decorative forest ${kind}`;
-    instances.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);mesh.setColorAt(i,p.color);});
     const leafy=kind==='leaves'||kind.startsWith('birchLeaves');
-    mesh.castShadow=false;mesh.receiveShadow=!leafy;
-    forest.add(spatialInstances(mesh));
+    const material=new THREE.MeshStandardMaterial({roughness:kind==='fruit'?.55:1,vertexColors:leafy,side:leafy?THREE.DoubleSide:THREE.FrontSide,map:kind in foliageMaps?foliageMaps[kind as keyof typeof foliageMaps]:null});
+    const variation=kind==='birchLeaves'?0:kind.startsWith('birchLeaves')?Number(kind.at(-1)):0;
+    const middle=leafy?createCanopyGeometry(kind==='leaves'?'broadleaf':'birch',variation,'middle'):kind==='wood'?woodShadow:kind==='needles'?new THREE.ConeGeometry(1,1,8,2):geometries[kind];
+    const far=leafy?createCanopyGeometry(kind==='leaves'?'broadleaf':'birch',variation,'far'):kind==='wood'?woodShadow:kind==='needles'?new THREE.ConeGeometry(1,1,6):geometries[kind];
+    forest.add(forestInstances(`Decorative forest ${kind}`,geometries[kind],material,instances,{middle,far,middleDetail:kind==='wood'?1:kind==='needles'?0:leafy?2:-1,farDetail:kind==='wood'||kind==='needles'?0:leafy?2:-1},!leafy));
     if(leafy)forest.add(sceneryShadowBatch(`Stable crown shadows ${kind}`,shadowGeometry,instances.map(p=>p.matrix)));
     // Fine twigs, bark markings and fruit sit inside the existing crown/trunk shadow.
     // Keep trunks and substantial boughs; needles use the same cone outline with fewer faces.
     if(kind==='wood')forest.add(sceneryShadowBatch('Stable trunk shadows',woodShadow,instances.filter(p=>new THREE.Vector3().setFromMatrixColumn(p.matrix,0).length()>=.075).map(p=>p.matrix)));
-    if(kind==='needles')forest.add(sceneryShadowBatch('Stable needle shadows',needleShadow,instances.map(p=>p.matrix)));
+    if(kind==='needles')forest.add(sceneryShadowBatch('Stable needle shadows',needleShadow,instances.filter(p=>p.detail===0).map(p=>p.matrix)));
   }
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);
-  const floor=new THREE.Mesh(ground,createGroundMaterial(H));floor.name='Biome ground';
+  const floor=new THREE.Mesh(ground,createGroundMaterial(H,layout));floor.name='Biome ground';
   floor.position.y=-.012;floor.receiveShadow=true;forest.add(floor);
   return forest;
 }
-import { spatialInstances } from './spatial-instances';

@@ -1,8 +1,9 @@
 import * as T from 'three';
 
 /** A whole crown made of folded pointed leaves, never intersecting foliage spheres. */
-export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf',variation=0){
- const count=kind==='oak'?2600:kind==='birch'?820:1050;
+export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf',variation=0,detail:'near'|'middle'|'far'='near'){
+ const full=kind==='oak'?2600:kind==='birch'?820:1050;
+ const count=Math.round(full*(detail==='near'?1:detail==='middle'?.28:.075));
  const positions:number[]=[],normals:number[]=[],uvs:number[]=[],colors:number[]=[];
  let seed=(kind==='birch'?172:kind==='oak'?919:431)+variation*7919;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
@@ -26,9 +27,11 @@ export function createCanopyGeometry(kind:'broadleaf'|'birch'|'oak'='broadleaf',
   side.set(Math.sin(az),.3*(random()-.5),Math.cos(az)).cross(normal).normalize();
   up.crossVectors(normal,side).normalize();
   const angle=random()*Math.PI*2;side.multiplyScalar(Math.cos(angle)).addScaledVector(up,Math.sin(angle));up.copy(normal).cross(side).normalize();
-  const size=(kind==='oak'?.038:.065)+random()*(kind==='oak'?.044:.065);
+  // Keep foliage coverage as the same crown becomes cheaper at distance.
+  const size=((kind==='oak'?.038:.065)+random()*(kind==='oak'?.044:.065))*Math.sqrt(full/count);
   const shade=.64+random()*.28+.12*Math.max(0,ny);
   const vertices=points.map(([x,y,z])=>center.clone().addScaledVector(side,x*size).addScaledVector(up,z*size).addScaledVector(normal,y*size));
+  if(detail!=='near')for(const v of vertices){const radius=Math.hypot(v.x,v.z);if(radius>1.2){v.x*=1.2/radius;v.z*=1.2/radius;}}
   for(const [a,b,c] of [[0,1,4],[1,2,4],[2,3,4],[3,0,4]]){
    const n=new T.Vector3().subVectors(vertices[b],vertices[a]).cross(new T.Vector3().subVectors(vertices[c],vertices[a])).normalize();
    for(const index of [a,b,c]){positions.push(...vertices[index].toArray());normals.push(...n.toArray());uvs.push((points[index][0]+1)/2,(points[index][2]/.46+1)/2);const v=shade*(index===4?1.06:1);colors.push(v,v,v);}

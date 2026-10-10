@@ -1,15 +1,17 @@
 import { createMountainTexture } from './mountain-texture';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H, MOUNTAIN_WIDTH as W } from './world-bounds';
+import {BIOME_TERRAIN} from './biome-style';
 
 /** Continuous square heightfield: adjoining sides share their corner vertices. */
 export function createMountains() {
   const positions: number[] = [], colors: number[] = [], uvs: number[] = [], indices: number[] = [];
   const along = 240, across = 40;
-  const snow = new THREE.Color('#ffffff');
+  const snow = new THREE.Color('#dce4df');
   // Same smooth boundaries as the meadow: spruce, birch, autumn and orchard.
-  const greens=['#7e9a75','#a4ae7c','#b2a16a','#91ab70'].map(c=>new THREE.Color(c));
-  const rocks=['#a2afb4','#c2c1ae','#bfa58b','#afafa0'].map(c=>new THREE.Color(c));
+  const order=['spruce','birch','autumn','orchard'] as const;
+  const greens=order.map(b=>new THREE.Color(BIOME_TERRAIN[b].foothill));
+  const rocks=order.map(b=>new THREE.Color(BIOME_TERRAIN[b].rock));
   const southColor=new THREE.Color(),green=new THREE.Color(),rock=new THREE.Color();
   function height(x: number, z: number) {
     const d = Math.max(Math.abs(x), Math.abs(z)) - H;

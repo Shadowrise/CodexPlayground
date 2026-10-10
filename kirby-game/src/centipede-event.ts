@@ -2,8 +2,10 @@ import {BOSS_ARENA as A} from './boss-arena-site';
 
 /** Dependency-free rules and paths shared by solo play and the Cloudflare room. */
 export const CENTIPEDE_STEP=1.35*1.25, CENTIPEDE_PHASE_HITS=3, CENTIPEDE_HITS=9, CENTIPEDE_POINT_LIMIT=12;
-export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:12500,exhausted:10000,tickle:2000,gather:12000,coil:2400,stomp:15000,lower:1800,back:16000,bell:1400,rise:1800,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
 export const CENTIPEDE_BALLS={waves:3,perWave:5,interval:2600,launch:1450,speed:12,radius:1.05,life:5500} as const;
+// Open the tail bell shortly after the last sneeze, rather than waiting for
+// every ball's maximum lifetime. Both solo play and the Worker use this clock.
+export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:CENTIPEDE_BALLS.waves*CENTIPEDE_BALLS.interval+700,exhausted:10000,tickle:2000,gather:12000,coil:2400,stomp:15000,lower:1800,back:16000,bell:1400,rise:1800,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
 export const CENTIPEDE_EMPTY_MS=10000;
 export const CENTIPEDE_REST_WALK_MS=12000;
 export type CentipedeStage=keyof typeof CENTIPEDE_TIMES;

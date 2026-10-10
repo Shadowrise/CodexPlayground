@@ -4,8 +4,9 @@ import {fruitLayout} from '../src/fruit-layout';
 import {createForest} from '../src/forest';
 import {sceneryClearance} from '../src/landmarks';
 import {inWater} from '../src/pond-layout';
+import {createMeadowDecor} from '../src/meadow-decor';
 test('fruit placement is deterministic, clear of actual trees and landmarks, and spread across the meadow',()=>{
- const trees=createForest().userData.treePositions as {x:number;z:number}[],positions=fruitLayout(trees);
+ const forest=createForest(),trees=forest.userData.treePositions as {x:number;z:number}[],positions=fruitLayout(trees);
  assert.equal(positions.length,70);assert.deepEqual(positions,fruitLayout(trees));
  for(const [i,p] of positions.entries()){
   assert(sceneryClearance(p.x,p.z,5));assert(!inWater(p.x,p.z));assert(trees.every(t=>Math.hypot(t.x-p.x,t.z-p.z)>10));
@@ -13,4 +14,8 @@ test('fruit placement is deterministic, clear of actual trees and landmarks, and
  }
  for(const x of [-1,1])for(const z of [-1,1])assert(positions.filter(p=>p.x*x>0&&p.z*z>0).length>=12);
  assert(Math.max(...positions.map(p=>p.x))>170);assert(Math.min(...positions.map(p=>p.x))< -170);
+ const decor=createMeadowDecor(forest.userData.treePositions,forest.userData.meadowLayout);
+ const obstacles=[...trees,...decor.userData.sites.filter((p:any)=>p.kind==='bush'||p.kind==='stump')];
+ const actual=fruitLayout(obstacles);assert.equal(actual.length,70,'dense groves and undergrowth must still leave room for every fruit');
+ for(const p of actual)for(const o of obstacles)assert(Math.hypot(p.x-o.x,p.z-o.z)>(('radius' in o?o.radius:7) as number)+3);
 });

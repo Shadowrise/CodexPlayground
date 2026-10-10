@@ -29,7 +29,7 @@ export function createCentipede(){
  function ring(p:T.Object3D,c:string,pos:number[],radius:number,thickness:number,rotation=[0,0,0],metal=false){const g=new T.TorusGeometry(radius,thickness,6,24);add(p,g,c,pos,[1,1,1],rotation,metal);g.dispose();}
  const motion=group(root,'Motion');
  const segments=Array.from({length:COUNT},(_,i)=>group(motion,`Segment_${i}`));
- const legs:{node:T.Group;stem:T.Group;boot:T.Group;segment:number;side:number}[]=[];
+ const legs:{node:T.Group;stem:T.Group;boot:T.Group;segment:number;side:number;origin:T.Vector3;soleY:number}[]=[];
  for(let i=1;i<COUNT;i++){
   const segment=segments[i],taper=1-(i/COUNT)*.25,color=PALETTE[i];
   ell(segment,color,[0,0,0],[.9*taper,.79*taper,.81]);
@@ -42,7 +42,7 @@ export function createCentipede(){
   }
   for(const side of [-1,1]){
    const leg=group(segment,`Leg_${i}_${side<0?'L':'R'}`,[side*.58*taper,-.12,0]);
-   const stem=group(leg,`Shin_${i}_${side}`),bootRig=group(leg,`Boot_${i}_${side}`);legs.push({node:leg,stem,boot:bootRig,segment:i,side});
+   const stem=group(leg,`Shin_${i}_${side}`),bootRig=group(leg,`Boot_${i}_${side}`);legs.push({node:leg,stem,boot:bootRig,segment:i,side,origin:leg.position.clone(),soleY:Infinity});
    tube(stem,'#f6c787',[[0,0,0],[side*.21,-.32,-.04],[side*.51,-.65,.05],[side*.59,-.78,.16]],.105);
    const x=side*.59,boot=BOOTS[(i+(side>0?1:0))%BOOTS.length];
    ell(bootRig,'#344354',[x,-.91,.22],[.49,.13,.68]);
@@ -101,6 +101,7 @@ export function createCentipede(){
   const geometry=mergeGeometries(list,false);list.forEach(g=>g.dispose());
   const mesh=new T.Mesh(geometry,material);mesh.name=`${parent.name}_${material===GOLD?'brass':'colours'}`;mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);
  }
+ for(const leg of legs)leg.boot.traverse(o=>{if(o instanceof T.Mesh){o.geometry.computeBoundingBox();leg.soleY=Math.min(leg.soleY,o.geometry.boundingBox!.min.y);}});
  // Animation poses are absolute and share tracks across every clip, so crossfades
  // never retain an old wheel transform or a hidden eye from the previous phase.
  function linePose(i:number,phase:number,wave=.24){
@@ -145,7 +146,8 @@ export function createCentipede(){
  function pose(name:CentipedeClip,time:number,duration:number){
   const u=time/duration,phase=u*Math.PI*2,one=Math.sin(Math.PI*u),isWheel=['CurlWheel','WheelRoll','WheelDizzy','WheelHit','Uncurl'].includes(name);
   for(const r of rigs){r.node.position.copy(r.position);r.node.quaternion.copy(r.rotation);r.node.scale.copy(r.scale);}
-  let gait=0,wave=.14,wheel=0,arena=0,stairs=0;
+  const planted=name==='Idle'||name==='Exhausted'||name==='Sneeze';
+  let gait=0,wave=planted?0:.14,wheel=0,arena=0,stairs=0;
   if(['Walk','Run','Charge'].includes(name)){gait=name==='Walk'?.23:name==='Run'?.4:.52;wave=name==='Charge'?.06:.4;}
   if(name==='TurnLeft'||name==='TurnRight'){wave=.15;gait=.22*Math.sin(Math.PI*u);}
   if(name==='CoilArena')arena=smooth(u);
@@ -181,7 +183,7 @@ export function createCentipede(){
     if(name==='Celebrate'){node.position.y+=.14*(1+Math.sin(phase*2-i*.65));node.rotateZ(.08*Math.sin(phase*2-i*.65));}
    }
   }
-  for(const {node,stem,boot,side,segment} of legs){
+  for(const {node,stem,boot,side,segment,origin,soleY} of legs){
    const extension=stairs*Math.max(0,stairPose(segment).p.y-linePose(segment,0).p.y);
    stem.scale.y=1+extension/.78;boot.position.y=-extension;
    const step=Math.sin(phase*2-segment*.9+(side>0?Math.PI:0));
@@ -190,6 +192,12 @@ export function createCentipede(){
    if(name==='Stomp'){const beat=(u*2)%1,raise=Math.sin(Math.PI*T.MathUtils.clamp(beat/.6,0,1));node.rotation.z=side*raise*.72;node.position.y+=raise*.2;}
    if(name==='TailTickle'||name==='Celebrate')node.rotation.z+=side*.25*Math.abs(Math.sin(phase*2-segment*.65))*(name==='TailTickle'?one:1);
    if(name==='WheelHit')node.rotation.z-=side*one*.85;
+   if(planted){
+    // Counter the breathing body's scale and height so each sole stays planted.
+    // These transforms are baked into the GLB; the game does no foot/vertex scans.
+    const body=segments[segment];node.scale.set(1/body.scale.x,1/body.scale.y,1/body.scale.z);
+    node.position.copy(origin).divide(body.scale);node.position.y=(.02-body.position.y-soleY)/body.scale.y;
+   }
   }
   head.rotation.y=.055*Math.sin(phase);head.rotation.z=.025*Math.sin(phase*2);
   if(name==='WheelDizzy')head.rotation.z+=.18*Math.sin(phase*2);
