@@ -88,6 +88,7 @@ export class RiverBoats {
   const landing=this.landing(r.player.actor.position,r.player.savedSize);if(!landing)return false;
   r.leaving=landing;r.elapsed=0;r.from.copy(r.player.actor.position);return true;
  }
+ cancel(){if(this.ride){this.unfit(this.ride.player);this.ride.player.setActivity('Idle');this.ride=undefined;}}
  private poseRider(index:number,player:CharacterController){
   const b=this.boats[index];this.fit(player);this.seatPosition.copy(seat).applyQuaternion(b.quaternion).add(b.position);
   player.actor.position.copy(this.seatPosition);player.actor.quaternion.copy(b.quaternion);player.yaw=b.rotation.y;

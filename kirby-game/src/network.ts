@@ -33,7 +33,7 @@ export class NetworkSession{
   const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);url.searchParams.set('variant',String(variant));url.searchParams.set('name',name);
   if(device)url.searchParams.set('device',JSON.stringify(device));
   const s=this.socket=new WebSocket(url),timeout=setTimeout(()=>{s.close();reject(Error('Сервер не ответил. Попробуй подключиться ещё раз.'));},12000);
-  s.onmessage=e=>{if(e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
+  s.onmessage=e=>{if(this.closed||e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
    if(m.type==='welcome'){if(Number.isFinite(m.serverNow))this.clockOffset=m.serverNow!-Date.now();if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.resume=m.resume;this.peerCount=m.players.length;this.room=m.room;this.log=m.room.log??[];this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.receiveActor(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
    else if(m.type==='centipede-progress')this.onCentipedeProgress?.(m.points,m.completed);
    else if(m.type==='centipede-bump')this.onCentipedeBump?.(m.direction);
@@ -69,5 +69,5 @@ export class NetworkSession{
   this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase?actor:undefined,world:sendWorld?world():undefined,events:this.events.splice(0,16)}));
   this.lastActor=serialized;this.chaseElapsed=0;if(sendWorld)this.worldElapsed=0;
  }
- close(){this.closed=true;clearInterval(this.heartbeat);this.socket?.close(1000,'Left game');}
+ close(){this.closed=true;clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();this.events=[];this.socket?.close(1000,'Left game');}
 }

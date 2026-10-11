@@ -63,8 +63,9 @@ export class CharacterController {
     this.actor.scale.setScalar(floor(this.actor.scale.x));
     if(this.growth){this.growth.from=floor(this.growth.from);this.growth.to=floor(this.growth.to);}
   }
-  resizeTo(size:number){
+  resizeTo(size:number,immediate=false){
     const to=Math.min(MAX_BODY_SIZE,Math.max(MIN_BODY_SIZE,size));
+    if(immediate){this.growth=undefined;this.actor.scale.setScalar(to);return;}
     if(Math.abs(this.savedSize-to)<.001)return;
     this.growth={from:this.actor.scale.x,to,elapsed:0};
   }

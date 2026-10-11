@@ -15,6 +15,10 @@ export class SkyTrail{
  private fall:number|undefined;private base=0;private inCourse=false;
  private rider?:CharacterController;private travel?:{from:T.Vector3;to:T.Vector3;elapsed:number;duration:number;leaves:boolean;landed:boolean;pad:T.Vector3;trampoline:T.Group;launched:boolean};
  get active(){return !!this.rider;}
+ cancel(){
+  if(this.travel)this.travel.trampoline.getObjectByName('Spring pad')!.position.y=.52;
+  this.rider?.setActivity('Idle');this.rider=undefined;this.travel=undefined;this.fall=undefined;this.base=0;this.inCourse=false;
+ }
  constructor(private sound:(kind:SkySound)=>void=()=>{}){
   this.group.name='Небесная тропа — сияющие ступени';this.group.position.set(SITE.x,0,SITE.z);
   const cube=new T.BoxGeometry(1,1,1),edges=new T.EdgesGeometry(cube),crystal=new T.OctahedronGeometry(.5),star=starGeometry();

@@ -75,6 +75,7 @@ export class BackgroundMusic {
     if(this.enabled)void this.play();
   }
   start() { this.started = true; if (this.enabled) void this.play(); }
+  stop() { this.started=false;this.playRequest++;this.audio.pause();this.eventAudio?.pause();this.eventActive=false; }
 
   private skip(direction: number) {
     this.track = (this.track + direction + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;

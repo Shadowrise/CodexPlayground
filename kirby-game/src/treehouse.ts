@@ -163,6 +163,7 @@ export class Treehouse {
     character.setActivity(this.activity==='climb'?'Climb':'Swing');
   }
   private dive(){this.activity='dive';this.elapsed=0;this.from.copy(this.rider!.actor.position);this.rider!.setActivity('LeafDive');this.sound('cheer');}
+  cancel(){this.rider?.setActivity('Idle');this.rider=undefined;}
   private finish(){const c=this.rider!;c.actor.position.copy(TREEHOUSE_SITE).add(new T.Vector3(this.activity==='swing'?-11:8,0,this.activity==='swing'?9:13));c.actor.rotation.set(0,0,0);c.yaw=0;c.setActivity('Idle');this.rider=undefined;}
   constrain(position:T.Vector3,size:number){const dx=position.x-TREEHOUSE_SITE.x,dz=position.z-(TREEHOUSE_SITE.z-6),r=2.4+.65*size,d=Math.hypot(dx,dz);if(d<r){position.x=TREEHOUSE_SITE.x+(d>.001?dx/d:1)*r;position.z=TREEHOUSE_SITE.z-6+(d>.001?dz/d:0)*r;}}
   update(dt:number,input:Input=idle,jump=false) {

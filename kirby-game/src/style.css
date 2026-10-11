@@ -26,8 +26,8 @@
 .rainbow-kirby:not(.npc-avatar) .mini-feet::before,.rainbow-kirby:not(.npc-avatar) .mini-feet::after { background:#b33ee6; }
 .rainbow-kirby .mini-kirby::after { content:'';position:absolute;z-index:2;left:20px;top:-5px;width:30px;height:19px;background:radial-gradient(ellipse at 50% 78%,#62dcff 0 9%,transparent 11%),linear-gradient(115deg,#be7d18,#fff2a0 42%,#eeb638 65%,#ffdf75);clip-path:polygon(0 0,18% 37%,25% 3%,38% 37%,50% 0,62% 37%,75% 3%,82% 37%,100% 0,89% 100%,11% 100%);filter:drop-shadow(0 1px 1px #51391d); }
 .selection-bottom { display: flex; align-items: center; justify-content: flex-end; margin-top: 24px; gap: 16px; }
-.spawn-option { display: flex; align-items: center; gap: 9px; margin-top: 20px; font-size: 13px; color: var(--ui-text); cursor: pointer; }
-.spawn-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--ui-accent); cursor: pointer; }
+#character-back { margin-right: auto; padding: 12px 16px; border: 1px solid var(--ui-border); border-radius: 13px; background: var(--ui-raised); color: var(--ui-text); font: inherit; font-size: 14px; font-weight: 600; }
+#character-back:hover { background: var(--ui-hover); }
 #start-game { padding: 15px 26px; border-radius: 13px; border: 0; background: #28563e; color: white; font-weight: 700; font-size: 14px; }
 #start-game:disabled { opacity: .55; cursor: wait; }
 #selection-message { font-size: 10px; color: var(--ui-muted); margin: 18px 0 0; line-height: 1.5; }
@@ -94,6 +94,11 @@ button:hover { background: var(--ui-hover); } button:focus-visible { outline: 2p
 .input-device select { max-width:100%;min-width:180px;border:1px solid var(--ui-border);border-radius:10px;padding:8px;background:var(--ui-raised);color:var(--ui-text); }
 .settings-language { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 7px;font-size:13px;color:var(--ui-text); }
 .gamepad-hint {font-size:11px;color:var(--ui-muted);margin:4px 0 12px;}
+.selection-input-row { display: flex; align-items: center; gap: 14px; margin: 12px 0 18px; }
+.selection-input-row .input-device { flex: 0 1 auto; flex-wrap: nowrap; min-width: 0; margin: 0; }
+.selection-input-row .input-device select { min-width: 0; width: 190px; }
+.selection-input-row .gamepad-hint { flex: 1; min-width: 0; margin: 0; line-height: 1.55; }
+@media (max-width: 520px) { .selection-input-row { gap: 10px; align-items: flex-start; } .selection-input-row .input-device { flex-direction: column; align-items: flex-start; gap: 5px; max-width: 55%; } .selection-input-row .input-device select { width: 170px; } }
 select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid var(--ui-focus);outline-offset:3px;}
 
 .controls { max-width: calc(100% - 40px); flex-wrap: wrap; white-space: normal; justify-content: center; }
@@ -270,6 +275,14 @@ button:disabled { cursor:default; }
 #chat-composer label,#chat-composer small {display:block;}
 #chat-input {box-sizing:border-box;width:100%;margin:14px 0;padding:12px;border:2px solid #9ce4c2;border-radius:10px;background:#0c1522;color:#fff;font:inherit;}
 #chat-composer small {font-size:12px;line-height:1.5;color:#c3ccdb;}
+#chat-command-list {max-height:min(250px,34dvh);overflow-y:auto;overscroll-behavior:contain;margin:0 0 12px;border:1px solid #526d7d;border-radius:10px;background:#0f1b29;scroll-padding:4px;}
+#chat-command-list[hidden],#chat-command-error[hidden] {display:none;}
+#chat-command-list button {display:flex;align-items:center;gap:12px;width:100%;margin:0;padding:10px 12px;border:0;border-radius:0;background:transparent;color:#eaf4f7;text-align:left;font:inherit;font-size:14px;cursor:pointer;}
+#chat-command-list button:hover,#chat-command-list [aria-selected="true"] {background:#294859;}
+#chat-command-list code {flex:0 0 60px;color:#a1efc6;font-size:14px;}
+#chat-command-list span {line-height:1.4;}
+#chat-command-error {margin:0 0 10px;color:#ffc59b;font-size:14px;line-height:1.5;}
+#chat-input[aria-invalid="true"] {border-color:#ffc59b;}
 
 #meadow-chat {background:#111b2c88;border-color:#70839a33;box-shadow:0 4px 22px #0002;}
 .chat-text {color:#fff;}

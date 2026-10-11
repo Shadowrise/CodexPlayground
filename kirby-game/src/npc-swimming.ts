@@ -7,6 +7,7 @@ type Spot={shore:Vector3;water:Vector3};
 type Visit={spot:Spot;phase:'shore'|'water'|'rest'|'leave';elapsed:number;rest:number};
 /** Host-only, occasional bathing trips. Ordinary water crossings still swim too. */
 export class NpcSwimming {
+ reset(){this.visits.clear();this.cooldown=new WeakMap();this.time=0;this.next=8;this.seed=82173;}
  private visits=new Map<KirbyNpc,Visit>();
  private cooldown=new WeakMap<KirbyNpc,number>();
  private time=0;

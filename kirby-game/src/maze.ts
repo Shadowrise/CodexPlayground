@@ -116,6 +116,15 @@ export class HedgeMaze {
     const mist=makeFruitMist(0);mist.material=mist.material.clone();mist.material.color.set('#ffe6a1');mist.material.opacity=.22;mist.position.y=1;mist.scale.set(3.8,4,1);this.aura.add(mist);
     this.sparkles=new T.InstancedMesh(new T.OctahedronGeometry(.07),new T.MeshBasicMaterial({color:'#fff0a2'}),28);this.sparkles.frustumCulled=false;this.aura.add(this.sparkles);
   }
+  reset(){
+    for(const [m,original] of this.glowMaterials){m.emissive.copy(original.color);m.emissiveIntensity=original.intensity;}
+    this.glowMaterials.clear();
+    if(this.sparkles){this.sparkles.geometry.dispose();this.sparkles.dispose();}
+    const materials=new Set<T.Material>();
+    this.aura?.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.Sprite)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
+    for(const material of materials)material.dispose();this.aura?.removeFromParent();
+    this.aura=undefined;this.sparkles=undefined;this.star.visible=true;
+  }
   update(dt:number,player?:CharacterController,available=true){
     this.clock+=dt;this.star.position.y=2.25+Math.sin(this.clock*1.7)*.25;this.star.rotation.y=this.clock*.65;
     if(!player)return false;let collected=false;

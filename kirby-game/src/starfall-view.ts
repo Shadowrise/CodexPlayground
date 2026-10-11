@@ -26,6 +26,11 @@ export class StarfallView {
   for(let i=0;i<12;i++){const a=Math.PI+i/11*Math.PI;dot(Math.cos(a)*.48,-.25+Math.sin(a)*.45,1,.25);}
   for(let i=0;i<70;i++){const s=new T.Sprite(this.glowMaterials[i%7]);s.userData.spark=i;s.scale.setScalar(.28);this.finale.add(s);}
  }
+ reset(){
+  this.results.close();this.results.replaceChildren();this.hud.hidden=true;this.hud.textContent='';
+  for(const star of this.stars.values())star.group.removeFromParent();this.stars.clear();
+  this.phase=this.resultKey='';this.initialized=false;this.finale.visible=false;
+ }
  private spawn(index:number,p:T.Vector3,obstacles:readonly {x:number;z:number}[]){
   const g=new T.Group(),color=index%7,body=new T.Mesh(this.geometry,this.materials[color]);g.add(body);
   const halo=new T.Sprite(this.glowMaterials[color]);halo.scale.setScalar(3.7);g.add(halo);

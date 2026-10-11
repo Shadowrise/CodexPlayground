@@ -109,6 +109,15 @@ export class Balloons {
     }
   }
   networkBlocked=new Set<number>();
+  reset(){
+    this.cancel();this.approach=undefined;this.clock=0;this.npcAfter=18;this.networkBlocked.clear();
+    this.balloons.forEach((b,i)=>{
+      if(b.passenger)restoreRider(b.passenger);b.passenger=undefined;
+      b.station=b.destination=i;b.time=b.wait=b.nextSound=0;b.phase='parked';b.scale=1;
+      b.group.position.copy(this.dock(i,i));b.group.rotation.set(0,0,0);b.group.scale.setScalar(1);
+      b.start.copy(b.group.position);b.end.copy(b.group.position);b.flame.visible=false;
+    });
+  }
   networkKey(position:T.Vector3){const b=this.balloons.find(b=>b.passenger instanceof CharacterController)??this.nearby(position);return b?'balloon:'+this.balloons.indexOf(b):undefined;}
   networkState():(number|string)[][]{return this.balloons.map(b=>[b.time,b.phase,b.station,b.destination,b.wait,b.scale,...b.start.toArray(),...b.end.toArray(),...b.group.position.toArray(),b.passenger && !(b.passenger instanceof CharacterController)?b.passenger.index:-1]);}
   networkApply(rows:(number|string)[][],npcs:readonly KirbyNpc[]){rows.forEach((v,i)=>{const b=this.balloons[i];if(!b||!v||b.passenger instanceof CharacterController)return;b.time=v[0] as number;b.phase=v[1] as Balloon['phase'];b.station=v[2] as number;b.destination=v[3] as number;b.wait=v[4] as number;b.scale=1;b.start.fromArray(v.slice(6,9) as number[]);b.end.fromArray(v.slice(9,12) as number[]);b.group.position.fromArray(v.slice(12,15) as number[]);b.group.scale.setScalar(b.scale);const passenger=npcs.find(n=>n.index===v[15]);if(b.passenger&&b.passenger!==passenger)restoreRider(b.passenger);b.passenger=passenger;});}
@@ -116,6 +125,13 @@ export class Balloons {
   private nearby(position:T.Vector3){return this.balloons.find(b=>b.phase==='parked' && !this.networkBlocked.has(this.balloons.indexOf(b)) && b!==this.approach?.balloon && position.distanceTo(b.group.position)<5.5);}
   prompt(position:T.Vector3){const riding=this.balloons.find(b=>b.passenger instanceof CharacterController);if(riding)return `Летим: ${BALLOON_SITES[riding.destination].name} · посадка автоматически`;const b=this.nearby(position);return b?'E — отправиться на воздушном шаре':'';}
   board(character:CharacterController){const b=this.nearby(character.actor.position);if(!b || this.riding || character.flight.active)return false;this.boardPassenger(b,character);return true;}
+  cancel(){
+    for(const [index,b] of this.balloons.entries())if(b.passenger instanceof CharacterController){
+      restoreRider(b.passenger);b.passenger.setActivity('Idle');b.passenger=undefined;
+      b.station=[0,1,2].sort((a,c)=>this.dock(a,index).distanceToSquared(b.group.position)-this.dock(c,index).distanceToSquared(b.group.position))[0];
+      b.destination=b.station;b.phase='parked';b.time=0;b.wait=0;
+    }
+  }
   private boardPassenger(b:Balloon,passenger:Passenger){
     b.passenger=passenger;b.from.copy(passenger.actor.position);b.time=0;b.phase='boarding';b.destination=(b.station+1+Math.floor(this.random()*2))%3;
     b.scale=1;b.group.scale.setScalar(1);

@@ -109,6 +109,10 @@ export class SoundEffects {
     this.button.setAttribute('aria-pressed', String(this.enabled));
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? this.volume : 0, this.context.currentTime, .03);
   }
+  reset() {
+    this.stopAll();this.events=new SoundEvents();this.waterEvents=new WaterSoundEvents();
+    this.npcEffectAfter=this.voiceAfter=this.wheelAfter=this.cheerAfter=0;
+  }
   private stopAll() {
     for (const voice of this.active) { try { voice.source.stop(); } catch { continue; } }
     this.active.clear(); this.buzz=undefined; this.rewardAfter=0;

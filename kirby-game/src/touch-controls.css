@@ -93,6 +93,13 @@
 .touch-ui #chat-composer[hidden] {display:none;}
 .touch-ui #chat-composer > :not(#meadow-chat) {flex-shrink:0;}
 .touch-ui #chat-input {margin:10px 0;}
+.touch-ui #chat-composer #chat-command-list {flex:0 1 auto;min-height:48px;max-height:min(220px,30dvh);touch-action:pan-y;}
 .touch-ui #chat-composer #meadow-chat {position:static;display:flex;flex-direction:column;flex:1 1 auto;min-height:0;width:100%;max-width:none;margin-top:12px;padding:8px 10px;pointer-events:auto;}
 .touch-ui #chat-composer .chat-messages {min-height:0;max-height:min(360px,44dvh);overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;}
 .touch-ui #chat-composer .chat-messages p {font-size:13px;line-height:1.45;}
+/* Keep command suggestions and Cancel reachable above a landscape keyboard. */
+.touch-ui #chat-composer.chat-compact {padding:8px;}
+.touch-ui #chat-composer.chat-compact > label {display:none;}
+.touch-ui #chat-composer.chat-compact #chat-input {margin:0 0 6px;padding:8px;}
+.touch-ui #chat-composer.chat-compact #chat-command-list {min-height:32px;max-height:84px;margin-bottom:6px;}
+.touch-ui #chat-composer.chat-compact #meadow-chat {padding:4px 8px;margin-top:6px;}

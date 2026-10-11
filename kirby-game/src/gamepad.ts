@@ -57,7 +57,9 @@ export function createGamepadInput() {
   }
   const hint=document.createElement('p');hint.className='gamepad-hint';
   hint.textContent=t('Подключите геймпад и нажмите на нём кнопку, чтобы он появился в списке.');
-  selectors[0].parentElement!.after(hint);
+  const row=document.createElement('div');row.className='selection-input-row';
+  const selectionLabel=selectors[0].parentElement!;
+  selectionLabel.before(row);row.append(selectionLabel,hint);
   let signature='';
   return {input, poll() {
     let pads: (Gamepad|null)[]=[];

@@ -18,6 +18,12 @@ export class NightFireflies {
   readonly lights:T.PointLight[]=[];
   readonly bugs:Bug[]=[];
   private time=0;
+  private initialState:number[][]=[];
+  reset(){
+    this.disembark();this.npcRiders.clear();this.npcCooldown.clear();this.remoteOffsets.clear();
+    this.networkBlocked.clear();this.landings.clear();this.pendingLandings.clear();this.npcAfter=3;
+    this.networkApply(this.initialState);
+  }
   private npcAfter=3;
   private npcRiders=new Map<number,KirbyNpc>();
   private npcCooldown=new Map<KirbyNpc,number>();
@@ -184,6 +190,7 @@ export class NightFireflies {
     }
     // A fixed light pool avoids forty point lights on every terrain fragment.
     for(let i=0;i<4;i++){const light=new T.PointLight('#ffffff',0,11,2);light.castShadow=false;this.lights.push(light);}
+    this.initialState=this.networkState();
     this.group.visible=false;
   }
   buzzLevel(listener:T.Vector3){

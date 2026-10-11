@@ -6,6 +6,14 @@ import { Quaternion, Vector3 } from 'three';
 import { CharacterController, type Input } from '../src/controller';
 
 const idle: Input = { forward: false, left: false, right: false };
+test('an immediate resize replaces pending growth without changing earned fruits or points',async()=>{
+ const c=await create();c.grow();c.bonusPoints=3;c.eventPoints=5;
+ c.resizeTo(.3,true);assert.equal(c.actor.scale.x,.3);assert.equal(c.savedSize,.3);assert.equal(c.speed,3.4);
+ advance(c,1);assert.equal(c.actor.scale.x,.3,'the old fruit growth cannot restore its size later');
+ c.setActivity('Balloon');c.resizeTo(10,true);assert.equal(c.actor.scale.x,10);assert.equal(c.savedSize,10);
+ assert.equal(c.fruitsEaten,1);assert.equal(c.bonusPoints,3);assert.equal(c.eventPoints,5);
+ c.setActivity('Idle');advance(c,1);assert.equal(c.actor.scale.x,10);
+});
 test('arena air push keeps flight height and motion, then restores wing animation',async()=>{
  const c=await create();c.update(1/60,{...idle,jump:true});advance(c,.2,idle);c.update(1/60,{...idle,jump:true});advance(c,.25,idle);
  const height=c.actor.position.y;assert(c.flight.active);assert(height>2.7);

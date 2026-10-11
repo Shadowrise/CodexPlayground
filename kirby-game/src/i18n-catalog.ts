@@ -1,5 +1,13 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ '← Назад':['← Back','← Назад'],
+ '↑↓ — выбрать · Tab — подставить · Enter — подтвердить':['↑↓ — choose · Tab — complete · Enter — confirm','↑↓ — избери · Tab — попълни · Enter — потвърди'],
+ 'Изменить размер Кирби: 30–1000%':['Set Kirby’s size: 30–1000%','Промени размера на Кирби: 30–1000%'],
+ 'Телепортироваться к приключению':['Teleport to an adventure','Телепортирай се до приключение'],
+ 'Команды доступны только в одиночной игре.':['Commands are available only in single-player.','Командите са достъпни само в самостоятелна игра.'],
+ 'Введи /size и число от 30 до 1000. Например: /size 100':['Enter /size and a number from 30 to 1000. For example: /size 100','Въведи /size и число от 30 до 1000. Например: /size 100'],
+ 'Выбери место из подсказок или введи его сокращение после /tele.':['Choose a place from the suggestions or type its abbreviation after /tele.','Избери място от предложенията или въведи съкращението му след /tele.'],
+ 'Доступные команды: /size и /tele.':['Available commands: /size and /tele.','Достъпни команди: /size и /tele.'],
  'Ветерок':['Breezy','Ветрец'],
  'Пройти обучение':['Take the tutorial','Премини обучението'],
  'Пропустить обучение':['Skip tutorial','Пропусни обучението'],

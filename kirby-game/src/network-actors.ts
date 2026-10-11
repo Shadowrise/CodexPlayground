@@ -1,4 +1,5 @@
 import {riderFit,restoreRider} from './rider-size';
+import {disposeActor} from './actor-lifecycle';
 import {MIN_BODY_SIZE} from './body-size';
 import type {PlayerSnapshots} from './player-snapshots';
 import {makeSwimRing,showSwimRing} from './ponds';
@@ -46,9 +47,10 @@ export class RemotePlayers{
  readonly players=new Map<string,CharacterController>();
  readonly renderedStates=new Map<string,ActorState>();
  constructor(private scene:T.Scene,private model:GLTF){}
+ clear(){for(const c of this.players.values()){c.setActivity('Idle');disposeActor(c);}this.players.clear();this.renderedStates.clear();}
  update(actors:Map<string,ActorState>,dt:number,snapshots?:Map<string,PlayerSnapshots>){
   const now=performance.now();
-  for(const [id,c] of this.players)if(!actors.has(id)){this.scene.remove(c.actor);c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();});this.players.delete(id);this.renderedStates.delete(id);}
+  for(const [id,c] of this.players)if(!actors.has(id)){c.setActivity('Idle');disposeActor(c);this.players.delete(id);this.renderedStates.delete(id);}
   for(const [id,latest] of actors){const a=snapshots?.get(id)?.sample(now)??latest;this.renderedStates.set(id,a);let c=this.players.get(id);const fresh=!c;if(!c){c=new CharacterController(cloneVariant(this.model.scene,KIRBY_VARIANTS[a.variant],false),this.model.animations);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 
   }applyActor(c,a,dt,!!snapshots||fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}

@@ -14,6 +14,7 @@ export class MazeTrampoline {
   private from=new T.Vector3();
   private elapsed=0;
   get active(){return !!this.player;}
+  cancel(){this.player?.setActivity('Idle');this.player=undefined;this.mat.position.y=.6;}
   savePosition(c:CharacterController){return this.player===c?this.position.clone():undefined;}
   constructor(private sound:(kind:'bounce'|'leaves')=>void=()=>{}){
     const layout=mazeLayout(),cell=farthestMazeCell(layout),reward=new T.Vector3(-30+cell%7*10,0,-30+Math.floor(cell/7)*10);

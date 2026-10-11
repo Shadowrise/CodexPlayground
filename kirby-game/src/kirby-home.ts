@@ -86,6 +86,12 @@ export class KirbyHome {
     if(!this.sleeper || this.waking)return;
     this.sleeper.state='Wake';this.wakeQuiltLift=this.quiltLift;this.wakeQuiltFold=this.quiltFold;this.wakeScale=riderFit(this.sleeper);this.waking=true;this.elapsed=0;this.from.copy(this.sleeper.actor.position);this.fromRotation.copy(this.sleeper.actor.quaternion);
   }
+  cancel(){
+    if(!this.sleeper)return;
+    for(const side of ['Left','Right']){const eye=this.sleeper.actor.getObjectByName(`${side}_eyelid_pivot`);if(eye)eye.scale.y=1;}
+    restoreRider(this.sleeper);this.sleeper.setActivity('Idle');this.sleeper=undefined;this.waking=false;
+    this.quiltLift=this.quiltFold=0;this.quilt.setPose(0,0);
+  }
   private uncover(t:number){
     // Pull the leading edge past the feet first. Lower it only after it clears
     // Kirby; spread it back across the mattress once he has left the bed.

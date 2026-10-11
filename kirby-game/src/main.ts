@@ -1,5 +1,6 @@
 import {t,createLanguageSwitcher,localizeDOM} from './i18n';
 import {MeadowTutorial} from './tutorial';
+import {disposeActor} from './actor-lifecycle';
 import {configureSceneryBatching} from './scenery-batch';
 import {StaticWorldMatrices} from './static-world';
 import {skipShadowOnlyColourPass} from './scenery-shadows';
@@ -171,7 +172,10 @@ startupCard.append(soloSection,networkSection);
 watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,serverUrl);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
+let selectionGeneration=0;
+let joiningSession:NetworkSession|undefined;
 function showCharacterSelection(){
+ selectionGeneration++;
  startupCard.hidden=true;selectionCard.hidden=false;
  selectionMessage.hidden=true;selectionMessage.textContent='';
  if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button[aria-pressed="true"]')?.focus();
@@ -180,10 +184,19 @@ newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvai
 networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();});
 const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent=t('Выйти в главное меню');audioPanel.append(leaveOnline);
 let returningToMenu=false;
-leaveOnline.addEventListener('click',()=>{
- if(returningToMenu)return;returningToMenu=true;playing=false;
- soloHistory?.stop();renderer.setAnimationLoop(null);keys.clear();stopDragging();network?.close();location.reload();
-});
+leaveOnline.addEventListener('click',returnToMenu);
+const backButton=document.querySelector<HTMLButtonElement>('#character-back')!;
+backButton.addEventListener('click',showStartupMenu);
+function showStartupMenu(){
+ selectionGeneration++;joiningSession?.close();joiningSession=undefined;
+ music.stop();sounds.reset();clearTutorialInput();
+ networkIntent=false;pendingSave=undefined;resetVariantAvailability();
+ startButton.disabled=!loadedModel;startButton.textContent=t(loadedModel?'На поляну →':'Загрузка…');
+ selectionMessage.hidden=true;selectionMessage.textContent='';startupMessage.hidden=true;
+ startupCard.hidden=false;selectionCard.hidden=true;
+ document.querySelector<HTMLElement>('#character-select')!.hidden=false;
+ document.body.classList.add('choosing');newGameButton.focus();
+}
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
 const onlineRoster=document.createElement('div');onlineRoster.className='online-roster';onlineRoster.hidden=true;document.body.append(onlineRoster);
@@ -214,8 +227,6 @@ saveButton.addEventListener('click',()=>{
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
-const spawnNearDepot = document.querySelector<HTMLInputElement>('#spawn-near-depot')!;
-spawnNearDepot.checked = false;
 let dayStart=Date.now(),dayStartPhase=Math.random();
 const currentDayPhase=()=>network?cyclePhase(network.room.dayPhase??.25,network.room.epoch,network.serverNow):cyclePhase(dayStartPhase,dayStart,Date.now());
 const timeDial=document.querySelector<HTMLElement>('#time-dial')!;
@@ -239,8 +250,8 @@ function resetVariantAvailability(){variantGrid.querySelectorAll<HTMLButtonEleme
 let checkingVariants=false;
 async function refreshVariantAvailability(){
  if(!networkIntent||playing||selectionCard.hidden||checkingVariants)return;
- checkingVariants=true;
- try{const response=await fetch(`${serverUrl.replace(/\/$/,'')}/room`,{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const room=await response.json();if(!networkIntent||!Array.isArray(room.occupiedVariants))return;
+ checkingVariants=true;const generation=selectionGeneration;
+ try{const response=await fetch(`${serverUrl.replace(/\/$/,'')}/room`,{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const room=await response.json();if(generation!==selectionGeneration||!networkIntent||playing||selectionCard.hidden||!Array.isArray(room.occupiedVariants))return;
  const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.title=t(b.disabled?'Этот цвет уже занят':'');});
  if(buttons[KIRBY_VARIANTS.indexOf(selected)].disabled)buttons.find(b=>!b.disabled)?.click();
  }catch{}finally{checkingVariants=false;}
@@ -294,6 +305,7 @@ function setupShadowMaterials() {
       if(!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial || material instanceof THREE.MeshLambertMaterial) || shadowMaterials.has(material))continue;
       const surfaceShader=material.onBeforeCompile;
       shadows.setupMaterial(material);
+      material.addEventListener('dispose',()=>shadows.shaders.delete(material));
       celestialLighting.setupMaterial(material);
       const shadowShader=material.onBeforeCompile;
       material.onBeforeCompile=(shader,renderer)=>{shadowShader.call(material,shader,renderer);surfaceShader.call(material,shader,renderer);};
@@ -317,6 +329,7 @@ const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).mate
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
 const coaster=new Coaster();scene.add(coaster.group);
+const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
 const millHud=new MillQuestHud();
@@ -348,6 +361,32 @@ const destinations:Destination[]=[
  ...BALLOON_SITES.map((p,i)=>({id:`balloon-${i}`,name:`Шар: ${p.name}`,x:p.x,z:p.z})),
 ];
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
+chat.configureCommands({
+ enabled:()=>playing&&!network&&!networkIntent,
+ destinations:()=>destinations,
+ execute:command=>{
+  if(!character||network||networkIntent)return;
+  if(command.kind==='size'){character.resizeTo(command.size,true);return;}
+  // Release every source of scripted movement before changing world position.
+  // This also restores the model fitted into a basket, bed, cart or boat.
+  clearTutorialInput();coaster.disembark();boats.cancel();fireflies?.disembark();
+  home.cancel();benches.cancel();treehouse.cancel();balloons.cancel();trampoline.cancel();skyTrail.cancel();
+  character.setActivity('Idle');character.actor.rotation.set(0,character.yaw,0);
+  character.surfaceY=0;character.swimming=false;
+  const {x,z,y=0}=command.destination;character.actor.position.set(x,y,z);
+  for(let i=0;i<4;i++){
+   watermill.constrain(character.actor.position,character.actor.scale.x);
+   treehouse.constrain(character.actor.position,character.actor.scale.x);
+   home.constrain(character.actor.position,character.actor.scale.x);
+   constrainArena(character.actor.position,character.actor.scale.x);
+  }
+  // A teleport is not a swept move from the old position through all maze walls.
+  const landing=character.actor.position.clone();maze.constrain(character.actor.position,character.actor.scale.x,landing);
+  ponds.apply(character,landing,false);ponds.apply(character,character.actor.position.clone());
+  skyTrail.restorePosition(character);wayfinder.selectDestination('');
+  viewScale=character.actor.scale.x;cameraTarget.copy(character.actor.position).y+=.9*viewScale;
+ }
+});
 const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((s:{kind:string})=>s.kind==='bush'||s.kind==='stump')];
 const fruits = new FruitWorld(fruitObstacles);
 fruits.group.name='Фрукты на поляне';
@@ -524,15 +563,21 @@ export const ready=loadCharacter().then(async()=>{
   renderer.render(scene,camera);
 });
 startButton.addEventListener('click', async () => {
-  if (!loadedModel || playing || !requirePlayerName()) return;
+  if (!loadedModel || playing || joiningSession || selectionCard.hidden || !requirePlayerName()) return;
+  const generation=selectionGeneration;
   selectionMessage.hidden=true;selectionMessage.textContent='';
   music.start();
   sounds.start();
   if(networkIntent){
     startButton.disabled=true;startButton.textContent=t('Подключаемся…');
-    const session=new NetworkSession();
-    try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
-    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent=t('Подключиться снова');selectionMessage.textContent=t(String(error instanceof Error?error.message:error));selectionMessage.hidden=false;return;}
+    const session=joiningSession=new NetworkSession();
+    try{
+      await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());
+      if(generation!==selectionGeneration){session.close();return;}
+      network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];
+    }
+    catch(error){session.close();if(generation!==selectionGeneration)return;void refreshVariantAvailability();startButton.disabled=false;startButton.textContent=t('Подключиться снова');selectionMessage.textContent=t(String(error instanceof Error?error.message:error));selectionMessage.hidden=false;return;}
+    finally{if(joiningSession===session)joiningSession=undefined;}
   }
   const { scene: template, animations } = loadedModel;
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
@@ -540,7 +585,7 @@ startButton.addEventListener('click', async () => {
   boats.addPassengers(template,animations);
   character = new CharacterController(cloneVariant(template, selected, false), animations);
   character.actor.name='Игрок';
-  const spawn=spawnNearDepot.checked ? {x:STATION.x,z:STATION.z-8} : randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
+  const spawn=randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
@@ -557,6 +602,7 @@ startButton.addEventListener('click', async () => {
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
   playing = true;startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
+  startButton.disabled=false;startButton.textContent=t('На поляну →');saveButton.hidden=saveMessage.hidden=!!network;saveMessage.textContent='';
   if(!network)try{soloHistory=new SoloHistory(serverUrl,()=>({name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),score:scoreOf(character!),tasksDone:SCORE_ACTIONS.filter(t=>character!.achievements.has(t)).length,tasksTotal:SCORE_ACTIONS.length}),historyDevice);}catch{/* Statistics are optional; the game must always start. */}
   document.body.classList.remove('choosing');
   document.querySelector<HTMLElement>('#character-select')!.hidden = true;
@@ -586,6 +632,32 @@ startButton.addEventListener('click', async () => {
   renderer.domElement.focus();
   tutorial.open();
 });
+
+/** End a session in place; the expensive scenery and loaded models stay reusable. */
+function returnToMenu(){
+ if(returningToMenu)return;returningToMenu=true;
+ try{
+  soloHistory?.stop();soloHistory=undefined;playing=false;tutorial.cancel();chat.close();clearTutorialInput();touch?.setEnabled(false);
+  network?.close();network=undefined;joiningSession?.close();joiningSession=undefined;
+  coaster.disembark();boats.cancel();boats.syncRemoteRiders(new Map());
+  balloons.reset();home.cancel();benches.cancel();treehouse.cancel();trampoline.cancel();skyTrail.cancel();fireflies?.reset();
+  prankEffects.beginFrame();prankEffects.update([],Date.now(),()=>undefined,camera.position);
+  maze.reset();
+  if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
+  for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
+  npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
+  for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
+  coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
+  fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());balloonSeed=6173;
+  soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
+  localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
+  interactionOutline.update(undefined);rideHint.textContent='';touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
+  settingsToggle.setAttribute('aria-expanded','false');audioPanel.hidden=controlsPanel.hidden=true;onlineRoster.hidden=true;onlineRoster.textContent='';
+  saveButton.hidden=saveMessage.hidden=false;saveMessage.textContent='';taskList.update(new Set());
+  viewScale=1;cameraTarget.set(0,.9,0);followCamera.reset(0);menuRepeat=0;
+  showStartupMenu();
+ }finally{returningToMenu=false;}
+}
 
 let soloCentipede:CentipedeEvent|undefined;let centipedeContactKey='';
 const centipedeView=new CentipedeEventView((stage,volume)=>sounds.playCentipede(stage,volume));scene.add(centipedeView.group);
@@ -668,10 +740,10 @@ renderer.setAnimationLoop((time: number) => {
     if(!playing && !startupCard.hidden) {
       if(pad.pressed.has(2))loadButton.click();
       else if(pad.pressed.has(0))newGameButton.click();
-    } else if(!playing) {
+    } else if(!playing && !selectionCard.hidden) {
       if(repeat){const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length;const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*columns+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;(variantGrid.children[i] as HTMLButtonElement).click();}
-      if(pad.pressed.has(3))spawnNearDepot.checked=!spawnNearDepot.checked;
-      if(pad.pressed.has(0))startButton.click();
+      if(pad.pressed.has(1))backButton.click();
+      else if(pad.pressed.has(0))startButton.click();
     } else {
       if(pad.pressed.has(1))settingsToggle.click();
       else if(repeat || pad.pressed.has(0))navigateSettings(repeat?vertical:0,repeat?horizontal:0,pad.pressed.has(0));
@@ -977,9 +1049,12 @@ async function interactOnline(){
  if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
- acquiring=true;const ok=await network.acquire(key);acquiring=false;
+ const session=network,player=character;
+ acquiring=true;const ok=await session.acquire(key);
+ if(network!==session||character!==player){if(ok)session.event({type:'release',key});return;}
+ acquiring=false;
  if(!ok)return;
- if(!character||resourceKey(character)!==key){network.event({type:'release',key});return;}
+ if(!playing||resourceKey(character)!==key){session.event({type:'release',key});return;}
  heldResource=key;resolveInteraction(character)?.run();
 }
 function updateNetwork(dt:number){
