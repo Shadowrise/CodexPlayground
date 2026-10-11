@@ -8,6 +8,7 @@ import {BOSS_ARENA} from './boss-arena-site';
 import {FOUNTAIN_SITE} from './fountain-site';
 import {SKY_TRAIL_SITE,SKY_PLATFORMS} from './sky-trail-layout';
 import {MEADOW_HALF_SIZE} from './world-bounds';
+import {MILL_BAGS} from './mill-quest';
 
 export type MeadowTree={x:number;z:number;crownRadius:number};
 export type MeadowPoint={x:number;z:number};
@@ -60,6 +61,8 @@ export class MeadowLayout {
    // Reserve the complete strip and soft rim around the entrance ornaments.
    if(MAZE_ENTRY_STONES.some(p=>Math.hypot(x-MAZE_SITE.x-p.x,z-MAZE_SITE.z-p.z)<4.1))return true;
    if(MAZE_ENTRY_POSTS.some(p=>Math.abs(x-MAZE_SITE.x-p.x)<4.25&&Math.abs(z-MAZE_SITE.z-p.z)<4.25))return true;
+   // Keep sack mats beside the path, including after tree clearings reroute it.
+   if(MILL_BAGS.some(p=>Math.hypot(x-p[0],z-p[2])<3.4))return true;
    if(Math.abs(x-49)<7.2&&z>26&&z<39.5)return true;
    if(Math.hypot(x-135,z-39)<5.2||Math.hypot(x-143,z-58)<6)return true;
    if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<12.5)return true;

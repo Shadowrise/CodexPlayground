@@ -5,7 +5,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {BankSupport} from './bank-support';
 import {createWaterSurface} from './water-surface';
-import { WATER_Y, deckHeight, inWater, waterShapes, BANK_REGIONS, BRIDGES,bankHeight } from './pond-layout';
+import { WATER_Y, deckHeight, inWater, waterShapes, bankGeometry, BRIDGES } from './pond-layout';
 type Swimmer={actor:T.Group;swimming:boolean;surfaceY:number;flight:{active:boolean};roll:{active:boolean}};
 let ringGeometry:T.BufferGeometry|undefined;
 const ringMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.3,metalness:.08});
@@ -52,14 +52,7 @@ export class Ponds {
   this.group.name='Swimmable lakes';
   const water=createWaterSurface();this.texture=water.texture;
   const surface=new T.Mesh(new T.ShapeGeometry(waterShapes()),water.material);surface.name='Lake and river water';surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;this.group.add(surface);
-  const shapes=BANK_REGIONS.map(region=>{
-   const shape=new T.Shape(region[0].map(([x,z])=>new T.Vector2(x,-z)));
-   for(const ring of region.slice(1))shape.holes.push(new T.Path(ring.map(([x,z])=>new T.Vector2(x,-z))));return shape;
-  });
-  const geo=new T.ShapeGeometry(shapes);geo.rotateX(-Math.PI/2);
-  const positions=geo.attributes.position;
-  for(let i=0;i<positions.count;i++)positions.setY(i,Math.min(-.012,bankHeight(positions.getX(i),positions.getZ(i))));
-  geo.computeVertexNormals();
+  const geo=bankGeometry();
   this.bankSupport=new BankSupport(geo);
   const bank=new T.Mesh(geo,groundMaterial??new T.MeshLambertMaterial({color:'#87916c'}));bank.name='Soft sloping river banks';bank.receiveShadow=true;this.group.add(bank);
 

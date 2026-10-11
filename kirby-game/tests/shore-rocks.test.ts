@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {InstancedMesh,Matrix4,Vector3,MeshStandardMaterial,Color} from 'three';
+import {InstancedMesh,Matrix4,Vector3,MeshStandardMaterial,MeshLambertMaterial,Color} from 'three';
 import {createLandmarks,rockHasGround} from '../src/landmarks';
 import {RIVERS,inWater} from '../src/pond-layout';
 
@@ -8,7 +8,7 @@ test('shore stones have land beneath their footprint even at river confluences',
  const scenery=createLandmarks(),matrix=new Matrix4(),position=new Vector3(),scale=new Vector3(),color=new Color();let stones=0;
  scenery.updateMatrixWorld(true);
  scenery.traverse(o=>{
-  if(!(o instanceof InstancedMesh)||!(o.material instanceof MeshStandardMaterial))return;
+  if(!(o instanceof InstancedMesh)||!(o.material instanceof MeshStandardMaterial||o.material instanceof MeshLambertMaterial))return;
   for(let i=0;i<o.count;i++){
    if(o.instanceColor)o.getColorAt(i,color);else color.set(0xffffff);
    if(color.multiply(o.material.color).getHexString()!=='838779')continue;

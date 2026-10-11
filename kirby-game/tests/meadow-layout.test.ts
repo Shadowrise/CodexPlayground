@@ -7,6 +7,7 @@ import {BANK_RINGS,flatGround as dryGround,WATER_Y,BRIDGES} from '../src/pond-la
 import {Ponds} from '../src/ponds';
 import {MAZE_SITE,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from '../src/maze-layout';
 import {roundMeadowPath} from '../src/meadow-path';
+import {MILL_BAGS} from '../src/mill-quest';
 
 test('shared trails reach entrances and keep full clearance from trunks and water',()=>{
  const forest=createForest(),trees=forest.userData.treePositions,layout=forest.userData.meadowLayout as MeadowLayout;
@@ -23,6 +24,7 @@ test('shared trails reach entrances and keep full clearance from trunks and wate
  const map=(floor.material as any).map;
  assert.equal(map.image.data.length,512*512*4);assert.equal((floor.material as any).transparent,false);
  assert(map.image.data.some((value:number,index:number)=>index%4===3&&value<100),'wear uses the existing map');
+ for(const [x,,z] of MILL_BAGS)assert(layout.trailDistance(x,z)>1.2,'the full sack mat stays on the grass beside the path');
  for(const p of [...MAZE_ENTRY_STONES,...MAZE_ENTRY_POSTS]){
   const radius='color' in p ? .2 : .65;
   assert(layout.trailDistance(MAZE_SITE.x+p.x,MAZE_SITE.z+p.z)>radius+1.4,'maze entrance decorations remain beside the complete path and its soft rim');

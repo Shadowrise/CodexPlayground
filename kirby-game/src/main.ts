@@ -3,6 +3,7 @@ import {MeadowTutorial} from './tutorial';
 import {configureSceneryBatching} from './scenery-batch';
 import {StaticWorldMatrices} from './static-world';
 import {skipShadowOnlyColourPass} from './scenery-shadows';
+import {updateTreeShadows} from './tree-shadows';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
@@ -136,8 +137,8 @@ let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
 const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');loadButton.disabled=true;
 const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
-const nameField=document.querySelector<HTMLElement>('#player-name-field')!;
 const nameInput=document.querySelector<HTMLInputElement>('#player-name-input')!;
+const selectionMessage=document.querySelector<HTMLElement>('#selection-message')!;
 try{nameInput.value=readPlayerName(localStorage);}catch{ /* Storage may be unavailable. */ }
 nameInput.addEventListener('input',()=>{
   nameInput.setCustomValidity('');nameInput.removeAttribute('aria-invalid');
@@ -161,17 +162,22 @@ let rosterSignature='';
 const remoteStatRows=new Map<string,HTMLElement>();
 const serverUrl=import.meta.env.VITE_GAME_SERVER_URL || (import.meta.env.DEV?'http://127.0.0.1:8787':'https://kirby-game-server.kirby-game-server.workers.dev');
 const startupCard=document.createElement('div');startupCard.className='selection-card';startupCard.id='startup-menu';startupCard.hidden=false;
-startupCard.innerHTML='<span class="eyebrow">GREEN PLAYGROUND</span><div class="welcome-heading"><h2>Добро пожаловать!</h2></div>';
+startupCard.innerHTML='<div class="welcome-heading"><h2 class="game-title">Кирби: Полянка друзей</h2></div>';
 startupCard.querySelector('.welcome-heading')!.append(createLanguageSwitcher());
 const newGameButton=document.createElement('button');newGameButton.id='new-game';newGameButton.type='button';newGameButton.textContent=t('Новая игра');
 const soloSection=document.createElement('section');soloSection.className='startup-section';soloSection.innerHTML='<h3>Одиночная игра</h3>';soloSection.append(newGameButton,loadButton);
 const networkSection=document.createElement('section');networkSection.className='startup-section';networkSection.innerHTML='<div class="network-heading"><h3>Сетевая игра</h3><span id="online-players" aria-live="polite">… игроков</span></div><div class="network-entry"><button type="button" id="network-join">Подключиться онлайн</button></div>';
-startupCard.append(nameField,soloSection,networkSection);
+startupCard.append(soloSection,networkSection);
 watchPlayerCount(networkSection.querySelector<HTMLElement>('#online-players')!,startupCard,serverUrl);
 const startupMessage=document.createElement('p');startupMessage.setAttribute('role','status');startupMessage.className='gamepad-hint';startupMessage.hidden=true;startupCard.append(startupMessage);
 selectionCard.before(startupCard);
-newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();pendingSave=undefined;startupCard.hidden=true;selectionCard.hidden=false;document.querySelector('#variant-grid')!.before(nameField);if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button')?.focus();});
-networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();document.querySelector('#selection-message')!.textContent=t('Общая поляна · выбери Кирби и подключайся');});
+function showCharacterSelection(){
+ startupCard.hidden=true;selectionCard.hidden=false;
+ selectionMessage.hidden=true;selectionMessage.textContent='';
+ if(!normalizePlayerName(nameInput.value))nameInput.focus();else document.querySelector<HTMLButtonElement>('.variant-button[aria-pressed="true"]')?.focus();
+}
+newGameButton.addEventListener('click',()=>{networkIntent=false;resetVariantAvailability();pendingSave=undefined;showCharacterSelection();});
+networkSection.querySelector('button')!.addEventListener('click',()=>{newGameButton.click();networkIntent=true;void refreshVariantAvailability();});
 const leaveOnline=document.createElement('button');leaveOnline.id='exit-to-menu';leaveOnline.textContent=t('Выйти в главное меню');audioPanel.append(leaveOnline);
 let returningToMenu=false;
 leaveOnline.addEventListener('click',()=>{
@@ -188,11 +194,15 @@ try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
 selectionCard.hidden=true;
 loadButton.title=t(hasSave?'Загрузить сохранение':'Сохранений пока нет');
 loadButton.addEventListener('click',()=>{
-  if(!requirePlayerName())return;networkIntent=false;
+  networkIntent=false;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
-    startButton.click();
+    // Keep the saved colour/NPC roster intact, while allowing name entry here.
+    resetVariantAvailability();
+    (variantGrid.children[KIRBY_VARIANTS.indexOf(selected)] as HTMLButtonElement).click();
+    variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>{b.disabled=i!==KIRBY_VARIANTS.indexOf(selected);});
+    showCharacterSelection();
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
 saveButton.addEventListener('click',()=>{
@@ -222,7 +232,6 @@ for (const variant of KIRBY_VARIANTS) {
   button.addEventListener('click', () => {
     selected = variant;
     variantGrid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
-    document.querySelector('#selected-name')!.textContent = t(variant[0]);
   });
   variantGrid.appendChild(button);
 }
@@ -271,6 +280,7 @@ shadows.updateFrustums();
 for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
 const celestialLighting=new CelestialLighting(shadows,scene);
 celestialLighting.update(daylight(currentDayPhase()));
+updateTreeShadows(daylight(currentDayPhase()));
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials() {
@@ -302,6 +312,7 @@ ground.position.y = -.02;
 ground.receiveShadow = true;
 scene.add(ground);
 const environmentRoots=addEnvironment(scene);
+const meadowWind=environmentRoots.find(root=>root.name==='Biome meadow details')!.userData.windTime as {value:number};
 const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
@@ -501,10 +512,9 @@ async function loadCharacter() {
     startButton.disabled = false;
     loadButton.disabled = !hasSave;
     startButton.textContent = t('На поляну →');
-    document.querySelector('#selection-message')!.textContent = t(mobile ? 'Джойстик слева — движение · ↑ — полёт · ✦ — толчок · проведи по поляне, чтобы повернуть камеру' : 'W / S — движение · A / D — поворот · Пробел — полёт (два подъёма, затем вперёд) · Q — толчок · E — взаимодействие');
   } catch (error) {
     console.error(error);
-    document.querySelector('#selection-message')!.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');
+    selectionMessage.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');selectionMessage.hidden=false;
     startButton.textContent = t('Загрузка не удалась');
     throw error;
   }
@@ -515,13 +525,14 @@ export const ready=loadCharacter().then(async()=>{
 });
 startButton.addEventListener('click', async () => {
   if (!loadedModel || playing || !requirePlayerName()) return;
+  selectionMessage.hidden=true;selectionMessage.textContent='';
   music.start();
   sounds.start();
   if(networkIntent){
     startButton.disabled=true;startButton.textContent=t('Подключаемся…');
     const session=new NetworkSession();
     try{await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());network=session;if(session.resume)selected=KIRBY_VARIANTS[session.resume.variant];}
-    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent=t('Подключиться снова');document.querySelector('#selection-message')!.textContent=t(String(error instanceof Error?error.message:error));return;}
+    catch(error){session.close();void refreshVariantAvailability();startButton.disabled=false;startButton.textContent=t('Подключиться снова');selectionMessage.textContent=t(String(error instanceof Error?error.message:error));selectionMessage.hidden=false;return;}
   }
   const { scene: template, animations } = loadedModel;
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
@@ -622,6 +633,7 @@ let sceneProfiler:import('./scene-profiler').SceneProfiler|undefined;
 if(new URLSearchParams(location.search).get('perf')==='1')void import('./scene-profiler').then(({SceneProfiler})=>{sceneProfiler=new SceneProfiler(renderer,scene,camera,()=>playing&&!network,shadows);});
 renderer.setAnimationLoop((time: number) => {
   if(sceneProfiler?.busy){previousTime=time;fpsCounter.sample(time,false);return;}
+  meadowWind.value=time*.001;
   const profileStart=sceneProfiler?performance.now():0;
   prankEffects.beginFrame();
   const dt = Math.max(0,Math.min((time - previousTime) / 1000, .05));
@@ -807,6 +819,7 @@ renderer.setAnimationLoop((time: number) => {
   (scene.background as THREE.Color).copy(daySky).lerp(nightSky,night).lerp(sunsetSky,twilight*.65);
   (scene.fog as THREE.Fog).color.copy(dayFog).lerp(nightFog,night).lerp(sunsetFog,twilight*.7);
   celestialLighting.update(lightTime);
+  updateTreeShadows(lightTime);
   shadows.update();
   renderer.toneMappingExposure=1+day*.2;
   // The dial completes one turn in ten minutes; 10 Hz is already subpixel.

@@ -8,6 +8,10 @@ import {MeadowIndex} from './meadow-index';
 import {MEADOW_HALF_SIZE} from './world-bounds';
 import {spatialInstances} from './spatial-instances';
 import {BIOME_STYLE as PALETTES} from './biome-style';
+import {createShrubGeometry,createShrubMaterial} from './shrub-model';
+import {instancedLod,type InstanceLodPart} from './instanced-lod';
+import {createGrassGeometry,createGrassMaterial} from './grass-model';
+import {createReedGeometry,createWaterPlantMaterial} from './water-plants';
 
 type Kind='flowers'|'mushrooms'|'stump'|'bush'|'fern'|'reeds';
 export type DecorSite={x:number;z:number;radius:number;kind:Kind;biome:Biome};
@@ -49,20 +53,6 @@ function prototype(kind:Kind,biome:Biome,variant:number){
   for(const r of [.18,.32,.46])add(ring,'#a27a50',.015,.99,0,r,1,r*.94);
   for(let i=0;i<9;i++){const a=i*Math.PI*2/9;add(crack,i%2?'#4f4034':'#9a7651',Math.sin(a)*.57,.46,Math.cos(a)*.56,.035,.72,.022,0,a,.05*Math.sin(i));}
   for(let i=0;i<15;i++){const a=i*2.399;add(leaf,palette.leaf,Math.sin(a)*.52,.12+random()*.15,Math.cos(a)*.52,.28,.8,.45,-.25,a);}
- }else if(kind==='bush'){
-  for(let j=0;j<4;j++)add(stem,'#766044',Math.sin(j)*.24,.43,Math.cos(j)*.2,.035,.85,.035,.2,j,.25);
-  for(let i=0;i<52;i++){
-   const a=i*2.399,y=.15+random()*1.2,r=Math.sqrt(Math.max(0,1-((y-.65)/.85)**2))*(.5+random()*.5);
-   add(leaf,i%4?palette.bush:palette.grass[1],Math.sin(a)*r,y,Math.cos(a)*r*.82,.4+random()*.22,1,.58,-.5+random(),a);
-  }
-  if(biome==='orchard')for(let i=0;i<5;i++){const a=i*2.399;add(ball,palette.flowers[0],Math.sin(a)*.7,.7+random()*.3,Math.cos(a)*.6,.09,.075,.09);}
- }else if(kind==='reeds'){
-  for(let i=0;i<6;i++){
-   const a=i*2.399,r=.12+random()*.32,x=Math.sin(a)*r,z=Math.cos(a)*r,h=.8+random()*.5;
-   add(stem,palette.leaf,x,h/2,z,.019,h,.019);
-   if(i%2===0)add(stem,'#896c4b',x,h-.08,z,.046,.24,.046);
-   for(let j=0;j<2;j++)add(leaf,palette.grass[j],x+Math.sin(a+j)*.12,.23+j*.22,z+Math.cos(a+j)*.12,.09,1,.58,-.7,a+j);
-  }
  }else{
   for(let f=0;f<5;f++){
    const a=f*Math.PI*2/5;
@@ -80,8 +70,8 @@ function distanceLod(mesh:T.Mesh,center:T.Vector3,distance:number){
  const lod=new T.LOD();lod.name=mesh.name;lod.position.copy(center);mesh.position.sub(center);lod.addLevel(mesh,0);lod.addLevel(new T.Group(),distance,.12);return lod;
 }
 
-/** Static, seeded undergrowth. Grass stays within the former 144k-blade budget;
- * detailed plants merge per region into a single draw, with no shadow passes.
+/** Seeded undergrowth. Grass stays within the former 144k-blade budget;
+ * rigid plants merge per region, animated shrubs use shared instanced LODs.
  */
 export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowLayout(trees)){
  const root=new T.Group();root.name='Biome meadow details';
@@ -90,24 +80,19 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  let seed=73219;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const dummy=new T.Object3D(),color=new T.Color();
  const material=new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide});
- const grassGeometry=new T.BufferGeometry(),positions:number[]=[],indices:number[]=[],colors:number[]=[];
- for(let j=0;j<3;j++){
-  const a=j*2.399,co=Math.cos(a),si=Math.sin(a),base=positions.length/3,h=.34+j*.045;
-  for(const [x,y,z] of [[-.09,0,0],[.09,0,0],[-.055,h*.55,.1],[.055,h*.55,.1],[.16,h,.24]]){positions.push(x*co+z*si,y,-x*si+z*co);const light=.72+.28*y/h;colors.push(light,light,light);}
-  indices.push(base,base+1,base+2,base+1,base+3,base+2,base+2,base+3,base+4);
- }
- grassGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));grassGeometry.setAttribute('color',new T.Float32BufferAttribute(colors,3));grassGeometry.setIndex(indices);grassGeometry.computeVertexNormals();
- const grassMaterial=material.clone();
- grassMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
- vec4 meadowPosition=vec4(transformed,1.0);
- #ifdef USE_INSTANCING
- meadowPosition=instanceMatrix*meadowPosition;
- #endif
- meadowPosition=modelMatrix*meadowPosition;
- transformed.y*=1.0-smoothstep(65.0,105.0,length(meadowPosition.xz-cameraPosition.xz));`);};
- grassMaterial.customProgramCacheKey=()=> 'meadow-grass-distance-v1';
+ const grassGeometry=createGrassGeometry(),grassMaterial=createGrassMaterial();
  const grass=new T.InstancedMesh(grassGeometry,grassMaterial,48000);grass.name='Meadow grass';let blades=0;
  const prototypes=new Map<string,T.BufferGeometry>(),cells=new Map<string,T.BufferGeometry[]>();let plantTriangles=0,plantLimit=850000;
+ const shrubs=new Map<Biome,InstanceLodPart[]>(),reeds=new Map<Biome,InstanceLodPart[]>(),windTime={value:0};root.userData.windTime=windTime;
+ const triangleCost=(kind:Kind,biome:Biome,variant:number)=>{
+  // Preserve the established placement budget and all seeded clearings. The
+  // new shared shrub geometry is paid once, not copied into every plant cell.
+  if(kind==='bush')return biome==='orchard'?388:288;
+  if(kind==='reeds')return 228; // Former tuft weight keeps seeded placement unchanged.
+  const key=kind+biome+variant;
+  if(!prototypes.has(key))prototypes.set(key,prototype(kind,biome,variant));
+  return prototypes.get(key)!.attributes.position.count/3;
+ };
  const treeIndex=new MeadowIndex(12,trees),plantIndex=new MeadowIndex<DecorSite>(8);
  const fruitIndex=new MeadowIndex(16,layout.fruitClearings);
  const nearTrunk=(x:number,z:number,r:number)=>treeIndex.some(x,z,r+.6,t=>(t.x-x)**2+(t.z-z)**2<(r+.6)**2);
@@ -117,9 +102,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
   color.set(PALETTES[biomeAt(x,z)].grass[Math.floor(random()*3)]);grass.setColorAt(blades++,color);
  };
  const plant=(kind:Kind,x:number,z:number,scale:number,variant=0,garden=false)=>{
-  const initialKey=kind+biomeAt(x,z)+variant;
-  if(!prototypes.has(initialKey))prototypes.set(initialKey,prototype(kind,biomeAt(x,z),variant));
-  if(plantTriangles+prototypes.get(initialKey)!.attributes.position.count/3>plantLimit)return;
+  if(plantTriangles+triangleCost(kind,biomeAt(x,z),variant)>plantLimit)return;
   const radius=({flowers:.42,mushrooms:.48,stump:.8,bush:1.3,fern:1.15,reeds:.68}[kind])*scale;
   const valid=(x:number,z:number)=>(garden||kind==='reeds'||sceneryClearance(x,z,radius+.4))&&dryGround(x,z,radius+.2)&&!nearTrunk(x,z,radius)&&!plantIndex.some(x,z,radius+2.5,p=>(p.x-x)**2+(p.z-z)**2<(p.radius+radius+.2)**2)
    && !fruitIndex.some(x,z,radius+3.3,p=>(p.x-x)**2+(p.z-z)**2<(radius+3.3)**2);
@@ -128,12 +111,19 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
    const target=layout.moveOffTrail(x,z,radius,valid);if(!target)return;x=target.x;z=target.z;
   }
   const biome=biomeAt(x,z),key=kind+biome+variant;
-  if(!prototypes.has(key))prototypes.set(key,prototype(kind,biome,variant));
-  const triangles=prototypes.get(key)!.attributes.position.count/3;
+  const triangles=triangleCost(kind,biome,variant);
   if(plantTriangles+triangles>plantLimit)return;plantTriangles+=triangles;
   dummy.position.set(x,0,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(scale);dummy.updateMatrix();
-  const copy=prototypes.get(key)!.clone();copy.applyMatrix4(dummy.matrix);
-  const cell=`${Math.floor(x/48)},${Math.floor(z/48)}`;if(!cells.has(cell))cells.set(cell,[]);cells.get(cell)!.push(copy);
+  if(kind==='bush'){
+   if(!shrubs.has(biome))shrubs.set(biome,[]);
+   shrubs.get(biome)!.push({matrix:dummy.matrix.clone(),color:new T.Color('#ffffff'),detail:0});
+  }else if(kind==='reeds'){
+   if(!reeds.has(biome))reeds.set(biome,[]);
+   reeds.get(biome)!.push({matrix:dummy.matrix.clone(),color:new T.Color('#ffffff'),detail:0});
+  }else{
+   const copy=prototypes.get(key)!.clone();copy.applyMatrix4(dummy.matrix);
+   const cell=`${Math.floor(x/48)},${Math.floor(z/48)}`;if(!cells.has(cell))cells.set(cell,[]);cells.get(cell)!.push(copy);
+  }
   const site={x,z,radius,kind,biome};sites.push(site);plantIndex.add(site);
  };
  const density=(x:number,z:number)=>.5+.24*Math.sin(x*.046+1.6*Math.sin(z*.026))+.22*Math.cos(z*.054+1.3*Math.sin(x*.033));
@@ -225,9 +215,21 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  for(const mesh of [...batches.children] as T.InstancedMesh[]){mesh.computeBoundingSphere();grassRoot.add(distanceLod(mesh,mesh.boundingSphere!.center,145));}
  for(const [key,parts] of cells){
   const geometry=mergeGeometries(parts)!;parts.forEach(g=>g.dispose());geometry.computeBoundingSphere();
-  const mesh=new T.Mesh(geometry,material);mesh.name='Flowers, ferns, mushrooms and shrubs '+key;
+  const mesh=new T.Mesh(geometry,material);mesh.name='Flowers, ferns and mushrooms '+key;
   root.add(distanceLod(mesh,geometry.boundingSphere!.center,145));
  }
+ const shrubMaterial=createShrubMaterial(windTime),shrubRoot=new T.Group();shrubRoot.name='Leafy meadow shrubs';root.add(shrubRoot);let nearPlantTriangles=plantTriangles;
+ for(const [biome,parts] of shrubs){
+  const near=createShrubGeometry(biome),middle=createShrubGeometry(biome,'middle'),far=createShrubGeometry(biome,'far');
+  nearPlantTriangles+=(near.index!.count/3-triangleCost('bush',biome,0))*parts.length;
+  shrubRoot.add(instancedLod('Leafy '+biome+' shrubs',near,shrubMaterial,parts,{middle,far,middleDistance:10,farDistance:42,hideDistance:110,cellSize:48},false));
+ }
+ const reedMaterial=createWaterPlantMaterial();
+ for(const [biome,parts] of reeds){
+  const near=createReedGeometry(biome),middle=createReedGeometry(biome,0,'middle'),far=createReedGeometry(biome,0,'far');
+  nearPlantTriangles+=(near.index!.count/3-228)*parts.length;
+  root.add(instancedLod('Leafy '+biome+' reeds',near,reedMaterial,parts,{middle,far,middleDistance:20,farDistance:55,hideDistance:145,cellSize:48},false));
+ }
  for(const p of prototypes.values())p.dispose();
- root.userData.grassBlades=blades*3;root.userData.plantTriangles=plantTriangles;return root;
+ root.userData.grassBlades=blades*3;root.userData.plantTriangles=nearPlantTriangles;root.userData.placementTriangles=plantTriangles;return root;
 }

@@ -3,7 +3,7 @@ import {MILL_BAGS} from './mill-quest';
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import {FOUNTAIN_SITE} from './fountain-site';
 import { spatialInstances } from './spatial-instances';
-import {instancedLod,roundedCoarseShape} from './instanced-lod';
+import {instancedLod} from './instanced-lod';
 import {sceneryShadowBatch} from './scenery-shadows';
 import {batchScenery} from './scenery-batch';
 import * as T from 'three';
@@ -12,6 +12,9 @@ import { MAZE_SITE } from './maze-layout';
 import { HOME_SITE } from './home-site';
 import type {MeadowLayout,MeadowTree} from './meadow-layout';
 import {MEADOW_HALF_SIZE} from './world-bounds';
+import {createRockGeometry,createRockMaterial} from './rock-model';
+import {createReedGeometry,createWaterLilyGeometry,createWaterPlantMaterial} from './water-plants';
+import {biomeAt} from './forest';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
@@ -20,7 +23,7 @@ import {outsideBoatRoute} from './boat-route';
 export const rockHasGround=dryGround;
 // Retain the original clearing so moving the sack does not reseed mature trees
 // and their connecting paths elsewhere on the meadow.
-const millBagClearings=[...MILL_BAGS,[68,0,54] as const];
+const millBagClearings=[...MILL_BAGS,[76,0,61] as const,[68,0,54] as const];
 export function sceneryClearance(x:number,z:number,padding=0,shorePlants=false,ownSite?:typeof LANDMARKS[number]) {
   if(Math.hypot(x-BOSS_ARENA.x,z-BOSS_ARENA.z)<BOSS_ARENA.radius+padding)return false;
   if(millBagClearings.some(p=>Math.hypot(x-p[0],z-p[2])<2.3+padding))return false;
@@ -71,21 +74,28 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     sites.push({x:world.x,z:world.z,radius:r,kind,fromX,fromZ,moved:Math.hypot(world.x-fromX,world.z-fromZ)>.01});
     g.worldToLocal(world);return {x:world.x,z:world.z};
   };
-  const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,12,8),rock:new T.IcosahedronGeometry(1,1),
+  const stones=Array.from({length:3},(_,i)=>({near:createRockGeometry(i),middle:createRockGeometry(i,'middle'),far:createRockGeometry(i,'far')}));
+  const lilies=Array.from({length:2},(_,i)=>({near:createWaterLilyGeometry(i),middle:createWaterLilyGeometry(i,'middle'),far:createWaterLilyGeometry(i,'far')}));
+  const reeds=new Map<string,{near:T.BufferGeometry;middle:T.BufferGeometry;far:T.BufferGeometry}>();
+  const stoneMaterial=createRockMaterial(),waterPlantMaterial=createWaterPlantMaterial();
+  const model=(g:T.Group,geometry:T.BufferGeometry,material:T.MeshLambertMaterial,x:number,y:number,z:number,sx=1,sy=1,sz=1,ry=0)=>{
+    const mesh=new T.Mesh(geometry,material);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.rotation.y=ry;g.add(mesh);return mesh;
+  };
+  const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,12,8),rock:stones[0].near,
     pole:new T.CylinderGeometry(1,1,1,10),cap:new T.SphereGeometry(1,16,8,0,Math.PI*2,0,Math.PI/2),
     ring:new T.TorusGeometry(1,.025,4,32)};
   const materials=new Map<string,T.MeshStandardMaterial>();
   function put(g:T.Group,k:keyof typeof geo,c:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0) {
+    if(k==='rock'){const mesh=model(g,geo.rock,stoneMaterial,x,y,z,sx,sy,sz,ry);mesh.rotation.set(rx,ry,rz);mesh.userData.tint=c;return mesh;}
     if(!materials.has(c)) materials.set(c,new T.MeshStandardMaterial({color:c,roughness:c==='#51b7cc'?.22:.92}));
     const m=new T.Mesh(geo[k],materials.get(c));m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.rotation.set(rx,ry,rz);g.add(m);return m;
   }
   const rock=(g:T.Group,x:number,z:number,s=1)=>{
     // Use the final union of lakes and rivers, including confluences and widened banks.
-    // Skip the entire stone (moss and markings too), so no fragments remain afloat.
+    // Skip the entire stone, so no fragments remain afloat.
     const p=place(g,x,z,1.45*s,'rock');if(!p)return;x=p.x;z=p.z;
-    put(g,'rock','#838779',x,.6*s,z,1.2*s,.85*s,s,0,x, .14);
-    put(g,'rock','#526846',x-.15*s,1.19*s,z,.8*s,.17*s,.65*s);
-    put(g,'box','#585f53',x,.93*s,z+.79*s,.045*s,.42*s,.04*s,0,.3,.45);
+    const variant=Math.abs(Math.round(x*7+z*11))%stones.length;
+    const mesh=model(g,stones[variant].near,stoneMaterial,x,.60*s,z,1.2*s,.85*s,s,x);mesh.userData.tint='#838779';
   };
   function flowers(g:T.Group,cx:number,cz:number,count:number) {
     for(let i=0;i<count;i++) {
@@ -128,14 +138,14 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
       for(let i=0;i<8;i++) {
         const a=i*2.4,x=Math.cos(a)*7,z=Math.sin(a)*4;
         if(!outsideBoatRoute(site.x+x*POND_SCALE,site.z+z*POND_SCALE,1.15*POND_SCALE))continue;
-        put(g,'ball','#4b8c53',x,WATER_Y+.025,z,.7,.055,.55);
-        for(let j=0;j<5;j++) {const b=j*1.256;put(g,'ball','#f4b6ca',x+Math.cos(b)*.16,WATER_Y+.14,z+Math.sin(b)*.16,.2,.12,.1,0,-b);}
-        put(g,'ring','#95d8d6',x,WATER_Y+.015,z,1.1,1.1,1.1,Math.PI/2);
+        model(g,lilies[i%2].near,waterPlantMaterial,x,WATER_Y+.005,z,1,1,1,a);
       }
       for(let i=0;i<24;i++) {const a=i*.8,x=Math.cos(a)*12.3,z=Math.sin(a)*8.6,h=1.1+i%4*.2;
         if(!dryGround(site.x+x*POND_SCALE,site.z+z*POND_SCALE,.12*POND_SCALE))continue;
-        const p=place(g,x,z,.12,'reed');if(!p)continue;
-        put(g,'pole','#5b7846',p.x,h/2,p.z,.035,h,.035);put(g,'pole','#795535',p.x,h,p.z,.09,.35,.09);}
+        const p=place(g,x,z,.45,'reed');if(!p)continue;
+        const biome=biomeAt(site.x+x*POND_SCALE,site.z+z*POND_SCALE),key=biome+i%2;
+        if(!reeds.has(key))reeds.set(key,{near:createReedGeometry(biome,i%2),middle:createReedGeometry(biome,i%2,'middle'),far:createReedGeometry(biome,i%2,'far')});
+        model(g,reeds.get(key)!.near,waterPlantMaterial,p.x,0,p.z,.65,h/1.6,.65,a);}
       flowers(g,-15,-3,38);
     } else if(site.kind===1) flowers(g,0,0,120);
     else if(site.kind===2) {
@@ -178,20 +188,21 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
   }
   root.updateMatrixWorld(true);
   const shadowGeometry=new Map<T.BufferGeometry,T.BufferGeometry>([
-    [geo.box,geo.box],[geo.rock,geo.rock],
+    [geo.box,geo.box],...stones.map(s=>[s.near,s.far] as [T.BufferGeometry,T.BufferGeometry]),
     [geo.ball,new T.SphereGeometry(1,8,6)],
     [geo.pole,new T.CylinderGeometry(1,1,1,6)],
     [geo.cap,new T.SphereGeometry(1,8,4,0,Math.PI*2,0,Math.PI/2)],
   ]);
   const shadowBatches=new Map<T.BufferGeometry,T.Matrix4[]>(),shadowSize=new T.Vector3();
   for(const geometry of shadowGeometry.keys())geometry.computeBoundingBox();
-  const batches=new Map<string,{geometry:T.BufferGeometry; material:T.MeshStandardMaterial; matrices:T.Matrix4[];colors:T.Color[]}>();
-  root.traverse(o=>{if(o instanceof T.Mesh){const source=o.material as T.MeshStandardMaterial,key=o.geometry.uuid+':'+source.roughness;
+  type SurfaceMaterial=T.MeshStandardMaterial|T.MeshLambertMaterial;
+  const batches=new Map<string,{geometry:T.BufferGeometry; material:SurfaceMaterial; matrices:T.Matrix4[];colors:T.Color[]}>();
+  root.traverse(o=>{if(o instanceof T.Mesh){const source=o.material as SurfaceMaterial,key=[o.geometry.uuid,source.type,'roughness' in source?source.roughness:'',source.map?.uuid,source.vertexColors,source.side].join(':');
     // Colour is per instance: different petals/planks need no separate draw call.
     // Keep glossy and matte surfaces separate so their original finish is retained.
-    if(!batches.has(key))batches.set(key,{geometry:o.geometry,material:new T.MeshStandardMaterial({color:0xffffff,roughness:source.roughness}),matrices:[],colors:[]});
+    if(!batches.has(key)){const material=source.clone();material.color.set(0xffffff);batches.set(key,{geometry:o.geometry,material,matrices:[],colors:[]});}
     batches.get(key)!.matrices.push(o.matrixWorld.clone());
-    batches.get(key)!.colors.push(source.color.clone());
+    batches.get(key)!.colors.push(o.userData.tint?new T.Color(o.userData.tint):source.color.clone());
     const shadow=shadowGeometry.get(o.geometry);
     if(shadow){o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).getSize(shadowSize);
       // Petals and water ripples are smaller than a useful shadow-map texel.
@@ -199,12 +210,13 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     }
   }});
   root.clear();
-  const lowRock=roundedCoarseShape();
   const levels=new Map<T.BufferGeometry,{name:string;middle:T.BufferGeometry;far:T.BufferGeometry}>([
     [geo.ball,{name:'Rounded meadow details',middle:new T.SphereGeometry(1,8,6),far:new T.SphereGeometry(1,6,4)}],
     [geo.cap,{name:'Meadow mushroom caps',middle:new T.SphereGeometry(1,10,5,0,Math.PI*2,0,Math.PI/2),far:new T.SphereGeometry(1,8,4,0,Math.PI*2,0,Math.PI/2)}],
     [geo.pole,{name:'Meadow stems and posts',middle:new T.CylinderGeometry(1,1,1,6),far:new T.CylinderGeometry(1,1,1,5)}],
-    [geo.rock,{name:'Meadow rocks',middle:lowRock,far:lowRock}],
+    ...stones.map(s=>[s.near,{name:'Weathered meadow rocks',middle:s.middle,far:s.far}] as const),
+    ...lilies.map(s=>[s.near,{name:'Water lilies',middle:s.middle,far:s.far}] as const),
+    ...[...reeds.values()].map(s=>[s.near,{name:'Leafy shore reeds',middle:s.middle,far:s.far}] as const),
   ]);
   for(const b of batches.values()){
     const shape=levels.get(b.geometry);

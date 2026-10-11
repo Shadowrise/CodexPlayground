@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createForest,biomeAt} from '../src/forest';
-import {LOD,Mesh,PerspectiveCamera} from 'three';
+import {LOD,Mesh,PerspectiveCamera,InstancedMesh,Matrix4,Color} from 'three';
 import {sceneryClearance} from '../src/landmarks';
 import {createCoasterCurve} from '../src/coaster';
 
@@ -16,7 +16,15 @@ test('tall tree crowns leave clearance between trees, attractions and the track'
   assert(edge.length>450);
   for(const side of [0,1,2,3])assert(edge.some(p=>side===0?p.x< -218:side===1?p.x>218:side===2?p.z< -218:p.z>218));
   forest.traverse(o=>{if(o.name.startsWith('Decorative forest leaves')||o.name.startsWith('Decorative forest birchLeaves'))o.traverse(child=>{if('castShadow' in child)assert(!child.castShadow);});});
-  assert(forest.children.some(o=>o.name.startsWith('Stable crown shadows')));
+  assert(forest.children.some(o=>o.name==='Soft patterned tree shadows'));
+  const painted=forest.getObjectByName('Soft patterned tree shadows')!,shadowMatrix=new Matrix4(),profile=new Color();let silhouettes=0,spruceSilhouettes=0;
+  painted.traverse(o=>{if(o instanceof InstancedMesh)for(let i=0;i<o.count;i++){
+    o.getMatrixAt(i,shadowMatrix);o.getColorAt(i,profile);
+    const spruce=biomeAt(shadowMatrix.elements[12],shadowMatrix.elements[14])==='spruce';
+    assert.equal(profile.r,spruce?1:0,'each tree uses its own biome silhouette');silhouettes++;if(spruce)spruceSilhouettes++;
+  }});
+  assert.equal(silhouettes,trees.length);assert(spruceSilhouettes>150);
+  forest.traverse(o=>{if(o instanceof Mesh)assert(!o.castShadow,'Trees use stable painted shadows instead of changing depth-map silhouettes');});
   const track=createCoasterCurve().getPoints(1800);
   for(const [i,p] of trees.entries()){
     assert(sceneryClearance(p.x,p.z,p.crownRadius+1));

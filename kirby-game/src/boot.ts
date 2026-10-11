@@ -1,6 +1,8 @@
-import {initializeLocale,localizeDOM,t} from './i18n';
+import {initializeLocale,localizeDOM,onLocaleChange,t} from './i18n';
 let languageStorage:Storage|undefined;try{languageStorage=localStorage;}catch{}
 initializeLocale(languageStorage,navigator.languages?.length?navigator.languages:[navigator.language]);
+const updateTitle=()=>{document.title=t('Кирби: Полянка друзей');};
+updateTitle();onLocaleChange(updateTitle);
 localizeDOM();
 /** Paint the lightweight loading screen before importing the procedural scene. */
 const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));

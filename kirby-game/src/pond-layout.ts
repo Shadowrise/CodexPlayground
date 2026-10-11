@@ -7,6 +7,7 @@ import { MAZE_SITE } from './maze-layout';
 import { BALLOON_SITES } from './balloon-sites';
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export const WATER_Y=-.42;
+export const MEADOW_Y=-.012;
 export const RIVER_HALF_WIDTH=3.5;
 export const PONDS=LANDMARKS.filter(s=>s.kind===0);
 export const streamX=(z:number)=>Math.sin((z-6)/1.35*.45)*1.2;
@@ -145,7 +146,9 @@ export const BANK_RINGS=WATER_REGIONS.flatMap(region=>region.map(water=>{
 // before triangulation, so neither the meadow nor the bank has inverted faces.
 let bankIndex=0;
 const landPolygons=WATER_REGIONS.map(region=>region.map(()=>BANK_RINGS[bankIndex++].land) as polygonClipping.Polygon);
-export const LAND_WATER_REGIONS=polygonClipping.union(landPolygons[0],...landPolygons.slice(1));
+// Include the original water too: a clipped offset can leave a tiny inlet tip
+// outside its polygon. The meadow cutout must contain the complete water surface.
+export const LAND_WATER_REGIONS=polygonClipping.union(WATER_REGIONS,...landPolygons);
 export const BANK_REGIONS=polygonClipping.difference(LAND_WATER_REGIONS,WATER_REGIONS);
 const waterContours=WATER_REGIONS.map(region=>region.map(ring=>ring.map(([x,z])=>new T.Vector2(x,z))));
 const rawInWater=(x:number,z:number)=>waterContours.some(region=>contains(region[0],x,z)&&!region.slice(1).some(hole=>contains(hole,x,z)));
@@ -188,13 +191,6 @@ export function shoreDistance(x:number,z:number,maximum=6){
  }
  return Math.sqrt(best);
 }
-export function bankHeight(x:number,z:number){
- const width=bankWidthAt(x,z),distance=shoreDistance(x,z,2.1);
- if(distance>=width)return 0;
- // This strip is dry land outside the water polygon. Keep its lowest edge
- // just above the surface, so the water cannot look raised above the bank.
- return (WATER_Y+.02)*(1-distance/width);
-}
 type Bridge={x:number;z:number;yaw:number};
 const bridgeCandidates:Bridge[]=[
  ...PONDS.flatMap(s=>[10,12,14,16].map(z=>({x:s.x+streamX(z)*POND_SCALE,z:s.z+z*POND_SCALE,yaw:Math.atan2(streamX(z+.1)-streamX(z-.1),.2)}))),
@@ -216,6 +212,24 @@ for(const target of [{x:32,z:34},{x:-100,z:-225},{x:225,z:80}]){
  if(!chosen)throw new Error('No dry bank-to-bank bridge site');BRIDGES.push(chosen);
 }
 export function waterShapes(){return waterContours.map(region=>{const shape=new T.Shape(region[0].map(p=>new T.Vector2(p.x,-p.y)));for(const hole of region.slice(1))shape.holes.push(new T.Path(hole.map(p=>new T.Vector2(p.x,-p.y))));return shape;});}
+export function bankGeometry(){
+ const shapes=BANK_REGIONS.map(region=>{
+  const shape=new T.Shape(region[0].map(([x,z])=>new T.Vector2(x,-z)));
+  for(const ring of region.slice(1))shape.holes.push(new T.Path(ring.map(([x,z])=>new T.Vector2(x,-z))));
+  return shape;
+ });
+ const geo=new T.ShapeGeometry(shapes);geo.rotateX(-Math.PI/2);
+ // Earcut's vertices are contour vertices. Set their height from which contour
+ // they belong to, not distance to the closest stretch of water: at bends that
+ // stretch may be on the opposite bank and used to pull the land seam down.
+ // Match Float32 coordinates exactly as both the meadow and bank buffers do.
+ const key=(x:number,z:number)=>`${Math.fround(x)},${Math.fround(z)}`;
+ const land=new Set(LAND_WATER_REGIONS.flatMap(region=>region.flatMap(ring=>ring.map(([x,z])=>key(x,z)))));
+ const positions=geo.attributes.position;
+ for(let i=0;i<positions.count;i++)positions.setY(i,land.has(key(positions.getX(i),positions.getZ(i)))?MEADOW_Y:WATER_Y+.02);
+ geo.computeVertexNormals();
+ return geo;
+}
 export function meadowGeometry(half:number){
  const shape=new T.Shape([new T.Vector2(-half,-half),new T.Vector2(half,-half),new T.Vector2(half,half),new T.Vector2(-half,half)]),islands:T.Shape[]=[];
  for(const region of LAND_WATER_REGIONS){shape.holes.push(new T.Path(region[0].map(([x,z])=>new T.Vector2(x,-z))));for(const hole of region.slice(1))islands.push(new T.Shape(hole.map(([x,z])=>new T.Vector2(x,-z))));}

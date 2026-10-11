@@ -2,7 +2,7 @@ import * as T from 'three';
 import {ACTOR_DISTANCE} from './visibility';
 
 export type InstanceLodPart={matrix:T.Matrix4;color:T.Color;detail:number};
-type Levels={middle:T.BufferGeometry;far:T.BufferGeometry;middleDetail?:number;farDetail?:number;middleDistance?:number;farDistance?:number;cellSize?:number};
+type Levels={middle:T.BufferGeometry;far:T.BufferGeometry;middleDetail?:number;farDetail?:number;middleDistance?:number;farDistance?:number;hideDistance?:number;cellSize?:number};
 
 const eye=new T.Vector3(),bounds=new T.Sphere();
 
@@ -72,6 +72,7 @@ export function instancedLod(name:string,geometry:T.BufferGeometry,material:T.Ma
   };
   const lod=new BoundsLOD(radius);lod.name=name;lod.position.copy(center);lod.updateMatrix();lod.matrixAutoUpdate=false;
   lod.addLevel(near,0);lod.addLevel(level(levels.middle,levels.middleDetail),levels.middleDistance??ACTOR_DISTANCE,.15);lod.addLevel(level(levels.far,levels.farDetail),levels.farDistance??ACTOR_DISTANCE*2,.15);
+  if(levels.hideDistance!==undefined)lod.addLevel(new T.Group(),levels.hideDistance,.12);
   root.add(lod);
  }
  return root;

@@ -19,6 +19,10 @@ export class CelestialLighting{
  }
  setupMaterial(material:Material){
   const compile=material.onBeforeCompile;
+  if(material.userData.leafLightTransmission){
+   const cacheKey=material.customProgramCacheKey;
+   material.customProgramCacheKey=function(){return cacheKey.call(this)+'|leaf-transmission-'+material.userData.leafLightTransmission;};
+  }
   material.onBeforeCompile=function(shader,renderer){
    compile.call(this,shader,renderer);
    // This probe only uses the constant and vertical coefficients. Avoid the
@@ -26,6 +30,14 @@ export class CelestialLighting{
    shader.fragmentShader=shader.fragmentShader.replace('#include <lights_pars_begin>',ShaderChunk.lights_pars_begin.replace(
     'vec3 irradiance = shGetIrradianceAt( worldNormal, lightProbe );',
     'vec3 irradiance = lightProbe[0] * 0.886227 + lightProbe[1] * (1.023328 * dot(normal, viewMatrix[1].xyz));'));
+   if(material.userData.leafLightTransmission){
+    // Thin leaves transmit a little sunlight to the underside. This stays
+    // opaque, uses the existing light, and keeps tall crowns from looking black.
+    const transmission=Number(material.userData.leafLightTransmission).toFixed(3);
+    shader.fragmentShader=shader.fragmentShader.replace('#include <lights_lambert_pars_fragment>',ShaderChunk.lights_lambert_pars_fragment.replace(
+     'float dotNL = saturate( dot( geometryNormal, directLight.direction ) );',
+     `float leafDot = dot( geometryNormal, directLight.direction );\n float dotNL = saturate(leafDot) + ${transmission} * saturate(-leafDot);`));
+   }
   };
  }
  update(time:Daylight){

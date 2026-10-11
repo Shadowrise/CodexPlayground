@@ -1,10 +1,22 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {AmbientLight,HemisphereLight,LightProbe,MeshStandardMaterial,PerspectiveCamera,Scene,ShaderChunk,Vector3,type WebGLRenderer,type WebGLProgramParametersWithUniforms} from 'three';
+import {AmbientLight,HemisphereLight,LightProbe,MeshStandardMaterial,MeshLambertMaterial,PerspectiveCamera,Scene,ShaderChunk,Vector3,type WebGLRenderer,type WebGLProgramParametersWithUniforms} from 'three';
 import {CelestialLighting} from '../src/celestial-lighting';
 import {CELESTIAL_ORBIT_NORMAL,daylight} from '../src/day-cycle';
 import {StableCSM} from '../src/stable-shadows';
 import {createSky} from '../src/sky';
+
+test('thin tree leaves transmit the existing light without affecting other surfaces or shader cache entries',()=>{
+ const scene=new Scene(),shadows=new StableCSM({camera:new PerspectiveCamera(),parent:scene,cascades:2}),lighting=new CelestialLighting(shadows,scene),leaf=new MeshLambertMaterial(),wood=new MeshLambertMaterial();
+ try{
+  leaf.userData.leafLightTransmission=.32;lighting.setupMaterial(leaf);lighting.setupMaterial(wood);
+  const make=()=>({uniforms:{},vertexShader:'',fragmentShader:'#include <lights_lambert_pars_fragment>'} as WebGLProgramParametersWithUniforms),a=make(),b=make();
+  leaf.onBeforeCompile(a,{} as WebGLRenderer);wood.onBeforeCompile(b,{} as WebGLRenderer);
+  assert(a.fragmentShader.includes('0.320 * saturate(-leafDot)'));assert.equal(b.fragmentShader,'#include <lights_lambert_pars_fragment>');
+  assert.notEqual(leaf.customProgramCacheKey(),wood.customProgramCacheKey());assert(!leaf.transparent);assert.equal(shadows.lights.length,2);
+  assert(!ShaderChunk.lights_lambert_pars_fragment.includes('leafDot'),'do not modify global Three shaders');
+ }finally{leaf.dispose();wood.dispose();shadows.dispose();shadows.remove();}
+});
 
 test('one celestial source lights both shadow cascades from the visible sun or moon',()=>{
  const scene=new Scene(),camera=new PerspectiveCamera(48,1.6,.75,1200);

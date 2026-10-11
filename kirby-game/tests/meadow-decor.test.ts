@@ -1,10 +1,23 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {Mesh,LOD,Vector3,Matrix4} from 'three';
+import {Mesh,LOD,Vector3,Matrix4,type Object3D} from 'three';
 import {createMeadowDecor} from '../src/meadow-decor';
 import {dryGround,inWater} from '../src/pond-layout';
 import {createLandmarks,sceneryClearance} from '../src/landmarks';
 import {createForest} from '../src/forest';
+
+// Smooth, narrow blades add six triangles per tuft, retaining the same 48k
+// placement cap. Whole-map totals below include every near cell at once;
+// actual rendering still uses regional culling and the existing distance fade.
+const grassCurveBudget=48000*6;
+
+// Only one level is drawn at a time. Alternative buffers are shared by every
+// shrub instance, so summing all LODs overstates the actual triangle budget.
+function trianglesAtLevel(object:Object3D,distantShrubs=false):number{
+ if(object instanceof LOD)return trianglesAtLevel(object.levels[distantShrubs&&object.levels.length===4?2:0].object,distantShrubs);
+ const own=object instanceof Mesh?(object.geometry.index?.count??object.geometry.attributes.position.count)/3*((object as any).isInstancedMesh?(object as any).count:1):0;
+ return own+object.children.reduce((sum,child)=>sum+trianglesAtLevel(child,distantShrubs),0);
+}
 
 test('all biomes get distinct, grounded undergrowth within a bounded render budget',()=>{
  const root=createMeadowDecor([{x:120,z:-40,crownRadius:5}]);
@@ -16,9 +29,8 @@ test('all biomes get distinct, grounded undergrowth within a bounded render budg
  }
  assert(root.userData.grassBlades<=144000);assert(sites.length>1500);
  for(const s of sites){assert(dryGround(s.x,s.z,s.radius),`${s.kind} intersects water`);assert(Math.hypot(s.x-120,s.z+40)>s.radius+.6);}
- let triangles=0;
- root.traverse(o=>{if(o instanceof Mesh){assert(!o.castShadow);assert(!o.receiveShadow);triangles+=(o.geometry.index?.count??o.geometry.getAttribute('position').count)/3*((o as any).isInstancedMesh?(o as any).count:1);}if(o instanceof LOD){assert.equal(o.levels.length,2);assert(o.levels[1].distance<=150);assert(o.levels[1].hysteresis>0);}});
- assert(triangles<1200000);
+ root.traverse(o=>{if(o instanceof Mesh){assert(!o.castShadow);assert(!o.receiveShadow);}if(o instanceof LOD){assert.equal(o.levels.length,o.name.startsWith('Leafy ')?4:2);assert(o.levels.at(-1)!.distance<=150);assert(o.levels[1].hysteresis>0);}});
+ assert(trianglesAtLevel(root)<1600000+grassCurveBudget);assert(trianglesAtLevel(root,true)<1200000+grassCurveBudget);assert(root.userData.placementTriangles<=850000);
 });
 
 test('existing landmark flower stems remain on dry ground, including enlarged pond sites',()=>{
@@ -45,9 +57,7 @@ test('open ground has no large grass gaps, with shrubs under crowns and along ev
  assert(root.userData.trailBushes>100,'shrubs frame the paths as well as the groves');
  for(const axis of ['x','z'])for(const sign of [-1,1])assert(bushes.filter((s:any)=>s[axis]*sign>234).length>60);
  const cells=new Map<string,Vector3[]>(),matrix=new Matrix4(),position=new Vector3();root.updateMatrixWorld(true);
- let triangles=0;
  root.traverse((o:any)=>{
-  if(o.isMesh)triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);
   if(!o.isInstancedMesh)return;
   for(let i=0;i<o.count;i++){
    o.getMatrixAt(i,matrix);matrix.premultiply(o.matrixWorld);position.setFromMatrixPosition(matrix);
@@ -63,7 +73,7 @@ test('open ground has no large grass gaps, with shrubs under crowns and along ev
   assert(nearest<4.5,`bare ground at ${x},${z}`);checked++;
  }
  // Denser groves intentionally replace some of the former open grass cells.
- assert(checked>500,`open grass cells checked: ${checked}`);assert(triangles<1400000);assert.equal(root.userData.grassBlades,144000);
+ assert(checked>500,`open grass cells checked: ${checked}`);assert(trianglesAtLevel(root)<4200000+grassCurveBudget);assert(trianglesAtLevel(root,true)<1400000+grassCurveBudget);assert.equal(root.userData.grassBlades,144000);
  for(const s of sites)assert(layout.clearOfTrails(s.x,s.z,s.radius),`${s.kind} obstructs a path or its rim`);
 });
 

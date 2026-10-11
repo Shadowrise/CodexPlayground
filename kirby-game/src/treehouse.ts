@@ -1,7 +1,7 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
-import {oakBarkMaterial} from './oak-bark';
-import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
+import {createBroadleafTree,treeWoodMaterial,treeLeafMaterial,createTreeBough,treeBranchPoint} from './broadleaf-tree';
+import {treeShadows} from './tree-shadows';
 import { LeafPile } from './leaf-pile';
 import {batchRigidMeshes} from './rigid-batch';
 import { awardFirst } from './score';
@@ -44,18 +44,13 @@ export class Treehouse {
       const p=part(parent,'pole',color,...start.clone().add(end).multiplyScalar(.5).toArray(),radius,delta.length(),radius);
       p.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return p;
     };
-    // Mature oak: properly tapered trunk, branching scaffold and a single leafy canopy.
-    const trunk=new T.Mesh(new T.CylinderGeometry(1.35,1.85,30,24,6),oakBarkMaterial());
-    trunk.name='Textured oak trunk';trunk.position.set(0,15,-6);trunk.scale.z=1.65/1.85;root.add(trunk);
-    for(let i=0;i<12;i++){
-      const a=i*2.4,x=Math.cos(a)*7,z=-6+Math.sin(a)*7,y=30+i%3;
-      beam([0,20+i%4,-6],[x*.48,27,-6+(z+6)*.48],.62,'#65432e');
-      beam([x*.48,27,-6+(z+6)*.48],[x,y,z],.38,'#70503a');
-      for(let j=0;j<3;j++)beam([x,y,z],[x+Math.cos(a+j*.6)*2,y+2+j*.45,z+Math.sin(a+j*.6)*2],.12,'#70503a');
-    }
-    const crown=new T.Mesh(createCanopyGeometry('oak'),new T.MeshStandardMaterial({color:'#518245',vertexColors:true,map:createLeafSurface(),side:T.DoubleSide,roughness:.95}));
-    crown.name='Oak leaf canopy';crown.position.set(0,34,-6);crown.scale.set(12,7.2,11);crown.castShadow=crown.receiveShadow=false;root.add(crown);
-    const crownShadow=new T.Mesh(createCanopyShadowGeometry(),new T.MeshBasicMaterial({colorWrite:false,depthWrite:false}));crownShadow.name='Stable oak crown shadow';crownShadow.position.copy(crown.position);crownShadow.scale.copy(crown.scale);crownShadow.castShadow=true;root.add(crownShadow);
+    // The oak's connected skeleton uses the same attached-leaf construction as
+    // the smaller trees. Its trunk leans away from the cabin and has no roots.
+    const oak=createBroadleafTree('oak');
+    const trunk=new T.Mesh(oak.wood,treeWoodMaterial());trunk.name='Textured oak trunk';trunk.position.z=-6;trunk.receiveShadow=true;root.add(trunk);
+    const crown=new T.Mesh(oak.leaves,treeLeafMaterial().clone());crown.material.color.set('#518245');
+    crown.name='Oak leaf canopy';crown.position.z=-6;crown.castShadow=crown.receiveShadow=false;root.add(crown);
+    root.add(treeShadows([new T.Matrix4().compose(new T.Vector3(0,.018,-6),new T.Quaternion(),new T.Vector3(10,1,10))]));
     raised=true;
     // Wide plank deck, underfloor joists, diagonal braces and brass nail heads.
     for(let i=0;i<30;i++){
@@ -120,9 +115,11 @@ export class Treehouse {
     ladderShadow.castShadow=true;root.add(ladderShadow);
     // Branch-mounted rope swing, with a broad rounded wooden seat.
     // Route the supporting bough around the cabin, then across both rope anchors.
-    beam([-1,26,-6],[-7,20,-4.8],.5,'#6b4b31');
-    beam([-7,20,-4.8],[-9,7.9,3],.43,'#6b4b31');
-    beam([-9,7.9,3],[-13,7.9,3],.4,'#6b4b31');
+    const swingRoot=treeBranchPoint(oak.branches[0],26/oak.branches[0].points.at(-1)!.y).add(new T.Vector3(0,0,-6));
+    const boughPoints=new T.CatmullRomCurve3([swingRoot,new T.Vector3(-5.3,24,-6),new T.Vector3(-8.1,17,-4.8),new T.Vector3(-9,9.2,1),new T.Vector3(-9,7.9,3)]).getPoints(28);
+    // The last horizontal part passes through both collars exactly.
+    boughPoints.push(new T.Vector3(-9.55,7.9,3),new T.Vector3(-12.45,7.9,3),new T.Vector3(-13,7.9,3));
+    const swingBough=new T.Mesh(createTreeBough(boughPoints,.55,.4),treeWoodMaterial());swingBough.name='Curved oak swing bough';swingBough.receiveShadow=true;root.add(swingBough);
     for(const x of [-12.45,-9.55]){
       const collar=new T.Mesh(new T.TorusGeometry(.44,.055,8,24),new T.MeshStandardMaterial({color:'#655b43',roughness:.6}));
       collar.position.set(x,7.9,3);collar.rotation.y=Math.PI/2;root.add(collar);
