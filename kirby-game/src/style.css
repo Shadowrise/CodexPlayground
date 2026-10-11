@@ -101,7 +101,7 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
 .controls > p { font-size: 12px; line-height: 1.7; margin: 0; }
 
 #load-game {width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid #659476;background:#294739;color:var(--ui-text);cursor:pointer;font-weight:600;}
-#save-game {padding:9px;border:1px solid #659476;border-radius:10px;background:#294739;color:var(--ui-text);cursor:pointer;}
+#save-game, #replay-tutorial {padding:9px;border:1px solid #659476;border-radius:10px;background:#294739;color:var(--ui-text);cursor:pointer;}
 
 .selection-card[hidden] {display:none;}
 #new-game {width:100%;padding:14px;border-radius:12px;border:0;background:#28563e;color:white;font:inherit;font-weight:700;cursor:pointer;}
@@ -147,7 +147,7 @@ body:has(#settings-toggle[aria-expanded="true"]) .route-panel { bottom:240px; }
 select, input, button { color-scheme:dark; }
 option, optgroup { background:var(--ui-raised); color:var(--ui-text); }
 input[type="range"], input[type="checkbox"] { accent-color:var(--ui-accent); }
-#start-game:hover, #new-game:hover, #load-game:hover, #save-game:hover { background:#35684c; }
+#start-game:hover, #new-game:hover, #load-game:hover, #save-game:hover, #replay-tutorial:hover { background:#35684c; }
 .variant-button:hover { background:var(--ui-hover); }
 .variant-button[aria-pressed="true"]:hover { background:#345843; }
 button:disabled { cursor:default; }

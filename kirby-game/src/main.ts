@@ -1,4 +1,5 @@
 import {t,createLanguageSwitcher,localizeDOM} from './i18n';
+import {MeadowTutorial} from './tutorial';
 import {configureSceneryBatching} from './scenery-batch';
 import {StaticWorldMatrices} from './static-world';
 import {skipShadowOnlyColourPass} from './scenery-shadows';
@@ -109,6 +110,7 @@ if(mobile){
  controlsPanel.append(help);
 }
 settingsToggle.addEventListener('click', () => {
+  if(tutorial.active)return;
   if(mobile&&chat.open)return;
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
@@ -358,7 +360,7 @@ let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
-  if(!playing||roundFinished())return;
+  if(!playing||roundFinished()||tutorial.active)return;
   if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
     event.preventDefault();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
   }
@@ -404,6 +406,16 @@ const stopDragging = () => {
   if(document.pointerLockElement===canvas)document.exitPointerLock();
   canvas.style.cursor='grab';
 };
+let tutorialStorage:Storage|undefined;try{tutorialStorage=localStorage;}catch{}
+const clearTutorialInput=()=>{keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();touch?.reset();};
+const tutorial=new MeadowTutorial({
+ scheme:gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard',storage:tutorialStorage,
+ adventures:document.querySelector<HTMLElement>('.tasks-panel')!,route:routePanel,
+ onOpen:()=>{if(!audioPanel.hidden)settingsToggle.click();chat.close();clearTutorialInput();},
+ onClose:clearTutorialInput,
+});
+const replayTutorial=document.createElement('button');replayTutorial.id='replay-tutorial';replayTutorial.type='button';replayTutorial.textContent=t('Пройти обучение');
+replayTutorial.addEventListener('click',()=>{if(playing&&!roundFinished())tutorial.open(true);});saveButton.after(replayTutorial);
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
   if (chat.open || !playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
@@ -532,7 +544,7 @@ startButton.addEventListener('click', async () => {
     remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
-    network.onDisconnect=reason=>{if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
+    network.onDisconnect=reason=>{tutorial.cancel();if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
     network.onEmote=emote=>sounds.playEmote(emote);
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.activateStarPower();}};
     network.onResize=size=>{if(character)character.resizeTo(size);};
@@ -550,6 +562,7 @@ startButton.addEventListener('click', async () => {
   }
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
+  tutorial.open();
 });
 
 let soloCentipede:CentipedeEvent|undefined;let centipedeContactKey='';
@@ -566,7 +579,7 @@ function festivalTick(){
  if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements)+character.eventPoints;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
  festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
- if(network&&now>=f.endsAt){chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
+ if(network&&now>=f.endsAt){tutorial.cancel();chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
 }
 const fpsCounter=new FpsCounter();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});
@@ -607,10 +620,13 @@ renderer.setAnimationLoop((time: number) => {
   if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   const controlScheme=gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard';
+  const tutorialWasOpen=tutorial.active;
+  tutorial.setScheme(controlScheme);
+  if(usingPad&&tutorialWasOpen)tutorial.gamepad(pad.pressed);
   if(controlScheme!==controlMode){controlMode=controlScheme;for(const element of controlHints)element.hidden=element.dataset.controls!==controlScheme;}
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'');}
-  if(usingPad && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
-  const settingsOpen=!audioPanel.hidden || chat.open || roundFinished();
+  if(usingPad && !tutorialWasOpen && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
+  const settingsOpen=!audioPanel.hidden || chat.open || roundFinished() || tutorial.active || tutorialWasOpen;
   touch?.setEnabled(playing&&!settingsOpen&&!usingPad&&!document.hidden);
   const usingTouch=!!touch&&!usingPad;
   const touchBlocked=settingsOpen||!!touch?.choosing||!playing||document.hidden;
@@ -622,7 +638,7 @@ renderer.setAnimationLoop((time: number) => {
   menuRepeat=Math.max(0,menuRepeat-dt);
   const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
   const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
-  if(usingPad && (!playing || settingsOpen)) {
+  if(usingPad && !tutorialWasOpen && (!playing || settingsOpen)) {
     const repeat=(horizontal!==0 || vertical!==0) && menuRepeat===0;
     if(repeat)menuRepeat=.22;
     if(!horizontal && !vertical)menuRepeat=0;
