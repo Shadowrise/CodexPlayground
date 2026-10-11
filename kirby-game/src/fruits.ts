@@ -3,7 +3,7 @@ import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { makeStrawberry } from './strawberry';
 import { makeBanana } from './banana';
-import { makeFruitMist } from './fruit-mist';
+import { makeFruitVolumeMist } from './fruit-mist';
 import { makeWatermelon } from './watermelon';
 import { makePineapple } from './pineapple';
 import { makePeach } from './peach';
@@ -73,14 +73,17 @@ export class FruitWorld {
   private time = 0;
   private readonly batches: { mesh: InstancedMesh; slots: { fruit: number; local: Matrix4; shown: boolean }[] }[] = [];
   private readonly scratch = new Matrix4();
+  private readonly mists:{object:Mesh;center:Vector3;scale:Vector3}[]=[];
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
   constructor(obstacles:readonly FruitObstacle[]=[]) {
     const templates = FRUIT_TYPES.map((_, i) => makeFruit(i));
+    const bounds=templates.map(template=>new Box3().setFromObject(template));
     const positions=fruitLayout(obstacles);
     for (let i = 0; i < 70; i++) {
       const kind = i % 10, object = templates[kind].clone(true);
-      object.add(makeFruitMist(kind));
+      const mist=makeFruitVolumeMist(kind,bounds[kind]);object.add(mist);
+      this.mists.push({object:mist,center:mist.position.clone(),scale:mist.scale.clone()});
       object.scale.setScalar(2.5);
       const position=positions[i];object.position.set(position.x,-.012,position.z);
       object.rotation.y=i*2.399;
@@ -165,11 +168,12 @@ export class FruitWorld {
     for (let i=0;i<this.fruits.length;i++) {
       const fruit=this.fruits[i];
       if(fruit.eaten||!fruit.object.visible)continue;
-      const mist=fruit.object.getObjectByName('Fruit colored mist')!;
+      const {object:mist,center,scale}=this.mists[i];
       if(!mist.visible)continue;
       const phase=this.time*.7+i*2.4;
-      mist.position.set(Math.sin(phase)*.07,.48+Math.sin(phase*.8)*.035,0);
-      mist.scale.set(2.5+Math.sin(phase)*.12,1.7+Math.cos(phase)*.07,1);
+      mist.position.set(center.x+Math.sin(phase)*.04,center.y+Math.sin(phase*.8)*.025,center.z);
+      const swell=1+Math.sin(phase)*.025;
+      mist.scale.set(scale.x*swell,scale.y*swell,scale.z*swell);
     }
     let playerFruit: Fruit | undefined;
     for (const eater of [player, ...npcs]) {

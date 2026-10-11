@@ -11,8 +11,8 @@ import { inWater } from './pond-layout';
 import { Firefly } from './firefly';
 import {batchRigidTree} from './rigid-batch';
 import { sceneryClearance } from './landmarks';
-import { makeFruitMist } from './fruit-mist';
-type Bug={carrier:T.Group;firefly:Firefly;home:T.Vector3;halo:T.Sprite;color:T.Color;phase:number;land:boolean;lightPosition:T.Vector3};
+import {softMist,softMistMaterial} from './soft-mist';
+type Bug={carrier:T.Group;firefly:Firefly;home:T.Vector3;halo:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>;color:T.Color;phase:number;land:boolean;lightPosition:T.Vector3};
 export class NightFireflies {
   readonly group=new T.Group();
   readonly lights:T.PointLight[]=[];
@@ -179,7 +179,7 @@ export class NightFireflies {
       const home=new T.Vector3((i%8-3.5)*54,0,(Math.floor(i/8)-2)*78);
       for(let j=0;j<600;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(Math.abs(x)<210 && Math.abs(z)<210 && sceneryClearance(x,z,15)){home.set(x,0,z);break;}}
       const carrier=new T.Group();carrier.add(object);this.group.add(carrier);
-      const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.copy(color);halo.material.opacity=.4;halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.set(3.5,3.5,1);carrier.add(halo);
+      const halo=softMist(softMistMaterial(color,.4));halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.setScalar(1.75);carrier.add(halo);
       this.bugs.push({carrier,firefly,home,halo,color,phase:i*1.87,land:true,lightPosition:new T.Vector3()});
     }
     // A fixed light pool avoids forty point lights on every terrain fragment.
@@ -212,7 +212,7 @@ export class NightFireflies {
       const visible=bug===this.mount || distance<=ACTOR_DISTANCE;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
       // Keep the light on the luminous rear end even when the detailed mesh is culled.
       bug.carrier.updateWorldMatrix(true,false);bug.lightPosition.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65).applyMatrix4(bug.carrier.matrixWorld);
-      bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(3.5*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.325+.075*Math.sin(this.time*2+bug.phase);
+      bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(1.75*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.325+.075*Math.sin(this.time*2+bug.phase);
     }
     const sources=[...this.bugs].sort((a,b)=>a.lightPosition.distanceToSquared(camera)-b.lightPosition.distanceToSquared(camera));
     this.lights.forEach((light,i)=>{const bug=sources[i];light.position.copy(bug.lightPosition);light.color.copy(bug.color);light.intensity=(4+5*Number(night))*T.MathUtils.clamp(1-light.position.distanceTo(camera)/48,0,1);});

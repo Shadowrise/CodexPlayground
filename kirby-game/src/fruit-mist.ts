@@ -1,8 +1,20 @@
-import { DataTexture, LinearFilter, Sprite, SpriteMaterial } from 'three';
+import { Box3, DataTexture, LinearFilter, MeshBasicMaterial, Sprite, SpriteMaterial, Vector3 } from 'three';
+import {softMist,softMistMaterial} from './soft-mist';
 
 const colors=['#ed343a','#ed2943','#69ed63','#b4ce42','#ffa028','#f4d04c','#934bd0','#e9b142','#ffab88','#d92b4c'];
 let texture: DataTexture | undefined;
 const materials: SpriteMaterial[]=[];
+const volumeMaterials:MeshBasicMaterial[]=[];
+
+/** Enclose the entire model, including banana tips and tall pineapple leaves. */
+export function makeFruitVolumeMist(kind:number,bounds:Box3){
+  volumeMaterials[kind]??=softMistMaterial(colors[kind],kind===2?.36:.3);
+  const mist=softMist(volumeMaterials[kind]),size=bounds.getSize(new Vector3());
+  bounds.getCenter(mist.position);
+  // These radii enclose even the box corners, so no fruit crosses the shell.
+  mist.scale.set(Math.max(.85,size.x*.95+.12),Math.max(.7,size.y*.95+.12),Math.max(.85,size.z*.95+.12));
+  return mist;
+}
 
 export function makeFruitMist(kind: number) {
   if(!texture) {

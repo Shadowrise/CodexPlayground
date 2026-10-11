@@ -148,6 +148,7 @@ export const translations: Record<string, readonly [string, string]> = {
  'Стрелки':['Arrow keys','Стрелки'], 'Вращать камеру':['Rotate camera','Завърти камерата'],
  'ЛКМ + мышь':['Left button + mouse','Ляв бутон + мишка'], 'Обзор':['Look around','Огледай се'],
  'ПКМ + мышь':['Right button + mouse','Десен бутон + мишка'], 'Поворот Кирби':['Turn Kirby','Завърти Кирби'],
+ 'ЛКМ + ПКМ':['Left + right buttons','Ляв + десен бутон'], 'Бежать вперёд и поворачивать мышью':['Run forward and turn with the mouse','Бягай напред и завивай с мишката'],
  'Колёсико':['Mouse wheel','Колелце'], 'Приблизить / отдалить':['Zoom in / out','Приближи / отдалечи'],
  'Настройки / отменить ввод в чат':['Settings / cancel chat input','Настройки / отмени писането в чата'],
  'Левый стик':['Left stick','Ляв стик'], 'Движение и поворот':['Move and turn','Движение и завъртане'], 'Правый стик':['Right stick','Десен стик'],

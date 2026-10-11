@@ -400,8 +400,9 @@ let dragMode:'camera'|'character'='camera';
 let mouseTurn=0;
 let pointerLocked=false;
 let rightMouseHeld=false;
+let leftMouseHeld=false;
 const stopDragging = () => {
-  const pointer=dragPointer;dragPointer=undefined;mouseTurn=0;rightMouseHeld=false;
+  const pointer=dragPointer;dragPointer=undefined;mouseTurn=0;rightMouseHeld=leftMouseHeld=false;
   if(pointer!==undefined && canvas.hasPointerCapture(pointer))canvas.releasePointerCapture(pointer);
   if(document.pointerLockElement===canvas)document.exitPointerLock();
   canvas.style.cursor='grab';
@@ -419,8 +420,10 @@ replayTutorial.addEventListener('click',()=>{if(playing&&!roundFinished())tutori
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
   if (chat.open || !playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;
-  event.preventDefault();
+  // Cancelling pointerdown would suppress the second button's mousedown too.
+  // Prevent the default on mousedown instead, keeping both button orders usable.
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
+  leftMouseHeld=true;
   if(rightMouseHeld)return;
   dragMode='camera';mouseTurn=0;
   dragPointer = event.pointerId;
@@ -431,10 +434,13 @@ canvas.addEventListener('pointerdown', event => {
 // Use MouseEvents throughout the right-button gesture. Pointer capture cancellation
 // during pointer lock must not end the separate mouse-lock gesture.
 canvas.addEventListener('mousedown',event=>{
-  if(chat.open || event.button!==2 || !playing || gamepad.input.active!=='keyboard' || !audioPanel.hidden)return;
+  if(chat.open || !playing || gamepad.input.active!=='keyboard' || !audioPanel.hidden)return;
+  // A second mouse button does not emit pointerdown while the first is held.
+  if(event.button===0){event.preventDefault();leftMouseHeld=true;return;}
+  if(event.button!==2)return;
   event.preventDefault();stopDragging();
   if(document.activeElement instanceof HTMLElement)document.activeElement.blur();
-  rightMouseHeld=true;dragMode='character';canvas.style.cursor='grabbing';
+  rightMouseHeld=true;leftMouseHeld=!!(event.buttons&1);dragMode='character';canvas.style.cursor='grabbing';
   try{Promise.resolve(canvas.requestPointerLock()).catch(()=>{if(rightMouseHeld)stopDragging();});}catch{stopDragging();}
 });
 canvas.addEventListener('pointermove', event => {
@@ -448,10 +454,11 @@ canvas.addEventListener('pointermove', event => {
 });
 canvas.addEventListener('contextmenu',event=>{if(playing && gamepad.input.active==='keyboard')event.preventDefault();});
 document.addEventListener('pointerup',event=>{if(event.button===0 && dragMode==='camera')stopDragging();});
-document.addEventListener('mouseup',event=>{if(event.button===2 && dragMode==='character')stopDragging();});
+document.addEventListener('mouseup',event=>{if(event.button===0)leftMouseHeld=false;if(event.button===2 && dragMode==='character')stopDragging();});
 document.addEventListener('mousemove',event=>{
   if(document.pointerLockElement!==canvas || !rightMouseHeld)return;
   if(gamepad.input.active!=='keyboard' || !audioPanel.hidden){stopDragging();return;}
+  leftMouseHeld=!!(event.buttons&1);
   mouseTurn=THREE.MathUtils.clamp(mouseTurn-event.movementX*.006,-.5,.5);
 });
 document.addEventListener('pointerlockchange',()=>{
@@ -665,8 +672,8 @@ renderer.setAnimationLoop((time: number) => {
     followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
-  const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key);
-  const mouseTurning=!usingPad && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
+  const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
+  const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character && !roundFinished()) {
