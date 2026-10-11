@@ -235,8 +235,9 @@ scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 // A less extreme depth range keeps distant ground overlays from fighting at altitude.
 const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
+const RENDER_PIXEL_RATIO = 1.25;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+renderer.setPixelRatio(RENDER_PIXEL_RATIO);
 renderer.setSize(innerWidth, innerHeight);
 const surfaceAnisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
 renderer.shadowMap.enabled = true;
@@ -804,7 +805,7 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   shadows.updateFrustums();
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1));
+  renderer.setPixelRatio(RENDER_PIXEL_RATIO);
   renderer.setSize(innerWidth, innerHeight);
 });
 

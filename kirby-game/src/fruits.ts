@@ -1,4 +1,4 @@
-import { Box3, BufferGeometry, CatmullRomCurve3, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, TubeGeometry, Vector3 } from 'three';
+import { Box3, BufferGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, Vector3 } from 'three';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { makeStrawberry } from './strawberry';
@@ -6,6 +6,11 @@ import { makeBanana } from './banana';
 import { makeFruitMist } from './fruit-mist';
 import { makeWatermelon } from './watermelon';
 import { makePineapple } from './pineapple';
+import { makePeach } from './peach';
+import { makeOrange } from './orange';
+import { makePear } from './pear';
+import { makeCherry } from './cherry';
+import { makeGrapes } from './grapes';
 import { fruitLayout,type FruitObstacle } from './fruit-layout';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
@@ -34,22 +39,19 @@ function makeFruit(kind: number) {
   } else if (kind === 2) {
     g.add(makeWatermelon());
   } else if (kind === 3) {
-    ball(g, '#bdde33', 0, .3, 0, .32, .3); ball(g, '#c9e448', .015, .59, 0, .18, .28); stem(g, .9); leaf(g, .13, .88, 0);
+    g.add(makePear());
   } else if (kind === 4) {
-    ball(g, '#ff9218', 0, .34, 0, .34); leaf(g, .08, .68, 0);
+    g.add(makeOrange());
   } else if (kind === 5) {
     g.add(makeBanana());
   } else if (kind === 6) {
-    for (let row = 0; row < 3; row++) for (let j = 0; j < 5 - row; j++) { const a = j / (5 - row) * Math.PI * 2; ball(g, row % 2 ? '#8e39c9' : '#6830b7', Math.cos(a) * (.19 - row * .045), .56 - row * .2, Math.sin(a) * (.19 - row * .045), .145); }
-    stem(g, .79); leaf(g, .14, .83, 0);
+    g.add(makeGrapes());
   } else if (kind === 7) {
     g.add(makePineapple());
   } else if (kind === 8) {
-    ball(g, '#ffae66', -.10, .32, 0, .25, .31); ball(g, '#fa8b83', .10, .32, 0, .25, .31); leaf(g, .1, .64, 0);
+    g.add(makePeach());
   } else {
-    ball(g, '#ba1645', -.18, .19, 0, .19); ball(g, '#e42d40', .18, .19, .05, .19);
-    for (const s of [-1, 1]) { const curve = new CatmullRomCurve3([new Vector3(s * .18, .35, 0), new Vector3(s * .12, .57, 0), new Vector3(0, .73, 0)]); g.add(new Mesh(new TubeGeometry(curve, 8, .018, 5, false), material('#477b2a'))); }
-    leaf(g, .1, .73, 0);
+    g.add(makeCherry());
   }
   g.traverse(o => { if (o instanceof Mesh) { o.castShadow = true; o.receiveShadow = true; } });
   const bounds = new Box3().setFromObject(g);
