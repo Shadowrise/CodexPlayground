@@ -30,7 +30,7 @@ export class CentipedeEventView{
   this.group.add(this.lane,this.halo,this.confetti,this.fireworks.mesh,this.balls.group,this.challenges.group);
   this.hud.id='centipede-event-hud';this.hud.className='event-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');this.hud.append(this.title,this.message);document.body.append(this.hud);
  }
- update(q:CentipedeEvent|undefined,id:string,now:number,listener:T.Vector3,visible:boolean,pushKey:string,camera?:T.Camera){
+ update(q:CentipedeEvent|undefined,id:string,now:number,listener:T.Vector3,visible:boolean,pushKey:string,camera?:T.Camera,chaseDelay=0){
   const distance=Math.hypot(listener.x-A.x,listener.z-A.z);this.group.visible=!!q&&distance<120;this.hud.hidden=!q||!visible||(q.emptySince===undefined&&distance>A.radius+8);
   if(!q){this.cue=this.path='';return;}
   const key=`${q.startedAt}:${q.cycle}:${q.stage}:${q.hits}`,volume=Math.max(.15,Math.min(1,1-(distance-A.playRadius)/40));
@@ -39,7 +39,7 @@ export class CentipedeEventView{
    const wave=Math.floor((now-q.stageAt)/CENTIPEDE_BALLS.interval),waveKey=`${key}:${wave}`;
    if(wave<CENTIPEDE_BALLS.waves&&this.waveCue!==waveKey){this.waveCue=waveKey;if(visible&&distance<75)this.sound('balls',volume);}
   }
-  this.balls.update(q,now);
+  this.balls.update(q,now,chaseDelay);
   this.challenges.update(q,now);
   const ring=centipedeWaves(q,now).at(-1),ringKey=ring?`${key}:${ring.index}`:'';
   if(ringKey&&this.ringCue!==ringKey){this.ringCue=ringKey;if(visible&&distance<75)this.sound('stomp',volume*.8);}
@@ -51,13 +51,13 @@ export class CentipedeEventView{
    balls:'Апчхи! Обходи шарики или перелетай через них. Скоро можно толкнуть бубенчик на хвосте!',
    exhausted:`Топотушка переводит дух. Толкни золотой бубенчик на хвосте: ${pushKey}`,
    tickle:'Хи-хи, щекотно! Отличный толчок — приготовься к следующему испытанию.',
-   gather:'Второе испытание! Топотушка готовится к радужному топоту.',
-   coil:'Сейчас побегут кольца! Перепрыгивай или перелетай волны. В центре тоже не спрятаться.',
+   gather:`Прыгающие мячики догоняют тебя! Уклоняйся или толкай их: ${pushKey}`,
+   coil:`Топотушка сворачивается. Отталкивай мячики: ${pushKey} · Скоро появятся кольца!`,
    stomp:'Перепрыгивай или перелетай радужные кольца! Потом заберись к барабанчику на спине.',
-   lower:'Топотушка опускает спинку. Приготовься подлететь к барабанчику.',
+   lower:`Топотушка опускает спинку. Пока она идёт, уклоняйся от мячиков или толкай: ${pushKey}`,
    back:`Подлети к барабанчику на спине и толкни: ${pushKey}`,
    bell:'Бум! Барабанчик прозвучал. Готовься к следующему испытанию!',
-   rise:'Топотушка снова поднимается. Отойди и приготовься перелетать кольца.',
+   rise:`Топотушка снова сворачивается. Отталкивай мячики: ${pushKey} · Затем перелетай кольца!`,
    curl:'Финальное испытание! Топотушка превращается в большое колесо.',
    wheelWarning:'Колесо сейчас покатится! Отойди от голубой дорожки.',
    wheelRoll:'Уступай дорогу колесу и перелетай кольца! Потом понадобится радужный мяч.',

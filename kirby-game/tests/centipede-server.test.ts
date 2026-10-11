@@ -16,8 +16,8 @@ test('Worker shares all three phases, awards both participants only at the final
   const actor=(name:string,variant:number)=>({p:[140,5,-45],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],eventPoints:0,name,variant,star:0});
   class Socket{readyState=1;messages:any[]=[];constructor(public data:any){}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(m:string){this.messages.push(JSON.parse(m));}}
   const a=new Socket({id:'a',session:'room',name:'Первый',variant:0,seen:now,visible:true,announced:true,actor:actor('Первый',0)}),b=new Socket({id:'b',session:'room',name:'Второй',variant:1,seen:now,visible:true,announced:true,actor:actor('Второй',1)}),sockets=[a,b];
-  const stored=new Map<string,any>(),pending:Promise<any>[]=[];
-  const ctx={getWebSockets:()=>sockets,getWebSocketAutoResponseTimestamp:()=>undefined,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
+  const stored=new Map<string,any>(),pending:Promise<any>[]=[];let writes=0;
+  const ctx={getWebSockets:()=>sockets,getWebSocketAutoResponseTimestamp:()=>undefined,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{writes++;stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
   let room=new GameRoom(ctx,{});await Promise.all(pending);room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const trail=Array.from({length:12},(_,i)=>{const p=centipedeRoute(centipedeRoam(0).distance-(11-i)*CENTIPEDE_STEP,new Vector3());return [140+p.x,-45+p.z];});
   const frame=(socket:Socket,events:any[]=[])=>{now+=200;room.webSocketMessage(socket,JSON.stringify({type:'frame',actor:structuredClone(socket.data.actor),events}));};
@@ -38,6 +38,22 @@ test('Worker shares all three phases, awards both participants only at the final
   };
   start();const started=q().startedAt;
   for(const socket of [b,a,b]){frame(socket,[{type:'centipede-start',trail}]);assert.equal(q().startedAt,started);assert.equal(q().stage,'invite');assert(socket.messages.some(m=>m.type==='room'&&m.room.centipede?.startedAt===started));}
+  // Active pursuit piggybacks on frames, including a stationary sender. It
+  // never stores every ball step or streams the full room on ball movement.
+  const invite=structuredClone(q()),initialActors=sockets.map(s=>structuredClone(s.data.actor));
+  q().stage='gather';q().phase=2;q().stageAt=now;a.data.actor.p=[140,0,-45];
+  frame(a);await Promise.all(pending);const beforeWrites=writes,beforeRooms=a.messages.filter(m=>m.type==='room').length;
+  for(let i=0;i<10;i++)frame(a);
+  await Promise.all(pending);assert.equal(writes,beforeWrites);assert.equal(a.messages.filter(m=>m.type==='room').length,beforeRooms);
+  for(const s of sockets)assert(s.messages.filter(m=>m.type==='frame'&&m.chasers).length>=5,'both players get compact shared pursuit updates');
+  const ball=q().chasers!.balls[0];ball.x=140;ball.z=-43;ball.vx=ball.vz=0;ball.contactAfter=0;
+  a.data.actor.q=[0,0,0,1];a.data.actor.state='Push';const bumps=a.messages.filter(m=>m.type==='centipede-bump').length;
+  frame(a,[{type:'hit'}]);assert.equal(a.messages.filter(m=>m.type==='centipede-bump').length,bumps,'same-frame push wins on the server');assert(ball.vz>0);
+  assert(a.messages.some(m=>m.type==='hit'&&m.target==='centipede-ball'));
+  ball.x=140;ball.z=-44.6;ball.vx=ball.vz=0;ball.contactAfter=0;ball.kickUntil=0;
+  frame(a);const bumpMessages=a.messages.filter(m=>m.type==='centipede-bump');assert.equal(bumpMessages.length,bumps+1);
+  const direction=bumpMessages.at(-1).direction;assert(ball.vx*direction[0]+ball.vz*direction[1]<0,'ball and player rebound in opposite directions');
+  room.room.centipede=invite;sockets.forEach((s,i)=>{s.data.actor=initialActors[i];});
   complete();
   for(const s of sockets){assert(s.data.actor.achievements.includes('centipede'));assert.equal(s.messages.filter(m=>m.type==='centipede-progress'&&m.completed).length,1);for(const phase of [2,3])assert(s.messages.some(m=>m.room?.centipede?.phase===phase));}
   assert.equal(a.data.actor.eventPoints,12);const points=b.data.actor.eventPoints;assert(points>0);assert(!room.room.festival);

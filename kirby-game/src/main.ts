@@ -1,6 +1,7 @@
 import {t,createLanguageSwitcher,localizeDOM} from './i18n';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
+import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
 import {ArenaCentipede} from './arena-centipede';
 import {BOSS_ARENA,constrainArena,constrainNpcOutsideArena} from './boss-arena-site';
 import {prepareSurfaceTextures} from './texture-filtering';
@@ -533,6 +534,7 @@ startButton.addEventListener('click', async () => {
     network.onCentipedeBump=direction=>{if(character?.takePush(direction[0],direction[1]))sounds.playBoing(.7);};
     network.onHit=(a,target)=>{
       if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
+      if(target==='centipede-ball'){sounds.playBoing(Math.max(0,.7*(1-character.actor.position.distanceTo(new THREE.Vector3().fromArray(a.p))/35)));return;}
       const npc=target.startsWith('npc:')?npcs[Number(target.slice(4))]:undefined;
       if(target===network!.id && !coaster.riding && !boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active){if(fireflies?.riding)fireflies.disembark(true);character.takePush(Math.sin(yaw),Math.cos(yaw));}
       else if(npc&&network!.host)npc.takePush(Math.sin(yaw),Math.cos(yaw));
@@ -668,7 +670,7 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back',steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);}
@@ -783,7 +785,7 @@ renderer.setAnimationLoop((time: number) => {
   updateNetwork(dt);
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
-  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera);
+  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera,network?100:0);
   if(!centipedeView.hud.hidden)combatMessage.hidden=true;
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
@@ -831,7 +833,13 @@ function centipedeSoloRewards(){
 }
 function centipedeTick(){
  if(!character||!playing||!currentCentipede())return;const now=network?.serverNow??Date.now(),a=centipedeActor(character);
- if(!network){soloCentipede=advanceCentipede(soloCentipede,now,[a]).event;const direction=bumpCentipede(soloCentipede,a,now);if(direction&&character.takePush(...direction))sounds.playBoing(.7);centipedeSoloRewards();}
+ if(!network){
+  soloCentipede=advanceCentipede(soloCentipede,now,[a]).event;advanceChasers(soloCentipede,[a],now);
+  // A player's timely push is resolved before ball contact in this frame.
+  if(character.attackHit&&pushChaser(soloCentipede,a,now)){character.attackHit=false;sounds.playBoing(.7);}
+  const direction=bumpChaser(soloCentipede,a,now)??bumpCentipede(soloCentipede,a,now);
+  if(direction&&character.takePush(...direction))sounds.playBoing(.7);centipedeSoloRewards();
+ }
  else {const hit=centipedeContact(network.room.centipede,a,now);if(hit&&centipedeContactKey!==hit.key){centipedeContactKey=hit.key;network.event({type:'centipede-step'});}}
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {

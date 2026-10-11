@@ -1,4 +1,5 @@
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
+import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
 import {pushTarget,PUSH_COOLDOWN_MS} from '../../kirby-game/src/push-target';
@@ -25,8 +26,8 @@ export class HistoryStore extends DurableObject<Env>{
  list(filter:HistoryFilter){return historyPage(this.ctx.storage.sql,filter);}
 }
 export class GameRoom extends DurableObject<Env>{
- private room?:RoomState;private bossSaved='';
- constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}ctx.blockConcurrencyWhile(async()=>{const event=await ctx.storage.get<CentipedeEvent>('centipede-event');if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify(event);}});}
+ private room?:RoomState;private bossSaved='';private chaseSentAt=0;
+ constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}ctx.blockConcurrencyWhile(async()=>{const event=await ctx.storage.get<CentipedeEvent>('centipede-event');if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}});}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),locks:{}};}
@@ -108,14 +109,15 @@ export class GameRoom extends DurableObject<Env>{
   const c=a.actor;if(!c)return;const q=c.q;
   return {id:a.id,p:c.p,yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),size:c.s,available:!c.ride&&c.state!=='Roll',done:c.achievements.includes('centipede'),points:c.eventPoints??0};
  }
- private advanceBoss(now:number,current?:Attachment){
+ private advanceBoss(now:number,current?:Attachment,contacts=true){
   const r=this.room;if(!r?.centipede)return false;
   const players=this.players().map(socket=>({socket,a:current&&(socket.deserializeAttachment() as Attachment).id===current.id?current:socket.deserializeAttachment() as Attachment}));
   const actors=players.map(p=>this.bossActor(p.a)).filter((a):a is CentipedeActor=>!!a);
   const emptySince=r.centipede.emptySince,result=advanceCentipede(r.centipede,now,actors);r.centipede=result.event;let changed=result.changed;
+  advanceChasers(r.centipede,actors,now);
   if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(r.centipede.emptySince+CENTIPEDE_EMPTY_MS));
   for(const {socket,a} of players){const c=a.actor,actor=this.bossActor(a);if(!c||!actor)continue;
-   const direction=bumpCentipede(r.centipede,actor,now);if(direction){this.send(socket,{type:'centipede-bump',direction});changed=true;}
+   const direction=contacts?(bumpChaser(r.centipede,actor,now)??bumpCentipede(r.centipede,actor,now)):undefined;if(direction){this.send(socket,{type:'centipede-bump',direction});changed=true;}
    const p=r.centipede?.players[a.id],complete=completedCentipede(r.centipede,a.id)&&!c.achievements.includes('centipede');
    if(complete||(p?.points??0)>(c.eventPoints??0)){
     c.eventPoints=Math.max(c.eventPoints??0,p?.points??0);if(complete)c.achievements.push('centipede');
@@ -146,7 +148,7 @@ export class GameRoom extends DurableObject<Env>{
   if(!this.room)return;
   // The world already fills most of the 16KiB WebSocket attachment. Persist the
   // small quest separately, only on stage/participant changes, never on movement.
-  const boss=JSON.stringify(this.room.centipede??null);
+  const boss=JSON.stringify(this.room.centipede?{...this.room.centipede,chasers:undefined}:null);
   if(boss!==this.bossSaved){this.bossSaved=boss;this.ctx.waitUntil(this.room.centipede?this.ctx.storage.put('centipede-event',this.room.centipede):this.ctx.storage.delete('centipede-event'));}
   for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.id===this.room.host){a.room={...this.room,centipede:undefined};s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}
  }
@@ -203,8 +205,12 @@ export class GameRoom extends DurableObject<Env>{
   }
   socket.serializeAttachment(a);
   if(a.actor&&!a.announced){a.announced=true;this.log(a,'зашёл на полянку.');}
-  let changed=this.advanceMill(now);if(this.advanceBoss(now,a))changed=true;
-  for(const e of (Array.isArray(m.events)?m.events.slice(0,16):[]) as Event[]){
+  const events=(Array.isArray(m.events)?m.events.slice(0,16):[]) as Event[];
+  // Only a frame with a ready push needs deferred contact handling. Ordinary
+  // frames advance the room once, regardless of how many balls are active.
+  const deferContacts=hasChasers(r.centipede)&&!!a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS&&events.some(e=>e?.type==='hit');
+  let changed=this.advanceMill(now);if(this.advanceBoss(now,a,!deferContacts))changed=true;
+  for(const e of events){
    if(!e||typeof e!=='object')continue;
    if(e.type==='centipede-start'){
     // A simultaneous/stale request never replaces the running event. Return the
@@ -228,7 +234,8 @@ export class GameRoom extends DurableObject<Env>{
    }
    else if(e.type==='hit'&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const millActor=this.millActor(a),branch=millActor?millPushTarget(r.millQuest??newMillQuest(),millActor):-1;
-    if(pushCentipede(r.centipede,this.bossActor(a)!,now)){this.advanceBoss(now,a);changed=true;continue;}
+    if(pushChaser(r.centipede,this.bossActor(a)!,now)){this.broadcast({type:'hit',id:a.id,actor:a.actor,target:'centipede-ball'});changed=true;continue;}
+    if(pushCentipede(r.centipede,this.bossActor(a)!,now)){this.advanceBoss(now,a,false);changed=true;continue;}
     if(branch>=0&&this.millAction(a,{kind:'push',index:branch},now)){changed=true;continue;}
     const actor=a.actor,q=actor.q,yaw=Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1]));
     const humans=this.players().map(s=>s.deserializeAttachment() as Attachment).filter(p=>p.id!==a.id&&p.actor).map(p=>({id:p.id,...p.actor!}));
@@ -244,6 +251,7 @@ export class GameRoom extends DurableObject<Env>{
    a.actor.fruits=count;
    if(a.adminSize!==undefined){const final=a.actor.progress?.size??a.actor.s;a.adminSize=final;if(reportedSize===undefined||Math.abs(reportedSize-final)>=.001)this.send(socket,{type:'resize',size:final});}
   }
+  if(deferContacts&&this.advanceBoss(now,a))changed=true;
   if(!r.festival&&a.actor&&allTasks(a.actor.achievements)){
    this.startFestival(now,a.actor.name);changed=true;
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
@@ -252,7 +260,11 @@ export class GameRoom extends DurableObject<Env>{
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
   a.room=a.id===r.host?{...r,centipede:undefined}:undefined;socket.serializeAttachment(a);
   if(changed)this.changed();else if(world||r.festival)this.persist();
-  if(actor||world)this.broadcast({type:'frame',id:a.id,actor,world},socket);
+  const chasers=r.centipede&&now-this.chaseSentAt>=CHASERS.snapshotMs?chaseSnapshot(r.centipede):undefined;
+  if(chasers)this.chaseSentAt=now;
+  // Include the sender only when a compact chase update is due. No new timer,
+  // HTTP request or full-room broadcast for ordinary ball movement.
+  if(actor||world||chasers)this.broadcast({type:'frame',id:a.id,actor,world,chasers},chasers?undefined:socket);
  }
  private remove(socket:WebSocket,status:Visit['status']='left'){return this.ctx.blockConcurrencyWhile(()=>this.removePlayer(socket,status));}
  private async removePlayer(socket:WebSocket,status:Visit['status'],reason='Disconnected'){

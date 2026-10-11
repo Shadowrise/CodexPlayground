@@ -1,13 +1,15 @@
 import * as T from 'three';
 import {centipedeBalls,CENTIPEDE_BALLS as B,type CentipedeEvent} from './centipede-event';
 import {roundedBallWarning} from './centipede-warning-geometry';
+import {CHASERS,ChasePlayback,hasChasers} from './centipede-chasers';
 
 const COLOURS=['#ff1469','#ff8b0d','#ffe128','#03b856','#168cff','#8742ff','#f62cc1'];
-/** At most fifteen striped rubber balls, two instanced draws, no lights/shadows. */
+/** Sneeze fans and pursuing balls share one instanced draw; no lights/shadows. */
 export class CentipedeBallsView{
  readonly group=new T.Group();readonly balls:T.InstancedMesh;readonly warnings:T.InstancedMesh;
  private matrix=new T.Matrix4();private position=new T.Vector3();private rotation=new T.Quaternion();private scale=new T.Vector3();
  private euler=new T.Euler();private colours=COLOURS.map(c=>new T.Color(c));
+ private chasePlayback=new ChasePlayback();
  constructor(){
   const geometry=new T.SphereGeometry(B.radius,20,14),positions=geometry.getAttribute('position'),colours:number[]=[];
   for(let i=0;i<positions.count;i++){
@@ -24,14 +26,14 @@ export class CentipedeBallsView{
    shader.fragmentShader='varying float ballLatitude;\n'+shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>\nfloat stripe=1.-smoothstep(.12,.12+max(fwidth(ballLatitude),.025),abs(ballLatitude));\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.),stripe*.16);`).replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance *= diffuseColor.rgb;');
   };
   material.customProgramCacheKey=()=> 'centipede-striped-ball-v2';
-  this.balls=new T.InstancedMesh(geometry,material,B.waves*B.perWave);
+  this.balls=new T.InstancedMesh(geometry,material,B.waves*B.perWave+CHASERS.count);
   this.warnings=new T.InstancedMesh(roundedBallWarning(),new T.MeshBasicMaterial({transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide}),B.perWave);
   this.group.name='Топотушка — прыгучие шарики';this.balls.name='Разноцветные полосатые шарики';this.warnings.name='Дорожки перед волной шариков';
   for(const mesh of [this.balls,this.warnings]){mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;mesh.count=0;}
   this.group.add(this.balls,this.warnings);this.group.visible=false;
  }
- update(q:CentipedeEvent|undefined,now:number){
-  this.group.visible=q?.stage==='balls';if(!this.group.visible)return;
+ update(q:CentipedeEvent|undefined,now:number,delay=0){
+  this.group.visible=q?.stage==='balls'||hasChasers(q);if(!this.group.visible)return;
   let active=0,preview=0;
   for(const b of centipedeBalls(q!,now)){
    const colour=this.colours[(b.index+q!.cycle)%this.colours.length];
@@ -45,6 +47,14 @@ export class CentipedeBallsView{
     this.warnings.setMatrixAt(preview,this.matrix);this.warnings.setColorAt(preview++,colour);
    }
   }
+  const chasers=this.chasePlayback.sample(q!,now,delay),state=q!.chasers;
+  chasers.forEach((b,i)=>{
+   const age=now-(state?.bornAt??now),grow=T.MathUtils.smoothstep(age/600,0,1);
+   const height=b.y-CHASERS.radius-.13,land=1-T.MathUtils.smoothstep(height,0,.22),squash=land*.14;
+   this.position.set(b.x,b.y,b.z);this.euler.set(age*.0012+i,Math.atan2(b.vx,b.vz),Math.sin(age*.003+i)*.15);this.rotation.setFromEuler(this.euler);
+   this.scale.set((1+squash*.5)*grow,(1-squash)*grow,(1+squash*.5)*grow);this.matrix.compose(this.position,this.rotation,this.scale);
+   this.balls.setMatrixAt(active,this.matrix);this.balls.setColorAt(active++,this.colours[(i+q!.cycle+2)%this.colours.length]);
+  });
   this.balls.count=active;this.warnings.count=preview;
   for(const mesh of [this.balls,this.warnings]){mesh.visible=mesh.count>0;mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;}
  }

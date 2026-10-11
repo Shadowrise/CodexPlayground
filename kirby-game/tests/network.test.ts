@@ -128,3 +128,16 @@ test('boss start is queued once until acknowledgement and an empty-arena deadlin
  for(let i=0;i<4;i++)session.tick(.1,actor,()=>({} as any));
  assert.equal(messages.length,2);assert.deepEqual(messages[1].events,[{type:'centipede-step'}]);
 });
+
+test('a stationary player wakes only active pursuit at five frames a second',()=>{
+ const session=new NetworkSession();session.id='host';session.peerCount=1;
+ session.room={id:'test',host:'host',epoch:0,fruits:[],starAt:0,mill:false,locks:{},centipede:{startedAt:Date.now(),stageAt:Date.now(),stage:'gather',cycle:1,hits:3,trail:[],from:[140,-45],control:[140,-45],to:[140,-45],players:{}}};
+ const messages:any[]=[];(session as any).socket={readyState:1,bufferedAmount:0,send:(s:string)=>messages.push(JSON.parse(s))};
+ const actor={p:[140,0,-45],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
+ for(let i=0;i<20;i++)session.tick(.1,actor,()=>({} as any));
+ assert.equal(messages.length,10);assert(messages.every(m=>m.actor&&m.events.length===0));
+ const sent=messages.length;session.room.centipede!.stage='back';session.room.centipede!.stageAt=Date.now();
+ for(let i=0;i<10;i++)session.tick(.1,actor,()=>({} as any));assert.equal(messages.length,sent,'ordinary boss phases keep sparse checkpoints');
+ session.id='guest';session.peerCount=2;session.room.centipede!.stage='gather';
+ for(let i=0;i<20;i++)session.tick(.1,actor,()=>({} as any));assert.equal(messages.length,sent,'stationary guests do not duplicate the host pursuit updates');
+});

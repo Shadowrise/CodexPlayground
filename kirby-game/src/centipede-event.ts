@@ -1,4 +1,5 @@
 import {BOSS_ARENA as A} from './boss-arena-site';
+import type {ChaseState} from './centipede-chasers';
 
 /** Dependency-free rules and paths shared by solo play and the Cloudflare room. */
 export const CENTIPEDE_STEP=1.35*1.25, CENTIPEDE_PHASE_HITS=3, CENTIPEDE_HITS=9, CENTIPEDE_POINT_LIMIT=12;
@@ -12,8 +13,8 @@ export const CENTIPEDE_REST_WALK_MS=12000;
 export type CentipedeStage=keyof typeof CENTIPEDE_TIMES;
 export type Point=[number,number];
 export type CentipedeActor={id:string;p:readonly number[];yaw:number;size:number;available:boolean;done:boolean;points:number};
-export type CentipedeParticipant={first:boolean;base:number;points:number;hits:number;dodges:number;origin:Point;bumpedCycle:number;ballBumps?:number;waveBumps?:number};
-export type CentipedeEvent={startedAt:number;stage:CentipedeStage;stageAt:number;emptySince?:number;cycle:number;hits:number;phase?:1|2|3;trail:Point[];from:Point;control:Point;to:Point;route?:Point[];players:Record<string,CentipedeParticipant>};
+export type CentipedeParticipant={first:boolean;base:number;points:number;hits:number;dodges:number;origin:Point;bumpedCycle:number;ballBumps?:number;waveBumps?:number;chaserSafeUntil?:number};
+export type CentipedeEvent={startedAt:number;stage:CentipedeStage;stageAt:number;emptySince?:number;cycle:number;hits:number;phase?:1|2|3;trail:Point[];from:Point;control:Point;to:Point;route?:Point[];chasers?:ChaseState;players:Record<string,CentipedeParticipant>};
 export const centipedePhase=(q:CentipedeEvent)=>q.phase??1;
 export const centipedePhaseHits=(q:CentipedeEvent)=>Math.max(0,Math.min(3,q.hits-(centipedePhase(q)-1)*3));
 const length=(a:readonly number[],b:readonly number[])=>Math.hypot(a[0]-b[0],a[1]-b[1]);
