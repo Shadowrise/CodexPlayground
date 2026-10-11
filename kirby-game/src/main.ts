@@ -416,7 +416,7 @@ const tutorial=new MeadowTutorial({
  onClose:clearTutorialInput,
 });
 const replayTutorial=document.createElement('button');replayTutorial.id='replay-tutorial';replayTutorial.type='button';replayTutorial.textContent=t('Пройти обучение');
-replayTutorial.addEventListener('click',()=>{if(playing&&!roundFinished())tutorial.open(true);});saveButton.after(replayTutorial);
+replayTutorial.addEventListener('click',()=>{if(playing&&!roundFinished())tutorial.open(true);});saveButton.after(replayTutorial);audioPanel.append(leaveOnline);
 canvas.style.cursor = 'grab';
 canvas.addEventListener('pointerdown', event => {
   if (chat.open || !playing || gamepad.input.active !== 'keyboard' || !audioPanel.hidden || event.button !== 0 || event.pointerType !== 'mouse') return;

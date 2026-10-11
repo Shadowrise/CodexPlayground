@@ -1,4 +1,5 @@
 import {riderFit,restoreRider} from './rider-size';
+import {MIN_BODY_SIZE} from './body-size';
 import type {PlayerSnapshots} from './player-snapshots';
 import {makeSwimRing,showSwimRing} from './ponds';
 import {updateFlightCloud} from './flight';
@@ -16,7 +17,7 @@ export function actorState(c:CharacterController|KirbyNpc,name:string,variant:nu
 }
 /** Restore durable progress without resuming an abandoned ride or animation. */
 export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
- restoreRider(c);c.actor.position.fromArray(a.p);c.surfaceY=a.p[1];c.actor.scale.setScalar(a.progress?.size??a.s);
+ restoreRider(c);c.actor.position.fromArray(a.p);c.surfaceY=a.p[1];c.actor.scale.setScalar(Math.max(MIN_BODY_SIZE,a.progress?.size??a.s));
  c.yaw=new T.Euler().setFromQuaternion(new T.Quaternion().fromArray(a.q).normalize(),'YXZ').y;c.actor.rotation.set(0,c.yaw,0);
  c.fruitsEaten=a.fruits;c.achievements.clear();for(const action of a.achievements)c.achievements.add(action as import('./score').ScoreAction);
  c.eventPoints=a.eventPoints??0;

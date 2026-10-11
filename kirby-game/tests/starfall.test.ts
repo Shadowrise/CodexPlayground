@@ -20,10 +20,10 @@ test('collection continues after the score cap without awarding more points',()=
 test('every minimum-size finisher earns Tiny Tot alongside existing nominations, without bonus points',()=>{
  const s=createStarfall(0,'Большой');
  s.players.big={...player(),name:'Большой',fruits:30,size:4,bonus:30};
- s.players.tiny={...player(),name:'Маленький',size:.1,bonus:30};
- s.players.other={...player(),name:'Ещё маленький',size:.1};
- s.players.near={...player(),name:'Почти',size:.101};
- s.players.npc={...player(),name:'Другие кирби',size:.1};
+ s.players.tiny={...player(),name:'Маленький',size:.3,bonus:30};
+ s.players.other={...player(),name:'Ещё маленький',size:.3};
+ s.players.near={...player(),name:'Почти',size:.301};
+ s.players.npc={...player(),name:'Другие кирби',size:.3};
  finishStarfall(s,s.endsAt);const results=JSON.stringify(s.results),awards=starfallAwards(s.results!,s.initiator);
  assert.deepEqual(awards.get('big'),['Толстячок','Звёздный собиратель','Любитель приключений']);
  assert.deepEqual(awards.get('tiny'),['Малявка','Звёздный собиратель']);
@@ -33,9 +33,9 @@ test('every minimum-size finisher earns Tiny Tot alongside existing nominations,
 });
 
 test('Tiny Tot depends on size at the finish, not earlier shrinking or changes after results freeze',()=>{
- const s=createStarfall(0,'Большой');s.players.regrown={...player(),size:.1};s.players.tiny={...player(),size:.1};
- s.players.regrown.size=.2;finishStarfall(s,s.endsAt);
- s.players.regrown.size=.1;s.players.tiny.size=1;assert(!finishStarfall(s,s.endsAt+1));
+ const s=createStarfall(0,'Большой');s.players.regrown={...player(),size:.3};s.players.tiny={...player(),size:.3};
+ s.players.regrown.size=.4;finishStarfall(s,s.endsAt);
+ s.players.regrown.size=.3;s.players.tiny.size=1;assert(!finishStarfall(s,s.endsAt+1));
  const awards=starfallAwards(s.results!,s.initiator);
  assert(!awards.get('regrown')?.includes('Малявка'));assert(awards.get('tiny')?.includes('Малявка'));
  assert.equal(starfallAwards([],s.initiator).size,0);

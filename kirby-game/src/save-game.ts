@@ -1,4 +1,5 @@
 import {validStarfall,type StarfallState} from './starfall';
+import {MIN_BODY_SIZE} from './body-size';
 import { validAchievements, type ScoreAction } from './score';
 import { KIRBY_VARIANTS, type KirbyVariant } from './variants';
 import type { CharacterController } from './controller';
@@ -25,7 +26,7 @@ export function parseSave(raw:string):GameSave {
 }
 export function restoreGame(data:GameSave,player:CharacterController,npcs:readonly KirbyNpc[],fruits:FruitWorld) {
   const restore=(c:CharacterController|KirbyNpc,a:ActorSave)=>{
-    c.actor.position.set(a.x,0,a.z);c.actor.scale.setScalar(a.size);c.yaw=a.yaw;c.actor.rotation.set(0,a.yaw,0);c.fruitsEaten=a.fruitsEaten;
+    c.actor.position.set(a.x,0,a.z);c.actor.scale.setScalar(Math.max(MIN_BODY_SIZE,a.size));c.yaw=a.yaw;c.actor.rotation.set(0,a.yaw,0);c.fruitsEaten=a.fruitsEaten;
     c.achievements.clear();for(const action of a.achievements??[])c.achievements.add(action);
   };
   restore(player,data.player);player.eventPoints=data.player.eventPoints??0;player.skyCheckpoint=data.skyCheckpoint??0;

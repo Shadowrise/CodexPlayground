@@ -167,7 +167,24 @@ test('release finishes only the current 10-degree step and stops repeating', asy
   advance(c, 1);
   assert.equal(c.yaw, yaw);
 });
-test('each fruit increases actual forward and backward speed by ten percent', async () => {
+test('small Kirby moves at full base speed, with sprint and star power still multiplying it',async()=>{
+  for(const [size,multiplier] of [[.3,1],[.5,1],[.99,1],[1,1],[1.5,1.5],[2,2]]){
+    for(const star of [false,true]){
+      const c=await create();c.actor.scale.setScalar(size);if(star)c.activateStarPower();
+      const boost=multiplier*(star?2:1);
+      for(const [input,distance] of [
+        [{...idle,forward:true},3.4*boost],
+        [{...idle,forward:true,sprint:true},6.8*boost],
+        [{...idle,backward:true},-1.65*boost],
+      ] as const){
+        const z=c.actor.position.z;advance(c,1,input);
+        assert(Math.abs(c.actor.position.z-z-distance)<1e-6,`size ${size}, star ${star}, distance ${distance}`);
+      }
+    }
+  }
+});
+
+test('each fruit above base size increases actual forward and backward speed by ten percent', async () => {
   const c = await create();
   c.grow(); c.grow();
   advance(c, .5);

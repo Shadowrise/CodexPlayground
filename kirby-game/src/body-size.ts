@@ -1,4 +1,4 @@
-export const MIN_BODY_SIZE = .1;
+export const MIN_BODY_SIZE = .3;
 export const MAX_BODY_SIZE = 10;
 
 export function stepBodySize(current: number, delta: number) {

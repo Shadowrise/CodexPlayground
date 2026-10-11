@@ -4,8 +4,10 @@ import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {CharacterController} from '../src/controller';
 import {MAX_BODY_SIZE,MIN_BODY_SIZE,stepBodySize} from '../src/body-size';
+import {actorState,restoreNetworkPlayer} from '../src/network-actors';
 
-test('admin size steps by half a body and clamps between 10% and 1000%',()=>{
+test('admin size steps by half a body and clamps between 30% and 1000%',()=>{
+ assert.equal(MIN_BODY_SIZE,.3);
  assert.equal(stepBodySize(1,.5),1.5);
  assert.equal(stepBodySize(1,-.5),.5);
  assert.equal(stepBodySize(1.1,.5),1.6);
@@ -15,7 +17,7 @@ test('admin size steps by half a body and clamps between 10% and 1000%',()=>{
  assert.equal(stepBodySize(10,.5),MAX_BODY_SIZE);
 });
 
-test('resize sets the saved size without counting a fruit, and the fountain floor is 10%',async()=>{
+test('resize sets the saved size without counting a fruit, and the fountain floor is 30%',async()=>{
  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));
  const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const c=new CharacterController(gltf.scene,gltf.animations);
@@ -27,4 +29,6 @@ test('resize sets the saved size without counting a fruit, and the fountain floo
  assert.equal(c.savedSize,MAX_BODY_SIZE);assert.equal(c.actor.scale.x,MAX_BODY_SIZE);
  c.actor.scale.setScalar(2);
  c.shrink(3);assert.equal(c.savedSize,MIN_BODY_SIZE);assert.equal(c.fruitsEaten,4);
+ const legacy=actorState(c,'Кирби',0);legacy.progress!.size=.1;legacy.s=.2;
+ restoreNetworkPlayer(c,legacy);assert.equal(c.savedSize,.3);assert.equal(c.fruitsEaten,4);
 });

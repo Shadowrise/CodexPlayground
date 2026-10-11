@@ -41,4 +41,8 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  restoreGame(parseSave(JSON.stringify(oldFormat)),restored,friends,fruits);assert.deepEqual([...restored.achievements],['star']);assert.equal(friends[3].achievements.size,0);assert.equal(restored.fruitsEaten,2);
  const legacy={...save};delete legacy.mazeStar;delete legacy.starRemaining;delete legacy.starCooldown;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);assert.equal(restored.starRemaining,0);assert.equal(restored.starCooldown,0);
  assert.throws(()=>parseSave(JSON.stringify({...save,starRemaining:31})));assert.throws(()=>parseSave(JSON.stringify({...save,starCooldown:-1})));
+ const smallSave=parseSave(JSON.stringify({...save,player:{...save.player,size:.1},npcs:save.npcs.map(n=>({...n,size:.2}))}));
+ restoreGame(smallSave,restored,friends,fruits);
+ assert.equal(restored.savedSize,.3);assert(friends.every(n=>n.savedSize===.3));
+ assert.equal(restored.fruitsEaten,save.player.fruitsEaten);assert.equal(fruits.onMap,67);
 });

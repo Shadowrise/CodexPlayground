@@ -76,11 +76,11 @@ test('room restores disconnected players by name, rejects online duplicates, and
   send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:1,fruits:0,progress:{size:1,checkpoint:0,ground:0}});assert.equal(fresh.data.actor.s,2.7);assert.equal(fresh.data.actor.progress.size,2.7);assert.equal(fresh.data.adminSize,2.7);assert.equal(retries(),beforeRetry+1);
   send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:2.7,fruits:0,progress:{size:2.7,checkpoint:0,ground:0}});assert.equal(fresh.data.adminSize,undefined);
   send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:.15,fruits:0,progress:{size:.15,checkpoint:0,ground:0}});
-  const shrunk=await room.adminResize(activeId,fresh.data.id,-.5);assert.equal(shrunk.ok,true);assert.equal(shrunk.size,.1);assert.equal(fresh.data.actor.fruits,0);
-  assert.match(last(peer.messages,m=>m.type==='log').entry.text,/уменьшился до 10% — Ветерок сдул лишний жирок/);
+  const shrunk=await room.adminResize(activeId,fresh.data.id,-.5);assert.equal(shrunk.ok,true);assert.equal(shrunk.size,.3);assert.equal(fresh.data.actor.fruits,0);
+  assert.match(last(peer.messages,m=>m.type==='log').entry.text,/уменьшился до 30% — Ветерок сдул лишний жирок/);
   const logs=()=>peer.messages.filter((m:any)=>m.type==='log'&&/жирка/.test(m.entry.text)).length;const before=logs();
-  assert.equal((await room.adminResize(activeId,fresh.data.id,-.5)).ok,false);assert.equal(logs(),before);assert.equal(fresh.data.actor.s,.1);
-  send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:.1,fruits:0,progress:{size:.1,checkpoint:0,ground:0}});assert.equal(fresh.data.adminSize,undefined);
+  assert.equal((await room.adminResize(activeId,fresh.data.id,-.5)).ok,false);assert.equal(logs(),before);assert.equal(fresh.data.actor.s,.3);
+  send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:.3,fruits:0,progress:{size:.3,checkpoint:0,ground:0}});assert.equal(fresh.data.adminSize,undefined);
   send(fresh,{...actor,name:'Кирби Друг',achievements:['bench'],s:9.6,fruits:1,progress:{size:9.6,checkpoint:0,ground:0}});
   assert.equal((await room.adminResize(activeId,fresh.data.id,.5)).size,10);assert.equal((await room.adminResize(activeId,fresh.data.id,.5)).ok,false);
   assert.equal((await room.adminResize(activeId,'missing',.5)).ok,false);assert.equal((await room.adminResize('stale',fresh.data.id,.5)).ok,false);

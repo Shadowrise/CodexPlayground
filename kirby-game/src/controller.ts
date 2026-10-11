@@ -75,8 +75,8 @@ export class CharacterController {
     this.eatElapsed = undefined;
   }
   readonly animationRoot: Object3D;
-  get speed() { return 3.4 * this.actor.scale.x * (this.starRemaining > 0 ? 2 : 1); }
-  get backwardSpeed() { return 1.65 * this.actor.scale.x * (this.starRemaining > 0 ? 2 : 1); }
+  get speed() { return 3.4 * Math.max(1, this.actor.scale.x) * (this.starRemaining > 0 ? 2 : 1); }
+  get backwardSpeed() { return 1.65 * Math.max(1, this.actor.scale.x) * (this.starRemaining > 0 ? 2 : 1); }
   readonly turnStep = Math.PI / 18;
   readonly turnDuration = .1;
 
