@@ -103,7 +103,8 @@ export class MeadowLayout {
    this.flowerBeds.push({x:p.x+4.7,z:p.z+4.5,rx:1.6,rz:2.4},{x:p.x-8,z:p.z-2,rx:1.5,rz:2});
    this.patches.push({x:p.x-5,z:p.z-3,rx:2.8,rz:1.8});
   }
-  this.flowerBeds.push({x:HOME_SITE.x-7.8,z:HOME_SITE.z+6,rx:1.5,rz:2.7},{x:HOME_SITE.x+7.8,z:HOME_SITE.z+6,rx:1.5,rz:2.7},
+  // The right garden sits beside the Shiba cottage, clear of its porch and roof.
+  this.flowerBeds.push({x:HOME_SITE.x-7.8,z:HOME_SITE.z+6,rx:1.5,rz:2.7},{x:HOME_SITE.x+12.3,z:HOME_SITE.z+5.6,rx:1.5,rz:2.7},
    {x:-7.7,z:213,rx:1.7,rz:2.3},{x:7.7,z:213,rx:1.7,rz:2.3});
   const network:MeadowPoint[]=[world(nearest({x:0,z:0}))],used=new Uint8Array(pass.length);
   used[cell(network[0])]=1;

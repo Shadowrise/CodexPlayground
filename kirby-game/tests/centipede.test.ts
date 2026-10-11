@@ -4,6 +4,41 @@ import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {AnimationMixer,Box3,Mesh,LoopOnce,Vector3} from 'three';
 import {CENTIPEDE_CLIPS} from '../src/centipede-clips';
+import {centipedeCrawl,CENTIPEDE_STEP} from '../src/centipede-event';
+import {BOSS_ARENA} from '../src/boss-arena-site';
+
+test('phase-two body follows the head history, and exported walking feet plant between lifted steps',async()=>{
+ const bytes=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url));
+ const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),''),mixer=new AnimationMixer(gltf.scene);
+ const point=new Vector3(),box=new Box3();
+ const inverseDistance=(stage:'coil'|'lower'|'rise',distance:number)=>{
+  let lo=0,hi=1;for(let i=0;i<40;i++){const mid=(lo+hi)/2;if(centipedeCrawl(stage,mid).distance<distance)lo=mid;else hi=mid;}return (lo+hi)/2;
+ };
+ for(const [stage,name] of [['coil','CoilArena'],['lower','LowerBack'],['rise','Rise']] as const){
+  const clip=gltf.animations.find(c=>c.name===name)!;
+  mixer.stopAllAction();const action=mixer.clipAction(clip).reset().setLoop(LoopOnce,1).play();action.clampWhenFinished=true;
+  for(let frame=1;frame<80;frame++){
+   const u=frame/80,crawl=centipedeCrawl(stage,u);action.time=u*clip.duration;mixer.update(0);gltf.scene.updateMatrixWorld(true);
+   for(let i=0;i<12;i++){
+    if(crawl.distance<i*CENTIPEDE_STEP)continue;
+    const past=centipedeCrawl(stage,inverseDistance(stage,crawl.distance-i*CENTIPEDE_STEP)).links[0],p=crawl.links[i];
+    assert(Math.hypot(p.x-past.x,p.z-past.z)<.0001,`${name} link ${i} must follow the head, not slide into a bent pose`);
+    const actual=gltf.scene.getObjectByName(`Segment_${i}`)!.getWorldPosition(point);
+    assert(Math.hypot(actual.x*1.25+BOSS_ARENA.x-p.x,actual.z*1.25+BOSS_ARENA.z-p.z)<.16,'export follows the crawl path, including the slight stair sway');
+   }
+  }
+  // Select two instants in one stance, away from start/end and stair lifting.
+  const stride=1.5*1.25,segment=6,k=Math.floor(centipedeCrawl(stage,.5).distance/stride-segment*.13);
+  const foot=gltf.scene.getObjectByName(`Boot_${segment}_-1`)!,boots:Mesh[]=[];foot.traverse(o=>{if(o instanceof Mesh){o.geometry.computeBoundingBox();boots.push(o);}});
+  const positions:Vector3[]=[];
+  for(const fraction of [.18,.38]){
+   const u=inverseDistance(stage,(k+fraction+segment*.13)*stride);action.time=u*clip.duration;mixer.update(0);gltf.scene.updateMatrixWorld(true);
+   positions.push(foot.getWorldPosition(new Vector3()));
+   for(const boot of boots){box.copy(boot.geometry.boundingBox!).applyMatrix4(boot.matrixWorld);assert(Math.abs(box.min.y-.02)<.012,`${name} planted sole should touch the floor`);}
+  }
+  assert(positions[0].distanceTo(positions[1])<.012,`${name} planted boot must not slide across the floor`);
+ }
+});
 
 test('stationary boots stay on the ground while the body breathes and the face animates',async()=>{
  const bytes=await readFile(new URL('../public/models/centipede-animated.glb',import.meta.url));

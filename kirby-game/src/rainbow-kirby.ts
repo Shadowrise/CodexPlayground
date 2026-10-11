@@ -6,7 +6,7 @@ let stripes:T.DataTexture|undefined;
 const stripedGeometry=new WeakMap<T.BufferGeometry,T.BufferGeometry>();
 
 /** A small shared texture, mapped by height, wraps seamlessly around the body. */
-export function rainbowSkin(geometry:T.BufferGeometry,material:T.MeshStandardMaterial){
+export function rainbowSkin(geometry:T.BufferGeometry,material:T.MeshStandardMaterial|T.MeshLambertMaterial){
  if(!stripes){
   const data=new Uint8Array(4*896*4);
   for(let y=0;y<896;y++){
@@ -22,7 +22,7 @@ export function rainbowSkin(geometry:T.BufferGeometry,material:T.MeshStandardMat
   for(let i=0;i<p.count;i++){uv[i*2]=.5;uv[i*2+1]=T.MathUtils.clamp((p.getY(i)-.21)/1.92,0,1);}
   copy.setAttribute('uv',new T.BufferAttribute(uv,2));stripedGeometry.set(geometry,copy);
  }
- material.color.set('#ffffff');material.map=stripes;material.roughness=.32;material.metalness=.04;
+ material.color.set('#ffffff');material.map=stripes;
  return copy;
 }
 

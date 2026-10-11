@@ -13,16 +13,17 @@ export class CentipedeBallsView{
   for(let i=0;i<positions.count;i++){
    const y=positions.getY(i),angle=Math.atan2(positions.getZ(i),positions.getX(i));
    const panel=Math.floor((angle+Math.PI)/(Math.PI/3)),stripe=Math.abs(y)<B.radius*.16;
-   const shade=stripe?1:panel%2?.68:.91;colours.push(shade,shade,shade);
+   const shade=stripe?1:panel%2?.82:1;colours.push(shade,shade,shade);
   }
   geometry.setAttribute('color',new T.Float32BufferAttribute(colours,3));
-  const material=new T.MeshStandardMaterial({vertexColors:true,roughness:.28,metalness:.05,emissive:'#fff6e7',emissiveIntensity:.08});
-  // Paint the cream equator after instance tinting, keeping every ball in one draw.
+  const material=new T.MeshLambertMaterial({vertexColors:true,emissive:'#ffffff',emissiveIntensity:.12});
+  // A lightly tinted stripe and hue-matched glow keep the colours saturated
+  // in sun and moonlight, without white glare or extra draws/lights.
   material.onBeforeCompile=shader=>{
    shader.vertexShader='varying float ballLatitude;\n'+shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>\nballLatitude=position.y/${B.radius.toFixed(3)};`);
-   shader.fragmentShader='varying float ballLatitude;\n'+shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>\nfloat stripe=1.-smoothstep(.12,.12+max(fwidth(ballLatitude),.025),abs(ballLatitude));\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(.98,.98,.91),stripe*.93);`);
+   shader.fragmentShader='varying float ballLatitude;\n'+shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>\nfloat stripe=1.-smoothstep(.12,.12+max(fwidth(ballLatitude),.025),abs(ballLatitude));\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.),stripe*.16);`).replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\ntotalEmissiveRadiance *= diffuseColor.rgb;');
   };
-  material.customProgramCacheKey=()=> 'centipede-striped-ball-v1';
+  material.customProgramCacheKey=()=> 'centipede-striped-ball-v2';
   this.balls=new T.InstancedMesh(geometry,material,B.waves*B.perWave);
   this.warnings=new T.InstancedMesh(roundedBallWarning(),new T.MeshBasicMaterial({transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide}),B.perWave);
   this.group.name='Топотушка — прыгучие шарики';this.balls.name='Разноцветные полосатые шарики';this.warnings.name='Дорожки перед волной шариков';

@@ -1,6 +1,8 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {CENTIPEDE_CLIPS,CENTIPEDE_MARKERS,type CentipedeClip} from './centipede-clips';
+import {centipedeCrawl} from './centipede-event';
+import {BOSS_ARENA} from './boss-arena-site';
 
 const COUNT=12,STEP=1.35;
 const PALETTE=['#ffbd69','#f47568','#f49b42','#e9c747','#9ac957','#43b995','#41baca','#5a98dd','#8970cd','#bd73bb','#ec8da9','#efb956'];
@@ -84,19 +86,34 @@ export function createCentipede(){
  ring(segments[0],'#ca4d67',[0,-.6,-.65],.64,.16,[0,0,0]);
  ell(segments[0],'#ee7687',[.47,-.57,-.73],[.24,.23,.24]);
  for(const side of [-1,1])ell(segments[0],'#ce5271',[.47+side*.2,-.77,-.75],[.13,.3,.09]);
- function bell(parent:T.Object3D,name:string,position:number[],size:number){
-  const pivot=group(parent,name,position);pivot.userData.interaction=name==='TailBell'?'tail':'back';
+ function bell(parent:T.Object3D,position:number[],size:number){
+  const pivot=group(parent,'TailBell',position);pivot.userData.interaction='tail';
   ring(pivot,'#ffe5a2',[0,.43*size,0],.17*size,.055*size,[0,0,0],true);
   add(pivot,sphere,'#ffc65b',[0,0,0],[.47*size,.41*size,.47*size],[0,0,0],true);
   ring(pivot,'#ffdf87',[0,-.12*size,0],.445*size,.032*size,[Math.PI/2,0,0],true);
   tube(pivot,'#84522d',[[-.29*size,-.27*size,.2*size],[0,-.39*size,.14*size],[.29*size,-.27*size,.2*size]],.024*size);
   ell(pivot,'#543c49',[0,-.26*size,.35*size],[.095*size,.07*size,.035*size],true);
-  const anchor=new T.Object3D();anchor.name=name==='TailBell'?'TailTarget':'BackTarget';pivot.add(anchor);return pivot;
+  const anchor=new T.Object3D();anchor.name='TailTarget';pivot.add(anchor);return pivot;
  }
  tube(segments[COUNT-1],'#8a657d',[[0,.25,-.45],[0,.61,-.87],[0,.4,-1.12]],.09);
- const tailBell=bell(segments[COUNT-1],'TailBell',[0,-.12,-1.12],1.3);
+ const tailBell=bell(segments[COUNT-1],[0,-.12,-1.12],1.3);
  ell(segments[3],'#fff0bb',[0,.77,0],[.61,.08,.54]);
- const backBell=bell(segments[3],'BackBell',[0,1.34,0],1.28);
+ // A drum is visibly distinct from the only bell, on the tail. Its centre keeps
+ // the same BackTarget position, shared by phase-two collisions and networking.
+ const backDrum=group(segments[3],'BackDrum',[0,1.34,0]);backDrum.userData.interaction='back';
+ const barrel=new T.CylinderGeometry(1,1,1,24),lug=new T.CylinderGeometry(1,1,1,6);
+ add(backDrum,barrel,'#437c91',[0,0,0],[.62,.86,.62]);
+ add(backDrum,barrel,'#f5ddb6',[0,.447,0],[.63,.036,.63]);
+ add(backDrum,barrel,'#967450',[0,-.475,0],[.63,.08,.63]);
+ for(const y of [-.43,.43])ring(backDrum,'#e1b46d',[0,y,0],.64,.038,[Math.PI/2,0,0],true);
+ for(let i=0;i<8;i++){
+  const a=i*Math.PI/4,b=a+Math.PI/4,x=Math.sin(a)*.654,z=Math.cos(a)*.654;
+  add(backDrum,lug,'#e1b46d',[x,0,z],[.028,.82,.028],[0,0,0],true);
+  tube(backDrum,'#ecd7ae',[[x,.36,z],[Math.sin((a+b)/2)*.66,0,Math.cos((a+b)/2)*.66],[Math.sin(b)*.654,-.36,Math.cos(b)*.654]],.018);
+ }
+ ring(backDrum,'#dac6a0',[0,.468,0],.50,.012,[Math.PI/2,0,0]);
+ const backTarget=new T.Object3D();backTarget.name='BackTarget';backDrum.add(backTarget);
+ barrel.dispose();lug.dispose();
  for(const [parent,batches] of parts)for(const [material,list] of batches){
   const geometry=mergeGeometries(list,false);list.forEach(g=>g.dispose());
   const mesh=new T.Mesh(geometry,material);mesh.name=`${parent.name}_${material===GOLD?'brass':'colours'}`;mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);
@@ -147,14 +164,12 @@ export function createCentipede(){
   const u=time/duration,phase=u*Math.PI*2,one=Math.sin(Math.PI*u),isWheel=['CurlWheel','WheelRoll','WheelDizzy','WheelHit','Uncurl'].includes(name);
   for(const r of rigs){r.node.position.copy(r.position);r.node.quaternion.copy(r.rotation);r.node.scale.copy(r.scale);}
   const planted=name==='Idle'||name==='Exhausted'||name==='Sneeze';
-  let gait=0,wave=planted?0:.14,wheel=0,arena=0,stairs=0;
+  let gait=0,wave=planted?0:.14,wheel=0,stairs=0;
   if(['Walk','Run','Charge'].includes(name)){gait=name==='Walk'?.23:name==='Run'?.4:.52;wave=name==='Charge'?.06:.4;}
   if(name==='TurnLeft'||name==='TurnRight'){wave=.15;gait=.22*Math.sin(Math.PI*u);}
-  if(name==='CoilArena')arena=smooth(u);
-  if(name==='Stomp')arena=1;
-  if(name==='LowerBack'){arena=1-smooth(u);stairs=smooth(u);}
+  if(name==='LowerBack')stairs=T.MathUtils.smoothstep(u,.82,1);
   if(name==='BackVulnerable'||name==='BellHit')stairs=1;
-  if(name==='Rise'){stairs=1-smooth(u);arena=smooth(u);}
+  if(name==='Rise')stairs=1-T.MathUtils.smoothstep(u,0,.18);
   if(name==='CurlWheel')wheel=smooth(u);
   if(name==='Uncurl')wheel=1-smooth(u);
   if(['WheelRoll','WheelDizzy','WheelHit'].includes(name))wheel=1;
@@ -162,8 +177,12 @@ export function createCentipede(){
   if(name==='WheelRoll')motion.rotation.x=phase;
   if(name==='WheelDizzy')motion.rotation.z=Math.sin(phase)*.095;
   if(name==='WheelHit'){motion.scale.set(1+one*.14,1-one*.12,1+one*.1);motion.position.y+=one*.6;}
-  const arenaTransition=['CoilArena','Stomp','LowerBack','Rise'].includes(name);
-  const curve=isWheel?arcPoses(wheel,true):arenaTransition?arcPoses(arena):null;
+  const crawl=name==='CoilArena'?centipedeCrawl('coil',u):name==='LowerBack'?centipedeCrawl('lower',u):name==='Rise'?centipedeCrawl('rise',u):undefined;
+  const ring=name==='Stomp'?centipedeCrawl('coil',1):undefined;
+  const crawlPoses=(crawl??ring)?.links.map((link,i)=>({p:new T.Vector3((link.x-BOSS_ARENA.x)/1.25,i===0?1.64:1.15+(COUNT-1-i)*.008,(link.z-BOSS_ARENA.z)/1.25),q:new T.Quaternion().setFromAxisAngle(up,link.yaw)}));
+  const curve=isWheel?arcPoses(wheel,true):crawlPoses??null;
+  if(crawl){gait=.24;wave=0;}
+  const stride=1.5,crawlPhase=crawl?crawl.distance/1.25/stride*Math.PI*2:phase*2;
   const turn=name==='TurnLeft'||name==='TurnRight'?turningPoses(u,name==='TurnLeft'?1:-1):null;
   for(let i=0;i<COUNT;i++){
    const node=segments[i],line=linePose(i,phase,wave),step=stairPose(i);
@@ -172,7 +191,7 @@ export function createCentipede(){
    if(stairs){node.position.y=T.MathUtils.lerp(node.position.y,step.p.y,stairs);node.position.x=curve?node.position.x+step.p.x*stairs:step.p.x;node.quaternion.slerp(step.q,stairs);}
    if(turn){node.position.copy(turn[i].p);node.quaternion.copy(turn[i].q);}
    if(!isWheel){
-    if(gait)node.position.y+=.06*(1+Math.sin(phase*2-i*.7));
+    if(gait)node.position.y+=.06*(1+Math.sin(crawlPhase-i*.7));
     if(name==='Idle')node.scale.set(1,1+.022*Math.sin(phase-i*.4),1);
     if(name==='ChargeAnticipation'){node.position.y+=one*(i===0?.65:-.15);node.position.z-=one*.12*i;node.rotateX(i===0?-.25*one:0);}
     if(name==='Exhausted'){node.position.y-=i===0?.35:.08;node.scale.y=1+.045*Math.sin(phase*2-i*.2);if(i===0)node.rotateX(.16);}
@@ -186,7 +205,7 @@ export function createCentipede(){
   for(const {node,stem,boot,side,segment,origin,soleY} of legs){
    const extension=stairs*Math.max(0,stairPose(segment).p.y-linePose(segment,0).p.y);
    stem.scale.y=1+extension/.78;boot.position.y=-extension;
-   const step=Math.sin(phase*2-segment*.9+(side>0?Math.PI:0));
+   const step=Math.sin(crawlPhase-segment*.9+(side>0?Math.PI:0));
    node.rotation.x=step*gait;node.position.y+=Math.max(0,step)*gait*.65;
    node.rotation.z=side*wheel*.9;
    if(name==='Stomp'){const beat=(u*2)%1,raise=Math.sin(Math.PI*T.MathUtils.clamp(beat/.6,0,1));node.rotation.z=side*raise*.72;node.position.y+=raise*.2;}
@@ -198,6 +217,27 @@ export function createCentipede(){
     const body=segments[segment];node.scale.set(1/body.scale.x,1/body.scale.y,1/body.scale.z);
     node.position.copy(origin).divide(body.scale);node.position.y=(.02-body.position.y-soleY)/body.scale.y;
    }
+   if(crawl){
+    // Bake planted stance and a lifted swing into the existing leg tracks.
+    // During stance the foot stays at one point on the travelled path, while
+    // its body segment advances and turns above it. No runtime IK is needed.
+    const strideWorld=stride*1.25,cycle=crawl.distance/strideWorld-segment*.13+(side>0?.5:0),fraction=cycle-Math.floor(cycle),stance=.62;
+    const distance=crawl.distance-fraction*strideWorld+stance*.5*strideWorld-segment*STEP*1.25;
+    const foot=(d:number)=>{
+     const p=crawl.atDistance(d),q=new T.Quaternion().setFromAxisAngle(up,p.yaw);
+     const position=new T.Vector3(origin.x,0,origin.z).applyQuaternion(q).add(new T.Vector3((p.x-BOSS_ARENA.x)/1.25,.02-soleY+extension,(p.z-BOSS_ARENA.z)/1.25));
+     return {position,q};
+    };
+    const plantedFoot=foot(distance);
+    if(fraction>stance){
+     const swing=(fraction-stance)/(1-stance),next=foot(distance+strideWorld);
+     plantedFoot.position.lerp(next.position,smooth(swing));plantedFoot.position.y+=.27*Math.sin(Math.PI*swing);plantedFoot.q.slerp(next.q,smooth(swing));
+    }
+    const body=segments[segment],inverse=body.quaternion.clone().invert(),weight=T.MathUtils.smoothstep(u,0,.04)*(1-T.MathUtils.smoothstep(u,.96,1));
+    const base=origin.clone();base.y=.02-body.position.y-soleY+extension;
+    node.position.copy(base).lerp(plantedFoot.position.sub(body.position).applyQuaternion(inverse),weight);
+    node.quaternion.identity().slerp(inverse.multiply(plantedFoot.q),weight);
+   }
   }
   head.rotation.y=.055*Math.sin(phase);head.rotation.z=.025*Math.sin(phase*2);
   if(name==='WheelDizzy')head.rotation.z+=.18*Math.sin(phase*2);
@@ -207,7 +247,8 @@ export function createCentipede(){
   brows.forEach((node,i)=>{node.rotation.z=(i?1:-1)*(name==='ChargeAnticipation'?-.18*one:name==='WheelDizzy'?.16:0);});
   mouth.scale.y=name==='Exhausted'?1+.28*Math.sin(phase*2):name==='Sneeze'?1+.65*one:1;
   tailBell.rotation.z=.15*Math.sin(phase*2)+(name==='TailTickle'?.6*one*Math.sin(phase*4):0);
-  backBell.rotation.z=name==='BellHit'?.65*Math.sin(phase*5)*one:.035*Math.sin(phase);
+  backDrum.rotation.z=name==='BellHit'?.2*Math.sin(phase*5)*one:.025*Math.sin(phase);
+  if(name==='BellHit')backDrum.scale.y=1-.12*Math.sin(phase*5)*one;
   // Bake ground contact into wheel clips offline; no vertex scans in the game.
   if(wheel>0){
    root.updateMatrixWorld(true);let bottom=Infinity;const v=new T.Vector3();

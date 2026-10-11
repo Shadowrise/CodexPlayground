@@ -1,4 +1,4 @@
-import { Color, Mesh, MeshStandardMaterial, Object3D } from 'three';
+import { Color, Material, Mesh, MeshLambertMaterial, MeshStandardMaterial, Object3D } from 'three';
 import {rainbowCrown,rainbowSkin} from './rainbow-kirby';
 
 import {KIRBY_VARIANTS,type KirbyVariant} from './variant-palette';
@@ -14,14 +14,36 @@ export function styleVariant(element:HTMLElement,variant:KirbyVariant){
   element.classList.toggle('rainbow-kirby',variant[0]==='Радуга');
 }
 
+function matteSurface(source: MeshStandardMaterial) {
+  const material = new MeshLambertMaterial();
+  // Keep the GLB's face colours, alpha/depth settings and textures, without
+  // its specular/clearcoat layers. Directional light and shadows still apply.
+  Material.prototype.copy.call(material, source);
+  material.color.copy(source.color);
+  material.map = source.map;
+  material.emissive.copy(source.emissive);
+  material.emissiveIntensity = source.emissiveIntensity;
+  material.emissiveMap = source.emissiveMap;
+  material.aoMap = source.aoMap;
+  material.aoMapIntensity = source.aoMapIntensity;
+  material.normalMap = source.normalMap;
+  material.normalMapType = source.normalMapType;
+  material.normalScale.copy(source.normalScale);
+  material.bumpMap = source.bumpMap;
+  material.bumpScale = source.bumpScale;
+  material.alphaMap = source.alphaMap;
+  material.flatShading = source.flatShading;
+  return material;
+}
+
 export function cloneVariant(template: Object3D, variant: KirbyVariant, npc: boolean) {
   const model = template.clone(true);
-  const materials = new Map<MeshStandardMaterial, MeshStandardMaterial>();
+  const materials = new Map<MeshStandardMaterial, MeshStandardMaterial | MeshLambertMaterial>();
   model.traverse(object => {
     if (!(object instanceof Mesh)) return;
     const recolor = (source: MeshStandardMaterial) => {
       if (!materials.has(source)) {
-        const material = source.clone();
+        const material = /^(Kirby|Feet|Cheeks|Smile|Tongue)/.test(source.name) ? matteSurface(source) : source.clone();
         if (material.name.startsWith('Kirby') && variant[0] !== 'Классический') material.color.set(variant[1]);
         if (material.name.startsWith('Feet') && npc) material.color.copy(new Color('#12452a'));
         materials.set(source, material);

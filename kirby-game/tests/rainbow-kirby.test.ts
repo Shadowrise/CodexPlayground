@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {Mesh,MeshStandardMaterial,DataTexture} from 'three';
+import {Mesh,MeshStandardMaterial,MeshLambertMaterial,DataTexture} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {cloneVariant,KIRBY_VARIANTS,remainingVariants} from '../src/variants';
 import {CharacterController} from '../src/controller';
@@ -17,7 +17,7 @@ test('Rainbow has seven wrapped bands, an animated crown and shared lightweight 
  const crown=model.getObjectByName('Rainbow crown')!;assert(crown);assert.match(crown.parent!.name,/Body.?motion/);
  assert.equal(crown.children.length,2);assert.equal((crown.children[0] as Mesh).geometry,(second.getObjectByName('Rainbow crown')!.children[0] as Mesh).geometry);
  let skins=0;
- model.traverse(o=>{if(!(o instanceof Mesh))return;const mat=o.material as MeshStandardMaterial;if(!mat.name.startsWith('Kirby'))return;
+ model.traverse(o=>{if(!(o instanceof Mesh))return;const mat=o.material as MeshStandardMaterial|MeshLambertMaterial;if(!mat.name.startsWith('Kirby'))return;
   skins++;const map=mat.map as DataTexture;assert(map);assert.equal(mat.color.getHexString(),'ffffff');
   const data=map.image.data!;for(let i=0;i<7;i++){const start=(i*128+64)*4*4;const hex=Array.from(data.slice(start,start+3)).map(v=>Number(v).toString(16).padStart(2,'0')).join('');assert.equal('#'+hex,RAINBOW_COLORS[6-i]);}
   const p=o.geometry.getAttribute('position'),uv=o.geometry.getAttribute('uv');for(let i=0;i<p.count;i+=137)assert(Math.abs(uv.getY(i)-Math.min(1,Math.max(0,(p.getY(i)-.21)/1.92)))<1e-6);

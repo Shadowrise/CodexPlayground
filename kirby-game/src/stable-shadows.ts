@@ -2,12 +2,13 @@ import {Box3,Matrix4,Vector3} from 'three';
 import type {Material} from 'three';
 import {prepareShadowDepth,setupStableShadowFilter} from './shadow-filter';
 import {CSM} from 'three/addons/csm/CSM.js';
+import {CELESTIAL_ORBIT_NORMAL} from './day-cycle';
 
 /** CSM texel snapping with an orientation that remains defined at solar noon. */
 export class StableCSM extends CSM {
   // Perpendicular to the sun/moon orbit used by daylight(). Unlike world Y,
   // this never becomes parallel to the light at noon or midnight.
-  private orbitNormal=new Vector3(-.4,0,.85).normalize();
+  private orbitNormal=new Vector3().fromArray(CELESTIAL_ORBIT_NORMAL);
   private orientation=new Matrix4();
   private inverseOrientation=new Matrix4();
   private cameraToLight=new Matrix4();

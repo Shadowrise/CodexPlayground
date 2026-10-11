@@ -40,11 +40,11 @@ export function lightenBoatPassenger(model:T.Object3D){
   if(meshes.length<2)continue;
   const parts=meshes.map(m=>{
    m.updateMatrix();const g=m.geometry.index?m.geometry.toNonIndexed():m.geometry.clone();g.applyMatrix4(m.matrix);g.deleteAttribute('uv');
-   const mat=m.material as T.MeshStandardMaterial,attribute=g.getAttribute('color'),values=new Float32Array(g.attributes.position.count*3);
+   const mat=m.material as T.MeshStandardMaterial|T.MeshLambertMaterial,attribute=g.getAttribute('color'),values=new Float32Array(g.attributes.position.count*3);
    for(let i=0;i<g.attributes.position.count;i++)values.set([mat.color.r*(attribute?.getX(i)??1),mat.color.g*(attribute?.getY(i)??1),mat.color.b*(attribute?.getZ(i)??1)],i*3);
    g.setAttribute('color',new T.BufferAttribute(values,3));return g;
   });
-  const combined=mergeGeometries(parts)!,material=(meshes[0].material as T.MeshStandardMaterial).clone();material.color.set('#ffffff');material.vertexColors=true;
+  const combined=mergeGeometries(parts)!,material=(meshes[0].material as T.MeshStandardMaterial|T.MeshLambertMaterial).clone();material.color.set('#ffffff');material.vertexColors=true;
   const mesh=new T.Mesh(combined,material);mesh.name='Batched passenger details';mesh.receiveShadow=true;
   meshes.forEach(m=>parent.remove(m));parent.add(mesh);parts.forEach(g=>g.dispose());
  }

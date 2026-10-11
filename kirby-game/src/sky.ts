@@ -1,10 +1,8 @@
 import {daylight,type Daylight} from './day-cycle';
 import * as THREE from 'three';
 
-export const SUN_DIRECTION = new THREE.Vector3(-.6, .45, 1).normalize();
-
 export function createSky(scene: THREE.Scene) {
-  const sun = new THREE.Mesh(new THREE.SphereGeometry(15,32,20),new THREE.MeshBasicMaterial({color:'#fff3ba',fog:false,toneMapped:false,transparent:true}));
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(19,32,20),new THREE.MeshBasicMaterial({color:'#fff3ba',fog:false,toneMapped:false,transparent:true}));
   sun.name='Sun disc'; scene.add(sun);
   const moon=new THREE.Group();moon.name='Moon';scene.add(moon);
   moon.add(new THREE.Mesh(new THREE.SphereGeometry(13,32,20),new THREE.MeshBasicMaterial({color:'#dbe8ff',fog:false,toneMapped:false,transparent:true})));
@@ -68,6 +66,8 @@ export function createSky(scene: THREE.Scene) {
     rays.position.copy(camera.position).addScaledVector(orbit,825);
     rays.quaternion.copy(camera.quaternion);
     cloudMaterial.color.copy(dayColor).lerp(nightColor,night).lerp(sunsetColor,twilight*.65);
+    // Approximate light scattered through cloud volume; no emitting lights.
+    cloudMaterial.emissive.copy(cloudMaterial.color);cloudMaterial.emissiveIntensity=.1+.16*(1-night);
     dome.position.copy(camera.position);horizonMaterial.uniforms.top.value.copy(topDay).lerp(topNight,night).lerp(topDusk,twilight*.65);horizonMaterial.uniforms.horizon.value.copy(horizonDay).lerp(horizonNight,night).lerp(horizonDusk,twilight*.85);
     if(stars.visible)for(let i=0;i<160;i++){const a=i*2.399,y=.12+(i%23)/26,r=Math.sqrt(1-y*y);starOffset.set(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(800);dummy.position.copy(camera.position).add(starOffset);dummy.scale.setScalar(.45+i%3*.25);dummy.updateMatrix();stars.setMatrixAt(i,dummy.matrix);}stars.instanceMatrix.needsUpdate=stars.visible;
     halo.position.copy(camera.position).addScaledVector(orbit,elevation>=0?830:-830);halo.quaternion.copy(camera.quaternion);

@@ -5,8 +5,9 @@ export const CENTIPEDE_STEP=1.35*1.25, CENTIPEDE_PHASE_HITS=3, CENTIPEDE_HITS=9,
 export const CENTIPEDE_BALLS={waves:3,perWave:5,interval:2600,launch:1450,speed:12,radius:1.05,life:5500} as const;
 // Open the tail bell shortly after the last sneeze, rather than waiting for
 // every ball's maximum lifetime. Both solo play and the Worker use this clock.
-export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:CENTIPEDE_BALLS.waves*CENTIPEDE_BALLS.interval+700,exhausted:10000,tickle:2000,gather:12000,coil:2400,stomp:15000,lower:1800,back:16000,bell:1400,rise:1800,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
+export const CENTIPEDE_TIMES={invite:2500,warning:1800,charge:6000,balls:CENTIPEDE_BALLS.waves*CENTIPEDE_BALLS.interval+700,exhausted:10000,tickle:2000,gather:12000,coil:6500,stomp:15000,lower:12000,back:16000,bell:1400,rise:16000,curl:2400,wheelWarning:1800,wheelRoll:8500,dizzy:16000,ballShot:1100,wheelHit:1200,uncurl:2400,celebrate:10000,rest:60000} as const;
 export const CENTIPEDE_EMPTY_MS=10000;
+export const CENTIPEDE_WAVES={initial:.8,birthMs:650,halfWidth:.65,clearance:.95} as const;
 export const CENTIPEDE_REST_WALK_MS=12000;
 export type CentipedeStage=keyof typeof CENTIPEDE_TIMES;
 export type Point=[number,number];
@@ -68,11 +69,11 @@ const restCache=new WeakMap<Point[],{trail:Point[];curve:WalkCurve}>();
 const tau=Math.PI*2,modAngle=(a:number)=>((a%tau)+tau)%tau;
 /** Forward-only circular turns join a straight approach. The tail follows the
  * head's travelled distance; never blend twelve unrelated body positions. */
-function walkCurve(trail:Point[],centre:Point,yaw:number):WalkCurve{
- const start=trail.at(-1)!,back=trailingPoint(trail,2),heading=Math.atan2(start[1]-back[1],start[0]-back[0]),goal=Math.PI/2-yaw;
+function walkCurve(trail:Point[],centre:Point,yaw:number,startYaw?:number,radii:readonly number[]=[5.5,7.5,10]):WalkCurve{
+ const start=trail.at(-1)!,back=trailingPoint(trail,2),heading=startYaw===undefined?Math.atan2(start[1]-back[1],start[0]-back[0]):Math.PI/2-startYaw,goal=Math.PI/2-yaw;
  const hx=Math.sin(yaw),hz=Math.cos(yaw),entry:Point=[centre[0]-hx*14,centre[1]-hz*14],finish:Point=[centre[0]+hx*5.5*CENTIPEDE_STEP,centre[1]+hz*5.5*CENTIPEDE_STEP];
  const candidates:WalkCurve[]=[];
- for(const radius of [5.5,7.5,10])for(const left of [-1,1])for(const right of [-1,1]){
+ for(const radius of radii)for(const left of [-1,1])for(const right of [-1,1]){
   const c1:Point=[start[0]-left*radius*Math.sin(heading),start[1]+left*radius*Math.cos(heading)],c2:Point=[entry[0]-right*radius*hz,entry[1]+right*radius*hx];
   const dx=c2[0]-c1[0],dz=c2[1]-c1[1],d=Math.hypot(dx,dz),offset=(left-right)*radius;if(d<=Math.abs(offset)+.001)continue;
   const tangent=Math.atan2(dz,dx)+Math.asin(offset/d),first=modAngle(left*(tangent-heading)),last=modAngle(right*(goal-tangent));
@@ -98,7 +99,46 @@ function walkCurve(trail:Point[],centre:Point,yaw:number):WalkCurve{
  const curve=candidates.find(safe)??candidates.find(c=>c.points.every(p=>Math.hypot(p[0]-A.x,p[1]-A.z)<A.playRadius-2))??candidates[0];
  return curve;
 }
-function gatherCurve(q:CentipedeEvent){let curve=gatherCache.get(q.trail);if(!curve){curve=walkCurve(q.trail,[A.x,A.z],0);gatherCache.set(q.trail,curve);}return curve;}
+const coilBend=.47,coilRadius=CENTIPEDE_STEP/coilBend,coilLength=11*CENTIPEDE_STEP,coilYaw=-.32+11*coilBend;
+function circleOffset(distance:number):Point{
+ const yaw=coilYaw-distance/coilRadius;
+ return [coilRadius*(Math.cos(yaw)-Math.cos(coilYaw)),coilRadius*(Math.sin(coilYaw)-Math.sin(yaw))];
+}
+const coilOffsets=Array.from({length:12},(_,i)=>circleOffset(coilLength-i*CENTIPEDE_STEP));
+const coilEntry:Point=[A.x-coilOffsets.reduce((sum,p)=>sum+p[0],0)/12,A.z-coilOffsets.reduce((sum,p)=>sum+p[1],0)/12];
+function coilPoint(distance:number):Point{
+ const p=distance<0?[Math.sin(coilYaw)*distance,Math.cos(coilYaw)*distance] as Point:circleOffset(distance);
+ return [coilEntry[0]+p[0],coilEntry[1]+p[1]];
+}
+function coilCentre():Point{return [coilEntry[0]-Math.sin(coilYaw)*5.5*CENTIPEDE_STEP,coilEntry[1]-Math.cos(coilYaw)*5.5*CENTIPEDE_STEP];}
+const coilTrail=Array.from({length:12},(_,i)=>coilPoint(i*CENTIPEDE_STEP));
+const straightTrail=Array.from({length:12},(_,i)=>[A.x,A.z+(i-5.5)*CENTIPEDE_STEP] as Point);
+let lowerCurve:WalkCurve|undefined,riseCurve:WalkCurve|undefined;
+/** Offline animation paths, also defining the shared gather destination.
+ * Every link follows the head's travelled path; no body-centre recentering.
+ * The game plays the baked tracks, so these samples cost no runtime skin work. */
+export function centipedeCrawl(stage:'coil'|'lower'|'rise',u:number){
+ const radii=[3.8,4.5,5.5,7.5];
+ const curve=stage==='lower'?(lowerCurve??=walkCurve(coilTrail,[A.x,A.z],0,-.32,radii)):stage==='rise'?(riseCurve??=walkCurve(straightTrail,coilCentre(),coilYaw,0,radii)):undefined;
+ const total=(curve?.length??0)+(stage==='lower'?0:coilLength),distance=total*runProgress(u);
+ const sample=(d:number):Point=>{
+  if(stage==='coil')return coilPoint(d);
+  if(d<0)return stage==='lower'?coilPoint(coilLength+d):[A.x,A.z+5.5*CENTIPEDE_STEP+d];
+  return stage==='rise'&&d>curve!.length?coilPoint(d-curve!.length):curvePoint(curve!,Math.min(curve!.length,d));
+ };
+ const atDistance=(d:number)=>{
+  const p=sample(d),a=sample(d+.04),b=sample(d-.04);
+  let yaw=Math.atan2(a[0]-b[0],a[1]-b[1]);
+  if(stage==='coil')yaw=coilYaw-Math.max(0,d)/coilRadius;
+  else if(stage==='lower'&&d<0)yaw=coilYaw-(coilLength+d)/coilRadius;
+  else if(stage==='rise'&&d<0||stage==='lower'&&d>=curve!.length)yaw=0;
+  else if(stage==='rise'&&d>=curve!.length)yaw=coilYaw-(d-curve!.length)/coilRadius;
+  return {x:p[0],z:p[1],yaw};
+ };
+ const links=Array.from({length:12},(_,i)=>atDistance(distance-i*CENTIPEDE_STEP));
+ return {links,distance,total,atDistance};
+}
+function gatherCurve(q:CentipedeEvent){let curve=gatherCache.get(q.trail);if(!curve){curve=walkCurve(q.trail,coilCentre(),coilYaw);gatherCache.set(q.trail,curve);}return curve;}
 function restWalk(q:CentipedeEvent){
  const key=q.route??q.trail;let path=restCache.get(key);if(path)return path;
  const p=centipedeWheel(q,q.stageAt),hx=Math.sin(p.yaw),hz=Math.cos(p.yaw),trail=Array.from({length:12},(_,i)=>[p.x+hx*(i-5.5)*CENTIPEDE_STEP,p.z+hz*(i-5.5)*CENTIPEDE_STEP] as Point);
@@ -146,14 +186,15 @@ export function centipedeBalls(q:CentipedeEvent,now:number):CentipedeBall[]{
  }
  return balls;
 }
-export type CentipedeWave={index:number;radius:number;gap:number;angle:number;age:number};
-/** Pairs of foot stomps, then faster narrow-gap rings during the wheel finale. */
+export type CentipedeWave={index:number;radius:number;age:number};
+/** Closed rings start at the centre; their birth pulse also pushes grounded
+ * players inside the crest, so standing in its original hole is never safe. */
 export function centipedeWaves(q:CentipedeEvent,now:number):CentipedeWave[]{
  if(q.stage!=='stomp'&&q.stage!=='wheelRoll')return [];
- const wheel=q.stage==='wheelRoll',count=wheel?3:6,interval=wheel?2600:2000,speed=wheel?13.5:10,initial=wheel?3:5,elapsed=now-q.stageAt,waves:CentipedeWave[]=[];
+ const wheel=q.stage==='wheelRoll',count=wheel?3:6,interval=wheel?2600:2000,speed=wheel?13.5:10,elapsed=now-q.stageAt,waves:CentipedeWave[]=[];
  for(let i=0;i<count;i++){
-  const age=elapsed-1200-i*interval,radius=initial+Math.max(0,age)/1000*speed;
-  if(age>=0&&radius<A.playRadius+1)waves.push({index:i,radius,gap:wheel?.82:1.15,angle:(q.cycle+i)*(wheel?1.35:Math.PI/2),age});
+  const age=elapsed-1200-i*interval,radius=CENTIPEDE_WAVES.initial+Math.max(0,age)/1000*speed;
+  if(age>=0&&radius<A.playRadius+1)waves.push({index:i,radius,age});
  }
  return waves;
 }
@@ -296,12 +337,11 @@ export function centipedeContact(q:CentipedeEvent|undefined,a:CentipedeActor,now
    return {direction:side>=0?[c,-s]:[-c,s],key:`${q.startedAt}:${q.cycle}:wheel`};
   }
  }
- if(a.p[1]<.95)for(const wave of centipedeWaves(q,now)){
+ if(a.p[1]<CENTIPEDE_WAVES.clearance)for(const wave of centipedeWaves(q,now)){
   if((p.waveBumps??0)&(1<<wave.index))continue;
-  const dx=a.p[0]-A.x,dz=a.p[2]-A.z,d=Math.hypot(dx,dz),angle=Math.atan2(dz,dx),gap=Math.abs(Math.atan2(Math.sin(angle-wave.angle),Math.cos(angle-wave.angle)));
-  // Keep the whole footprint inside the gap, so its painted safe sector is reliable.
-  if(gap<wave.gap/2-Math.min(.22,a.size*.3/Math.max(1,d)))continue;
-  if(Math.abs(d-wave.radius)<.65+Math.min(4,a.size*.4))return {direction:d>.1?[dx/d,dz/d]:[1,0],key:`${q.startedAt}:${q.cycle}:ring:${wave.index}`,ring:wave.index};
+  const dx=a.p[0]-A.x,dz=a.p[2]-A.z,d=Math.hypot(dx,dz),width=CENTIPEDE_WAVES.halfWidth+Math.min(4,a.size*.4);
+  const onCrest=Math.abs(d-wave.radius)<width,inBirthPulse=wave.age<CENTIPEDE_WAVES.birthMs&&d<wave.radius+width;
+  if(onCrest||inBirthPulse)return {direction:d>.1?[dx/d,dz/d]:[Math.sin(a.yaw),Math.cos(a.yaw)],key:`${q.startedAt}:${q.cycle}:ring:${wave.index}`,ring:wave.index};
  }
 }
 export function bumpCentipede(q:CentipedeEvent|undefined,a:CentipedeActor,now:number,mark=true):Point|undefined{

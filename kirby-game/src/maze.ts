@@ -16,7 +16,7 @@ export class HedgeMaze {
   private aura?:T.Group;
   private sparkles?:T.InstancedMesh;
   private clock=0;
-  private glowMaterials=new Map<T.MeshStandardMaterial,{color:T.Color;intensity:number}>();
+  private glowMaterials=new Map<T.MeshStandardMaterial|T.MeshLambertMaterial,{color:T.Color;intensity:number}>();
   private dummy=new T.Object3D();
   constructor(){
     const root=this.group;root.name='Hedge maze and golden star';root.position.set(MAZE_SITE.x,0,MAZE_SITE.z);
@@ -101,7 +101,7 @@ export class HedgeMaze {
   moveFruitOutside(p:T.Vector3){if(this.contains(p,3)){const a=Math.atan2(p.z-MAZE_SITE.z,p.x-MAZE_SITE.x);p.x=MAZE_SITE.x+Math.cos(a)*56;p.z=MAZE_SITE.z+Math.sin(a)*56;}}
   private bless(player:CharacterController){
     this.aura=new T.Group();this.aura.name='Golden star blessing';player.actor.add(this.aura);
-    player.actor.traverse(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof T.MeshStandardMaterial&&!this.glowMaterials.has(m))this.glowMaterials.set(m,{color:m.emissive.clone(),intensity:m.emissiveIntensity});}});
+    player.actor.traverse(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material])if((m instanceof T.MeshStandardMaterial||m instanceof T.MeshLambertMaterial)&&!this.glowMaterials.has(m))this.glowMaterials.set(m,{color:m.emissive.clone(),intensity:m.emissiveIntensity});}});
     const mist=makeFruitMist(0);mist.material=mist.material.clone();mist.material.color.set('#ffe6a1');mist.material.opacity=.22;mist.position.y=1;mist.scale.set(3.8,4,1);this.aura.add(mist);
     this.sparkles=new T.InstancedMesh(new T.OctahedronGeometry(.07),new T.MeshBasicMaterial({color:'#fff0a2'}),28);this.sparkles.frustumCulled=false;this.aura.add(this.sparkles);
   }

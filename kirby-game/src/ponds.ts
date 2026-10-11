@@ -61,7 +61,7 @@ export class Ponds {
   for(let i=0;i<positions.count;i++)positions.setY(i,Math.min(-.012,bankHeight(positions.getX(i),positions.getZ(i))));
   geo.computeVertexNormals();
   this.bankSupport=new BankSupport(geo);
-  const bank=new T.Mesh(geo,groundMaterial??new T.MeshStandardMaterial({color:'#87916c',roughness:1}));bank.name='Soft sloping river banks';bank.receiveShadow=true;this.group.add(bank);
+  const bank=new T.Mesh(geo,groundMaterial??new T.MeshLambertMaterial({color:'#87916c'}));bank.name='Soft sloping river banks';bank.receiveShadow=true;this.group.add(bank);
 
  }
  update(dt:number){this.time+=dt;this.texture.offset.set(this.time*.015,this.time*.009);}

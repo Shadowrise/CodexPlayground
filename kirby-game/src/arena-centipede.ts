@@ -52,6 +52,7 @@ export class ArenaCentipede{
  private readonly shadow:T.InstancedMesh;
  private readonly form=new T.Group();private readonly motion:T.Object3D;
  private readonly formStart=new T.Vector3();private readonly formTurn=new T.Quaternion();private followerStart:{p:T.Vector3;q:T.Quaternion}[]=[];
+ private coilStart?:{p:T.Vector3;q:T.Quaternion}[];
  private readonly position=new T.Vector3();private readonly ahead=new T.Vector3();private readonly behind=new T.Vector3();
  private readonly turn=new T.Quaternion();private readonly matrix=new T.Matrix4();private readonly scaleMatrix=new T.Matrix4();
  private readonly up=new T.Vector3(0,1,0);
@@ -81,8 +82,19 @@ export class ArenaCentipede{
   const goingToRest=event?.stage==='rest'&&now-event.stageAt<CENTIPEDE_REST_WALK_MS;
   const eventClip=event?(goingToRest?'Walk':EVENT_ANIMATION[event.stage]):undefined;
   const stage=event?`${event.startedAt}:${event.stageAt}:${event.stage}:${eventClip}`:undefined;
-  if(stage!==this.lastStage){this.blendClip=this.lastClip??state.animation;this.blendTime=this.actions[this.blendClip].time;this.blendStart=now;this.lastStage=stage;this.lastClip=eventClip;this.formStart.copy(this.form.position);this.formTurn.copy(this.form.quaternion);this.followerStart=this.followers.map(f=>({p:f.position.clone(),q:f.quaternion.clone()}));}
-  const fade=T.MathUtils.smoothstep((now-this.blendStart)/1000,0,.18);
+  if(stage!==this.lastStage){
+   this.coilStart=undefined;
+   if(event?.stage==='coil'&&this.lastClip==='Walk'){
+    this.group.updateMatrixWorld(true);
+    const inverse=this.group.matrixWorld.clone().invert();
+    this.coilStart=this.segments.map(segment=>{const p=new T.Vector3(),q=new T.Quaternion();new T.Matrix4().multiplyMatrices(inverse,segment.matrixWorld).decompose(p,q,new T.Vector3());return {p,q};});
+   }
+   this.blendClip=this.lastClip??state.animation;this.blendTime=this.actions[this.blendClip].time;this.blendStart=now;this.lastStage=stage;this.lastClip=eventClip;this.formStart.copy(this.form.position);this.formTurn.copy(this.form.quaternion);this.followerStart=this.followers.map(f=>({p:f.position.clone(),q:f.quaternion.clone()}));
+  }
+  // CoilArena starts where the approach ends, rather than at the model origin.
+  // Blend the actual body pose below; fading its keys against an in-place Walk
+  // would apply the old path offset twice and pull every link sideways.
+  const fade=event?.stage==='coil'?1:T.MathUtils.smoothstep((now-this.blendStart)/1000,0,.18);
   for(const name of Object.keys(this.actions)){
    const action=this.actions[name];let weight=0;
    if(eventClip){weight=Number(name===eventClip)*fade;}else {if(name===state.animation)weight+=state.blend*fade;if(name===state.previous)weight+=(1-state.blend)*fade;}if(name===this.blendClip)weight+=1-fade;
@@ -113,7 +125,14 @@ export class ArenaCentipede{
    const follower=this.followers[i],restZ=segment.position.z;
    if(whole){follower.position.set(0,0,0);follower.quaternion.identity();}
    else {follower.position.set(this.position.x/SCALE-Math.sin(yaw)*restZ,0,this.position.z/SCALE-Math.cos(yaw)*restZ);follower.quaternion.copy(this.turn.setFromAxisAngle(this.up,yaw));}
-   if(whole||!event){const start=this.followerStart[i];if(start){follower.position.lerp(start.p,1-formFade);follower.quaternion.slerp(start.q,1-formFade);}}
+   if(event?.stage==='coil'){
+    const start=this.coilStart?.[i];
+    if(start&&formFade<1){
+     const p=segment.position.clone().lerp(start.p,1-formFade),q=segment.quaternion.clone().slerp(start.q,1-formFade);
+     follower.quaternion.copy(q.multiply(segment.quaternion.clone().invert()));
+     follower.position.copy(p).sub(segment.position.clone().applyQuaternion(follower.quaternion));
+    }
+   }else if(whole||!event){const start=this.followerStart[i];if(start){follower.position.lerp(start.p,1-formFade);follower.quaternion.slerp(start.q,1-formFade);}}
    follower.updateMatrix();segment.updateMatrix();this.matrix.multiplyMatrices(this.form.matrix,this.motion.matrix).multiply(follower.matrix).multiply(segment.matrix);
    this.scaleMatrix.makeScale(i===0?1.13:.86*(1-i/48),i===0?1:.77*(1-i/48),i===0?1.05:.8);
    this.matrix.multiply(this.scaleMatrix);this.shadow.setMatrixAt(i,this.matrix);

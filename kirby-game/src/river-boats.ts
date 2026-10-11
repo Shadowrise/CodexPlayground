@@ -60,7 +60,12 @@ export class RiverBoats {
  networkKey(player:CharacterController){const i=this.ride?.index??this.nearby(player);return i>=0?`boat:${i}`:undefined;}
  outlineBoat(player:CharacterController){const i=this.nearby(player);return !this.riding&&i>=0?this.boats[i]:undefined;}
  prompt(player:CharacterController){
-  if(this.ride){if(this.ride.leaving)return 'Выходим на берег…';const percent=Math.min(10,Math.floor((boatDistance(this.ride.index,this.seconds)-this.ride.start)/BOAT_ROUTE_LENGTH*100));return `E — выйти на берег · ${player.achievements.has('boat')?'Задача выполнена':`Проплыто: ${percent}% из 10% круга`}`;}
+  if(this.ride){
+   if(this.ride.leaving)return 'Выходим на берег…';
+   const distance=boatDistance(this.ride.index,this.seconds)-this.ride.start;
+   const percent=Math.max(1,Math.min(100,Math.floor(distance/(BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION)*100)));
+   return `E — выйти на берег · Проплыто: ${percent}%${player.achievements.has('boat')?' · Задача выполнена':''}`;
+  }
   return this.nearby(player)>=0?'E — сесть в лодочку':'';
  }
  board(player:CharacterController){

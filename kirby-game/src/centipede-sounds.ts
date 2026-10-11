@@ -3,11 +3,16 @@ import type {CentipedeStage} from './centipede-event';
 export function centipedeSound(stage:CentipedeStage,rate=22050){
  const duration=stage==='balls'?2.05:stage==='warning'?1.25:stage==='exhausted'?1.7:stage==='celebrate'?2.4:stage==='charge'?1.2:1;
  const samples=new Float32Array(Math.ceil(rate*duration));let phase=0;
- const happy=['invite','tickle','bell','wheelHit','uncurl','celebrate'].includes(stage);
- const notes=stage==='celebrate'?[523.25,659.25,783.99,1046.5]:['tickle','bell','wheelHit'].includes(stage)?[659.25,783.99,1046.5]:[523.25,659.25];
+ const happy=['invite','tickle','wheelHit','uncurl','celebrate'].includes(stage);
+ const notes=stage==='celebrate'?[523.25,659.25,783.99,1046.5]:['tickle','wheelHit'].includes(stage)?[659.25,783.99,1046.5]:[523.25,659.25];
  for(let i=0;i<samples.length;i++){
   const t=i/rate,u=t/duration,edge=Math.min(1,t/.035,(duration-t)/.08);let v=0;
-  if(happy)for(let n=0;n<notes.length;n++){const age=t-n*.19;if(age>=0)v+=(Math.sin(2*Math.PI*notes[n]*age)+.16*Math.sin(4*Math.PI*notes[n]*age))*Math.min(1,age/.035)*Math.exp(-age*4)*.2;}
+  if(stage==='bell')for(let n=0;n<3;n++){
+   const age=t-n*.18;if(age<0)continue;
+   const drumPhase=2*Math.PI*([180,210,150][n]*age+2*(1-Math.exp(-age*35)));
+   v+=(Math.sin(drumPhase)+.12*Math.sin(drumPhase*2.3))*Math.min(1,age/.014)*Math.exp(-age*14)*.32;
+  }
+  else if(happy)for(let n=0;n<notes.length;n++){const age=t-n*.19;if(age>=0)v+=(Math.sin(2*Math.PI*notes[n]*age)+.16*Math.sin(4*Math.PI*notes[n]*age))*Math.min(1,age/.035)*Math.exp(-age*4)*.2;}
   else if(stage==='stomp'){phase+=2*Math.PI*(105+140*Math.exp(-t*14))/rate;v=(Math.sin(phase)+.12*Math.sin(phase*2))*Math.min(1,t/.035)*Math.exp(-t*7)*.37;}
   else if(['wheelWarning','curl','coil'].includes(stage)){phase+=2*Math.PI*(220+180*u+20*Math.sin(t*16))/rate;v=Math.sin(phase)*Math.sin(Math.PI*u)**2*.27;}
   else if(stage==='wheelRoll'){phase+=2*Math.PI*(135+50*Math.sin(t*23))/rate;v=(Math.sin(phase)+.15*Math.sin(phase*2))*Math.sin(t*18)**4*Math.sin(Math.PI*u)**2*.3;}

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {BOSS_ARENA as A} from '../src/boss-arena-site';
 import {ArenaCentipede,centipedeRoam,centipedeRoute} from '../src/arena-centipede';
 import {Vector3} from 'three';
-import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,centipedeSegments,centipedeGatherDistance,centipedeRoot,centipedeTail,chargePoint,centipedeBalls,centipedeContact,centipedeTarget,centipedePhase,centipedeWheel,centipedeWaves,CENTIPEDE_BALLS,CENTIPEDE_TIMES,CENTIPEDE_STEP,type CentipedeActor,type CentipedeEvent,type Point} from '../src/centipede-event';
+import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,centipedeSegments,centipedeGatherDistance,centipedeCrawl,centipedeRoot,centipedeTail,chargePoint,centipedeBalls,centipedeContact,centipedeTarget,centipedePhase,centipedeWheel,centipedeWaves,CENTIPEDE_BALLS,CENTIPEDE_TIMES,CENTIPEDE_STEP,type CentipedeActor,type CentipedeEvent,type Point} from '../src/centipede-event';
 import {centipedeSound} from '../src/centipede-sounds';
 import {CentipedeFireworks} from '../src/centipede-fireworks';
 import {CentipedeBallsView} from '../src/centipede-balls-view';
@@ -80,7 +80,8 @@ test('walking into phase two follows a forward path without squeezing, crossings
     for(let j=i+3;j<12;j++)assert(Math.hypot(poses[i].x-poses[j].x,poses[i].z-poses[j].z)>1.95,`gather crosses itself at ${seconds}/${frame}/${i}/${j}`);
    }previous=poses;
   }
-  previous.forEach((p,i)=>{assert(Math.abs(p.x-A.x)<.001);assert(Math.abs(p.z-(A.z+(5.5-i)*CENTIPEDE_STEP))<.001);assert(Math.abs(p.yaw)<.001);});
+  const entry=centipedeCrawl('coil',0).links;
+  previous.forEach((p,i)=>{assert(Math.hypot(p.x-entry[i].x,p.z-entry[i].z)<.001);assert(Math.abs(Math.atan2(Math.sin(p.yaw-entry[i].yaw),Math.cos(p.yaw-entry[i].yaw)))<.001);});
   assert.deepEqual(centipedeSegments(q,q.stageAt+4600),centipedeSegments(JSON.parse(JSON.stringify(q)),q.stageAt+4600),'late join derives the same walk');
  }
 });
@@ -149,13 +150,35 @@ test('striped balls and their warnings use at most two instanced draws and disap
  view.update(undefined,0);assert(!view.group.visible);
  for(const m of [view.balls,view.warnings]){m.geometry.dispose();(m.material as any).dispose();}
 });
-test('stomp waves have real safe gaps, support flight and bump only once per ring',()=>{
- const a=actor();let q=startCentipede(trail(),a,1)!;q.phase=2;q.stage='stomp';q.cycle=4;q.stageAt=1000;
- const now=3000,wave=centipedeWaves(q,now)[0];assert(wave);assert.deepEqual(centipedeWaves(q,now),centipedeWaves(JSON.parse(JSON.stringify(q)),now));
- a.p=[A.x+Math.cos(wave.angle)*wave.radius,0,A.z+Math.sin(wave.angle)*wave.radius];assert(!centipedeContact(q,a,now),'gap is safe');
- a.p=[A.x+Math.cos(wave.angle+1)*wave.radius,0,A.z+Math.sin(wave.angle+1)*wave.radius];assert(!bumpCentipede(q,{...a,p:[a.p[0],1.2,a.p[2]]},now),'jump clears the ground ring');
- assert(centipedeContact(q,a,now)?.ring===0);assert(bumpCentipede(q,a,now));assert(!bumpCentipede(q,a,now));
- q.stage='back';atTarget(q,a);assert(!pushCentipede(q,{...a,p:[a.p[0],0,a.p[2]]},now),'the back bell needs an actual flight');assert(pushCentipede(q,a,now));
+test('closed stomp and wheel rings bump from every direction, support flight and bump once',()=>{
+ for(const stage of ['stomp','wheelRoll'] as const){
+  const a=actor(),q=startCentipede(trail(),a,1)!;q.phase=stage==='stomp'?2:3;q.stage=stage;q.cycle=4;q.stageAt=1000;q.players.a.bumpedCycle=q.cycle;
+  const now=3000,wave=centipedeWaves(q,now)[0];assert(wave);assert.deepEqual(centipedeWaves(q,now),centipedeWaves(JSON.parse(JSON.stringify(q)),now));
+  for(let i=0;i<48;i++){
+   const angle=i*Math.PI/24;a.p=[A.x+Math.cos(angle)*wave.radius,0,A.z+Math.sin(angle)*wave.radius];
+   assert.equal(centipedeContact(q,a,now)?.ring,0,`${stage}: no safe gap at angle ${angle}`);
+   assert(!bumpCentipede(q,{...a,p:[a.p[0],1.2,a.p[2]]},now),'jump clears the ground ring');
+  }
+  assert(bumpCentipede(q,a,now));assert(!bumpCentipede(q,a,now));
+  q.phase=2;q.stage='back';atTarget(q,a);assert(!pushCentipede(q,{...a,p:[a.p[0],0,a.p[2]]},now),'the back drum needs an actual flight');assert(pushCentipede(q,a,now));
+ }
+});
+
+test('every ring birth pushes players out of the centre, including between network ticks',()=>{
+ for(const stage of ['stomp','wheelRoll'] as const){
+  const a=actor(),q=startCentipede(trail(),a,1)!;q.phase=stage==='stomp'?2:3;q.stage=stage;q.cycle=4;q.stageAt=1000;q.players.a.bumpedCycle=q.cycle;
+  a.p=[A.x,0,A.z];a.yaw=.7;
+  for(let i=0;i<(stage==='stomp'?6:3);i++){
+   const now=q.stageAt+1200+i*(stage==='stomp'?2000:2600)+350;
+   const copy=JSON.parse(JSON.stringify(q)),contact=centipedeContact(q,a,now)!;
+   assert.equal(contact.ring,i,`${stage} pulse ${i} must reach the centre after a delayed tick`);
+   assert.deepEqual(contact,centipedeContact(copy,a,now),'client and server derive the same pulse');
+   assert(Math.abs(Math.hypot(...contact.direction)-1)<1e-9);
+   assert(!centipedeContact(q,{...a,p:[A.x,1.2,A.z]},now),'levitation avoids the centre pulse');
+   const edge={...a,p:[A.x+2,0,A.z]};assert.deepEqual(centipedeContact(q,edge,now)?.direction,[1,0],'push goes outward');
+   assert(bumpCentipede(q,a,now));assert(!bumpCentipede(q,a,now+10),'one bump per pulse, not continuous pinning');
+  }
+ }
 });
 test('final wheel combines grounded and airborne hazards; rainbow ball requires approaching and aiming',()=>{
  const a=actor();let q=startCentipede(trail(),a,1)!;q.phase=3;q.hits=6;q.stage='curl';q.to=[A.x,A.z];q=next(q,[a]);assert.equal(q.stage,'wheelWarning');q=next(q,[a]);

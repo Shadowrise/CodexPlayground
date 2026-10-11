@@ -156,7 +156,8 @@ export function createGrassDetail(){
 }
 
 export function createGroundMaterial(half:number,layout?:MeadowLayout){
-  const material=new T.MeshStandardMaterial({map:createGroundTexture(half,512,layout),roughness:1});
+  // Dry turf and worn earth scatter light without a view-dependent specular sheen.
+  const material=new T.MeshLambertMaterial({map:createGroundTexture(half,512,layout)});
   const detail=createGrassDetail();
   material.onBeforeCompile=shader=>{
     shader.uniforms.groundDetail={value:detail};
@@ -175,7 +176,7 @@ diffuseColor.rgb *= mix(soilDetail,vec3(.58+groundSurface.r*.8),grassWeight);
 diffuseColor.rgb *= 1.0-trailRim*.28;
 diffuseColor.a=1.0;`);
   };
-  material.customProgramCacheKey=()=> 'biome-ground-detail-v5';
+  material.customProgramCacheKey=()=> 'biome-ground-matte-v6';
   material.addEventListener('dispose',()=>{detail.dispose();material.map?.dispose();});
   return material;
 }

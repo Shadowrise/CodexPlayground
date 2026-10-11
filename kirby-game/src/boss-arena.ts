@@ -3,10 +3,10 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import polygonClipping from 'polygon-clipping';
 import {BOSS_ARENA,ARENA_POSTS} from './boss-arena-site';
-import {createArenaStoneTexture} from './arena-stone-texture';
+import {createArenaFloorTexture} from './arena-floor-texture';
 
 const COLORS=['#bf5d62','#c58f59','#bbac67','#739867','#549f9e','#6382ae','#9775ac'];
-/** Static arena: merged opaque decoration, tiled ground, no update loop/lights. */
+/** Static arena: merged opaque decoration, matte ground, no update loop/lights. */
 export function createBossArena(){
  const root=new T.Group();root.name='Арена Топотушки';root.position.set(BOSS_ARENA.x,0,BOSS_ARENA.z);
  const batches:T.BufferGeometry[][]=[[],[],[]];
@@ -23,13 +23,18 @@ export function createBossArena(){
   const ring:polygonClipping.Ring=Array.from({length:24},(_,i)=>{const a=i*Math.PI/12;return [x+Math.cos(a)*sx,z+Math.sin(a)*sz];});ring.push([...ring[0]]);
   inlays.push({c,y,polygon:[ring]});
  }
- // One tiled stone material covers both the outer floor and the centre emblem.
+ // One quiet matte material covers the floor and the darker centre emblem.
  // Keep the decorative ring's gap; no coplanar paving lies underneath it.
  const outer=new T.RingGeometry(8.25,35.7,128),centre=new T.CircleGeometry(8,64);outer.rotateX(-Math.PI/2);centre.rotateX(-Math.PI/2);
- const floorGeo=mergeGeometries([outer,centre])!;outer.dispose();centre.dispose();
+ const outerVertices=outer.getAttribute('position').count,floorGeo=mergeGeometries([outer,centre])!;outer.dispose();centre.dispose();
  const uv=floorGeo.getAttribute('uv'),positions=floorGeo.getAttribute('position');
  for(let i=0;i<uv.count;i++)uv.setXY(i,positions.getX(i)/71.4+.5,-positions.getZ(i)/71.4+.5);
- const floor=new T.Mesh(floorGeo,new T.MeshStandardMaterial({map:createArenaStoneTexture(),roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));floor.name='Arena stone paving';floor.position.y=.025;floor.receiveShadow=true;root.add(floor);
+ const floorColors=new Float32Array(positions.count*3),paving=new T.Color('#93856c'),medallion=new T.Color('#696d5e');
+ for(let i=0;i<positions.count;i++){
+  const c=i<outerVertices?paving:medallion;c.toArray(floorColors,i*3);
+ }
+ floorGeo.setAttribute('color',new T.BufferAttribute(floorColors,3));
+ const floor=new T.Mesh(floorGeo,new T.MeshLambertMaterial({vertexColors:true,map:createArenaFloorTexture(),polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1}));floor.name='Arena matte paving';floor.position.y=.025;floor.receiveShadow=true;root.add(floor);
  band(35.7,36,'#b5b09a');band(36,37.1,'#a39475');band(38.2,40.6,'#a39475');band(40.6,40.85,'#beb59d');band(8,8.25,'#b7ae8f');
  // An inlaid centipede emblem, not a collectible star.
  for(let i=0;i<7;i++){

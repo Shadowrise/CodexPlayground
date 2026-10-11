@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, Color, Float32BufferAttribute, Group, Mesh, MeshStandardMaterial, TubeGeometry, Vector3 } from 'three';
+import { BufferGeometry, CatmullRomCurve3, Color, Float32BufferAttribute, Group, Mesh, MeshLambertMaterial, TubeGeometry, Vector3 } from 'three';
 
 /** Curved, tapered peel with five soft ridges and subtle ripe-skin variation. */
 export function makeBanana() {
@@ -33,10 +33,10 @@ export function makeBanana() {
   geometry.setAttribute('position',new Float32BufferAttribute(positions,3));
   geometry.setAttribute('color',new Float32BufferAttribute(colors,3));
   geometry.setIndex(indices);geometry.computeVertexNormals();
-  group.add(new Mesh(geometry,new MeshStandardMaterial({vertexColors:true,roughness:.28})));
+  group.add(new Mesh(geometry,new MeshLambertMaterial({vertexColors:true})));
   const addTip=(points:Vector3[],radius:number,color:string)=>group.add(new Mesh(
     new TubeGeometry(new CatmullRomCurve3(points),12,radius,10,false),
-    new MeshStandardMaterial({color,roughness:.9})));
+    new MeshLambertMaterial({color})));
   addTip([new Vector3(.48,.51,0),new Vector3(.52,.59,0),new Vector3(.53,.68,-.005)],.026,'#8a863c');
   addTip([new Vector3(.53,.66,-.005),new Vector3(.53,.7,-.005)],.028,'#5a4026');
   addTip([new Vector3(-.55,.46,0),new Vector3(-.58,.49,0),new Vector3(-.59,.52,0)],.023,'#654127');

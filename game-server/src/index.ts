@@ -120,7 +120,7 @@ export class GameRoom extends DurableObject<Env>{
    if(complete||(p?.points??0)>(c.eventPoints??0)){
     c.eventPoints=Math.max(c.eventPoints??0,p?.points??0);if(complete)c.achievements.push('centipede');
     socket.serializeAttachment(a);this.send(socket,{type:'centipede-progress',points:c.eventPoints,completed:complete});this.broadcast({type:'frame',id:a.id,actor:c},socket);
-    if(complete)this.log(a,'подружился с Топотушкой — бубенчики звенят от радости!');changed=true;
+    if(complete)this.log(a,'прошёл все три испытания и подружился с Топотушкой!');changed=true;
    }
   }
   return changed;

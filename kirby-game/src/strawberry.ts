@@ -1,4 +1,4 @@
-import { BufferGeometry, CatmullRomCurve3, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, LatheGeometry, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, TubeGeometry, Vector2, Vector3 } from 'three';
+import { BufferGeometry, CatmullRomCurve3, Color, DoubleSide, Float32BufferAttribute, Group, InstancedMesh, LatheGeometry, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, TubeGeometry, Vector2, Vector3 } from 'three';
 
 export function makeStrawberry() {
   const group = new Group();
@@ -40,8 +40,8 @@ export function makeStrawberry() {
   }
   geometry.setAttribute('color', new Float32BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
-  group.add(new Mesh(geometry, new MeshStandardMaterial({ vertexColors: true, roughness: .2 })));
-  const seeds = new InstancedMesh(new SphereGeometry(1, 8, 6), new MeshStandardMaterial({ color: '#efc66a', roughness: .6 }), seedPoints.length);
+  group.add(new Mesh(geometry, new MeshLambertMaterial({ vertexColors: true })));
+  const seeds = new InstancedMesh(new SphereGeometry(1, 8, 6), new MeshLambertMaterial({ color: '#efc66a' }), seedPoints.length);
   const dummy = new Object3D();
   seedPoints.forEach((seed, i) => {
     dummy.position.set(Math.sin(seed.a) * (seed.r - .004), seed.y, Math.cos(seed.a) * (seed.r - .004) * .9);
@@ -50,7 +50,7 @@ export function makeStrawberry() {
     dummy.scale.set(.009, .018, .006); dummy.updateMatrix(); seeds.setMatrixAt(i, dummy.matrix);
   });
   group.add(seeds);
-  const green = new MeshStandardMaterial({ color: '#3e822b', roughness: .7, side: DoubleSide });
+  const green = new MeshLambertMaterial({ color: '#3e822b', side: DoubleSide });
   for (let i = 0; i < 7; i++) {
     const p: number[] = [], indices: number[] = [];
     for (let j = 0; j <= 8; j++) {

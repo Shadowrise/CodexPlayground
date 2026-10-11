@@ -37,6 +37,7 @@ import {FOUNTAIN_SITE} from './fountain-site';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { StableCSM } from './stable-shadows';
+import { CelestialLighting } from './celestial-lighting';
 import { CharacterController } from './controller';
 import { resolveAttack } from './combat';
 import { FruitWorld } from './fruits';
@@ -54,7 +55,7 @@ import { MazeTrampoline } from './maze-trampoline';
 import { KirbyHome } from './kirby-home';
 import { NightFireflies } from './night-fireflies';
 import { randomSpawn } from './spawn';
-import { createSky, SUN_DIRECTION } from './sky';
+import { createSky } from './sky';
 import { BackgroundMusic } from './music';
 import { SoundEffects } from './sfx';
 import { MEADOW_HALF_SIZE, MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
@@ -246,17 +247,18 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 mount.appendChild(renderer.domElement);
 
-const daySky=new THREE.Color('#b3d9ef'),nightSky=new THREE.Color('#0b1428'),sunsetSky=new THREE.Color('#dd8b9b'),dayFog=new THREE.Color('#d8e9eb'),nightFog=new THREE.Color('#182b4b'),sunsetFog=new THREE.Color('#ffc392'),whiteLight=new THREE.Color('#ffffff'),nightLight=new THREE.Color('#9db5e0'),duskLight=new THREE.Color('#ffad70'),dayGround=new THREE.Color('#779455'),nightGround=new THREE.Color('#293850'),sunLight=new THREE.Color('#fff1d7');
-const ambient=new THREE.HemisphereLight('#ffffff', '#779455', 2.4);scene.add(ambient);
+const daySky=new THREE.Color('#b3d9ef'),nightSky=new THREE.Color('#0b1428'),sunsetSky=new THREE.Color('#dd8b9b'),dayFog=new THREE.Color('#d8e9eb'),nightFog=new THREE.Color('#182b4b'),sunsetFog=new THREE.Color('#ffc392');
 // Concentrate the existing texels around the player: fewer distant casters and
 // smaller world-space texels, rather than cheaper but more visibly aliased filtering.
 const shadows = new StableCSM({camera,parent:scene,cascades:2,maxFar:200,mode:'practical',
-  shadowMapSize:1024,lightDirection:SUN_DIRECTION.clone().negate(),lightIntensity:3.2,
+  shadowMapSize:1024,lightDirection:new THREE.Vector3().fromArray(daylight(currentDayPhase()).shadowDirection),lightIntensity:4.6,
   lightNear:1,lightFar:1400,lightMargin:250,shadowBias:-.00003});
 shadows.fade=true;
 shadows.updateFrustums();
 // Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
 for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
+const celestialLighting=new CelestialLighting(shadows,scene);
+celestialLighting.update(daylight(currentDayPhase()));
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials() {
@@ -269,6 +271,7 @@ function setupShadowMaterials() {
       if(!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial || material instanceof THREE.MeshLambertMaterial) || shadowMaterials.has(material))continue;
       const surfaceShader=material.onBeforeCompile;
       shadows.setupMaterial(material);
+      celestialLighting.setupMaterial(material);
       const shadowShader=material.onBeforeCompile;
       material.onBeforeCompile=(shader,renderer)=>{shadowShader.call(material,shader,renderer);surfaceShader.call(material,shader,renderer);};
       shadowMaterials.add(material);material.needsUpdate=true;
@@ -280,7 +283,7 @@ const updateSky = createSky(scene);
 const outer=MEADOW_HALF_SIZE+MOUNTAIN_WIDTH,inner=MEADOW_HALF_SIZE;
 const border=new THREE.Shape([new THREE.Vector2(-outer,-outer),new THREE.Vector2(outer,-outer),new THREE.Vector2(outer,outer),new THREE.Vector2(-outer,outer)]);
 border.holes.push(new THREE.Path([new THREE.Vector2(-inner,-inner),new THREE.Vector2(-inner,inner),new THREE.Vector2(inner,inner),new THREE.Vector2(inner,-inner)]));
-const ground = new THREE.Mesh(new THREE.ShapeGeometry(border), new THREE.MeshStandardMaterial({ color: '#80b654', roughness: 1 }));
+const ground = new THREE.Mesh(new THREE.ShapeGeometry(border), new THREE.MeshLambertMaterial({ color: '#80b654' }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -.02;
 ground.receiveShadow = true;
@@ -765,9 +768,7 @@ renderer.setAnimationLoop((time: number) => {
   const {day,night,twilight}=lightTime;
   (scene.background as THREE.Color).copy(daySky).lerp(nightSky,night).lerp(sunsetSky,twilight*.65);
   (scene.fog as THREE.Fog).color.copy(dayFog).lerp(nightFog,night).lerp(sunsetFog,twilight*.7);
-  ambient.color.copy(whiteLight).lerp(nightLight,night).lerp(duskLight,twilight*.25);ambient.groundColor.copy(dayGround).lerp(nightGround,night);ambient.intensity=.7+day*1.7;
-  for(const light of shadows.lights){light.color.copy(sunLight).lerp(nightLight,night).lerp(duskLight,twilight*.75);light.intensity=(1.35+day*1.85)*lightTime.shadowStrength;}
-  shadows.lightDirection.fromArray(lightTime.shadowDirection);
+  celestialLighting.update(lightTime);
   shadows.update();
   renderer.toneMappingExposure=1+day*.2;
   timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=t(lightTime.label);timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));
@@ -825,7 +826,7 @@ function startCentipedeGame(){
 function centipedeSoloRewards(){
  if(!character||!soloCentipede)return;
  character.eventPoints=Math.max(character.eventPoints,soloCentipede.players.solo?.points??0);
- if(completedCentipede(soloCentipede,'solo')&&awardFirst(character,'centipede'))addLocalLog('подружился с Топотушкой — бубенчики звенят от радости!');
+ if(completedCentipede(soloCentipede,'solo')&&awardFirst(character,'centipede'))addLocalLog('прошёл все три испытания и подружился с Топотушкой!');
 }
 function centipedeTick(){
  if(!character||!playing||!currentCentipede())return;const now=network?.serverNow??Date.now(),a=centipedeActor(character);

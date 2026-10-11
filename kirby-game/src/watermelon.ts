@@ -1,4 +1,4 @@
-import { CatmullRomCurve3, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshStandardMaterial, RepeatWrapping, SphereGeometry, SRGBColorSpace, TubeGeometry, Vector3 } from 'three';
+import { CatmullRomCurve3, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshLambertMaterial, RepeatWrapping, SphereGeometry, SRGBColorSpace, TubeGeometry, Vector3 } from 'three';
 
 /** Painted rind shares one surface: no raised rings or intersecting stripes. */
 export function makeWatermelon() {
@@ -21,10 +21,10 @@ export function makeWatermelon() {
   texture.magFilter=LinearFilter;texture.minFilter=LinearMipmapLinearFilter;
   texture.generateMipmaps=true;texture.needsUpdate=true;
   const group=new Group();group.name='Natural striped watermelon';
-  const rind=new Mesh(new SphereGeometry(1,48,32),new MeshStandardMaterial({map:texture,roughness:.2,metalness:0}));
+  const rind=new Mesh(new SphereGeometry(1,48,32),new MeshLambertMaterial({map:texture}));
   rind.name='Smooth mottled watermelon rind';
   rind.scale.set(.43,.59,.44);rind.rotation.z=Math.PI/2;rind.position.y=.43;group.add(rind);
-  const stemMaterial=new MeshStandardMaterial({color:'#76633b',roughness:.95});
+  const stemMaterial=new MeshLambertMaterial({color:'#76633b'});
   const curve=new CatmullRomCurve3([new Vector3(-.57,.43,0),new Vector3(-.64,.46,.015),new Vector3(-.67,.53,.03),new Vector3(-.72,.55,.055)]);
   const stem=new Mesh(new TubeGeometry(curve,12,.017,6,false),stemMaterial);
   stem.name='Curved dry watermelon stem';group.add(stem);

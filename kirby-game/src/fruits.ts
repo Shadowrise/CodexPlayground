@@ -1,18 +1,19 @@
-import { Box3, BufferGeometry, CatmullRomCurve3, ConeGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Object3D, SphereGeometry, TubeGeometry, Vector3 } from 'three';
+import { Box3, BufferGeometry, CatmullRomCurve3, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, TubeGeometry, Vector3 } from 'three';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { makeStrawberry } from './strawberry';
 import { makeBanana } from './banana';
 import { makeFruitMist } from './fruit-mist';
 import { makeWatermelon } from './watermelon';
+import { makePineapple } from './pineapple';
 import { fruitLayout,type FruitObstacle } from './fruit-layout';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
 export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean };
 const sphere = new SphereGeometry(1, 16, 12);
-const materials = new Map<string, MeshStandardMaterial>();
+const materials = new Map<string, MeshLambertMaterial>();
 function material(color: string) {
-  if (!materials.has(color)) materials.set(color, new MeshStandardMaterial({ color, roughness: .22 }));
+  if (!materials.has(color)) materials.set(color, new MeshLambertMaterial({ color }));
   return materials.get(color)!;
 }
 function ball(g: Group, color: string, x: number, y: number, z: number, sx: number, sy = sx, sz = sx) {
@@ -42,9 +43,7 @@ function makeFruit(kind: number) {
     for (let row = 0; row < 3; row++) for (let j = 0; j < 5 - row; j++) { const a = j / (5 - row) * Math.PI * 2; ball(g, row % 2 ? '#8e39c9' : '#6830b7', Math.cos(a) * (.19 - row * .045), .56 - row * .2, Math.sin(a) * (.19 - row * .045), .145); }
     stem(g, .79); leaf(g, .14, .83, 0);
   } else if (kind === 7) {
-    ball(g, '#e6a52c', 0, .4, 0, .3, .4, .3);
-    for (let i = 0; i < 36; i++) { const a = i * 2.4, h = .15 + (i % 6) * .1, r = .3 * Math.sqrt(1 - ((h - .4) / .4) ** 2); ball(g, '#bf8122', Math.cos(a) * r, h, Math.sin(a) * r, .024); }
-    for (let i = 0; i < 7; i++) { const a = i * Math.PI * 2 / 7; const tip = new Mesh(new ConeGeometry(.06, .5, 4), material('#388b42')); tip.position.set(Math.cos(a) * .1, .94, Math.sin(a) * .1); tip.rotation.set(Math.sin(a) * .4, 0, -Math.cos(a) * .4); g.add(tip); }
+    g.add(makePineapple());
   } else if (kind === 8) {
     ball(g, '#ffae66', -.10, .32, 0, .25, .31); ball(g, '#fa8b83', .10, .32, 0, .25, .31); leaf(g, .1, .64, 0);
   } else {
@@ -93,8 +92,8 @@ export class FruitWorld {
     this.group.updateMatrixWorld(true);
     const inv = new Matrix4();
     const placed = new Matrix4();
-    const parts = new Map<string, { geometry: BufferGeometry; material: MeshStandardMaterial; items: { fruit: number; local: Matrix4 }[] }>();
-    const add = (geometry: BufferGeometry, material: MeshStandardMaterial, fruit: number, local: Matrix4) => {
+    const parts = new Map<string, { geometry: BufferGeometry; material: MeshLambertMaterial; items: { fruit: number; local: Matrix4 }[] }>();
+    const add = (geometry: BufferGeometry, material: MeshLambertMaterial, fruit: number, local: Matrix4) => {
       const key = geometry.uuid + material.uuid;
       const part = parts.get(key) ?? { geometry, material, items: [] };
       part.items.push({ fruit, local });
@@ -107,7 +106,7 @@ export class FruitWorld {
       fruit.object.traverse(object => { if (object instanceof Mesh) meshes.push(object); });
       for (const mesh of meshes) {
         const source = mesh.material;
-        if (!(source instanceof MeshStandardMaterial)) continue;
+        if (!(source instanceof MeshLambertMaterial)) continue;
         if (mesh instanceof InstancedMesh) {
           const instance = new Matrix4();
           for (let i = 0; i < mesh.count; i++) {
