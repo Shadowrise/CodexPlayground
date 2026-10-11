@@ -36,6 +36,9 @@ test('display templates translate nested labels and keep player names verbatim',
  setLocale('bg');assert.equal(t('E — положи красный мешочек в воронку'),'E — сложи червената торбичка във фунията');
  assert.equal(t('Радуга'),'Дъга');setLocale('ru');assert.equal(t('Радуга'),'Радуга');
 });
+test('Tiny Tot nomination is localized in all supported languages',()=>{
+ for(const [language,label] of [['ru','Малявка'],['en','Tiny tot'],['bg','Мъниче']] as const){setLocale(language);assert.equal(t('Малявка'),label);}
+});
 test('every catalog entry has both translations and preserves all template slots',()=>{
  const slots=(s:string)=>[...s.matchAll(/\{\d+\}/g)].map(m=>m[0]).sort();
  for(const [source,values] of Object.entries(translations))for(const value of values){assert(value.trim(),source);assert.deepEqual(slots(value),slots(source),source);}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
 import {SCORE_ACTIONS} from '../src/score';
-import {RESULTS_MS} from '../src/starfall';
+import {RESULTS_MS,starfallAwards} from '../src/starfall';
 test('room starts once, survives host departure, freezes rewards and expires with players connected',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8')).replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }').replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href).replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2');
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -19,12 +19,19 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  const room=new GameRoom(ctx,{HISTORY:{getByName:()=>({write:async(rows:any[])=>{visits.push(...structuredClone(rows));}})}});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
  // The room, not the incoming actor frame, awards the two protected quests.
  a.data.actor.achievements=['millQuest','centipede'];
+ b.data.actor.s=.2;b.data.actor.progress={size:.1,checkpoint:0,ground:0};
  room.webSocketMessage(a,JSON.stringify({type:'frame',actor:{...actor(0),achievements:SCORE_ACTIONS}}));
- const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);
+ const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);assert.equal(f.players.b.size,.1);
  now=f.startsAt+3000;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:0},{type:'festival-star',index:0}]}));assert.equal(f.players.b.bonus,1);
  await room.webSocketClose(a);assert.equal(room.room.host,'b');assert.equal(room.room.festival.startsAt,f.startsAt);
  assert.equal(visits[0].status,'left');assert.equal(visits[0].completed,false);assert.equal(visits[0].tasksDone,SCORE_ACTIONS.length);assert.equal(visits[0].tasksTotal,SCORE_ACTIONS.length);assert.equal(visits[0].activeMs,23000);
+ // Visual fitting for a ride cannot earn Tiny Tot. Logical size during resize can.
+ now=f.endsAt-1000;room.webSocketMessage(b,JSON.stringify({type:'frame',actor:{...actor(1),fit:.1,progress:{size:1,checkpoint:0,ground:0}}}));
+ assert.equal(f.players.b.size,1);
+ now=f.endsAt-100;room.webSocketMessage(b,JSON.stringify({type:'frame',actor:{...actor(1),s:.2,progress:{size:.1,checkpoint:0,ground:0}}}));
+ assert.equal(f.players.b.size,.1);
  now=f.endsAt;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[]}));assert(f.results);assert(b.messages.some(m=>m.type==='room'&&m.room.festival?.results));const results=JSON.stringify(f.results);
+ assert(starfallAwards(f.results,f.initiator).get('b')?.includes('Малявка'));
  const completed=visits.find(v=>v.playerId==='b');assert.equal(completed.status,'finished');assert.equal(completed.completed,true);assert.equal(completed.score,1);assert.equal(completed.place,2);assert.equal(completed.endedAt,f.endsAt);
  room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:3}]}));assert.equal(JSON.stringify(f.results),results);
  now=f.endsAt+RESULTS_MS;await room.alarm();assert.equal(b.readyState,3);assert.equal(room.room,undefined);assert(cleared);assert.equal(alarm,0);

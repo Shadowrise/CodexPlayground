@@ -1,6 +1,6 @@
 import {t} from './i18n';
 import * as T from 'three';
-import {STAR_COUNT,STAR_INTERVAL,STAR_LIFE,STAR_LIMIT,CELEBRATE_MS,RESULTS_MS,starValue,starfallPhase,type StarfallState} from './starfall';
+import {STAR_COUNT,STAR_INTERVAL,STAR_LIFE,STAR_LIMIT,CELEBRATE_MS,RESULTS_MS,starValue,starfallPhase,starfallAwards,type StarfallState} from './starfall';
 import {KIRBY_VARIANTS,styleVariant} from './variants';
 import {sceneryClearance} from './landmarks';
 const COLORS=['#ff668f','#ffc640','#63ed95','#52dfff','#9d83ff','#ff87eb','#ff974d'];
@@ -61,8 +61,7 @@ export class StarfallView {
   }
   if(online&&now>=s.endsAt&&s.results){
    if(this.resultKey!==String(s.startsAt)){this.resultKey=String(s.startsAt);this.results.replaceChildren();const title=document.createElement('h2');title.textContent=t('★ Праздник завершён!');this.results.append(title);
-    const humans=s.results.filter(r=>r.id!=='npc');
-    const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0],best=Math.max(...humans.map(r=>r.bonus));
+    const awards=starfallAwards(s.results,s.initiator);
     const list=document.createElement('ol');
     for(const r of s.results){
       const place=1+s.results.filter(v=>v.points>r.points).length,row=document.createElement('li');row.className='festival-result-row';
@@ -75,13 +74,7 @@ export class StarfallView {
       }else rank.textContent=String(place);
       const portrait=document.createElement('span');portrait.className='mini-kirby';portrait.setAttribute('aria-hidden','true');portrait.innerHTML='<i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i>';
       const identity=document.createElement('div');identity.className='festival-identity';const name=document.createElement('strong');name.className='festival-name';name.textContent=r.id==='npc'?t('Другие кирби'):r.name;identity.append(name);
-      const awards:string[]=[];
-      if(r.id!=='npc'){
-        if(top&&r.fruits===top.fruits&&r.size===top.size)awards.push('Толстячок');
-        if(r.bonus===best)awards.push('Звёздный собиратель');
-        if(r.name===s.initiator)awards.push('Любитель приключений');
-      }
-      for(const award of awards){const badge=document.createElement('span');badge.className='festival-award';badge.textContent=t(award);identity.append(badge);}
+      for(const award of awards.get(r.id)??[]){const badge=document.createElement('span');badge.className='festival-award';badge.textContent=t(award);identity.append(badge);}
       const points=document.createElement('strong');points.className='festival-points';points.textContent=t(`${r.points} очков`);
       row.append(rank,portrait,identity,points);list.append(row);
     }

@@ -84,7 +84,7 @@ export class GameRoom extends DurableObject<Env>{
  private startFestival(now:number,initiator:string){
   const r=this.room;if(!r||r.festival)return;
   r.festival=createStarfall(now,initiator);
-  for(const peer of this.players()){const a=peer.deserializeAttachment() as Attachment;const actor=a.actor;r.festival.players[a.id]={name:a.name??actor?.name??'Кирби',variant:a.variant,base:(actor?.fruits??0)+achievementPoints(actor?.achievements??[])+(actor?.eventPoints??0),fruits:actor?.fruits??0,size:actor?.s??1,bonus:0,collected:[]};}
+  for(const peer of this.players()){const a=peer.deserializeAttachment() as Attachment;const actor=a.actor;r.festival.players[a.id]={name:a.name??actor?.name??'Кирби',variant:a.variant,base:(actor?.fruits??0)+achievementPoints(actor?.achievements??[])+(actor?.eventPoints??0),fruits:actor?.fruits??0,size:actor?.progress?.size??actor?.s??1,bonus:0,collected:[]};}
  }
  private millActor(a:Attachment):MillActor|undefined{
   const c=a.actor;if(!c)return;const q=c.q;
@@ -256,7 +256,7 @@ export class GameRoom extends DurableObject<Env>{
    this.startFestival(now,a.actor.name);changed=true;
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
   }
-  if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.s;}
+  if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
   a.room=a.id===r.host?{...r,centipede:undefined}:undefined;socket.serializeAttachment(a);
   if(changed)this.changed();else if(world||r.festival)this.persist();
