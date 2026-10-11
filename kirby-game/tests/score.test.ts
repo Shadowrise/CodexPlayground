@@ -20,3 +20,8 @@ test('retired lake achievement remains compatible with older saves and players',
  const player=actor();player.achievements.add('swim');assert.equal(scoreOf(player),3);
  assert(!SCORE_ACTIONS.some(id=>String(id)==='swim'));
 });
+test('retired maze trampoline reward is preserved but is no longer an active adventure',()=>{
+ assert(validAchievements(['trampoline','star']));assert(!validAchievements(['trampoline','trampoline']));
+ const player=actor();player.achievements.add('trampoline');assert.equal(scoreOf(player),3);
+ assert(!SCORE_ACTIONS.some(id=>String(id)==='trampoline'));
+});

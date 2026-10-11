@@ -1,5 +1,5 @@
 export const TUTORIAL_KEY='kirby-tutorial-completed-v1';
-export const TUTORIAL_STEPS=['welcome','score','interact','adventures','route','chat','good-luck'] as const;
+export const TUTORIAL_STEPS=['welcome','score','interact','adventures','route','chat','modes','good-luck'] as const;
 export type TutorialStep=typeof TUTORIAL_STEPS[number];
 export type TutorialScheme='keyboard'|'gamepad'|'touch';
 

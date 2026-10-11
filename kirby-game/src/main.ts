@@ -25,7 +25,7 @@ import { actorState, applyActor, restoreNetworkPlayer, RemotePlayers } from './n
 import type { WorldState, ActorState } from './network-protocol';
 import { InteractionOutline, outlineRegion, type OutlineTarget } from './interaction-outline';
 import { watchPlayerCount } from './player-count';
-import { TaskList } from './tasks';
+import { TaskList,taskDestination } from './tasks';
 import { awardFirst, scoreOf, SCORE_ACTIONS, achievementPoints } from './score';
 import {SoloHistory} from './solo-history';
 import {deviceInfo} from './history-types';
@@ -101,7 +101,11 @@ const languageLabel=document.createElement('span');languageLabel.textContent=t('
 languageSetting.append(languageLabel,createLanguageSwitcher());
 audioPanel.querySelector('.input-device')!.after(languageSetting);
 const settingsPanels=document.createElement('div');settingsPanels.id='settings-panels';document.body.append(settingsPanels);settingsPanels.append(audioPanel,controlsPanel);
-const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!);
+const taskList=new TaskList(document.querySelector<HTMLOListElement>('#task-list')!,document.querySelector<HTMLElement>('#task-count')!,document.querySelector<HTMLButtonElement>('#tasks-toggle')!,action=>{
+ if(!playing||!character)return;
+ const target=taskDestination(action,destinations,character.actor.position);
+ if(target)wayfinder.selectDestination(target.id);
+});
 if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
 if(mobile){
  audioPanel.prepend(createFullscreenControls());

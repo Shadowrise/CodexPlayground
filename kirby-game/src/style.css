@@ -182,6 +182,12 @@ button:disabled { cursor:default; }
 #task-list {margin:0;padding:0 16px 12px;list-style:none;max-height:280px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--ui-border) transparent;}
 #task-list[hidden] {display:none;}
 .task {display:flex;align-items:center;gap:10px;padding:9px 0;font-size:12px;line-height:1.4;border-top:1px solid #52647c50;}
+.task-label {flex:1;min-width:0;}
+.task-route {display:grid;place-items:center;box-sizing:border-box;flex:0 0 30px;width:30px;height:30px;padding:6px;border:1px solid #65949480;border-radius:9px;background:#284348;color:#b0e5dc;cursor:pointer;}
+.task-route svg {width:16px;height:16px;}
+.task-route:hover {background:#365b5d;color:#ddfff5;border-color:#8dbdb6;}
+.task-route:active {background:#416b69;}
+.task-route:focus-visible {outline:2px solid var(--ui-focus);outline-offset:2px;}
 .task-check {display:grid;place-items:center;flex:0 0 18px;height:18px;border:1px solid var(--ui-border);border-radius:5px;font-weight:800;}
 .task.done {color:var(--ui-muted);}
 .task.done .task-check {color:var(--ui-accent);background:#294739;border-color:#659476;}

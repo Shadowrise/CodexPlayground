@@ -26,13 +26,17 @@ export class Wayfinder {
   for(const place of places){const name=place.group??'Приключения';if(!groups.has(name)){const group=document.createElement('optgroup');group.label=t(name);this.select.append(group);groups.set(name,group);}groups.get(name)!.append(new Option(t(place.name),place.id));}
   const field=document.createElement('label');field.textContent=t('Куда пойдём?');field.append(this.select);panel.prepend(field);
   const hint=document.createElement('small');hint.dataset.controls='gamepad';hint.hidden=true;hint.textContent=t('← / → на крестовине — выбрать место');panel.append(hint);
-  this.select.addEventListener('change',()=>this.route.select(this.select.value,[...this.places,...this.players.values()]));
+  this.select.addEventListener('change',()=>this.selectDestination(this.select.value));
   this.label.className='route-distance';this.label.hidden=true;document.body.append(this.label);
   const shape=new T.Shape();shape.moveTo(-.15,-.8);shape.lineTo(.15,-.8);shape.lineTo(.15,.25);shape.lineTo(.55,.25);shape.lineTo(0,1.1);shape.lineTo(-.55,.25);shape.lineTo(-.15,.25);shape.closePath();
   const geometry=new T.ExtrudeGeometry(shape,{depth:.09,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.035,bevelThickness:.025});
   const outline=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#fffbea'}));outline.rotation.x=Math.PI/2;outline.scale.set(1.17,1.12,.9);outline.position.y=-.03;
   const mesh=new T.Mesh(geometry,new T.MeshBasicMaterial({color:'#ffbf35'}));mesh.rotation.x=Math.PI/2;mesh.position.y=.04;
   this.arrow.add(outline,mesh);this.arrow.name='Destination arrow';this.arrow.visible=false;scene.add(this.arrow);
+ }
+ selectDestination(id:string){
+  this.select.value=id;
+  this.route.select(this.select.value,[...this.places,...this.players.values()]);
  }
  /** Reuse destination objects so a selected player follows their rendered position. */
  syncPlayers(players:Iterable<readonly [string,{name:string;p:number[]}]>){

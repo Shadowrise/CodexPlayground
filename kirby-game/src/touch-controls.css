@@ -35,6 +35,9 @@
 .touch-ui #tasks-toggle{padding:8px 10px;min-height:40px;font-size:11px;gap:6px;}
 .touch-ui .right-hud .tasks-panel{flex:0 0 auto;}
 .touch-ui #task-list{max-height:min(55dvh,400px);padding:0 10px 8px;overscroll-behavior:contain;}.touch-ui .task{font-size:11px;}
+.touch-ui .task {gap:8px;}
+.touch-ui .task-route {flex-basis:44px;width:44px;height:44px;padding:12px;touch-action:manipulation;}
+.touch-ui .task-route svg {width:18px;height:18px;}
 .touch-ui #time-dial{width:40px;height:40px;top:max(12px,env(safe-area-inset-top));left:calc(var(--touch-left) + 86px);transform:none;}
 .touch-ui .status-cluster{top:auto;bottom:calc(var(--touch-bottom) + 7px);left:calc(50% - 100px);right:auto;width:200px;justify-content:center;transform:none;max-width:calc(100vw - 320px);}
 .touch-ui .status-cluster .status{padding:5px 8px;font-size:10px;white-space:normal;text-align:center;}

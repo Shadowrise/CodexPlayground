@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {TutorialProgress,TUTORIAL_KEY,TUTORIAL_STEPS} from '../src/tutorial-state';
 import {setLocale,t} from '../src/i18n';
 
-test('first visit walks through seven steps and remembers completion for future sessions',()=>{
+test('first visit walks through eight steps and remembers completion for future sessions',()=>{
+ assert.equal(TUTORIAL_STEPS.length,8);assert.equal(TUTORIAL_STEPS.at(-2),'modes');assert.equal(TUTORIAL_STEPS.at(-1),'good-luck');
  const data=new Map<string,string>(),storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value);}};
  const tour=new TutorialProgress(storage);assert(tour.start());assert.equal(tour.step,'welcome');
  for(let i=1;i<TUTORIAL_STEPS.length;i++){tour.next();assert(tour.active);assert.equal(tour.index,i);assert.equal(data.get(TUTORIAL_KEY),undefined);}

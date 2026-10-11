@@ -1,13 +1,15 @@
 import {t,onLocaleChange} from './i18n';
 import {TutorialProgress,TUTORIAL_STEPS,type TutorialScheme,type TutorialStep} from './tutorial-state';
+import {TASK_ROUTE_ICON} from './tasks';
 import './tutorial.css';
 
 const CONTENT:Record<TutorialStep,readonly [string,string]>={
  welcome:['Привет, я Ветерок!','Добро пожаловать на полянку! Я помогу тебе освоиться. Здесь можно играть, исследовать и заводить новых друзей.'],
- score:['Зарабатывай очки!','Кушай фрукты и участвуй в приключениях — так ты зарабатываешь очки. Фрукты съедаются сами, когда ты подходишь совсем близко. Они калорийные: съев фрукт, ты немного подрастёшь и станешь быстрее!'],
+ score:['Зарабатывай очки!','Кушай фрукты и участвуй в приключениях — так ты зарабатываешь очки. Фрукты съедаются сами, когда ты подходишь совсем близко. Они калорийные: съев фрукт, ты немного подрастёшь и станешь быстрее! Чтобы сбросить лишний вес, искупайся в радужном фонтане.'],
+ modes:['Два режима игры','В одиночной игре ты соревнуешься по очкам только с другими кирби. Играй сколько хочется — игра не заканчивается.\n\nВ сетевой игре ты соревнуешься по очкам с другими игроками. Когда кто-то первым пройдёт все приключения, начнётся финальный звездопад. После него появятся итоги, и сессия завершится.'],
  interact:['Играй на полянке','Подойди к светлячку, лодочке или другому интерактивному предмету. Когда он подсветится, можно взаимодействовать!'],
  adventures:['Твои приключения','Здесь собраны приключения на полянке. За первое прохождение каждого приключения ты получаешь очки.'],
- route:['Не знаешь, как найти приключение?','Выбери место в помощнике «Куда пойдём?». Стрелочка над Кирби покажет направление и расстояние.'],
+ route:['Не знаешь, как найти приключение?','Или выбери место в помощнике «Куда пойдём?». Стрелочка над Кирби покажет направление и расстояние.'],
  chat:['Общение с друзьями','Нажми Enter, чтобы открыть чат. Напиши сообщение и снова нажми Enter, чтобы отправить его. Escape — закрыть чат. В онлайн-игре сообщение увидят все игроки.'],
  'good-luck':['Удачи, мой друг!','Тебя ждут друзья и чудесные приключения!'],
 };
@@ -34,6 +36,7 @@ export class MeadowTutorial {
  private spotlight=document.createElement('div');
  private heading=document.createElement('h2');
  private message=document.createElement('p');
+ private content=document.createElement('div');
  private speaker=document.createElement('strong');
  private counter=document.createElement('span');
  private dots=document.createElement('div');
@@ -60,12 +63,12 @@ export class MeadowTutorial {
   portrait.innerHTML='<svg viewBox="0 0 100 100"><defs><linearGradient id="breezy-face" x2=".7" y2="1"><stop stop-color="#f5fcff"/><stop offset="1" stop-color="#93d7e7"/></linearGradient></defs><circle cx="50" cy="50" r="47" fill="#79cfdb18"/><path d="M13 43H3m13 13H7m9 14H2" fill="none" stroke="#9ddde7" stroke-width="3" stroke-linecap="round"/><path d="M22 70C7 65 11 41 25 39c-1-15 15-24 27-19 7-16 32-11 33 6 15 2 17 23 7 32 4 17-12 26-25 22-8 9-28 7-34-1-13 1-22-2-27-7 8 2 12 1 16-2Z" fill="url(#breezy-face)" stroke="#daeff8" stroke-width="2"/><path d="M51 26c15-16 30-1 19 7-7 5-16-3-10-8" fill="none" stroke="#62b8d0" stroke-width="3" stroke-linecap="round"/><g class="breezy-eyes" fill="#214958"><ellipse cx="40" cy="51" rx="3.3" ry="5"/><ellipse cx="69" cy="51" rx="3.3" ry="5"/><circle cx="41" cy="49" r="1" fill="#fff"/><circle cx="70" cy="49" r="1" fill="#fff"/></g><ellipse cx="33" cy="61" rx="6" ry="3.5" fill="#f0a9b8" opacity=".75"/><ellipse cx="77" cy="61" rx="6" ry="3.5" fill="#f0a9b8" opacity=".75"/><path d="M47 62q8 11 16 0" fill="#a84f71" stroke="#335f6e" stroke-width="2" stroke-linecap="round"/><path d="M50 67q6-4 11 0" fill="#ffa9bc"/><path d="M84 18q5-10 12-9-1 10-12 9Z" fill="#a9ce86"/><path d="m84 18 8-5" stroke="#59877c" stroke-width="1.2"/></svg>';
   identity.className='tutorial-speaker';this.speaker.className='tutorial-name';this.counter.className='tutorial-counter';identity.append(this.speaker,this.counter);header.append(portrait,identity);
   this.heading.id='tutorial-heading';this.message.id='tutorial-message';
-  const content=document.createElement('div');content.className='tutorial-content';content.setAttribute('aria-live','polite');content.append(this.heading,this.message);
+  this.content.className='tutorial-content';this.content.setAttribute('aria-live','polite');this.content.append(this.heading,this.message,this.action);
   this.action.className='tutorial-action';this.dots.className='tutorial-dots';this.dots.setAttribute('aria-hidden','true');
   TUTORIAL_STEPS.forEach(()=>this.dots.append(document.createElement('i')));
   this.hint.className='tutorial-hint';const buttons=document.createElement('nav');
   this.skipButton.id='tutorial-skip';this.nextButton.id='tutorial-next';this.skipButton.type=this.nextButton.type='button';buttons.append(this.skipButton,this.nextButton);
-  this.card.append(header,content,this.action,this.dots,this.hint,buttons);this.root.append(this.shade,this.spotlight,this.card);document.body.append(this.root);
+  this.card.append(header,this.content,this.dots,this.hint,buttons);this.root.append(this.shade,this.spotlight,this.card);document.body.append(this.root);
   // Capture before game handlers, including the last click that closes the tour.
   window.addEventListener('click',e=>{if(!this.active)return;e.preventDefault();e.stopImmediatePropagation();if((e.target as Element)?.closest('#tutorial-skip'))this.skip();else this.next();},true);
   window.addEventListener('contextmenu',e=>{if(!this.active)return;e.preventDefault();e.stopImmediatePropagation();this.next();},true);
@@ -112,8 +115,13 @@ export class MeadowTutorial {
   this.hint.textContent=t(HINT[this.scheme]);
   this.skipButton.textContent=t('Пропустить обучение');this.nextButton.textContent=t(step==='good-luck'?'Начать приключение':'Дальше');
   [...this.dots.children].forEach((dot,i)=>dot.classList.toggle('current',i===this.progress.index));
-  this.action.replaceChildren();this.action.hidden=step!=='interact';
+  this.action.replaceChildren();this.action.hidden=step!=='interact'&&step!=='route';
+  this.content.replaceChildren(this.heading,...(step==='route'?[this.action,this.message]:[this.message,this.action]));this.content.scrollTop=0;
   if(step==='interact'){const [button,label]=ACTION[this.scheme],key=document.createElement('b'),explanation=document.createElement('span');key.textContent=t(button);key.className=this.scheme==='touch'?'touch-action-preview':'action-key';explanation.textContent=t(label);this.action.append(key,explanation);}
+  if(step==='route'){
+   const icon=document.createElement('span'),explanation=document.createElement('span');icon.className='task-route tutorial-route-preview';icon.setAttribute('aria-hidden','true');icon.innerHTML=TASK_ROUTE_ICON;
+   explanation.textContent=t('Нажми такую стрелочку справа от нужного приключения — указатель покажет путь.');this.action.append(icon,explanation);
+  }
   if(step==='adventures'){
    const list=this.options.adventures.querySelector<HTMLElement>('#task-list')!;this.tasksHidden=list.hidden;list.hidden=false;this.options.adventures.querySelector('#tasks-toggle')!.setAttribute('aria-expanded','true');
   }

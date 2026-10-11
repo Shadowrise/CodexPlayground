@@ -1,17 +1,35 @@
 import {SCORE_ACTIONS,type ScoreAction,type ActiveScoreAction} from './score';
 import {getLocale,t} from './i18n';
+import type {Destination} from './navigation';
+export const TASK_ROUTE_ICON='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 3 14 21 10 14 3 10 21 3Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 export const TASK_NAMES:Record<ActiveScoreAction,string>={
  centipede:'Подружиться с Топотушкой',
  boat:'Поплавать на лодочке',
  fountain:'Покупаться в радужном фонтане',
- skyStar:'Добыть звёздочку Небесной тропы',millQuest:'Запустить радужную мельницу',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',trampoline:'Прыгнуть на батуте в лабиринте',star:'Найти звёздочку в лабиринте',firefly:'Покататься на светлячке',
+ skyStar:'Добыть звёздочку Небесной тропы',millQuest:'Запустить радужную мельницу',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',star:'Найти звёздочку в лабиринте',firefly:'Покататься на светлячке',
 };
+export const TASK_DESTINATIONS:Readonly<Partial<Record<ActiveScoreAction,string>>>={
+ skyStar:'sky-trail',millQuest:'mill',star:'maze',treehouse:'treehouse',centipede:'boss-arena',
+ swing:'swing',fountain:'fountain',balloon:'balloon',sleep:'home',coaster:'depot',leaves:'treehouse',
+};
+/** Resolve on click: the nearest balloon station changes as Kirby moves. */
+export function taskDestination(action:ActiveScoreAction,places:readonly Destination[],position:{x:number;z:number}){
+ const id=TASK_DESTINATIONS[action];if(!id)return undefined;
+ if(action!=='balloon')return places.find(place=>place.id===id);
+ let nearest:Destination|undefined,best=Infinity;
+ for(const place of places){
+  if(!place.id.startsWith('balloon-'))continue;
+  const distance=(place.x-position.x)**2+(place.z-position.z)**2;
+  if(distance<best){nearest=place;best=distance;}
+ }
+ return nearest;
+}
 const alphabets={ru:new Intl.Collator('ru'),en:new Intl.Collator('en'),bg:new Intl.Collator('bg')};
 export function sortedTasks(done:ReadonlySet<ScoreAction>){return SCORE_ACTIONS.map(id=>({id,name:t(TASK_NAMES[id]),done:done.has(id)})).sort((a,b)=>Number(a.done)-Number(b.done)||alphabets[getLocale()].compare(a.name,b.name));}
 export class TaskList {
  private signature='';
- private rows=new Map<ScoreAction,{row:HTMLLIElement;mark:HTMLElement;state:HTMLElement;label:Text}>();
- constructor(private list:HTMLOListElement,private count:HTMLElement,button:HTMLButtonElement){
+ private rows=new Map<ScoreAction,{row:HTMLLIElement;mark:HTMLElement;state:HTMLElement;label:Text;route?:HTMLButtonElement}>();
+ constructor(private list:HTMLOListElement,private count:HTMLElement,button:HTMLButtonElement,private navigate?:(action:ActiveScoreAction)=>void){
   button.addEventListener('click',()=>{const open=button.getAttribute('aria-expanded')!=='true';button.setAttribute('aria-expanded',String(open));list.hidden=!open;});
   this.update(new Set());
  }
@@ -26,10 +44,17 @@ export class TaskList {
    let entry=this.rows.get(task.id);
    if(!entry){
     const row=document.createElement('li'),mark=document.createElement('span'),text=document.createElement('span'),state=document.createElement('span');
-    const label=document.createTextNode(task.name);mark.className='task-check';mark.setAttribute('aria-hidden','true');state.className='sr-only';text.append(label,state);row.append(mark,text);
-    entry={row,mark,state,label};this.rows.set(task.id,entry);
+    const label=document.createTextNode(task.name);mark.className='task-check';mark.setAttribute('aria-hidden','true');state.className='sr-only';text.className='task-label';text.append(label,state);row.append(mark,text);row.dataset.action=task.id;
+    let route:HTMLButtonElement|undefined;
+    if(this.navigate&&TASK_DESTINATIONS[task.id]){
+     route=document.createElement('button');route.type='button';route.className='task-route';route.dataset.i18nIgnore='';
+     route.innerHTML=TASK_ROUTE_ICON;
+     route.addEventListener('click',()=>this.navigate?.(task.id));row.append(route);
+    }
+    entry={row,mark,state,label,route};this.rows.set(task.id,entry);
    }
    entry.label.textContent=task.name;entry.row.className=task.done?'task done':'task';entry.mark.textContent=task.done?'✓':'';entry.state.textContent=t(task.done?' — выполнено':' — ещё не выполнено');
+   if(entry.route){entry.route.title=t('Показать путь: {0}',[task.name]);entry.route.setAttribute('aria-label',entry.route.title);}
    this.list.append(entry.row);
   }
   // FLIP: keep each existing row at its old visual position, then slide to the new order.

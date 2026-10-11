@@ -18,27 +18,38 @@ try{
    document.querySelector('#player-name').textContent='Саша';
    const {MeadowTutorial}=await import('/src/tutorial.ts'),{TaskList}=await import('/src/tasks.ts');
    window.worldInputs=0;window.addEventListener('click',()=>window.worldInputs++);window.addEventListener('keydown',()=>window.worldInputs++);
-   new TaskList(document.querySelector('#task-list'),document.querySelector('#task-count'),document.querySelector('#tasks-toggle'));
+   new TaskList(document.querySelector('#task-list'),document.querySelector('#task-count'),document.querySelector('#tasks-toggle'),()=>window.worldInputs++);
    if(mobile)document.querySelector('#tasks-toggle').click();window.worldInputs=0;
    const route=document.createElement('div');route.className='panel route-panel';route.innerHTML='<label>Куда пойдём?<select id="destination-select"><option>Выбрать место…</option></select></label>';document.querySelector('.tasks-panel').before(route);
    window.tour=new MeadowTutorial({scheme:mobile?'touch':'keyboard',storage:localStorage,adventures:document.querySelector('.tasks-panel'),route,onOpen(){},onClose(){}});window.tour.open();
   },mobile);
   await page.locator('#tutorial-heading').getByText('Привет, я Ветерок!').waitFor();
   const advance=()=>mobile?page.touchscreen.tap(4,height/2):page.mouse.click(4,height/2);
-  await advance();await page.keyboard.press('e');assert.equal(await page.locator('#meadow-tutorial').getAttribute('data-step'),'interact');
+  await advance();assert((await page.locator('#tutorial-message').innerText()).includes('искупайся в радужном фонтане'));
+  await page.keyboard.press('e');assert.equal(await page.locator('#meadow-tutorial').getAttribute('data-step'),'interact');
   assert.equal(await page.locator('.tutorial-action b').innerText(),mobile?'Действие':'E');
   await page.evaluate(()=>{window.tour.setScheme('gamepad');});assert.equal(await page.locator('.tutorial-action b').innerText(),'Y');
   await page.evaluate(mobile=>window.tour.setScheme(mobile?'touch':'keyboard'),mobile);
   await advance();
   for(const step of ['adventures','route']){
    await page.waitForFunction(step=>document.querySelector('#meadow-tutorial').dataset.step===step&&document.querySelector('.tutorial-spotlight').offsetWidth>0,step);
+   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
    const boxes=await page.evaluate(()=>{
     const box=el=>{const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};return {card:box(document.querySelector('.tutorial-card')),target:box(document.querySelector('.tutorial-spotlight'))};
    });
    const {card,target}=boxes;
-   assert(card.x>=0&&card.y>=0&&card.x+card.w<=width+1&&card.y+card.h<=height+1,`${name}/${step}: card outside screen`);
+   assert(card.x>=0&&card.y>=0&&card.x+card.w<=width+1&&card.y+card.h<=height+1,`${name}/${step}: card outside screen ${JSON.stringify(boxes)}`);
    assert(card.x+card.w<=target.x||target.x+target.w<=card.x||card.y+card.h<=target.y||target.y+target.h<=card.y,`${name}/${step}: card covers highlighted UI ${JSON.stringify(boxes)}`);
-   if(step==='adventures')assert.equal(await page.locator('#task-list').isVisible(),true);
+   if(step==='adventures'){
+    assert.equal(await page.locator('#task-list').isVisible(),true);
+    assert.equal(await page.locator('.tutorial-route-preview').count(),0);
+   }else{
+    assert.equal(await page.locator('.tutorial-route-preview').isVisible(),true);
+    assert.equal(await page.locator('.tutorial-route-preview svg').evaluate(el=>el.outerHTML),await page.locator('#task-list .task-route svg').first().evaluate(el=>el.outerHTML));
+    assert((await page.locator('.tutorial-action').innerText()).startsWith('Нажми такую стрелочку'));
+    assert((await page.locator('#tutorial-message').innerText()).startsWith('Или выбери место'));
+    assert(await page.evaluate(()=>Boolean(document.querySelector('.tutorial-action').compareDocumentPosition(document.querySelector('#tutorial-message'))&Node.DOCUMENT_POSITION_FOLLOWING)));
+   }
    await page.screenshot({path:new URL(`tutorial-${name}-${step}.png`,out).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
    await advance();
   }
@@ -49,7 +60,17 @@ try{
   await page.evaluate(()=>window.tour.setScheme('gamepad'));
   assert((await page.locator('#tutorial-message').innerText()).includes(mobile?'«Сенсорный экран»':'«Клавиатура и мышь»'));
   await page.evaluate(mobile=>window.tour.setScheme(mobile?'touch':'keyboard'),mobile);
-  await advance();await advance();assert.equal(await page.locator('#meadow-tutorial').isVisible(),false);
+  await advance();assert.equal(await page.locator('#meadow-tutorial').getAttribute('data-step'),'modes');
+  assert.equal(await page.locator('#tutorial-heading').innerText(),'Два режима игры');
+  assert((await page.locator('#tutorial-message').innerText()).includes('игра не заканчивается'));
+  assert((await page.locator('#tutorial-message').innerText()).includes('финальный звездопад'));
+  const modeButtonsFit=await page.evaluate(()=>{
+   const card=document.querySelector('.tutorial-card').getBoundingClientRect();
+   return [...document.querySelectorAll('.tutorial-card nav button')].every(button=>{const box=button.getBoundingClientRect();return box.top>=card.top&&box.bottom<=card.bottom-8;});
+  });assert(modeButtonsFit,`${name}: modes step clips the navigation buttons`);
+  await page.screenshot({path:new URL(`tutorial-${name}-modes.png`,out).pathname.replace(/^\/([A-Za-z]:)/,'$1')});
+  await advance();assert.equal(await page.locator('#meadow-tutorial').getAttribute('data-step'),'good-luck');
+  await advance();assert.equal(await page.locator('#meadow-tutorial').isVisible(),false);
   assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-tutorial-completed-v1')),'1');
   assert.equal(await page.evaluate(()=>window.worldInputs),0,'tour click/key leaked into game');
   if(mobile)assert.equal(await page.locator('#tasks-toggle').getAttribute('aria-expanded'),'false');

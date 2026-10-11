@@ -6,6 +6,7 @@ import { CharacterController } from '../src/controller';
 import { MazeTrampoline } from '../src/maze-trampoline';
 import { HedgeMaze } from '../src/maze';
 import { MAZE_SITE } from '../src/maze-layout';
+import {scoreOf} from '../src/score';
 test('reward trampoline clears every hedge, lands in leaves and restores control and size',async()=>{
  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url)),model=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const c=new CharacterController(model.scene,model.animations),maze=new HedgeMaze(),events:string[]=[],trampoline=new MazeTrampoline(kind=>events.push(kind));
@@ -18,5 +19,6 @@ test('reward trampoline clears every hedge, lands in leaves and restores control
  }
  assert(maxY>18);assert(!trampoline.active);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);assert.equal(c.actor.scale.x,2);assert.equal(c.animationRoot.scale.y,1);
  assert(!maze.contains(c.actor.position,5));assert.deepEqual(events,['bounce','leaves']);assert(c.starBlessed);
+ assert(!c.achievements.has('trampoline'));assert.equal(scoreOf(c),0);
  const before=c.actor.position.clone();c.update(.1,{forward:true,left:false,right:false});assert(c.actor.position.distanceTo(before)>0);
 });
