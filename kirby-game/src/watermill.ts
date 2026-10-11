@@ -1,4 +1,5 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
+import {batchRigidMeshes} from './rigid-batch';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
@@ -251,16 +252,10 @@ export class Watermill {
     }
     // Batch the hundreds of decorative pieces, including the moving wheel.
     const batch=(parent:T.Group)=>{
-      const groups=new Map<string,T.Mesh[]>();
       for(const child of [...parent.children])if(child instanceof T.Mesh && child.material instanceof T.MeshStandardMaterial) {
-        child.updateMatrix();const key=child.geometry.uuid+child.material.uuid;
-        if(!groups.has(key))groups.set(key,[]);groups.get(key)!.push(child);
+        child.castShadow=child.receiveShadow=true;
       }
-      for(const parts of groups.values()) {
-        const mesh=new T.InstancedMesh(parts[0].geometry,parts[0].material,parts.length);
-        parts.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});
-        mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);
-      }
+      batchRigidMeshes(parent);
     };
     batch(root);batch(this.wheel);batch(this.gate);batch(this.handle);
     const race=new T.Mesh(new T.PlaneGeometry(1.9,8.3),this.water);race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.9);root.add(race);
@@ -272,7 +267,7 @@ export class Watermill {
   }
   prompt(actor:MillActor) {
     const q=this.quest,action=this.action(actor);
-    if(action?.kind==='start')return 'E — начни задание мельницы · 6 очков';
+    if(action?.kind==='start')return 'E — начни приключение на мельнице · 6 очков';
     if(action?.kind==='gate')return q.gate===1?`Подожди ${Math.max(0,3-Math.floor((this.now-q.steadyAt)/1000))} с — не трогай рычаг`:'E — поверни рычаг, чтобы стрелка попала в зелёную зону';
     if(action?.kind==='deliver')return q.carried===q.order[q.delivered]?`E — положи ${MILL_COLOR_NAMES[q.carried]} мешочек в воронку`:`E — верни этот мешочек. Найди ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
     return '';

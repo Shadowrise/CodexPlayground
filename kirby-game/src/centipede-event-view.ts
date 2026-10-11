@@ -3,6 +3,7 @@ import * as T from 'three';
 import {CentipedeFireworks} from './centipede-fireworks';
 import {CentipedeBallsView} from './centipede-balls-view';
 import {CentipedeChallengesView} from './centipede-challenges-view';
+import {CentipedeTargetCue} from './centipede-target-cue';
 import {roundedRunWarning} from './centipede-warning-geometry';
 import {BOSS_ARENA as A} from './boss-arena-site';
 import {chargePoint,centipedeTail,centipedePhase,centipedePhaseHits,centipedeTarget,centipedeRoot,centipedeWaves,CENTIPEDE_TIMES,CENTIPEDE_BALLS,CENTIPEDE_EMPTY_MS,type CentipedeEvent,type CentipedeStage} from './centipede-event';
@@ -15,7 +16,7 @@ export class CentipedeEventView{
  // so the centre emblem cannot occlude it at grazing angles; keep depth testing
  // enabled so the marker still sits underneath the boss and characters.
  private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}));
- private halo=new T.Mesh(new T.TorusGeometry(1.15,.07,6,32),new T.MeshBasicMaterial({color:'#fff29b',transparent:true,opacity:.8,depthWrite:false}));
+ private targetCue=new CentipedeTargetCue();
  private confetti=new T.InstancedMesh(new T.OctahedronGeometry(.13),new T.MeshBasicMaterial(),32);
  private fireworks=new CentipedeFireworks();
  private balls=new CentipedeBallsView();private waveCue='';
@@ -24,13 +25,13 @@ export class CentipedeEventView{
  private fireworksKey='';private fireworksCentre=new T.Vector3();private look=new T.Vector3();
  private cue='';private path='';private text='';
  constructor(private sound:(stage:CentipedeStage,volume:number)=>void){
-  this.group.name='Топотушка — подсказки игры';this.group.visible=false;this.halo.rotation.x=-Math.PI/2;
+  this.group.name='Топотушка — подсказки игры';this.group.visible=false;
   this.confetti.instanceMatrix.setUsage(T.DynamicDrawUsage);this.confetti.frustumCulled=false;
   for(let i=0;i<32;i++)this.confetti.setColorAt(i,new T.Color().setHSL(i/32,.85,.6));
-  this.group.add(this.lane,this.halo,this.confetti,this.fireworks.mesh,this.balls.group,this.challenges.group);
+  this.group.add(this.lane,this.targetCue.group,this.confetti,this.fireworks.mesh,this.balls.group,this.challenges.group);
   this.hud.id='centipede-event-hud';this.hud.className='event-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');this.hud.append(this.title,this.message);document.body.append(this.hud);
  }
- update(q:CentipedeEvent|undefined,id:string,now:number,listener:T.Vector3,visible:boolean,pushKey:string,camera?:T.Camera,chaseDelay=0){
+ update(q:CentipedeEvent|undefined,id:string,now:number,listener:T.Vector3,visible:boolean,pushKey:string,camera?:T.Camera,chaseDelay=0,targetPosition?:T.Vector3){
   const distance=Math.hypot(listener.x-A.x,listener.z-A.z);this.group.visible=!!q&&distance<120;this.hud.hidden=!q||!visible||(q.emptySince===undefined&&distance>A.radius+8);
   if(!q){this.cue=this.path='';return;}
   const key=`${q.startedAt}:${q.cycle}:${q.stage}:${q.hits}`,volume=Math.max(.15,Math.min(1,1-(distance-A.playRadius)/40));
@@ -59,8 +60,8 @@ export class CentipedeEventView{
    bell:'Бум! Барабанчик прозвучал. Готовься к следующему испытанию!',
    rise:`Топотушка снова сворачивается. Отталкивай мячики: ${pushKey} · Затем перелетай кольца!`,
    curl:'Финальное испытание! Топотушка превращается в большое колесо.',
-   wheelWarning:'Колесо сейчас покатится! Отойди от голубой дорожки.',
-   wheelRoll:'Уступай дорогу колесу и перелетай кольца! Потом понадобится радужный мяч.',
+   wheelWarning:'Колесо сейчас покатится! Отойди от голубой дорожки и уклоняйся от мячиков.',
+   wheelRoll:'Уступай дорогу колесу, перелетай кольца и отталкивай мячики. Потом понадобится радужный мяч.',
    dizzy:`Колесо устало! Подойди к радужному мячу, повернись к Топотушке и толкни: ${pushKey}`,
    ballShot:'Отличный толчок! Радужный мяч летит к Топотушке.',
    wheelHit:'Бум-пружинка! Топотушка смеётся и готовится к следующему перекату.',
@@ -77,7 +78,8 @@ export class CentipedeEventView{
    this.path=pathKey;this.lane.geometry.dispose();this.lane.geometry=roundedRunWarning(u=>chargePoint(q,u),centipedePhase(q)===3?2.65:1.35);
   }
   this.lane.material.opacity=q.stage==='warning'||q.stage==='wheelWarning'?.6+.025*Math.sin(now*.006):.46;
-  this.halo.visible=['exhausted','back','dizzy'].includes(q.stage);if(this.halo.visible){const p=centipedeTarget(q);this.halo.position.set(p[0],q.stage==='back'?p[1]+.6:.2,p[2]);this.halo.scale.setScalar(1+.13*Math.sin(now*.005));}
+  this.targetCue.group.visible=['exhausted','back','dizzy'].includes(q.stage);
+  if(this.targetCue.group.visible)this.targetCue.update(targetPosition??centipedeTarget(q),now,camera,q.stage==='dizzy');
   this.confetti.visible=['tickle','bell','wheelHit','celebrate'].includes(q.stage);
   if(q.stage==='celebrate'&&this.fireworksKey!==key){
    this.fireworksKey=key;const head=q.trail.at(-1)!,tail=centipedeTail(q);

@@ -3,7 +3,9 @@ import {MILL_BAGS} from './mill-quest';
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
 import {FOUNTAIN_SITE} from './fountain-site';
 import { spatialInstances } from './spatial-instances';
+import {instancedLod,roundedCoarseShape} from './instanced-lod';
 import {sceneryShadowBatch} from './scenery-shadows';
+import {batchScenery} from './scenery-batch';
 import * as T from 'three';
 import { BALLOON_SITES } from './balloon-sites';
 import { MAZE_SITE } from './maze-layout';
@@ -197,8 +199,20 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     }
   }});
   root.clear();
-  for(const b of batches.values()){const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>{m.setMatrixAt(i,v);m.setColorAt(i,b.colors[i]);});m.receiveShadow=true;root.add(spatialInstances(m));}
+  const lowRock=roundedCoarseShape();
+  const levels=new Map<T.BufferGeometry,{name:string;middle:T.BufferGeometry;far:T.BufferGeometry}>([
+    [geo.ball,{name:'Rounded meadow details',middle:new T.SphereGeometry(1,8,6),far:new T.SphereGeometry(1,6,4)}],
+    [geo.cap,{name:'Meadow mushroom caps',middle:new T.SphereGeometry(1,10,5,0,Math.PI*2,0,Math.PI/2),far:new T.SphereGeometry(1,8,4,0,Math.PI*2,0,Math.PI/2)}],
+    [geo.pole,{name:'Meadow stems and posts',middle:new T.CylinderGeometry(1,1,1,6),far:new T.CylinderGeometry(1,1,1,5)}],
+    [geo.rock,{name:'Meadow rocks',middle:lowRock,far:lowRock}],
+  ]);
+  for(const b of batches.values()){
+    const shape=levels.get(b.geometry);
+    if(shape)root.add(instancedLod(shape.name,b.geometry,b.material,b.matrices.map((matrix,i)=>({matrix,color:b.colors[i],detail:0})),{middle:shape.middle,far:shape.far,middleDistance:60,farDistance:150},true));
+    else {const m=new T.InstancedMesh(b.geometry,b.material,b.matrices.length);b.matrices.forEach((v,i)=>{m.setMatrixAt(i,v);m.setColorAt(i,b.colors[i]);});m.receiveShadow=true;root.add(spatialInstances(m));}
+  }
   for(const material of materials.values())material.dispose();
   for(const [geometry,matrices] of shadowBatches)root.add(sceneryShadowBatch('Stable landmark shadows',geometry,matrices));
+  batchScenery(root);
   return root;
 }

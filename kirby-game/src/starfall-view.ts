@@ -40,7 +40,7 @@ export class StarfallView {
   const phase=starfallPhase(s,now),player=s.players[id],bonus=player?.bonus??0;
   this.hud.hidden=phase==='done'||(!online&&phase==='celebrate');
   if(phase!==this.phase){if(phase==='collect'||phase==='celebrate')this.cheer();this.phase=phase;}
-  if(phase==='countdown')this.hud.textContent=t(`★ ${s.initiator} выполнил все задачи! Звездопад через ${Math.ceil((s.startsAt-now)/1000)} с`);
+  if(phase==='countdown')this.hud.textContent=t(`★ ${s.initiator} прошёл все приключения! Звездопад через ${Math.ceil((s.startsAt-now)/1000)} с`);
   if(phase==='collect')this.hud.textContent=t(`★ Собирай звёзды · ${Math.ceil((s.endsAt-now)/1000)} с · +${bonus}/${STAR_LIMIT} очков`);
   if(phase==='celebrate')this.hud.textContent=t('★ Спасибо за чудесное приключение!');
   if(phase==='collect'){

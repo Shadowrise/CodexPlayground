@@ -1,4 +1,5 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
+import {batchRigidMeshes} from './rigid-batch';
 import {DogHouse} from './dog-house';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {BedQuilt,BED_REST,BED_COVER_FOLD} from './bed-quilt';
@@ -65,6 +66,8 @@ export class KirbyHome {
     if(typeof document!=='undefined'){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#704f49';ctx.fillRect(0,0,512,128);ctx.fillStyle='#fff0c4';ctx.textAlign='center';ctx.font='bold 45px sans-serif';drawLocalizedText(ctx,'ДОМИК КИРБИ',256,78);const sign=new T.Mesh(new T.PlaneGeometry(4.6,1.15),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,4.7,3.44);this.group.add(sign);}}
     // Merge repeated decoration into a small number of draws.
     for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
+    batchRigidMeshes(this.group,new Set(this.group.children.filter(o=>o instanceof T.Mesh&&(o.material===this.windows||(!Array.isArray(o.material)&&'color' in o.material&&(o.material as T.MeshStandardMaterial).color.getHexString()==='fff5df')))));
+    batchRigidMeshes(this.roof);batchRigidMeshes(this.dogHouse);
     this.group.add(this.quilt);
     this.group.add(this.dogHouse);
   }

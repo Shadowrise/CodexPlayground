@@ -48,6 +48,7 @@ export class ArenaCentipede{
  private readonly mixer:T.AnimationMixer;
  private readonly actions:Record<string,T.AnimationAction>;
  private readonly segments:T.Object3D[];
+ private readonly tailTarget:T.Object3D;private readonly backTarget:T.Object3D;private readonly targetPosition=new T.Vector3();
  private readonly followers:T.Group[];
  private readonly shadow:T.InstancedMesh;
  private readonly form=new T.Group();private readonly motion:T.Object3D;
@@ -61,6 +62,7 @@ export class ArenaCentipede{
   this.group.name='Топотушка — прогулка по арене';this.group.position.set(BOSS_ARENA.x,0,BOSS_ARENA.z);this.group.scale.setScalar(SCALE);
   const model=gltf.scene;this.group.add(this.form);this.form.add(model);this.motion=model.getObjectByName('Motion')!;model.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=false;o.receiveShadow=true;}});
   this.mixer=new T.AnimationMixer(model);
+  this.tailTarget=model.getObjectByName('TailTarget')!;this.backTarget=model.getObjectByName('BackTarget')!;
   this.actions=Object.fromEntries(CENTIPEDE_CLIPS.map(({name})=>{
    const clip=T.AnimationClip.findByName(gltf.animations,name);if(!clip)throw Error(`Missing centipede clip: ${name}`);
    return [name,this.mixer.clipAction(clip).setLoop(T.LoopRepeat,Infinity).setEffectiveWeight(0).play()];
@@ -74,6 +76,10 @@ export class ArenaCentipede{
  }
  startTrail(seconds:number):Point[]{
   const {distance}=centipedeRoam(seconds);return Array.from({length:12},(_,i)=>{const p=centipedeRoute(distance-(11-i)*CENTIPEDE_STEP,new T.Vector3());return [p.x+BOSS_ARENA.x,p.z+BOSS_ARENA.z] as Point;});
+ }
+ interactionTarget(event?:CentipedeEvent){
+  const anchor=event?.stage==='exhausted'?this.tailTarget:event?.stage==='back'?this.backTarget:undefined;
+  return anchor?.getWorldPosition(this.targetPosition);
  }
  update(seconds:number,camera?:T.Vector3,event?:CentipedeEvent,now=0){
   this.group.visible=!camera||camera.distanceToSquared(this.group.position)<(ACTOR_DISTANCE+BOSS_ARENA.playRadius)**2;

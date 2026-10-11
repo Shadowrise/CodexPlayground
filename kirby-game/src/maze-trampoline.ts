@@ -1,4 +1,5 @@
 import { LeafPile } from './leaf-pile';
+import {batchRigidMeshes} from './rigid-batch';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
@@ -29,6 +30,7 @@ export class MazeTrampoline {
     for(let i=0;i<24;i++){const a=i*Math.PI/12,points=[];for(let j=0;j<=24;j++){const t=j/24;points.push(new T.Vector3((1.4+t*.25)*Math.cos(a)+Math.sin(t*Math.PI*8)*.035,.6+Math.cos(t*Math.PI*8)*.035,(1.4+t*.25)*Math.sin(a)));}frame.add(new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points),24,.012,4,false),metal));}
     this.leafPile.group.position.copy(this.landing);this.group.add(this.leafPile.group);
     this.group.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=o.receiveShadow=true;});
+    batchRigidMeshes(frame,new Set([this.mat]));
   }
   prompt(c:CharacterController){return this.active?'Прыжок из лабиринта!':c.starBlessed && c.actor.position.distanceTo(this.position)<3.8?'E — прыгнуть на батут · Пробел — тоже прыгнуть':'';}
   start(c:CharacterController){if(this.active || !this.prompt(c) || c.actor.position.y>.5)return false;this.player=c;this.from.copy(c.actor.position);this.elapsed=0;c.setActivity('Trampoline');return true;}

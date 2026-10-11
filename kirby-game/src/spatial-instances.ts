@@ -12,9 +12,10 @@ export function spatialInstances(source: InstancedMesh, cellSize = 64) {
     if (!cells.has(key)) cells.set(key, []);
     cells.get(key)!.push(i);
   }
-  for (const indices of cells.values()) {
+  for (const [cell,indices] of cells) {
     const mesh = new InstancedMesh(source.geometry, source.material, indices.length);
     mesh.castShadow = source.castShadow; mesh.receiveShadow = source.receiveShadow;
+    mesh.userData.spatialCell=cell;
     indices.forEach((index, i) => {
       source.getMatrixAt(index, matrix); mesh.setMatrixAt(i, matrix);
       if (source.instanceColor) { source.getColorAt(index, color); mesh.setColorAt(i, color); }

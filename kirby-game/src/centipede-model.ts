@@ -79,13 +79,16 @@ export function createCentipede(){
   ring(antenna,'#ffe4ab',[side*.43,.95,.13],.241,.024,[.25,.25,0]);
   ell(antenna,'#fff4d3',[side*.37,1.045,.31],[.064,.07,.026],true);
  }
- const mouth=group(head,'Mouth',[0,-.4,1.14]);
- ell(mouth,'#784858',[0,0,0],[.44,.24,.084]);ell(mouth,'#f293a1',[0,-.087,.069],[.26,.085,.028]);
- for(const side of [-1,1])ell(mouth,'#fff5df',[side*.09,.145,.072],[.084,.058,.027],true);
- // A soft neckerchief gives the long silhouette an unmistakable front end.
- ring(segments[0],'#ca4d67',[0,-.6,-.65],.64,.16,[0,0,0]);
- ell(segments[0],'#ee7687',[.47,-.57,-.73],[.24,.23,.24]);
- for(const side of [-1,1])ell(segments[0],'#ce5271',[.47+side*.2,-.77,-.75],[.13,.3,.09]);
+ const mouth=group(head,'Mouth',[0,-.42,1.245]);
+ const opening=group(mouth,'MouthOpening',[0,0,.025]),smile=group(mouth,'MouthSmile');
+ // A shallow curved opening follows the muzzle, rather than a protruding oval.
+ // Independent lip/jaw pivots bake expressions into the same animation clips.
+ const lip=new T.CircleGeometry(1,40),lipPositions=lip.getAttribute('position');
+ for(let i=0;i<lipPositions.count;i++){const x=lipPositions.getX(i),y=lipPositions.getY(i);lipPositions.setXYZ(i,x*.39,y*.28,.006-.04*x*x-.008*y*y);}lip.computeVertexNormals();
+ add(opening,lip,'#623e47',[0,0,0]);lip.dispose();
+ ell(opening,'#dc8494',[0,-.13,.018],[.21,.075,.019],true);
+ tube(smile,'#704548',[[-.37,.04,-.071],[-.24,-.045,-.035],[0,-.105,.005],[.24,-.045,-.035],[.37,.04,-.071]],.023);
+ for(const side of [-1,1])ell(mouth,'#b97560',[side*.37,.035,-.074],[.034,.043,.018],true);
  function bell(parent:T.Object3D,position:number[],size:number){
   const pivot=group(parent,'TailBell',position);pivot.userData.interaction='tail';
   ring(pivot,'#ffe5a2',[0,.43*size,0],.17*size,.055*size,[0,0,0],true);
@@ -245,7 +248,17 @@ export function createCentipede(){
   const blink=1-.94*Math.max(0,1-Math.abs(u-.72)/.035);
   eyes.forEach(eye=>eye.scale.y=name==='Sneeze'&&u>.48&&u<.76?.08:name==='Celebrate'?.7:blink);
   brows.forEach((node,i)=>{node.rotation.z=(i?1:-1)*(name==='ChargeAnticipation'?-.18*one:name==='WheelDizzy'?.16:0);});
-  mouth.scale.y=name==='Exhausted'?1+.28*Math.sin(phase*2):name==='Sneeze'?1+.65*one:1;
+  let open=0;
+  if(name==='Run'||name==='Charge')open=.08+.06*(.5+.5*Math.sin(phase*2));
+  if(name==='Exhausted')open=.16+.20*(.5+.5*Math.sin(phase*2));
+  if(name==='ChargeAnticipation')open=.26*one;
+  if(name==='Sneeze')open=.22*Math.sin(Math.PI*T.MathUtils.clamp(u/.52,0,1))+.94*Math.sin(Math.PI*T.MathUtils.clamp((u-.5)/.32,0,1));
+  if(name==='WheelDizzy')open=.12+.07*(.5+.5*Math.sin(phase*2));
+  if(name==='Celebrate')open=.16+.42*(.5+.5*Math.sin(phase*2));
+  if(name==='TailTickle'||name==='BellHit'||name==='WheelHit')open=.56*one*one;
+  opening.scale.set(Math.max(.001,T.MathUtils.smoothstep(open,0,.12))*(1-.12*open),Math.max(.001,open),1);
+  smile.position.y=-.18*open;smile.scale.set(1-.12*open,1+.10*open,1);
+  mouth.scale.x=1+.025*Math.sin(phase);
   tailBell.rotation.z=.15*Math.sin(phase*2)+(name==='TailTickle'?.6*one*Math.sin(phase*4):0);
   backDrum.rotation.z=name==='BellHit'?.2*Math.sin(phase*5)*one:.025*Math.sin(phase);
   if(name==='BellHit')backDrum.scale.y=1-.12*Math.sin(phase*5)*one;

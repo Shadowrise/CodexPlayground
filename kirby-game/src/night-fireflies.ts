@@ -9,6 +9,7 @@ import type { CharacterController, Input } from './controller';
 import { constrainToMeadow } from './world-bounds';
 import { inWater } from './pond-layout';
 import { Firefly } from './firefly';
+import {batchRigidTree} from './rigid-batch';
 import { sceneryClearance } from './landmarks';
 import { makeFruitMist } from './fruit-mist';
 type Bug={carrier:T.Group;firefly:Firefly;home:T.Vector3;halo:T.Sprite;color:T.Color;phase:number;land:boolean;lightPosition:T.Vector3};
@@ -166,8 +167,11 @@ export class NightFireflies {
   }
   constructor(gltf:GLTF){
     this.group.name='Forty meadow fireflies';
+    const template=gltf.scene.clone(true),imported:T.Object3D[]=[];
+    template.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
+    batchRigidTree(template,gltf.animations);
     for(let i=0;i<40;i++){
-      const object=gltf.scene.clone(true);const imported:T.Object3D[]=[];object.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
+      const object=template.clone(true);
       // Spread 39 saturated hues evenly; permute them so nearby bugs contrast.
       const color=i===39?new T.Color('#ffffff'):new T.Color().setHSL(((i*16)%39)/39,1,.5,T.SRGBColorSpace);
       const firefly=new Firefly({...gltf,scene:object},color);

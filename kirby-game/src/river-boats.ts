@@ -9,6 +9,7 @@ import {BOAT_COUNT,BOAT_OCCUPIED,BOAT_ROUTE_LENGTH,boatDistance,boatPose} from '
 import {makeBoat} from './boat-model';
 import {updateBoatWake} from './boat-wake';
 import {lightenBoatPassenger} from './boat-passenger';
+import {CosmeticClock} from './cosmetic-clock';
 
 type Ride={player:CharacterController;index:number;start:number;from:T.Vector3;elapsed:number;leaving?:T.Vector3};
 export const BOAT_QUEST_FRACTION=.1;
@@ -21,7 +22,7 @@ export class RiverBoats {
  networkBlocked=new Set<number>();
  private ride?:Ride;
  private seconds=0;
- private passengers:{model:T.Object3D;mixer:T.AnimationMixer;index:number}[]=[];
+ private passengers:{model:T.Object3D;mixer:T.AnimationMixer;index:number;clock:CosmeticClock}[]=[];
  private seatPosition=new T.Vector3();
  private fitted=new Map<CharacterController,T.Object3D>();
  get riding(){return !!this.ride;}
@@ -35,7 +36,7 @@ export class RiverBoats {
    lightenBoatPassenger(model);
    model.position.copy(seat);model.scale.setScalar(.85);model.traverse(o=>{o.castShadow=false;});
    const mixer=new T.AnimationMixer(model),idle=clips.find(c=>c.name==='Idle');if(idle)mixer.clipAction(idle).play();
-   this.boats[index].add(model);this.passengers.push({model,mixer,index});this.sittingPose(model);
+   this.boats[index].add(model);this.passengers.push({model,mixer,index,clock:new CosmeticClock()});this.sittingPose(model);
   }
  }
  private sittingPose(model:T.Object3D){
@@ -64,7 +65,7 @@ export class RiverBoats {
    if(this.ride.leaving)return 'Выходим на берег…';
    const distance=boatDistance(this.ride.index,this.seconds)-this.ride.start;
    const percent=Math.max(1,Math.min(100,Math.floor(distance/(BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION)*100)));
-   return `E — выйти на берег · Проплыто: ${percent}%${player.achievements.has('boat')?' · Задача выполнена':''}`;
+   return `E — выйти на берег · Проплыто: ${percent}%${player.achievements.has('boat')?' · Приключение пройдено':''}`;
   }
   return this.nearby(player)>=0?'E — сесть в лодочку':'';
  }
@@ -109,7 +110,7 @@ export class RiverBoats {
    b.rotation.set(.012*Math.sin(seconds*1.3+i),yaw,.014*Math.sin(seconds*1.1+i*2),'YXZ');
    b.visible=!camera||b.position.distanceToSquared(camera)<280**2||i===this.ride?.index;
   }
-  for(const p of this.passengers){p.model.visible=!camera||this.boats[p.index].position.distanceToSquared(camera)<120**2;if(this.boats[p.index].visible&&p.model.visible){p.mixer.update(dt);this.sittingPose(p.model);}}
+  for(const p of this.passengers){const distance=camera?this.boats[p.index].position.distanceToSquared(camera):0;p.model.visible=!camera||distance<120**2;const elapsed=p.clock.step(dt,distance,this.boats[p.index].visible&&p.model.visible);if(elapsed){p.mixer.update(elapsed);this.sittingPose(p.model);}}
   const r=this.ride;if(!r)return;
   r.elapsed+=dt;r.player.mixer.update(dt);
   if(r.leaving){

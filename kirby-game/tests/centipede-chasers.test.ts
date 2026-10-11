@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {BOSS_ARENA as A} from '../src/boss-arena-site';
 import type {CentipedeActor,CentipedeEvent,CentipedeStage} from '../src/centipede-event';
+import {centipedeWaves} from '../src/centipede-event';
 import {CHASERS,advanceChasers,bumpChaser,pushChaser,hasChasers,chaseSnapshot,applyChaseSnapshot,ChasePlayback,chaseBallHeight} from '../src/centipede-chasers';
 import {CentipedeBallsView} from '../src/centipede-balls-view';
 
@@ -11,7 +12,7 @@ function event(stage:CentipedeStage='gather'):CentipedeEvent{
 }
 function nearBall(){const a=actor(),q=event();advanceChasers(q,[a],1000);const b=q.chasers!.balls[0];b.x=A.x;b.z=A.z+2;b.vx=0;b.vz=-CHASERS.speed;return {a,q,b};}
 
-test('pursuers only fill long transitions, approach their player, remain bounded and preserve existing points',()=>{
+test('pursuers approach their player, remain bounded and preserve existing points across connected transitions',()=>{
  const a=actor(),q=event();advanceChasers(q,[a],1000);assert.equal(q.chasers!.balls.length,3);
  const initial=q.chasers!.balls.map(b=>Math.hypot(b.x-a.p[0],b.z-a.p[2]));
  for(let now=1100;now<=4000;now+=100)advanceChasers(q,[a],now);
@@ -19,6 +20,22 @@ test('pursuers only fill long transitions, approach their player, remain bounded
  assert.equal(q.players.a.points,0);assert.equal(q.hits,3);
  const first=q.chasers;q.stage='coil';q.stageAt=4000;advanceChasers(q,[a],4000);assert.equal(q.chasers,first,'connected transitions continue the same balls');
  for(const stage of ['invite','warning','balls','stomp','back','dizzy','uncurl','celebrate','rest'] as const){q.stage=stage;advanceChasers(q,[a],5000);assert(!q.chasers);assert(!hasChasers(q));}
+});
+
+test('third-phase pursuers continue through wheel warning and roll alongside rings, then clear for the rainbow ball',()=>{
+ const a=actor(),q=event('wheelWarning');q.phase=3;q.hits=6;
+ advanceChasers(q,[a],1000);const state=q.chasers!;assert(hasChasers(q));
+ for(let now=1100;now<=2700;now+=100)advanceChasers(q,[a],now);
+ q.stage='wheelRoll';q.stageAt=2800;advanceChasers(q,[a],2800);
+ assert.equal(q.chasers,state,'do not replace the balls when the wheel starts');
+ advanceChasers(q,[a],4800);assert(centipedeWaves(q,4800).length>0);
+ const view=new CentipedeBallsView();view.update(q,4800);assert(view.group.visible);assert.equal(view.balls.count,3);assert(!view.warnings.visible);
+ const copy:CentipedeEvent={...structuredClone(q),chasers:undefined},snapshot=chaseSnapshot(q)!;applyChaseSnapshot(copy,snapshot);
+ assert.deepEqual(copy.chasers,snapshot.state,'third-phase snapshots use the existing protocol');
+ copy.chasers!.balls.forEach((b,i)=>assert(Math.hypot(b.x-q.chasers!.balls[i].x,b.z-q.chasers!.balls[i].z)<.001,'snapshot rounding stays visually negligible'));
+ assert.equal(q.players.a.points,0);assert.equal(q.hits,6);
+ q.stage='dizzy';q.stageAt=5000;advanceChasers(q,[a],5000);view.update(q,5000);
+ assert(!q.chasers);assert(!view.group.visible,'clear pursuers while aiming the rainbow ball');
 });
 
 test('contact rebounds both sides; a proactive push rebounds only the ball, then pursuit resumes',()=>{

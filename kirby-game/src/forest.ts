@@ -1,5 +1,6 @@
 import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
-import {sceneryShadowBatch} from './scenery-shadows';
+import {sceneryShadowBatch,consolidateSceneryShadows} from './scenery-shadows';
+import {batchScenery} from './scenery-batch';
 import { createCoasterCurve } from './coaster';
 import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
@@ -146,13 +147,19 @@ export function createForest() {
     const variation=kind==='birchLeaves'?0:kind.startsWith('birchLeaves')?Number(kind.at(-1)):0;
     const middle=leafy?createCanopyGeometry(kind==='leaves'?'broadleaf':'birch',variation,'middle'):kind==='wood'?woodShadow:kind==='needles'?new THREE.ConeGeometry(1,1,8,2):geometries[kind];
     const far=leafy?createCanopyGeometry(kind==='leaves'?'broadleaf':'birch',variation,'far'):kind==='wood'?woodShadow:kind==='needles'?new THREE.ConeGeometry(1,1,6):geometries[kind];
-    forest.add(forestInstances(`Decorative forest ${kind}`,geometries[kind],material,instances,{middle,far,middleDetail:kind==='wood'?1:kind==='needles'?0:leafy?2:-1,farDetail:kind==='wood'||kind==='needles'?0:leafy?2:-1},!leafy));
+    // Keep broadleaf crowns and orchard fruit at their existing long range.
+    // Small branch tips/needle sprigs are subpixel much sooner; retain all main
+    // conifer tiers and trunks, with the independent shadow proxies unchanged.
+    const middleDistance=kind==='wood'?48:kind==='needles'?64:undefined;
+    const farDistance=kind==='wood'?120:kind==='needles'?160:undefined;
+    forest.add(forestInstances(`Decorative forest ${kind}`,geometries[kind],material,instances,{middle,far,middleDistance,farDistance,middleDetail:kind==='wood'?1:kind==='needles'?0:leafy?2:-1,farDetail:kind==='wood'||kind==='needles'?0:leafy?2:-1},!leafy));
     if(leafy)forest.add(sceneryShadowBatch(`Stable crown shadows ${kind}`,shadowGeometry,instances.map(p=>p.matrix)));
     // Fine twigs, bark markings and fruit sit inside the existing crown/trunk shadow.
     // Keep trunks and substantial boughs; needles use the same cone outline with fewer faces.
     if(kind==='wood')forest.add(sceneryShadowBatch('Stable trunk shadows',woodShadow,instances.filter(p=>new THREE.Vector3().setFromMatrixColumn(p.matrix,0).length()>=.075).map(p=>p.matrix)));
     if(kind==='needles')forest.add(sceneryShadowBatch('Stable needle shadows',needleShadow,instances.filter(p=>p.detail===0).map(p=>p.matrix)));
   }
+  consolidateSceneryShadows(forest);batchScenery(forest);
   // Bake biome colours once instead of subdividing every shoreline triangle.
   const ground=meadowGeometry(H);ground.rotateX(-Math.PI/2);
   const floor=new THREE.Mesh(ground,createGroundMaterial(H,layout));floor.name='Biome ground';

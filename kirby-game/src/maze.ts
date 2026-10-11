@@ -5,6 +5,7 @@ import type { CharacterController } from './controller';
 import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
 import { makeFruitMist } from './fruit-mist';
 import {sceneryShadowBatch} from './scenery-shadows';
+import {instancedLod,roundedCoarseShape} from './instanced-lod';
 type Wall={x:number;z:number;hx:number;hz:number};
 export class HedgeMaze {
   readonly group=new T.Group();
@@ -80,7 +81,17 @@ export class HedgeMaze {
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.textBaseline='middle';drawLocalizedText(ctx,'ЗВЁЗДНЫЙ ЛАБИРИНТ',384,96);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }
-    for(const p of parts.values()){const mesh=new T.InstancedMesh(p.geo,new T.MeshStandardMaterial({color:'#ffffff',roughness:.95}),p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.name=p.geo===leaf?'Detailed maze foliage':'Maze masonry';mesh.castShadow=p.geo!==leaf;mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);}
+    for(const p of parts.values()){
+      const material=new T.MeshStandardMaterial({color:'#ffffff',roughness:.95});
+      if(p.geo===leaf){
+        // Retain every clump and its rainbow colour. Coarse clumps cover the
+        // same hedge faces; stable continuous shadow walls never change level.
+        const coarse=roundedCoarseShape();
+        root.add(instancedLod('Detailed maze foliage',leaf,material,p.matrices.map((matrix,i)=>({matrix,color:p.colors[i],detail:0})),{middle:coarse,far:coarse,middleDistance:90,farDistance:180,cellSize:48},true));
+      }else{
+        const mesh=new T.InstancedMesh(p.geo,material,p.matrices.length);p.matrices.forEach((m,i)=>{mesh.setMatrixAt(i,m);mesh.setColorAt(i,p.colors[i]);});mesh.name='Maze masonry';mesh.castShadow=true;mesh.receiveShadow=true;mesh.computeBoundingSphere();root.add(mesh);
+      }
+    }
     root.add(sceneryShadowBatch('Stable hedge shadows',box,hedgeShadows));
   }
   contains(p:T.Vector3,padding=0){return Math.abs(p.x-MAZE_SITE.x)<MAZE_HALF+padding && Math.abs(p.z-MAZE_SITE.z)<MAZE_HALF+padding;}

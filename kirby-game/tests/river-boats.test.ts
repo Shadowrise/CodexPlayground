@@ -43,11 +43,11 @@ test('boarding, ten-percent reward, safe exit, saved size and reboarding',async(
  b.update(.6,90.6);assert(b.riding);assert.equal(c.savedSize,7);assert.equal(c.animationRoot.parent!.scale.x,.9/7);
  b.update(.02,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED*.5);assert.match(b.prompt(c),/Проплыто: (49|50)%$/);assert(!c.achievements.has('boat'));
  assert(!c.achievements.has('boat'));b.update(.02,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED-.1);assert(!c.achievements.has('boat'));
- b.update(.2,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED+.1);assert(c.achievements.has('boat'));assert.equal(scoreOf(c),3);assert.match(b.prompt(c),/Проплыто: 100% · Задача выполнена$/);
+ b.update(.2,90+BOAT_ROUTE_LENGTH*BOAT_QUEST_FRACTION/BOAT_SPEED+.1);assert(c.achievements.has('boat'));assert.equal(scoreOf(c),3);assert.match(b.prompt(c),/Проплыто: 100% · Приключение пройдено$/);
  b.update(1,90+BOAT_ROUTE_LENGTH/BOAT_SPEED*2);assert.equal(scoreOf(c),3);assert.match(b.prompt(c),/Проплыто: 100%/);
  const shore=b.savePosition(c)!;assert(shore);assert(dryGround(shore.x,shore.z,2));assert(b.disembark());b.update(.8,90+BOAT_ROUTE_LENGTH/BOAT_SPEED*2+.8);
  assert(!b.riding);assert.equal(c.state,'Idle');assert.equal(c.savedSize,7);assert.equal(c.animationRoot.parent!.scale.x,1);assert(c.actor.position.distanceTo(shore)<1e-8);
- b.update(0,1);c.actor.position.copy(b.boats[0].position);assert(b.board(c));assert.match(b.prompt(c),/Проплыто: 1% · Задача выполнена$/);b.update(.6,1.6);assert.equal(scoreOf(c),3);
+ b.update(0,1);c.actor.position.copy(b.boats[0].position);assert(b.board(c));assert.match(b.prompt(c),/Проплыто: 1% · Приключение пройдено$/);b.update(.6,1.6);assert.equal(scoreOf(c),3);
 });
 
 test('shared clock requires no world payload and network locks exclude occupied boats',async()=>{

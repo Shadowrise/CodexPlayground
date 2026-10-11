@@ -46,9 +46,9 @@ test('mill blocks building walls at enlarged sizes and leaves the lever approach
   const position=MILL_LEVER.clone();mill.constrain(position,1);assert(position.equals(MILL_LEVER));
 });
 test('mill batches detailed parts to keep draw calls bounded',()=>{
-  const mill=new Watermill();let draws=0,instances=0;
-  mill.group.traverse(o=>{if(o instanceof Mesh)draws++;if(o instanceof InstancedMesh)instances+=o.count;});
-  assert(instances>600);assert(draws<105);
+  const mill=new Watermill();let draws=0,triangles=0;
+  mill.group.traverse(o=>{if(o instanceof Mesh){draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o instanceof InstancedMesh?o.count:1);}});
+  assert(triangles>14000,'keep the detailed ornaments');assert(draws<75);
 });
 
 test('celebration bubbles appear near the funnel at player height, including at completion',()=>{

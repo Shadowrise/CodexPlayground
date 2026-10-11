@@ -76,6 +76,11 @@ test('exported centipede: complete clips, independent targets, blink and grounde
  for(const clip of gltf.animations){assert(clip.validate(),clip.name);for(const track of clip.tracks)assert(Array.from(track.values).every(Number.isFinite),track.name);sample(clip.name,clip.duration*.5);}
  sample('Idle',0);assert(gltf.scene.getObjectByName('Eye_L')!.scale.y>.95);
  sample('Idle',2.88);assert(gltf.scene.getObjectByName('Eye_L')!.scale.y<.2);
+ sample('Idle',0);assert(gltf.scene.getObjectByName('MouthOpening')!.scale.y<.01,'resting mouth is a closed smile');
+ sample('Sneeze',1.72);assert(gltf.scene.getObjectByName('MouthOpening')!.scale.y>.8,'sneeze opens the jaw');
+ sample('Sneeze',2.6);assert(gltf.scene.getObjectByName('MouthOpening')!.scale.y<.01,'mouth closes again after sneezing');
+ sample('Exhausted',.3);const open=gltf.scene.getObjectByName('MouthOpening')!.scale.y;
+ sample('Exhausted',.9);assert(Math.abs(gltf.scene.getObjectByName('MouthOpening')!.scale.y-open)>.1,'panting animates the jaw');
  sample('Walk',0);const leg=gltf.scene.getObjectByName('Leg_3_L')!,q=leg.quaternion.clone();sample('Walk',.25);assert(q.angleTo(leg.quaternion)>.1);
  const point=new Vector3();
  for(const time of [0,.3,.65,1,1.35,1.7,1.99]){

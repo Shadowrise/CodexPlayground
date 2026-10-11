@@ -6,9 +6,7 @@ import * as THREE from 'three';
 import {createMountains} from './mountains';
 
 export function addEnvironment(scene:THREE.Scene){
- const forest=createForest();scene.add(forest);
- scene.add(createMeadowDecor(forest.userData.treePositions,forest.userData.meadowLayout));
- scene.add(createLandmarks(forest.userData.meadowLayout,forest.userData.treePositions));
- scene.add(createMountains());
- scene.add(createBossArena());
+ const forest=createForest();
+ const roots=[forest,createMeadowDecor(forest.userData.treePositions,forest.userData.meadowLayout),createLandmarks(forest.userData.meadowLayout,forest.userData.treePositions),createMountains(),createBossArena()];
+ scene.add(...roots);return roots;
 }

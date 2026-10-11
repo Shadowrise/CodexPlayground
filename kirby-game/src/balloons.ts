@@ -5,6 +5,7 @@ import * as T from 'three';
 import { CharacterController } from './controller';
 import type { KirbyNpc,NpcConstraint } from './npcs';
 import { BALLOON_SITES } from './balloon-sites';
+import {batchRigidMeshes} from './rigid-batch';
 export { BALLOON_SITES } from './balloon-sites';
 type Passenger=CharacterController|KirbyNpc;
 export type BalloonSound='burner'|'arrival'|'departure';
@@ -37,8 +38,8 @@ export class Balloons {
       const p=part(parent,'pole',color,...start.add(end).multiplyScalar(.5).toArray(),r,v.length(),r);p.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.normalize());
     };
     const batch=(parent:T.Group)=>{
-      const groups=new Map<string,T.Mesh[]>();for(const p of [...parent.children])if(p instanceof T.Mesh && Object.values(geometries).includes(p.geometry)){p.updateMatrix();const key=p.geometry.uuid+(p.material as T.Material).uuid;if(!groups.has(key))groups.set(key,[]);groups.get(key)!.push(p);}
-      for(const list of groups.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}
+      for(const p of parent.children)if(p instanceof T.Mesh && Object.values(geometries).includes(p.geometry))p.castShadow=p.receiveShadow=true;
+      batchRigidMeshes(parent);
     };
     BALLOON_SITES.forEach((site,index)=>{
       const port=new T.Group();port.position.set(site.x,0,site.z);port.name=site.name;this.group.add(port);

@@ -40,6 +40,10 @@ export class CelestialLighting{
   this.shadows.lightDirection.fromArray(time.shadowDirection);
   this.sky.copy(daySky).lerp(nightSky,time.night).lerp(duskSky,time.twilight*.65).multiplyScalar(.65+time.day*.35);
   this.ground.copy(dayGround).lerp(nightGround,time.night).multiplyScalar(.24+time.day*.1);
+  // Scattered twilight fills only the brief direct-light fade at the horizon.
+  // Keep the shadow handoff and established daylight/moonlight unchanged.
+  const horizonReflection=1+2*(1-time.shadowStrength);
+  this.sky.multiplyScalar(horizonReflection);this.ground.multiplyScalar(horizonReflection);
   // Degree-one SH: irradiance varies smoothly from sky to ground by surface
   // normal. No per-frame captures, textures or extra shadow maps are needed.
   const [constant,vertical]=this.reflected.sh.coefficients;

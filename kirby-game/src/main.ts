@@ -1,4 +1,7 @@
 import {t,createLanguageSwitcher,localizeDOM} from './i18n';
+import {configureSceneryBatching} from './scenery-batch';
+import {StaticWorldMatrices} from './static-world';
+import {skipShadowOnlyColourPass} from './scenery-shadows';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
@@ -238,6 +241,7 @@ const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
 const RENDER_PIXEL_RATIO = 1.25;
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+configureSceneryBatching(renderer.extensions.has('WEBGL_multi_draw'));
 renderer.setPixelRatio(RENDER_PIXEL_RATIO);
 renderer.setSize(innerWidth, innerHeight);
 const surfaceAnisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
@@ -268,6 +272,7 @@ function setupShadowMaterials() {
   scene.traverse(o=>{if(o.name.startsWith('Permanent Kirby passenger ')||o.name==='Luigi · permanent passenger')decorativeCharacters.push(o);});
   scene.traverse(object=>{
     if(!(object instanceof THREE.Mesh))return;
+    skipShadowOnlyColourPass(object);
     for(const material of Array.isArray(object.material)?object.material:[object.material]) {
       prepareSurfaceTextures(material,surfaceAnisotropy);
       if(!(material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhongMaterial || material instanceof THREE.MeshLambertMaterial) || shadowMaterials.has(material))continue;
@@ -290,7 +295,7 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = -.02;
 ground.receiveShadow = true;
 scene.add(ground);
-addEnvironment(scene);
+const environmentRoots=addEnvironment(scene);
 const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
@@ -341,6 +346,7 @@ scene.getObjectByName('Meadow grass')?.traverse(object=>{
 });
 scene.add(fruits.group);
 setupShadowMaterials();
+const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));
 
 const keys = new Set<string>();
 let pendingTurn: 'KeyA' | 'KeyD' | undefined;
@@ -549,7 +555,7 @@ startButton.addEventListener('click', async () => {
 let soloCentipede:CentipedeEvent|undefined;let centipedeContactKey='';
 const centipedeView=new CentipedeEventView((stage,volume)=>sounds.playCentipede(stage,volume));scene.add(centipedeView.group);
 const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
-function peerPoints(a:ActorState){const id=[...network!.actors].find(([,v])=>v===a)?.[0];return a.fruits+achievementPoints(a.achievements)+(a.eventPoints??0)+(id?network!.room.festival?.players[id]?.bonus??0:0);}
+function peerPoints(id:string,a:ActorState){return a.fruits+achievementPoints(a.achievements)+(a.eventPoints??0)+(network!.room.festival?.players[id]?.bonus??0);}
 function roundFinished(){return !!network?.room.festival&&network.serverNow>=network.room.festival.endsAt;}
 function festivalTick(){
  if(!character||!playing)return;
@@ -566,6 +572,7 @@ const fpsCounter=new FpsCounter();
 document.addEventListener('visibilitychange',()=>{if(document.hidden)fpsCounter.sample(performance.now(),false);});
 const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel.textContent='—';fpsLabel.title=t('Кадров в секунду');fpsLabel.setAttribute('aria-label',t('Кадров в секунду'));document.body.append(fpsLabel);
 let previousTime = performance.now();
+let lastDialUpdate=-Infinity;
 let greetingCooldown=0;
 let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
@@ -672,7 +679,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
-    coaster.update(dt);
+    coaster.update(dt,camera.position);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){
       maze.constrain(character.actor.position,character.actor.scale.x,groundPrevious.set(previousX,0,previousZ));
@@ -748,14 +755,15 @@ renderer.setAnimationLoop((time: number) => {
     taskList.update(character.achievements);
     setText(fruitValue,String(scoreOf(character)));
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
-    setText(playerPlace,`${1+Number(teamPoints>playerPoints)+(network?[...network.actors.values()].filter(a=>peerPoints(a)>playerPoints).length:0)}.`);
-    setText(npcPlace,`${1+Number(playerPoints>teamPoints)+(network?[...network.actors.values()].filter(a=>peerPoints(a)>teamPoints).length:0)}.`);
+    let playerRank=1+Number(teamPoints>playerPoints),teamRank=1+Number(playerPoints>teamPoints);
+    if(network)for(const [id,actor] of network.actors){const points=peerPoints(id,actor);playerRank+=Number(points>playerPoints);teamRank+=Number(points>teamPoints);}
+    setText(playerPlace,`${playerRank}.`);setText(npcPlace,`${teamRank}.`);
     const [leader,runnerUp]=teamPoints>playerPoints?[npcStatsRow,playerStatsRow]:[playerStatsRow,npcStatsRow];
     if(!network && leader.nextElementSibling!==runnerUp)runnerUp.parentElement!.insertBefore(leader,runnerUp);
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     combatMessage.hidden = hitMessageRemaining === 0;
   }
-  else if(!character) {boats.update(dt,boatTime(),camera.position);skyTrail.update(dt);coaster.update(dt);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
+  else if(!character) {boats.update(dt,boatTime(),camera.position);skyTrail.update(dt);coaster.update(dt,camera.position);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
   constrainToMeadow(camera.position, .5);
@@ -774,7 +782,8 @@ renderer.setAnimationLoop((time: number) => {
   celestialLighting.update(lightTime);
   shadows.update();
   renderer.toneMappingExposure=1+day*.2;
-  timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);timeDial.title=t(lightTime.label);timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));
+  // The dial completes one turn in ten minutes; 10 Hz is already subpixel.
+  if(time-lastDialUpdate>=100){lastDialUpdate=time;timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);const label=t(lightTime.label);if(timeDial.title!==label){timeDial.title=label;timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));}}
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
   sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
@@ -785,7 +794,7 @@ renderer.setAnimationLoop((time: number) => {
   updateNetwork(dt);
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
-  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera,network?100:0);
+  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera,network?100:0,arenaCentipede?.interactionTarget(boss));
   if(!centipedeView.hud.hidden)combatMessage.hidden=true;
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);

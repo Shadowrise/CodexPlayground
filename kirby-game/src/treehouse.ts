@@ -3,6 +3,7 @@ import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import {oakBarkMaterial} from './oak-bark';
 import {createCanopyGeometry,createLeafSurface,createCanopyShadowGeometry} from './canopy';
 import { LeafPile } from './leaf-pile';
+import {batchRigidMeshes} from './rigid-batch';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
@@ -144,6 +145,7 @@ export class Treehouse {
       for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial && p!==crown){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid+!!p.userData.noShadow;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
       for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=!list[0].userData.noShadow;mesh.computeBoundingSphere();parent.add(mesh);}
     }
+    batchRigidMeshes(root,new Set([crown]));batchRigidMeshes(this.swing);
 
   }
   networkSwing(angle:number){if(!this.rider){this.swingAngle=angle;this.swing.rotation.x=angle;}}

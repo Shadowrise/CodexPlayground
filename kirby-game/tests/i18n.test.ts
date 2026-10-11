@@ -30,7 +30,7 @@ test('display templates translate nested labels and keep player names verbatim',
  setLocale('en');
  assert.equal(t('Яблоко съеден! Размер +10% · 110%'),'Apple eaten! Size +10% · 110%');
  assert.equal(t('E — положи золотой мешочек в воронку'),'E — put the golden bag in the funnel');
- assert.equal(t('★ Радуга выполнил все задачи! Звездопад через 5 с'),'★ Радуга completed every task! Starfall in 5 s');
+ assert.equal(t('★ Радуга прошёл все приключения! Звездопад через 5 с'),'★ Радуга completed every adventure! Starfall in 5 s');
  assert.equal(t('Радуга: это мой текст!'),'Радуга: это мой текст!');
  assert.equal(t('★ Собирай звёзды · {0} с · +{1}/{2} очков',[45,7,30]),'★ Collect stars · 45 s · +7/30 points');
  setLocale('bg');assert.equal(t('E — положи красный мешочек в воронку'),'E — сложи червената торбичка във фунията');

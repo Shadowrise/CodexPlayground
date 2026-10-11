@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {AmbientLight,HemisphereLight,MeshStandardMaterial,PerspectiveCamera,Scene,ShaderChunk,Vector3,type WebGLRenderer,type WebGLProgramParametersWithUniforms} from 'three';
+import {AmbientLight,HemisphereLight,LightProbe,MeshStandardMaterial,PerspectiveCamera,Scene,ShaderChunk,Vector3,type WebGLRenderer,type WebGLProgramParametersWithUniforms} from 'three';
 import {CelestialLighting} from '../src/celestial-lighting';
 import {CELESTIAL_ORBIT_NORMAL,daylight} from '../src/day-cycle';
 import {StableCSM} from '../src/stable-shadows';
@@ -46,6 +46,26 @@ test('weak reflected light keeps shaded surfaces readable with a smooth horizon 
    lighting.update(daylight(phase+1e-6));const after=irradiance(new Vector3(0,1,0));
    assert(before.distanceTo(after)<.0001);assert(Math.abs(a-shadows.lights[0].intensity)<.0001);
   }
+ }finally{shadows.dispose();shadows.remove();}
+});
+
+test('twilight reflection brightens the horizon handoff without changing established day or night',()=>{
+ const scene=new Scene(),shadows=new StableCSM({camera:new PerspectiveCamera(),parent:scene,cascades:2}),lighting=new CelestialLighting(shadows,scene);
+ const normal=new Vector3(0,1,0),read=()=>lighting.reflected.sh.getIrradianceAt(normal,new Vector3());
+ try{
+  for(let step=0;step<=200;step++){
+   const time=daylight(step/200);
+   lighting.update({...time,shadowStrength:1});const ordinary=read();
+   lighting.update(time);const actual=read();
+   if(Math.abs(time.elevation)>=.16)assert(actual.equals(ordinary),'day and moonlight reflection must be unchanged outside the handoff');
+   else{
+    assert(actual.toArray().every((value,i)=>value>=ordinary.getComponent(i)),'twilight must never dim shaded surfaces');
+    if(Math.abs(time.elevation)<=.02)assert(actual.length()>ordinary.length()*2,'retain enough diffuse light when direct illumination vanishes');
+   }
+   if(time.shadowStrength===0)assert.equal(shadows.lights[0].intensity,0,'do not revive a shadow at the sun/moon switch');
+  }
+  assert.equal(scene.children.filter(o=>o instanceof LightProbe).length,1,'reuse the existing probe');
+  assert.equal(shadows.lights.length,2,'no additional shadow passes');
  }finally{shadows.dispose();shadows.remove();}
 });
 

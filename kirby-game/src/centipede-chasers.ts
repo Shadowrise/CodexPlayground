@@ -6,7 +6,7 @@ export const CHASERS={count:4,radius:1.05,speed:6.8,kickSpeed:18,kickMs:1050,bou
 export type ChaseBall={x:number;z:number;vx:number;vz:number;target:string;kickUntil:number;bounceUntil?:number;contactAfter:number;serial:number};
 export type ChaseState={stageAt:number;at:number;bornAt:number;balls:ChaseBall[]};
 export type ChaseSnapshot={startedAt:number;state:ChaseState};
-export function hasChasers(q:CentipedeEvent|undefined){return !!q&&['gather','coil','lower','rise'].includes(q.stage);}
+export function hasChasers(q:CentipedeEvent|undefined){return !!q&&['gather','coil','lower','rise','wheelWarning','wheelRoll'].includes(q.stage);}
 const participants=(q:CentipedeEvent,actors:readonly CentipedeActor[])=>actors.filter(a=>q.players[a.id]&&Math.hypot(a.p[0]-A.x,a.p[2]-A.z)<A.playRadius+2);
 const targets=(q:CentipedeEvent,actors:readonly CentipedeActor[])=>participants(q,actors).filter(a=>a.available).sort((a,b)=>a.id.localeCompare(b.id));
 

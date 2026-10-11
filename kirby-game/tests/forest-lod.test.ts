@@ -59,3 +59,14 @@ test('all detail levels keep both outer crowns inside their camera culling bound
   }
  }
 });
+
+test('branch and needle detail can reduce earlier without changing crown/fruit visibility or the near shape',()=>{
+ const shape=new T.ConeGeometry(1,1,12,3),coarse=new T.ConeGeometry(1,1,8,2),parts=[0,1,2].map(detail=>({matrix:new T.Matrix4().makeTranslation(detail*3,5,0),color:new T.Color('green'),detail}));
+ const root=forestInstances('Needles',shape,new T.MeshStandardMaterial(),parts,{middle:coarse,far:coarse,middleDistance:64,farDistance:160,middleDetail:0,farDetail:0},true);root.updateMatrixWorld(true);
+ const lod=root.children[0] as T.LOD,camera=new T.PerspectiveCamera(),radius=(lod.levels[0].object as T.InstancedMesh).boundingSphere!.radius;
+ const update=(gap:number)=>{camera.position.copy(lod.position).add(new T.Vector3(radius+gap,0,0));camera.updateMatrixWorld();lod.update(camera);};
+ update(300);update(100);assert.equal(lod.getCurrentLevel(),1);assert.equal((lod.levels[1].object as T.InstancedMesh).count,1);
+ update(63);assert.equal(lod.getCurrentLevel(),0);assert.equal((lod.levels[0].object as T.InstancedMesh).geometry,shape);assert.equal((lod.levels[0].object as T.InstancedMesh).count,3);
+ update(65);assert.equal(lod.getCurrentLevel(),0);update(74);assert.equal(lod.getCurrentLevel(),1);
+ assert.equal(crowns().levels[1].distance,ACTOR_DISTANCE);
+});

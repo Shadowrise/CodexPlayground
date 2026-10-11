@@ -133,6 +133,10 @@ test('accepted coil and wheel poses stay connected, grounded and inside arena th
   if(['exhausted','back','dizzy'].includes(q.stage)){
    const p=centipedeTarget(q);a.p=[p[0],q.stage==='back'?2.9:0,p[2]+(q.stage==='dizzy'?0:1)];const target=q.stage==='dizzy'?centipedeWheel(q,q.stageAt):{x:p[0],z:p[2]};a.yaw=Math.atan2(target.x-a.p[0],target.z-a.p[2]);
    if(q.stage==='back'){const actual=model.group.getObjectByName('BackTarget')!.getWorldPosition(new Vector3());assert(actual.distanceTo(new Vector3(...p))<.3,'painted back target aligns with actual bell');}
+   if(q.stage==='exhausted'||q.stage==='back'){
+    const anchor=model.group.getObjectByName(q.stage==='back'?'BackTarget':'TailTarget')!.getWorldPosition(new Vector3());
+    assert(model.interactionTarget(q)!.distanceTo(anchor)<1e-8,'target cue follows the animated instrument, including its actual height');
+   }
    assert(pushCentipede(q,a,q.stageAt+CENTIPEDE_TIMES[q.stage]-1));
   }else q=advanceCentipede(q,q.stageAt+CENTIPEDE_TIMES[q.stage]+1,[a]).event!;
  }

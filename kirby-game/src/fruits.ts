@@ -71,9 +71,8 @@ export class FruitWorld {
   private npcEaten = 0;
   private pickupAfter = new WeakMap<Object3D, number>();
   private time = 0;
-  private readonly batches: { mesh: InstancedMesh; slots: { index: number; fruit: number; local: Matrix4; shown: boolean }[] }[] = [];
+  private readonly batches: { mesh: InstancedMesh; slots: { fruit: number; local: Matrix4; shown: boolean }[] }[] = [];
   private readonly scratch = new Matrix4();
-  private readonly hiddenScale = new Vector3();
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
   constructor(obstacles:readonly FruitObstacle[]=[]) {
@@ -125,7 +124,7 @@ export class FruitWorld {
       const slots = part.items.map((item, index) => {
         fruitMatrix(this.fruits[item.fruit].object, this.scratch).multiply(item.local);
         mesh.setMatrixAt(index, this.scratch);
-        return { index, fruit: item.fruit, local: item.local, shown: true };
+        return { fruit: item.fruit, local: item.local, shown: true };
       });
       mesh.computeBoundingSphere();
       mesh.instanceMatrix.needsUpdate = true;
@@ -135,20 +134,24 @@ export class FruitWorld {
   }
   syncInstances() {
     for (const batch of this.batches) {
-      let shown = false;
       let dirty = false;
       for (const slot of batch.slots) {
-        const visible = this.fruits[slot.fruit].object.visible;
-        shown ||= visible;
+        const fruit = this.fruits[slot.fruit];
+        const visible = !fruit.eaten && fruit.object.visible;
         if (visible === slot.shown) continue;
         slot.shown = visible;
         dirty = true;
-        const matrix = fruitMatrix(this.fruits[slot.fruit].object, this.scratch).multiply(slot.local);
-        if (!visible) matrix.scale(this.hiddenScale);
-        batch.mesh.setMatrixAt(slot.index, matrix);
       }
-      if (dirty) batch.mesh.instanceMatrix.needsUpdate = true;
-      batch.mesh.visible = shown;
+      if (!dirty) continue;
+      // Pack active instances instead of submitting zero-scale hidden fruit to
+      // the vertex shader and both shadow passes. Capacity/bounds stay stable.
+      let count = 0;
+      for (const slot of batch.slots) if (slot.shown) {
+        batch.mesh.setMatrixAt(count++, fruitMatrix(this.fruits[slot.fruit].object, this.scratch).multiply(slot.local));
+      }
+      batch.mesh.count = count;
+      batch.mesh.visible = count > 0;
+      batch.mesh.instanceMatrix.needsUpdate = true;
     }
   }
   restore(eaten:readonly boolean[],npcEaten:number) {

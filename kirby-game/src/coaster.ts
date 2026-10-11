@@ -5,6 +5,8 @@ import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeLuigi, updateLuigiIdle } from './luigi';
+import {batchRigidMeshes} from './rigid-batch';
+import {CosmeticClock} from './cosmetic-clock';
 import { cloneVariant, remainingVariants, type KirbyVariant } from './variants';
 import type { CharacterController } from './controller';
 
@@ -157,6 +159,7 @@ export class Coaster {
         hood.position.set(0,1.507,1.3);hood.rotation.x=-Math.PI/2;hood.scale.set(1.25,.55,1);
         g.add(hood);
       }
+      batchRigidMeshes(g,new Set([...wheels,...g.children.filter(o=>!!o.name)]));
       this.group.add(g);this.carts.push({group:g,distance:i*this.length/12,wait:i===0?2.5:0,speed:i===0?0:64,wheels,occupied:i%2===1 || i===10});
     }
   }
@@ -198,9 +201,16 @@ export class Coaster {
     this.ridden.group.scale.setScalar(1);restoreRider(player);
     this.rider=undefined;this.ridden=undefined;this.rideMotion.speed=0;
   }
-  update(dt:number) {
-    if(this.luigi)updateLuigiIdle(this.luigi,dt);
-    for(const mixer of this.passengerMixers)mixer.update(dt);
+  private cosmeticClocks=new Map<T.Object3D,CosmeticClock>();
+  update(dt:number,camera?:T.Vector3) {
+    const idleDelta=(model:T.Object3D)=>{
+      if(!camera)return dt;
+      let clock=this.cosmeticClocks.get(model);if(!clock){clock=new CosmeticClock();this.cosmeticClocks.set(model,clock);}
+      // Carts move every frame; only the seated passengers' tiny idle motion is throttled.
+      return clock.step(dt,model.parent!.position.distanceToSquared(camera),model.visible);
+    };
+    if(this.luigi){const elapsed=idleDelta(this.luigi);if(elapsed)updateLuigiIdle(this.luigi,elapsed);}
+    for(const mixer of this.passengerMixers){const elapsed=idleDelta(mixer.getRoot() as T.Object3D);if(elapsed)mixer.update(elapsed);}
     this.rideMotion.speed=0;this.rideMotion.slope=0;this.rideMotion.inverted=false;this.rideMotion.turn=0;
     for(const cart of this.carts) {
       cart.group.scale.setScalar(1);
@@ -212,7 +222,8 @@ export class Coaster {
         const t=this.curve.getTangentAt(cart.distance/this.length);
         const remaining=this.length-cart.distance;
         const cruisingSpeed=2*(remaining<35?Math.max(7,remaining):Math.max(13,32-t.y*22));
-        const ahead=this.carts.filter(c=>c!==cart).map(c=>({cart:c,gap:(c.distance-cart.distance+this.length)%this.length})).sort((a,b)=>a.gap-b.gap)[0];
+        let ahead={cart:this.carts[0],gap:Infinity};
+        for(const candidate of this.carts)if(candidate!==cart){const gap=(candidate.distance-cart.distance+this.length)%this.length;if(gap<ahead.gap){ahead.cart=candidate;ahead.gap=gap;}}
         const gap=ahead.gap;
         // Fixed-size carts keep the same safe spacing for every rider.
         const spacing=1.7*(cart.group.scale.x+ahead.cart.group.scale.x)+1.6;

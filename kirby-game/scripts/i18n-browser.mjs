@@ -48,7 +48,7 @@ try{
  await page.waitForFunction(()=>document.querySelector('.chat-text')?.textContent==='Новая игра');
  assert((await page.locator('.chat-messages').innerText()).includes('Радуга joined the meadow.'));
  await page.evaluate(()=>{const c=window.i18nTest.character;c.actor.position.set(49,0,42);c.yaw=Math.PI;});
- await page.waitForFunction(()=>document.querySelector('#action-hint')?.textContent.includes('start the mill quest'));
+ await page.waitForFunction(()=>document.querySelector('#action-hint')?.textContent.includes('start the mill adventure'));
  await page.keyboard.press('e');await page.waitForFunction(()=>window.i18nTest.watermill.quest.stage==='clear');
  assert((await page.locator('#mill-quest-hud').innerText()).includes('Go to the twigs in the stream'));
  // A live switch updates game prompts, task order and event HUD without resetting the quest.

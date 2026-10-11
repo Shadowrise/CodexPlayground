@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {rigidComponents} from './rigid-batch';
+import {scenerySources} from './scenery-batch';
 
 export type OutlineTarget={key:unknown;root:T.Object3D;box?:T.Box3};
 export function outlineRegion(key:unknown,root:T.Object3D,center:T.Vector3,size:T.Vector3):OutlineTarget {
@@ -9,7 +11,7 @@ export function outlineRegion(key:unknown,root:T.Object3D,center:T.Vector3,size:
 export class InteractionOutline {
   readonly group=new T.Group();
   private key:unknown;
-  private parts:{source:T.Mesh;instances?:number[];mesh:T.Mesh}[]=[];
+  private parts:{source:T.Object3D;instanceSource?:T.InstancedMesh;instances?:number[];local?:T.Matrix4;mesh:T.Mesh}[]=[];
   private matrix=new T.Matrix4();
   private material=new T.MeshBasicMaterial({color:0xa8fff1,transparent:true,opacity:.48,side:T.BackSide,depthWrite:false});
   constructor(){
@@ -35,14 +37,20 @@ export class InteractionOutline {
       if(target){
         target.root.updateWorldMatrix(true,true);
         const center=new T.Vector3();
-        target.root.traverseVisible(object=>{
+        const collect=(object:T.Mesh,transform:T.Object3D=object)=>{
           if(!(object instanceof T.Mesh) || object.parent===this.group)return;
           const materials=Array.isArray(object.material)?object.material:[object.material];
           if(materials.every(m=>m.transparent || !m.visible || !m.colorWrite))return;
+          const components=target.box?rigidComponents(object):undefined;
+          if(components){
+            for(const part of components){this.matrix.multiplyMatrices(transform.matrixWorld,part.matrix);center.setFromMatrixPosition(this.matrix);if(!target.box!.containsPoint(center))continue;
+              const mesh=new T.Mesh(part.geometry,this.material);mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;this.group.add(mesh);this.parts.push({source:transform,local:part.matrix,mesh});
+            }return;
+          }
           const count=object instanceof T.InstancedMesh?object.count:1;
           const selected:number[]=[];
           for(let i=0;i<count;i++){
-            this.matrix.copy(object.matrixWorld);
+            this.matrix.copy(transform.matrixWorld);
             if(object instanceof T.InstancedMesh){const local=new T.Matrix4();object.getMatrixAt(i,local);this.matrix.multiply(local);}
             center.setFromMatrixPosition(this.matrix);
             if(!target.box || target.box.containsPoint(center))selected.push(i);
@@ -53,16 +61,21 @@ export class InteractionOutline {
             : new T.Mesh(object.geometry,this.material);
           mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;
           mesh.morphTargetInfluences=object.morphTargetInfluences;
-          this.group.add(mesh);this.parts.push({source:object,instances:object instanceof T.InstancedMesh?selected:undefined,mesh});
+          this.group.add(mesh);this.parts.push({source:transform,instanceSource:object instanceof T.InstancedMesh?object:undefined,instances:object instanceof T.InstancedMesh?selected:undefined,mesh});
+        };
+        target.root.traverseVisible(object=>{
+          if(object instanceof T.BatchedMesh){for(const source of scenerySources(object)){let visible=true;for(let p:T.Object3D|null=source.visibility;p;p=p.parent)if(!p.visible){visible=false;break;}if(visible)collect(source.mesh,source.visibility);}}
+          else if(object instanceof T.Mesh)collect(object);
         });
       }
     }
     this.group.visible=!!target;
     for(const part of this.parts){
       part.source.updateWorldMatrix(true,false);part.mesh.matrix.copy(part.source.matrixWorld);
+      if(part.local)part.mesh.matrix.multiply(part.local);
       if(part.instances && part.mesh instanceof T.InstancedMesh){
         const mesh=part.mesh;
-        part.instances.forEach((index,i)=>{(part.source as T.InstancedMesh).getMatrixAt(index,this.matrix);mesh.setMatrixAt(i,this.matrix);});
+        part.instances.forEach((index,i)=>{part.instanceSource!.getMatrixAt(index,this.matrix);mesh.setMatrixAt(i,this.matrix);});
         mesh.instanceMatrix.needsUpdate=true;
       }
     }

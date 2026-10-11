@@ -44,7 +44,7 @@ test('three ports are clear of trees and detailed balloons have distinct random 
   for(const p of BALLOON_SITES)assert(!sceneryClearance(p.x,p.z));
   const colors=world.balloons.map(b=>{const cloth=b.group.children.find(o=>o instanceof Mesh && o.geometry.getAttribute('color')) as Mesh;const c=cloth.geometry.getAttribute('color');return [c.getX(0),c.getY(0),c.getZ(0)].join(',');});
   assert.equal(new Set(colors).size,3);
-  let batches=0,parts=0;world.group.traverse(o=>{if(o instanceof InstancedMesh){batches++;parts+=o.count;}});assert(parts>1000);assert(batches<100);
+  let draws=0,triangles=0;world.group.traverse(o=>{if(o instanceof Mesh){draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o instanceof InstancedMesh?o.count:1);}});assert(triangles>120000,'keep the basket weave, seams and port flowers');assert(draws<40);
 });
 test('cruise takes twenty seconds while ascent and descent still take nine each',async()=>{
   const gltf=await model(),c=new CharacterController(gltf.scene,gltf.animations),world=new Balloons(()=>{},()=>.2);

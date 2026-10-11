@@ -4,6 +4,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import type {CharacterController} from './controller';
 import {awardFirst} from './score';
 import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,inFountain} from './fountain-site';
+import {batchRigidMeshes} from './rigid-batch';
 
 const COLORS=['#ef557e','#f6a044','#f5d75b','#62be91','#54bbd9','#627ed3','#a375d0'];
 /** Batched enamel/stone ornament, animated water and instanced droplets; no extra lights. */
@@ -73,6 +74,7 @@ export class RainbowFountain {
    // Only substantial stone pieces cast shadows; mosaic/trim cannot produce shimmer.
    m.castShadow=list[0].material===stone;this.group.add(m);
   }
+  batchRigidMeshes(this.group);
   this.water=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,
    uniforms:{time:{value:0},brightness:{value:1}},
    vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
@@ -102,6 +104,7 @@ export class RainbowFountain {
    const a=i/7*Math.PI*2,m=new T.Mesh(leaf,enamel[i%7]);m.position.set(Math.cos(a)*(i<7?.65:.38),i<7?0:.35,Math.sin(a)*(i<7?.65:.38));m.scale.set(.32,.16,.8);m.rotation.set(-.5,Math.PI/2-a,0);this.petals.add(m);
   }
   const pearl=new T.Mesh(new T.IcosahedronGeometry(.38,1),new T.MeshStandardMaterial({color:'#fff0bd',emissive:'#a97936',emissiveIntensity:.12,metalness:.35,roughness:.18}));pearl.position.y=.35;this.petals.add(pearl);
+  batchRigidMeshes(this.petals);
   this.bubbles=new T.InstancedMesh(new T.SphereGeometry(1,10,6),new T.MeshStandardMaterial({color:'white',transparent:true,opacity:.4,roughness:.16,metalness:.2,depthWrite:false}),21);
   for(let i=0;i<21;i++)this.bubbles.setColorAt(i,new T.Color(COLORS[i%7]));
   this.bubbles.frustumCulled=false;this.bubbles.visible=false;this.group.add(this.bubbles);

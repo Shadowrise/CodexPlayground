@@ -352,4 +352,4 @@ body:not(.touch-ui) .hud-corner .right-hud {position:static;min-width:0;max-widt
 #centipede-event-hud{left:50%;width:min(420px,calc(100vw - 40px));box-sizing:border-box;font-size:14px;line-height:1.45;}
 #centipede-event-hud strong{display:block;font-size:16px;margin-bottom:4px;}
 @media(max-width:900px){#centipede-event-hud{left:50%;top:92px;padding:9px 14px;font-size:12px;}#centipede-event-hud strong{font-size:14px;}}
-.touch-ui #centipede-event-hud{left:50%;top:82px;max-width:min(390px,calc(100vw - 32px));padding:8px 12px;font-size:12px;}
+.touch-ui #centipede-event-hud{left:50%;top:max(4px,env(safe-area-inset-top));bottom:auto;z-index:60;width:min(520px,calc(100vw - var(--touch-left) - var(--touch-right)));max-width:none;padding:8px 12px;font-size:12px;}
