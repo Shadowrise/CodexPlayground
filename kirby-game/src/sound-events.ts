@@ -11,15 +11,19 @@ export class SoundEvents {
   private strides = new Map<string, number>();
   private stepAfter = new Map<string, number>();
   private npcStepAfter = 0;
+  private pendingGreetings=new Set<string>();
   constructor(private random = Math.random) {}
 
-  update(dt: number, actors: SoundActor[], listener: { x: number; z: number }) {
+  update(dt: number, actors: SoundActor[], listener: { x: number; z: number }, audioReady=true) {
     this.now += dt;
     const events: SoundEvent[] = [];
     const steps: SoundActor[] = [];
     for (const actor of actors) {
       const before = this.previous.get(actor.id);
-      if(!actor.player&&actor.state==='Hello'&&before?.state!=='Hello')events.push({kind:'hello',actor});
+      if(!actor.player&&actor.state==='Hello'){
+        if(before?.state!=='Hello')this.pendingGreetings.add(actor.id);
+        if(audioReady&&this.pendingGreetings.delete(actor.id))events.push({kind:'hello',actor});
+      }else this.pendingGreetings.delete(actor.id);
       if (before) {
         const distance = Math.hypot(actor.x - before.x, actor.z - before.z);
         const walking = !actor.down && ['Walk', 'Run', 'WalkBackward'].includes(actor.state);
@@ -43,6 +47,7 @@ export class SoundEvents {
       }
       this.previous.set(actor.id, { ...actor });
     }
+    for(const id of this.pendingGreetings)if(!actors.some(a=>a.id===id))this.pendingGreetings.delete(id);
     // Only the closest eligible NPC supplies a quiet step at a time.
     steps.sort((a,b) => Math.hypot(a.x-listener.x,a.z-listener.z)-Math.hypot(b.x-listener.x,b.z-listener.z));
     for (const actor of steps) {

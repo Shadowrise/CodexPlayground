@@ -5,6 +5,8 @@ import {createForest} from '../src/forest';
 import {MeadowLayout,onMeadowBridge,meadowPathHalfWidth} from '../src/meadow-layout';
 import {BANK_RINGS,flatGround as dryGround,WATER_Y,BRIDGES} from '../src/pond-layout';
 import {Ponds} from '../src/ponds';
+import {MAZE_SITE,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from '../src/maze-layout';
+import {roundMeadowPath} from '../src/meadow-path';
 
 test('shared trails reach entrances and keep full clearance from trunks and water',()=>{
  const forest=createForest(),trees=forest.userData.treePositions,layout=forest.userData.meadowLayout as MeadowLayout;
@@ -21,6 +23,26 @@ test('shared trails reach entrances and keep full clearance from trunks and wate
  const map=(floor.material as any).map;
  assert.equal(map.image.data.length,512*512*4);assert.equal((floor.material as any).transparent,false);
  assert(map.image.data.some((value:number,index:number)=>index%4===3&&value<100),'wear uses the existing map');
+ for(const p of [...MAZE_ENTRY_STONES,...MAZE_ENTRY_POSTS]){
+  const radius='color' in p ? .2 : .65;
+  assert(layout.trailDistance(MAZE_SITE.x+p.x,MAZE_SITE.z+p.z)>radius+1.4,'maze entrance decorations remain beside the complete path and its soft rim');
+ }
+ for(const path of layout.paths)for(let i=1;i<path.points.length-1;i++){
+  const a=path.points[i-1],p=path.points[i],b=path.points[i+1],ux=p.x-a.x,uz=p.z-a.z,vx=b.x-p.x,vz=b.z-p.z;
+  const lengths=Math.hypot(ux,uz)*Math.hypot(vx,vz);if(lengths<1e-8)continue;
+  assert((ux*vx+uz*vz)/lengths>Math.cos(Math.PI*25/180),'every actual approach, obstacle detour and bend turns progressively instead of having a right-angle corner');
+ }
+ assert(layout.paths.reduce((n,p)=>n+p.points.length,0)<3400,'startup raster/placement budget stays bounded');
+});
+
+test('rounding preserves endpoints and detours around an obstacle instead of cutting through it',()=>{
+ const source=[{x:-12,z:0},{x:0,z:0},{x:0,z:12},{x:12,z:12}],free=(x:number,z:number)=>!(x>1&&x<7&&z<10);
+ const points=roundMeadowPath(source,free);
+ assert.deepEqual(points[0],source[0]);assert.deepEqual(points.at(-1),source.at(-1));
+ assert(points.some(p=>p.x<0&&p.z>0),'round the first corner with a visible arc');
+ for(let i=1;i<points.length;i++)for(let step=0;step<=10;step++){
+  const a=points[i-1],b=points[i],t=step/10;assert(free(a.x+(b.x-a.x)*t,a.z+(b.z-a.z)*t));
+ }
 });
 
 test('sloping banks are continuous, upward facing and support walking down to water',()=>{

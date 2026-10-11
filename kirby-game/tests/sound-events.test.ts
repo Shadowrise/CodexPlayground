@@ -3,6 +3,16 @@ import { test } from 'node:test';
 import { SoundEvents, type SoundActor } from '../src/sound-events';
 const actor = (id: string): SoundActor => ({ id, state: 'Idle', down: false, size: 1, x: 0, z: 0 });
 
+test('audio unlock retries a still-active greeting once without replaying muted fruit sounds or old greetings',()=>{
+ const events=new SoundEvents(),npc=actor('npc'),player={...actor('player'),player:true,fruitsEaten:0};
+ const update=(ready:boolean)=>events.update(.016,[player,npc],player,ready).map(e=>e.kind);
+ assert.deepEqual(update(true),[]);npc.state='Hello';player.fruitsEaten++;
+ assert.deepEqual(update(false),['eat']);assert.deepEqual(update(false),[]);
+ assert.deepEqual(update(true),['hello']);assert.deepEqual(update(true),[]);
+ npc.state='Idle';update(false);npc.state='Hello';update(false);npc.state='Idle';update(false);
+ assert.deepEqual(update(true),[],'completed silent greeting does not play five seconds later');
+});
+
 test('fruit bite sounds once per swallowed fruit during smooth growth',()=>{
   const events=new SoundEvents(),player={...actor('player'),player:true,fruitsEaten:0};
   events.update(.016,[player],player);player.fruitsEaten=1;

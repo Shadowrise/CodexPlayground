@@ -2,7 +2,8 @@ import {BRIDGES,flatGround as dryGround} from './pond-layout';
 import {LANDMARKS,POND_SCALE} from './landmark-sites';
 import {BALLOON_SITES} from './balloon-sites';
 import {HOME_SITE} from './home-site';
-import {MAZE_SITE,MAZE_HALF} from './maze-layout';
+import {MAZE_SITE,MAZE_HALF,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from './maze-layout';
+import {roundMeadowPath} from './meadow-path';
 import {BOSS_ARENA} from './boss-arena-site';
 import {FOUNTAIN_SITE} from './fountain-site';
 import {SKY_TRAIL_SITE,SKY_PLATFORMS} from './sky-trail-layout';
@@ -56,6 +57,9 @@ export class MeadowLayout {
    // Entrances lead to the actual door/ladder, not the centres of solid buildings.
    if(Math.abs(x-HOME_SITE.x)<7.5&&z>HOME_SITE.z-6.8&&z<HOME_SITE.z+5.2)return true;
    if(Math.abs(x-MAZE_SITE.x)<MAZE_HALF+2.6&&Math.abs(z-MAZE_SITE.z)<MAZE_HALF+2.6)return true;
+   // Reserve the complete strip and soft rim around the entrance ornaments.
+   if(MAZE_ENTRY_STONES.some(p=>Math.hypot(x-MAZE_SITE.x-p.x,z-MAZE_SITE.z-p.z)<4.1))return true;
+   if(MAZE_ENTRY_POSTS.some(p=>Math.abs(x-MAZE_SITE.x-p.x)<4.25&&Math.abs(z-MAZE_SITE.z-p.z)<4.25))return true;
    if(Math.abs(x-49)<7.2&&z>26&&z<39.5)return true;
    if(Math.hypot(x-135,z-39)<5.2||Math.hypot(x-143,z-58)<6)return true;
    if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<12.5)return true;
@@ -203,7 +207,7 @@ export class MeadowLayout {
     }
     if(!changed)break;
    }
-   path.points=curved;
+   path.points=roundMeadowPath(curved,free);
   }
   for(const path of this.paths)for(let i=1;i<path.points.length;i++){
    const a=path.points[i-1],b=path.points[i],s={a,b,halfA:meadowPathHalfWidth(path,a),halfB:meadowPathHalfWidth(path,b)};

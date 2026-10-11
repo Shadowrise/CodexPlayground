@@ -72,6 +72,12 @@ export class SoundEffects {
         this.buffers.set('hello', this.synthesize('voice', 4));
         this.buffers.set('wheel',this.rideBuffer(false));
         this.buffers.set('cheer',this.rideBuffer(true));
+        // One cached phrase follows the gesture: cheerful Wii, then Hello.
+        // A single protected source cannot lose the second word to voice limits.
+        const intro=this.buffers.get('cheer')!,hello=this.buffers.get('hello')!,pause=Math.round(22050*.06);
+        const greeting=this.context.createBuffer(1,intro.length+pause+hello.length,22050),phrase=greeting.getChannelData(0);
+        phrase.set(intro.getChannelData(0).map(v=>v*.8));phrase.set(hello.getChannelData(0),intro.length+pause);
+        this.buffers.set('npc-greeting',greeting);
         void this.loadFruitBite(this.context);
         void this.loadDogBark(this.context);
       }
@@ -308,6 +314,16 @@ export class SoundEffects {
     this.voiceAfter=ctx.currentTime+1.5;
   }
 
+  private sayNpcGreeting(volume:number,panValue:number){
+    const ctx=this.context,buffer=this.buffers.get('npc-greeting');
+    if(!ctx||!buffer)return;
+    const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
+    source.buffer=buffer;gain.gain.value=.65*volume;pan.pan.value=panValue;
+    source.connect(gain);gain.connect(pan);pan.connect(this.master!);
+    this.begin(source,gain,()=>pan.disconnect(),undefined,true);
+    this.voiceAfter=Math.max(this.voiceAfter,ctx.currentTime+buffer.duration+.5);
+  }
+
   playTreehouse(kind:'ladder'|'creak'|'leaves'|'cheer') {
     const ctx=this.context;
     if(!ctx || !this.enabled || document.hidden || ctx.state!=='running' || this.active.size>=8)return;
@@ -448,13 +464,16 @@ export class SoundEffects {
   }
 
   update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], cameraAzimuth: number) {
+    const ctx = this.context;
+    const audioReady=!!ctx&&this.enabled&&!document.hidden&&ctx.state==='running';
     const actors: SoundActor[] = [
       { id: 'player', player: true, state: player.state, down: false, size: player.actor.scale.x, fruitsEaten: player.fruitsEaten, x: player.actor.position.x, z: player.actor.position.z },
       ...npcs.map(n => ({ id: n.actor.uuid, state: n.state, down: n.isDown, size: n.actor.scale.x, fruitsEaten:n.fruitsEaten, x: n.actor.position.x, z: n.actor.position.z })),
     ];
-    const events = this.events.update(dt, actors, player.actor.position);
-    const ctx = this.context;
-    if (!ctx || !this.enabled || document.hidden || ctx.state !== 'running') return;
+    // Only a still-active greeting waits for audio unlock; muted steps/growth
+    // remain observed and are never replayed later.
+    const events = this.events.update(dt, actors, player.actor.position,audioReady);
+    if(!ctx||!audioReady)return;
     // Player and important life-cycle events take precedence over ambient chatter.
     events.sort((a, b) => Number(a.kind === 'step') - Number(b.kind === 'step') || Number(!!b.actor.player) - Number(!!a.actor.player));
     for (const event of events) {
@@ -462,7 +481,7 @@ export class SoundEffects {
       const distance = Math.hypot(dx, dz);
       // Greetings accompany the visible wave, including the full 24m greeting
       // radius. They must not be dropped by ambient voice/footstep limits.
-      if(event.kind==='hello'){if(distance<=32)this.sayHello(Math.max(.35,1-distance/40));continue;}
+      if(event.kind==='hello'){if(distance<=32)this.sayNpcGreeting(Math.max(.35,1-distance/40),Math.max(-.8,Math.min(.8,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/24)));continue;}
       if (!event.actor.player && distance > 18) continue;
       if (event.kind === 'voice' && ctx.currentTime < this.voiceAfter) continue;
       if (!event.actor.player && event.kind !== 'voice' && event.kind !== 'step' && ctx.currentTime < this.npcEffectAfter) continue;

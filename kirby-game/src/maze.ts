@@ -2,7 +2,7 @@ import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
-import { MAZE_SITE, MAZE_CELL, MAZE_HALF, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
+import { MAZE_SITE, MAZE_CELL, MAZE_HALF, MAZE_ENTRY_STONES, MAZE_ENTRY_POSTS, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
 import { makeFruitMist } from './fruit-mist';
 import {sceneryShadowBatch} from './scenery-shadows';
 import {instancedLod,roundedCoarseShape} from './instanced-lod';
@@ -56,9 +56,9 @@ export class HedgeMaze {
       if(x===6&&w[1])wall(cx+5,cz,.7,5,cell,-1);if(z===6&&w[2])wall(cx,cz+5,5,.7,cell,-1);
     }
     // Clear entrance framed with stone pillars, golden caps, lanterns and flowers.
-    for(const x of [-5,5]){put(box,'#969780',x,1.8,37,1.1,3.6,1.1);put(box,'#d6bf7b',x,3.65,37,1.3,.25,1.3);put(leaf,'#f1d68e',x,4.1,37,.25,.4,.25);}
+    for(const {x,z} of MAZE_ENTRY_POSTS){put(box,'#969780',x,1.8,z,1.1,3.6,1.1);put(box,'#d6bf7b',x,3.65,z,1.3,.25,1.3);put(leaf,'#f1d68e',x,4.1,z,.25,.4,.25);}
     for(let i=0;i<8;i++)put(box,'#baaf82',0,.045,36+i*.75,4,.09,.65);
-    for(let i=0;i<40;i++){const side=i%2?-1:1,x=side*(6+(i%5)*.6),z=37+Math.floor(i/5)*.5;put(leaf,i%3?'#e1bd54':'#cf87a6',x,.4,z,.2,.3,.2);}
+    for(const {x,z,color} of MAZE_ENTRY_STONES)put(leaf,color,x,.4,z,.2,.3,.2);
     for(const x of [-5,5])put(box,'#826743',x,5.9,37,.22,4.7,.22);
     const arrowShape=new T.Shape();arrowShape.moveTo(-2.7,-.25);arrowShape.lineTo(.8,-.25);arrowShape.lineTo(.8,-.75);arrowShape.lineTo(2.5,0);arrowShape.lineTo(.8,.75);arrowShape.lineTo(.8,.25);arrowShape.lineTo(-2.7,.25);arrowShape.closePath();
     const arrowGeometry=new T.ShapeGeometry(arrowShape),arrowMaterial=new T.MeshBasicMaterial({color:'#ffe291'});
