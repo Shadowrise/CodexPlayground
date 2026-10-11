@@ -7,7 +7,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  'boss-arena':'ar',fountain:'fn','sky-trail':'sky',home:'hm',treehouse:'th',
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -18,6 +18,7 @@ export type ChatCommandOptions={
 const commands=[
  {name:'size',description:'Изменить размер Кирби: 30–1000%'},
  {name:'tele',description:'Телепортироваться к приключению'},
+ {name:'unlock',description:'Разблокировать персонажа'},
 ];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
@@ -36,7 +37,8 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   const destination=destinations.find(d=>TELE_ALIASES[d.id]===argument.toLowerCase());
   return destination?{command:{kind:'tele',destination}}:{error:'Выбери место из подсказок или введи его сокращение после /tele.'};
  }
- return {error:'Доступные команды: /size и /tele.'};
+ if(name==='unlock')return argument.toLowerCase()==='bandana'?{command:{kind:'unlock',character:'bandana'}}:{error:'Введи /unlock bandana, чтобы открыть Бандану.'};
+ return {error:'Доступные команды: /size, /tele и /unlock.'};
 }
 
 export function commandSuggestions(text:string,enabled:boolean,destinations:readonly Destination[]):CommandSuggestion[]{
@@ -46,6 +48,7 @@ export function commandSuggestions(text:string,enabled:boolean,destinations:read
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,
  }));
+ if(name==='unlock')return 'bandana'.startsWith(argument)?[{value:'/unlock bandana',label:'bandana',description:t('Бандана'),complete:true}]:[];
  if(match[2]!==undefined)return [];
  return commands.filter(c=>c.name.startsWith(name)).map(c=>({value:`/${c.name} `,label:`/${c.name}`,description:t(c.description),complete:false}));
 }

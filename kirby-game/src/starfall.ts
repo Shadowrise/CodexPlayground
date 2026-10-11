@@ -6,7 +6,7 @@ export const STAR_COUNT=Math.ceil(COLLECT_MS/STAR_INTERVAL);
 export type FestivalPlayer={name:string;variant:number;base:number;fruits:number;size:number;bonus:number;collected:number[]};
 export type FestivalResult={id:string;name:string;variant:number;points:number;bonus:number;fruits:number;size:number};
 export type StarfallState={startsAt:number;endsAt:number;initiator:string;players:Record<string,FestivalPlayer>;results?:FestivalResult[]};
-export function allTasks(achievements:Iterable<string>){const done=new Set(achievements);return SCORE_ACTIONS.every(a=>done.has(a));}
+export function allTasks(achievements:Iterable<string>){const done=achievements instanceof Set?achievements:new Set(achievements);return SCORE_ACTIONS.every(a=>done.has(a));}
 export function createStarfall(now:number,initiator:string):StarfallState{return {startsAt:now+PREPARE_MS,endsAt:now+PREPARE_MS+COLLECT_MS,initiator,players:{}};}
 export function starfallPhase(s:StarfallState,now:number){return now<s.startsAt?'countdown':now<s.endsAt?'collect':now<s.endsAt+CELEBRATE_MS?'celebrate':'done';}
 export function starValue(index:number){return index%5===4?3:1;}

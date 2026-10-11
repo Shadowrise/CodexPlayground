@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 64" fill="none">
+ <defs>
+  <radialGradient id="body" cx=".32" cy=".2" r=".85"><stop stop-color="#ff9a49"/><stop offset=".7" stop-color="#f47a28"/><stop offset="1" stop-color="#d95119"/></radialGradient>
+  <linearGradient id="cloth" x1="20" y1="12" x2="53" y2="31" gradientUnits="userSpaceOnUse"><stop stop-color="#5277ec"/><stop offset=".65" stop-color="#335bd4"/><stop offset="1" stop-color="#2443ad"/></linearGradient>
+  <linearGradient id="steel" x1="13" y1="2" x2="22" y2="15" gradientUnits="userSpaceOnUse"><stop stop-color="#e3f5f4"/><stop offset=".5" stop-color="#93b6c2"/><stop offset="1" stop-color="#758891"/></linearGradient>
+  <linearGradient id="foot" x1="25" y1="48" x2="25" y2="61" gradientUnits="userSpaceOnUse"><stop stop-color="#ffe865"/><stop offset="1" stop-color="#edbf2b"/></linearGradient>
+  <radialGradient id="face" cx=".35" cy=".25" r=".8"><stop stop-color="#fff0ca"/><stop offset="1" stop-color="#efd294"/></radialGradient>
+  <linearGradient id="eye" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#111b2a"/><stop offset="1" stop-color="#a96b08"/></linearGradient>
+ </defs>
+ <!-- Wooden spear and ribbon sit behind the raised hand. -->
+ <path d="M7 48 18 15" stroke="#5b3e24" stroke-width="3.2" stroke-linecap="round"/>
+ <path d="M7 47 17.5 16" stroke="#a07845" stroke-width="2" stroke-linecap="round"/>
+ <path d="m17 17-4-6L23 1l-.5 13Z" fill="url(#steel)" stroke="#77949d" stroke-width=".4"/>
+ <path d="m17 17 1-7 5-9-.5 13Z" fill="#c0caca"/>
+ <path d="m15.5 16 4 1" stroke="#e9bd4a" stroke-width="2.6" stroke-linecap="round"/>
+ <path d="M16 17c-5-5-8 0-7 6 2-2 4-3 6-3-2 3-1 5 0 6l3-7" fill="#e95243" stroke="#b93832" stroke-width=".5"/>
+ <ellipse cx="14.7" cy="31" rx="7" ry="10" transform="rotate(-24 14.7 31)" fill="url(#body)"/>
+ <ellipse cx="56" cy="39" rx="7" ry="9" transform="rotate(-25 56 39)" fill="url(#body)"/>
+ <ellipse cx="24" cy="54.6" rx="12.8" ry="7.5" transform="rotate(-19 24 54.6)" fill="url(#foot)"/>
+ <ellipse cx="45.3" cy="55" rx="12.8" ry="7.5" transform="rotate(17 45.3 55)" fill="url(#foot)"/>
+ <path d="M61 25c4-4 6-7 5-11-5 0-9 3-11 9Z" fill="url(#cloth)" stroke="#2443ad" stroke-width=".6"/>
+ <path d="M58 29c7 3 10 0 11-4-5-4-10-4-14 0Z" fill="url(#cloth)" stroke="#2443ad" stroke-width=".6"/>
+ <path d="m58 24 5-6m-5 7 8 1" stroke="#89a3ff" stroke-opacity=".4" stroke-width=".7"/>
+ <ellipse cx="35" cy="34.4" rx="23.9" ry="22.1" fill="url(#body)"/>
+ <path d="M21 26c3-6 22-6 27 0l1.5 7c7 9 5 16-3 17.5-6 1.8-16 1.4-24-1-8-2.7-7.4-10-2.5-15Z" fill="url(#face)"/>
+ <ellipse cx="29" cy="34.2" rx="3.8" ry="8.1" transform="rotate(5 29 34.2)" fill="url(#eye)" stroke="#0a1320" stroke-width=".7"/>
+ <ellipse cx="41.7" cy="34.7" rx="3.8" ry="8.1" transform="rotate(5 41.7 34.7)" fill="url(#eye)" stroke="#0a1320" stroke-width=".7"/>
+ <ellipse cx="29.6" cy="30.8" rx="2" ry="3" transform="rotate(5 29.6 30.8)" fill="#fff"/>
+ <ellipse cx="42.3" cy="31.3" rx="2" ry="3" transform="rotate(5 42.3 31.3)" fill="#fff"/>
+ <ellipse cx="22.3" cy="40.8" rx="4.5" ry="2.6" transform="rotate(8 22.3 40.8)" fill="#efaa68" fill-opacity=".75"/>
+ <ellipse cx="48.3" cy="42.2" rx="4.5" ry="2.6" transform="rotate(8 48.3 42.2)" fill="#efaa68" fill-opacity=".75"/>
+ <path d="M14 24C16 7 44 6 54 19c2 3 3 7 2 10-13-7-27-10-42-5Z" fill="url(#cloth)" stroke="#274caf" stroke-width=".6"/>
+ <path d="M14.7 23.5c16-5 30-2 41 5" stroke="#203e9c" stroke-width="2.2" stroke-linecap="round"/>
+ <path d="M16 22.8c15-4 27-1.5 38.5 4.5" stroke="#6283e7" stroke-width=".7" stroke-linecap="round"/>
+ <path d="m22 15 3-2m18 2 4 2m-12-7 1.5 2" stroke="#829eff" stroke-opacity=".35" stroke-width=".7" stroke-linecap="round"/>
+ <ellipse cx="56.5" cy="25.9" rx="3.5" ry="3.8" transform="rotate(-20 56.5 25.9)" fill="#3357c0"/>
+</svg>

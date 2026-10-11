@@ -283,6 +283,28 @@ export class SoundEffects {
     }
   }
 
+  playCharacterUnlock(){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const key='character-unlock';
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=1.8,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);
+      const notes=[392,523.25,659.25,783.99,1046.5];
+      for(let i=0;i<data.length;i++){
+        const time=i/rate;let value=0;
+        notes.forEach((frequency,n)=>{
+          const age=time-n*.13;if(age<0)return;
+          const envelope=T_smoothstep(age/.025)*Math.exp(-age*(n===4?3.2:6))*T_smoothstep((duration-time)/.22);
+          const phase=2*Math.PI*frequency*age;
+          value+=(Math.sin(phase)+.12*Math.sin(phase*2)*Math.exp(-age*4))*envelope*.2;
+        });data[i]=value;
+      }this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.55;
+    source.connect(gain);gain.connect(this.master!);
+    // Follow the final adventure's chime without building a long reward queue.
+    this.begin(source,gain,undefined,Math.max(ctx.currentTime,Math.min(this.rewardAfter,ctx.currentTime+.75)),true);
+  }
+
   playEmote(kind:Emote){
     if(kind==='Hello'){this.sayHello();return;}
     const ctx=this.context;if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;

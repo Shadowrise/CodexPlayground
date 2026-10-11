@@ -1,5 +1,6 @@
 import { Color, Material, Mesh, MeshLambertMaterial, MeshStandardMaterial, Object3D } from 'three';
 import {rainbowCrown,rainbowSkin} from './rainbow-kirby';
+import {applyBandana} from './bandana-kirby';
 
 import {KIRBY_VARIANTS,type KirbyVariant} from './variant-palette';
 export {NPC_COLORS,KIRBY_VARIANTS,type KirbyVariant} from './variant-palette';
@@ -12,6 +13,7 @@ export function remainingVariants(selected: KirbyVariant) {
 export function styleVariant(element:HTMLElement,variant:KirbyVariant){
   element.style.setProperty('--kirby-color',variant[1]);
   element.classList.toggle('rainbow-kirby',variant[0]==='Радуга');
+  element.classList.toggle('bandana-kirby',variant[0]==='Бандана');
 }
 
 function matteSurface(source: MeshStandardMaterial) {
@@ -64,5 +66,6 @@ export function cloneVariant(template: Object3D, variant: KirbyVariant, npc: boo
     const head=model.getObjectByName('Body_motion')??model.getObjectByName('Body motion');
     if(head)head.add(rainbowCrown());
   }
+  if(variant[0]==='Бандана')applyBandana(model);
   return model;
 }

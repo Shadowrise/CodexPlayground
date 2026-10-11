@@ -1,4 +1,7 @@
-import {t,createLanguageSwitcher,localizeDOM} from './i18n';
+import {t,createLanguageSwitcher,localizeDOM,onLocaleChange} from './i18n';
+import {CharacterUnlocks} from './character-unlocks';
+import {CharacterUnlockView} from './character-unlock-view';
+import {LockedCharacterTooltip} from './locked-character-tooltip';
 import {MeadowTutorial} from './tutorial';
 import {disposeActor} from './actor-lifecycle';
 import {configureSceneryBatching} from './scenery-batch';
@@ -128,6 +131,11 @@ settingsToggle.addEventListener('click', () => {
 });
 const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
+let unlockStorage:Storage|undefined;try{unlockStorage=localStorage;}catch{}
+const characterUnlocks=new CharacterUnlocks(unlockStorage);
+const unlockView=new CharacterUnlockView(()=>sounds.playCharacterUnlock());
+const lockedCharacterTooltip=new LockedCharacterTooltip();
+let unlockAnnouncement=false;
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
@@ -211,11 +219,19 @@ loadButton.addEventListener('click',()=>{
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
+    if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncement=true;
+    const lockedSave=characterUnlocks.isLocked(selected[0]);
+    if(lockedSave){
+      // A save created while Bandana was freely available still keeps all progress.
+      selected=KIRBY_VARIANTS.find(v=>!characterUnlocks.isLocked(v[0])&&!pendingSave!.npcs.some(n=>n.variant===v[0]))!;
+      pendingSave.player.variant=selected[0];
+    }
     // Keep the saved colour/NPC roster intact, while allowing name entry here.
     resetVariantAvailability();
     (variantGrid.children[KIRBY_VARIANTS.indexOf(selected)] as HTMLButtonElement).click();
     variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>{b.disabled=i!==KIRBY_VARIANTS.indexOf(selected);});
     showCharacterSelection();
+    if(lockedSave){selectionMessage.textContent=t('Бандана пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.');selectionMessage.hidden=false;}
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
 saveButton.addEventListener('click',()=>{
@@ -239,21 +255,44 @@ for (const variant of KIRBY_VARIANTS) {
   button.setAttribute('aria-label', t(variant[0]));
   button.setAttribute('aria-pressed', String(variant === selected));
   styleVariant(button,variant);
-  button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${t(variant[0])}</span><span class="choice-check" aria-hidden="true">✓</span>`;
+  button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${t(variant[0])}</span><span class="choice-check" aria-hidden="true">✓</span><span class="variant-lock" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="9" width="16" height="13" rx="4" fill="currentColor"/><path d="M12 14v3" stroke="#253142" stroke-width="2.5" stroke-linecap="round"/></svg></span>`;
   button.addEventListener('click', () => {
+    if(button.disabled)return;
+    if(characterUnlocks.isLocked(variant[0])){lockedCharacterTooltip.show(button);return;}
     selected = variant;
     variantGrid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
   });
+  button.addEventListener('pointerenter',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button);});
+  button.addEventListener('pointerleave',()=>lockedCharacterTooltip.leave(button));
+  button.addEventListener('focus',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button);});
+  button.addEventListener('blur',()=>lockedCharacterTooltip.hide());
   variantGrid.appendChild(button);
 }
-function resetVariantAvailability(){variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach(b=>{b.disabled=false;b.title='';});}
+function updateVariantLocks(){
+ variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>{
+  const variant=KIRBY_VARIANTS[i],locked=characterUnlocks.isLocked(variant[0]);
+  b.classList.toggle('variant-locked',locked);b.setAttribute('aria-disabled',String(locked||b.disabled));
+  b.querySelector<HTMLElement>('.variant-lock')!.hidden=!locked;
+  b.title=t(!locked&&b.dataset.occupied==='true'?'Этот цвет уже занят':'');b.setAttribute('aria-label',t(variant[0]));
+  if(locked)b.setAttribute('aria-describedby',lockedCharacterTooltip.element.id);else b.removeAttribute('aria-describedby');
+ });
+ if(characterUnlocks.bandanaUnlocked)lockedCharacterTooltip.hide();
+}
+function resetVariantAvailability(){
+ lockedCharacterTooltip.hide();
+ variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach(b=>{b.disabled=false;delete b.dataset.occupied;});
+ updateVariantLocks();
+ if(characterUnlocks.isLocked(selected[0]))variantGrid.querySelector<HTMLButtonElement>('button:not(.variant-locked):not(:disabled)')?.click();
+}
+resetVariantAvailability();onLocaleChange(updateVariantLocks);
 let checkingVariants=false;
 async function refreshVariantAvailability(){
  if(!networkIntent||playing||selectionCard.hidden||checkingVariants)return;
  checkingVariants=true;const generation=selectionGeneration;
  try{const response=await fetch(`${serverUrl.replace(/\/$/,'')}/room`,{cache:'no-store',signal:AbortSignal.timeout(5000)});if(!response.ok)return;const room=await response.json();if(generation!==selectionGeneration||!networkIntent||playing||selectionCard.hidden||!Array.isArray(room.occupiedVariants))return;
- const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.title=t(b.disabled?'Этот цвет уже занят':'');});
- if(buttons[KIRBY_VARIANTS.indexOf(selected)].disabled)buttons.find(b=>!b.disabled)?.click();
+ const buttons=[...variantGrid.querySelectorAll<HTMLButtonElement>('button')];buttons.forEach((b,i)=>{b.disabled=room.occupiedVariants.includes(i);b.dataset.occupied=String(b.disabled);});
+ updateVariantLocks();
+ if(buttons[KIRBY_VARIANTS.indexOf(selected)].disabled||characterUnlocks.isLocked(selected[0]))buttons.find((b,i)=>!b.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0]))?.click();
  }catch{}finally{checkingVariants=false;}
 }
 setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
@@ -367,6 +406,10 @@ chat.configureCommands({
  execute:command=>{
   if(!character||network||networkIntent)return;
   if(command.kind==='size'){character.resizeTo(command.size,true);return;}
+  if(command.kind==='unlock'){
+   if(characterUnlocks.unlockBandana()){unlockAnnouncement=true;updateVariantLocks();}
+   return;
+  }
   // Release every source of scripted movement before changing world position.
   // This also restores the model fitted into a basket, bed, cart or boat.
   clearTutorialInput();coaster.disembark();boats.cancel();fireflies?.disembark();
@@ -563,7 +606,8 @@ export const ready=loadCharacter().then(async()=>{
   renderer.render(scene,camera);
 });
 startButton.addEventListener('click', async () => {
-  if (!loadedModel || playing || joiningSession || selectionCard.hidden || !requirePlayerName()) return;
+  if (!loadedModel || playing || joiningSession || selectionCard.hidden || characterUnlocks.isLocked(selected[0]) || !requirePlayerName()) return;
+  lockedCharacterTooltip.hide();
   const generation=selectionGeneration;
   selectionMessage.hidden=true;selectionMessage.textContent='';
   music.start();
@@ -633,11 +677,17 @@ startButton.addEventListener('click', async () => {
   tutorial.open();
 });
 
+function checkCharacterUnlock(){
+ if(!character||!playing)return;
+ if(characterUnlocks.complete(character.achievements)){unlockAnnouncement=true;updateVariantLocks();}
+ if(unlockAnnouncement&&!tutorial.active){unlockAnnouncement=false;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]==='Бандана')!);}
+}
+
 /** End a session in place; the expensive scenery and loaded models stay reusable. */
 function returnToMenu(){
  if(returningToMenu)return;returningToMenu=true;
  try{
-  soloHistory?.stop();soloHistory=undefined;playing=false;tutorial.cancel();chat.close();clearTutorialInput();touch?.setEnabled(false);
+  soloHistory?.stop();soloHistory=undefined;playing=false;tutorial.cancel();chat.close();unlockView.hide();clearTutorialInput();touch?.setEnabled(false);
   network?.close();network=undefined;joiningSession?.close();joiningSession=undefined;
   coaster.disembark();boats.cancel();boats.syncRemoteRiders(new Map());
   balloons.reset();home.cancel();benches.cancel();treehouse.cancel();trampoline.cancel();skyTrail.cancel();fireflies?.reset();
@@ -741,7 +791,15 @@ renderer.setAnimationLoop((time: number) => {
       if(pad.pressed.has(2))loadButton.click();
       else if(pad.pressed.has(0))newGameButton.click();
     } else if(!playing && !selectionCard.hidden) {
-      if(repeat){const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length;const i=(KIRBY_VARIANTS.indexOf(selected)+horizontal+vertical*columns+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;(variantGrid.children[i] as HTMLButtonElement).click();}
+      if(repeat){
+        const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length,delta=horizontal+vertical*columns;
+        let i=KIRBY_VARIANTS.indexOf(selected);
+        for(let step=0;delta&&step<KIRBY_VARIANTS.length;step++){
+          i=(i+delta+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;
+          const button=variantGrid.children[i] as HTMLButtonElement;
+          if(!button.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0])){button.click();break;}
+        }
+      }
       if(pad.pressed.has(1))backButton.click();
       else if(pad.pressed.has(0))startButton.click();
     } else {
@@ -904,6 +962,7 @@ renderer.setAnimationLoop((time: number) => {
   fountain.update(dt,lightTime.day,camera);
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
+  checkCharacterUnlock();
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
   centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera,network?100:0,arenaCentipede?.interactionTarget(boss));

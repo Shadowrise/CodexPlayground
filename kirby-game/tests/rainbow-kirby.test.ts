@@ -25,7 +25,7 @@ test('Rainbow has seven wrapped bands, an animated crown and shared lightweight 
  gltf.scene.traverse(o=>{if(o instanceof Mesh&&((o.material as MeshStandardMaterial).name.startsWith('Kirby')))assert.equal((o.material as MeshStandardMaterial).map,null);});
  const player=new CharacterController(model,gltf.animations);player.mixer.update(.2);assert.equal(crown.parent!.parent!==null,true);
  assert(validActor(actorState(player,'Радуга',KIRBY_VARIANTS.indexOf(variant))));
- assert(!validActor({...actorState(player,'Радуга',15),variant:16}));
+ assert(!validActor({...actorState(player,'Радуга',15),variant:KIRBY_VARIANTS.length}));
  const savedActor=(name:string)=>({variant:name,x:0,z:0,yaw:0,size:1,fruitsEaten:0});
  const save=parseSave(JSON.stringify({version:1,savedAt:new Date().toISOString(),player:savedActor(variant[0]),npcs:remainingVariants(variant).map(v=>savedActor(v[0])),fruits:Array(70).fill(false)}));
  assert.equal(save.player.variant,'Радуга');assert.equal(save.npcs.length,14);
