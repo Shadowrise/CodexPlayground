@@ -189,6 +189,7 @@ export class Treehouse {
       if(jump){this.dive();return;}
       c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*1.8*dt;c.actor.rotation.y=c.yaw;
       const movement=(Number(input.forward)-Number(!!input.backward))*2.4*dt;
+      if(c.isPigeon && c.state!=='Sitting')c.setActivity(movement?(movement>0?'Walk':'WalkBackward'):'Lookout');
       c.actor.position.x=T.MathUtils.clamp(c.actor.position.x+Math.sin(c.yaw)*movement,TREEHOUSE_SITE.x-4.8,TREEHOUSE_SITE.x+4.8);
       c.actor.position.z=T.MathUtils.clamp(c.actor.position.z+Math.cos(c.yaw)*movement,TREEHOUSE_SITE.z+2.5,TREEHOUSE_SITE.z+7);
       if(footL)footL.rotation.x=movement?Math.sin(this.clock*10)*.3:0;if(footR)footR.rotation.x=movement?-Math.sin(this.clock*10)*.3:0;

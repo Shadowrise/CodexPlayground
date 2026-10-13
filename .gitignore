@@ -2,6 +2,10 @@ node_modules/
 dist/
 dist-*/
 .vercel/
+.wrangler/
+.cache/
+# Replaced by the authored SVG icon.
+kirby-game/public/icons/pigeon.png
 .env
 .env.*
 !.env.example

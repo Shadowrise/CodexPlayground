@@ -1,4 +1,4 @@
-import {Object3D} from 'three';
+import {Object3D,Texture} from 'three';
 import {NetworkSession} from '../src/network';
 import {createStarfall} from '../src/starfall';
 import {test} from 'node:test';
@@ -13,14 +13,32 @@ import {Balloons} from '../src/balloons';
 import {NightFireflies} from '../src/night-fireflies';
 import {actorState} from '../src/network-actors';
 import {PROTOCOL,validActor,validWorld} from '../src/network-protocol';
-async function model(name:string){const data=await readFile(new URL('../public/models/'+name,import.meta.url));return new GLTFLoader().parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');}
+import {pidgieFixture} from './pidgie-fixture';
+import {PidgieNpc} from '../src/pidgie-npc';
+async function model(name:string){
+ const data=await readFile(new URL('../public/models/'+name,import.meta.url)),loader=new GLTFLoader();
+ // Node cannot decode DOM image bitmaps; load the shipped skin/animation with
+ // a texture placeholder, as the exported-pigeon model test does.
+ if(name==='pigeon-animated.glb')loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
+ return loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');
+}
 test('actual world fits the shared wire contract and attachment budget',async()=>{
- const [gltf,bugs]=await Promise.all([model('kirby-animated.glb'),model('firefly-animated.glb')]);
+ const [gltf,bugs,pigeon]=await Promise.all([model('kirby-animated.glb'),model('firefly-animated.glb'),model('pigeon-animated.glb')]);
  const npcs=createNpcs(gltf.scene,gltf.animations,KIRBY_VARIANTS[0]),coaster=new Coaster(),balloons=new Balloons(),fireflies=new NightFireflies(bugs);
  npcs[0].greet(npcs[0].actor.position.clone().setX(npcs[0].actor.position.x+20));npcs[0].update(.4,[]);
  const round=(rows:number[][])=>rows.map(row=>row.map(x=>Math.round(x*1000)/1000));
  const w={npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(r=>r.map(x=>typeof x==='number'?Math.round(x*1000)/1000:x)),bugs:round(fireflies.networkState())};
  assert(validWorld(w));assert(new TextEncoder().encode(JSON.stringify(w)).length<11000);
+ const withPidgie={...w,pidgie:pidgieFixture()};
+ assert(validWorld(withPidgie));assert(new TextEncoder().encode(JSON.stringify(withPidgie)).length<12500);
+ assert.equal(withPidgie.npcs.length,14);
+ const pidgie=new PidgieNpc(pigeon,{safeGround:()=>true,seed:0x7bdea138});
+ const approaching=pidgie.actor.position.clone();approaching.x+=9;
+ pidgie.update(3.45,[approaching]);
+ const actual={...w,pidgie:pidgie.networkState()};
+ assert.equal(actual.pidgie.phase,'fly');assert.equal(actual.pidgie.fearCount,1);
+ assert(validWorld(actual));assert(new TextEncoder().encode(JSON.stringify(actual)).length<12500);
+ assert.equal(actual.npcs.length,14);
  assert.equal(w.npcs[0].state,'Hello');assert.equal(w.npcs[0].pose.length,5);
  await writeFile(tmpdir()+'/kirby-network-world.json',JSON.stringify(w));
  assert(!validWorld({...w,npcLife:[[]]}));assert(!validActor({...w.npcs[0],p:[Infinity,0,0]}));

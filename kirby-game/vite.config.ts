@@ -4,4 +4,5 @@ export default defineConfig({build:{rollupOptions:{input:{
  game:fileURLToPath(new URL('./index.html',import.meta.url)),
  firefly:fileURLToPath(new URL('./firefly.html',import.meta.url)),
  centipede:fileURLToPath(new URL('./centipede.html',import.meta.url)),
+ pigeon:fileURLToPath(new URL('./pigeon-preview.html',import.meta.url)),
 }}}});

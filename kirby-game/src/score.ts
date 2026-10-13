@@ -1,11 +1,11 @@
-export const SCORE_ACTIONS=['millQuest','sleep','coaster','bench','balloon','treehouse','swing','leaves','star','firefly','skyStar','fountain','boat','centipede'] as const;
+export const SCORE_ACTIONS=['millQuest','sleep','coaster','bench','balloon','treehouse','swing','leaves','star','firefly','skyStar','fountain','boat','centipede','flowers'] as const;
 export type ActiveScoreAction=typeof SCORE_ACTIONS[number];
 // Preserve retired lake, lever and maze trampoline rewards in saves.
 // Retired actions are no longer awarded, listed, or required for the finale.
 export type ScoreAction=ActiveScoreAction|'swim'|'mill'|'trampoline';
 export type ScoredActor={fruitsEaten:number;achievements:Set<ScoreAction>;bonusPoints?:number;eventPoints?:number};
 export function awardFirst(actor:ScoredActor,action:ActiveScoreAction){if(actor.achievements.has(action))return false;actor.achievements.add(action);return true;}
-export function achievementPoints(actions:Iterable<string>){let total=0;for(const action of actions)total+=action==='millQuest'?6:3;return total;}
+export function achievementPoints(actions:Iterable<string>){let total=0;for(const action of actions)total+=action==='millQuest'||action==='flowers'?6:3;return total;}
 export function scoreOf(actor:ScoredActor){return actor.fruitsEaten+achievementPoints(actor.achievements)+(actor.bonusPoints??0)+(actor.eventPoints??0);}
 /** Equal scores share a place; only strictly higher scores outrank a player. */
 export function placeOf(actor:ScoredActor,actors:ScoredActor[]){return 1+actors.filter(other=>scoreOf(other)>scoreOf(actor)).length;}

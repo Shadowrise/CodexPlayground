@@ -6,5 +6,5 @@ export const NPC_COLORS = [
  ['Мята', '#35ec87'], ['Янтарь', '#ffb20c'], ['Орхидея', '#e14df5'],
  ['Малина', '#ef1762'], ['Сапфир', '#2368ff'],
 ] as const;
-export const KIRBY_VARIANTS = [['Классический', '#ffa2c5'], ...NPC_COLORS, ['Радуга', '#f4b5ff'], ['Бандана', '#f47a28']] as const;
+export const KIRBY_VARIANTS = [['Классический', '#ffa2c5'], ...NPC_COLORS, ['Радуга', '#f4b5ff'], ['Бандана', '#f47a28'], ['Пиджи', '#8c98a6']] as const;
 export type KirbyVariant = typeof KIRBY_VARIANTS[number];

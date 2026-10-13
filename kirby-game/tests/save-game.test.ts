@@ -8,6 +8,16 @@ import { FruitWorld } from '../src/fruits';
 import { captureGame, parseSave, restoreGame } from '../src/save-game';
 import { KIRBY_VARIANTS, cloneVariant } from '../src/variants';
 import { STATION } from '../src/coaster';
+
+test('the former pigeon name migrates to Pidgie without losing saved progress',()=>{
+ const actor=(variant:string)=>({variant,x:12,z:33,yaw:.8,size:1.2,fruitsEaten:2,achievements:['bench'],eventPoints:3});
+ const old={version:1,savedAt:'2026-10-13',player:actor('Голубь'),npcs:KIRBY_VARIANTS.slice(0,14).map(v=>actor(v[0])),fruits:Array(70).fill(false)};
+ const parsed=parseSave(JSON.stringify(old));
+ assert.equal(parsed.player.variant,'Пиджи');assert.equal(parsed.player.size,1.2);
+ assert.equal(parsed.player.eventPoints,3);assert.deepEqual(parsed.player.achievements,['bench']);
+ const duplicate={...old,npcs:[...old.npcs.slice(0,13),actor('Пиджи')]};
+ assert.throws(()=>parseSave(JSON.stringify(duplicate)),'migration must still reject duplicate character slots');
+});
 test('save round trip restores variant, positions, growth targets, fruit visibility and counters',async()=>{
  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));
  const model=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');

@@ -10,6 +10,16 @@ test('push targeting respects direction, height, activities and rolls',()=>{
  for(const other of [{...target,p:[0,0,-2]},{...target,p:[0,30,2]},{...target,state:'Roll'},{...target,state:'Balloon'}])assert.equal(pushTarget([0,0,0],0,1,[other]),undefined);
  assert(pushTarget([0,0,0],0,1,[{...target,state:'FireflyRide',p:[0,6,2]}]));
 });
+test('a 700% Kirby reaches smaller bodies in front without reaching through height gaps',()=>{
+ for(const size of [.3,1,7]){
+  const target={id:'small',p:[0,0,8],s:size,state:'Idle'};
+  assert.equal(pushTarget([0,0,0],0,7,[target])?.id,'small');
+  assert.equal(pushTarget([0,0,0],Math.PI/2,7,[{...target,p:[8,0,0]}])?.id,'small');
+  assert.equal(pushTarget([0,0,0],0,7,[{...target,p:[0,0,-12]}]),undefined);
+  assert.equal(pushTarget([0,0,0],0,7,[{...target,p:[0,30,8]}]),undefined);
+  assert.equal(pushTarget([0,15,0],0,7,[target]),undefined);
+ }
+});
 test('server chooses exactly one human or NPC target and broadcasts it to all clients',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8')).replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }').replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href).replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2');
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -27,6 +37,11 @@ test('server chooses exactly one human or NPC target and broadcasts it to all cl
   now+=1;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));
   for(const s of sockets){const hits=s.messages.filter(m=>m.type==='hit');assert.equal(hits.length,2);assert.equal(hits[1].target,'b');}
   b.data.actor.state='Roll';now+=500;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));assert.equal(a.messages.filter(m=>m.type==='hit').at(-1).target,'npc:0');
+  a.data.actor.s=7;b.data.actor.state='Idle';b.data.actor.p=[0,0,8];room.room.world.npcs[0].p=[0,0,9];room.room.world.npcs[0].s=.3;
+  now+=500;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));
+  for(const s of sockets)assert.equal(s.messages.filter(m=>m.type==='hit').at(-1).target,'b','a giant pushes the small human in front');
+  b.data.actor.state='Roll';now+=500;room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'hit'}]}));
+  for(const s of sockets)assert.equal(s.messages.filter(m=>m.type==='hit').at(-1).target,'npc:0','a giant also pushes a 30% NPC');
   assert(validActor({...actor(0),state:'Roll',roll:[1,0,.5,-5,0]}));assert(!validActor({...actor(0),roll:[NaN,0,.5,-5,0]}));
  }finally{Date.now=original;(globalThis as any).WebSocketRequestResponsePair=saved;}
 });

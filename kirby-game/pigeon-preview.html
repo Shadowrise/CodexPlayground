@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#ece5d9">
+  <link rel="icon" href="/kirby-icon.svg">
+  <title>Пиджи · мастерская персонажей</title>
+</head>
+<body>
+  <aside>
+    <a class="back" href="/">← В игру</a>
+    <div class="eyebrow">МАСТЕРСКАЯ ПЕРСОНАЖЕЙ / 03</div>
+    <h1>Пиджи<span>Важный вид.<br>Ни одной мысли.</span></h1>
+    <p class="intro">Круглый, неуклюжий и совершенно довольный собой.</p>
+    <div class="palette" aria-label="Цвета персонажа">
+      <i style="--swatch:#8c9baa" title="Серо-голубое тело"></i>
+      <i style="--swatch:#6c7b8f" title="Тёмные крылья"></i>
+      <i style="--swatch:#8eaa99" title="Зелёный отлив"></i>
+      <i style="--swatch:#ad8dad" title="Сиреневый отлив"></i>
+      <i style="--swatch:#646b77" title="Серый клюв"></i>
+      <i style="--swatch:#d49aa2" title="Розовые лапы"></i>
+    </div>
+    <div class="divider"></div>
+    <div class="section-label">ХАРАКТЕР В ДВИЖЕНИИ</div>
+    <div id="clip-groups" role="tablist" aria-label="Группы анимаций"></div>
+    <div id="clip-panels" aria-label="Анимации Пиджи"></div>
+    <p id="clip-description" class="note" aria-live="polite">Выбери движение, позу или эмоцию.</p>
+    <label class="voice-option"><input id="voice" type="checkbox" checked> Курлыканье для эмоций <span>1–5</span></label>
+    <p id="voice-status" class="voice-status" aria-live="polite">У каждой эмоции свой голос.</p>
+    <button id="rest" class="motion"><span class="motion-icon">○</span><span><strong>Рассмотреть модель</strong><small>Исходная поза без анимации</small></span></button>
+    <div class="download">
+      <a href="/models/pigeon-animated.glb" download="pigeon-animated.glb">↓ Скачать 3D-модель <span>GLB</span></a>
+      <p id="budget">Модель и все анимации в одном файле</p>
+    </div>
+  </aside>
+  <main id="stage">
+    <div class="stage-heading"><span>ЭСКИЗ → 3D</span><p>Знакомься: Пиджи.</p></div>
+    <div class="views" role="group" aria-label="Ракурс модели">
+      <button data-view="three" class="selected" aria-pressed="true">¾</button>
+      <button data-view="front" aria-pressed="false">Спереди</button>
+      <button data-view="side" aria-pressed="false">Сбоку</button>
+      <button id="reference-toggle" aria-pressed="false" aria-controls="reference">Эскиз</button>
+    </div>
+    <figure id="reference" hidden>
+      <img src="/models/pigeon-side-reference.png" alt="Утверждённый эскиз голубя сбоку: короткая голова, компактный клюв, округлое крыло и плоский хвост">
+      <figcaption>Эскиз · вид сбоку</figcaption>
+    </figure>
+    <div class="stage-status"><i></i><span id="status">Ожидание / зациклено</span></div>
+    <div class="playback">
+      <button id="pause" aria-label="Приостановить анимацию">Ⅱ <span>Пауза</span></button>
+      <button id="restart" aria-label="Запустить анимацию сначала" title="Сначала">↺</button>
+      <label for="speed">Темп</label>
+      <input id="speed" type="range" min="0.25" max="2" step="0.25" value="1" aria-label="Скорость анимации">
+      <output id="speed-value" for="speed">1×</output>
+      <span class="orbit-hint">Потяни, чтобы повернуть · колесо — масштаб</span>
+    </div>
+    <div id="loading" role="status"><span class="loading-dot"></span>Знакомимся с Пиджи…</div>
+  </main>
+  <script type="module" src="/src/pigeon-preview.ts"></script>
+</body>
+</html>

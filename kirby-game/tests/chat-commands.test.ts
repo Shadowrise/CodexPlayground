@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {commandSuggestions,parseChatCommand,TELE_ALIASES} from '../src/chat-commands';
-import {setLocale} from '../src/i18n';
+import {setLocale,t} from '../src/i18n';
 import type {Destination} from '../src/navigation';
 
 const places:Destination[]=[
@@ -19,7 +19,7 @@ test('size parses full numbers within 30–1000%, never partial or non-finite va
 });
 test('single-player gating covers every command and ordinary chat is preserved',()=>{
  assert.equal(parseChatCommand('Hello /size 1000',false,places),undefined);
- for(const input of ['/size 1000','/tele mz','/unlock bandana','/']){
+ for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/']){
   assert(parseChatCommand(input,false,places)?.error);assert.deepEqual(commandSuggestions(input,false,places),[]);
  }
  assert(parseChatCommand('/other',true,places)?.error);
@@ -57,6 +57,26 @@ test('unlock accepts the complete English name and suggests it in every language
    const [option]=commandSuggestions(text,true,places);assert.equal(option.value,'/unlock bandana');assert.equal(option.label,'bandana');assert(option.complete);
    assert.equal(option.description,locale==='en'?'Bandana':'Бандана');
   }
+ }
+ setLocale('ru');
+});
+
+test('Pidgie unlock requires its complete Latin name; partial names remain suggestions and errors explain both targets',()=>{
+ for(const text of ['/unlock pidgie',' /UNLOCK   PIDGIE '])assert.deepEqual(parseChatCommand(text,true,places),{command:{kind:'unlock',character:'pidgie'}});
+ for(const text of ['/unlock pi','/unlock pid','/unlock pidg','/unlock пиджи','/unlock pidgie extra']){
+  const result=parseChatCommand(text,true,places);assert(result?.error,text);
+  assert.match(result.error,/\/unlock bandana/);assert.match(result.error,/\/unlock pidgie/);
+ }
+ assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie']);
+ for(const locale of ['ru','en','bg'] as const){
+  setLocale(locale);
+  for(const prefix of ['p','PI','pidg','pidgie']){
+   const options=commandSuggestions('/unlock '+prefix,true,places);assert.equal(options.length,1);
+   assert.equal(options[0].value,'/unlock pidgie');assert.equal(options[0].label,'pidgie');assert(options[0].complete);
+   assert.equal(options[0].description,locale==='en'?'Pidgie':'Пиджи');
+  }
+  const error=parseChatCommand('/unlock',true,places)!.error!;
+  assert.match(t(error),/\/unlock bandana/);assert.match(t(error),/\/unlock pidgie/);
  }
  setLocale('ru');
 });

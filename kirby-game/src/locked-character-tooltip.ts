@@ -1,11 +1,17 @@
 import {onLocaleChange,t} from './i18n';
 
+export const PIDGIE_LOCK_HINT='Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.';
+export function lockedCharacterHint(name:string){
+ return name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
+}
+
 /** Detached from the scrolling picker so the hint cannot be clipped by it. */
 export class LockedCharacterTooltip {
  readonly element=document.createElement('div');
  private title=document.createElement('strong');
  private text=document.createElement('p');
  private anchor?:HTMLElement;
+ private character='Бандана';
  constructor(){
   this.element.id='locked-character-tooltip';this.element.hidden=true;this.element.dataset.i18nIgnore='';this.element.setAttribute('role','tooltip');
   const header=document.createElement('div');header.className='locked-tooltip-header';
@@ -20,9 +26,9 @@ export class LockedCharacterTooltip {
  }
  private localize(){
   this.title.textContent=t('Персонаж недоступен');
-  this.text.textContent=t('Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.');
+  this.text.textContent=t(lockedCharacterHint(this.character));
  }
- show(anchor:HTMLElement){this.anchor=anchor;this.element.hidden=false;this.layout();}
+ show(anchor:HTMLElement,name='Бандана'){this.anchor=anchor;this.character=name;this.localize();this.element.hidden=false;this.layout();}
  leave(anchor:HTMLElement){if(document.activeElement!==anchor)this.hide();}
  hide(){this.element.hidden=true;this.anchor=undefined;}
  private layout(){

@@ -9,6 +9,8 @@ import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { footstepProfile } from './footsteps';
 import {createSoundOutput} from './sound-output';
+import {FLOWER_SOUND_SECONDS,MUSICAL_FLOWERS,validFlowerIndex} from './musical-flower-site';
+import {loadPigeonEmoteBuffers,preloadPigeonEmoteSounds} from './pigeon-voice';
 
 function T_smoothstep(value: number) {
   const t=Math.max(0,Math.min(1,value));
@@ -21,10 +23,16 @@ export class SoundEffects {
   private context?: AudioContext;
   private master?: GainNode;
   private buffers = new Map<string, AudioBuffer>();
+  private readonly pigeonVoiceData=preloadPigeonEmoteSounds();
+  private pigeonVoices?:Promise<Map<Emote,AudioBuffer>>;
+  private pigeonVoiceToken=0;
+  private pigeonSoundGeneration=0;
   // Fetch once while the menu loads; an unavailable effect must never block play.
   private readonly fruitBiteData=fetch(`${import.meta.env.BASE_URL}audio/apple-bite.wav`)
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private readonly dogBarkData=fetch(`${import.meta.env.BASE_URL}audio/shiba-bark.wav`)
+    .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
+  private readonly flowerNoteData=fetch(`${import.meta.env.BASE_URL}audio/flower-bells.wav`)
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private active = new Set<PlayingVoice>();
   private events = new SoundEvents();
@@ -80,6 +88,8 @@ export class SoundEffects {
         this.buffers.set('npc-greeting',greeting);
         void this.loadFruitBite(this.context);
         void this.loadDogBark(this.context);
+        void this.loadFlowerNotes(this.context);
+        this.pigeonVoices=this.pigeonVoiceData.then(()=>loadPigeonEmoteBuffers(this.context!));
       }
       void this.context.resume().catch(() => { this.enabled = false; this.sync(); });
       this.sync();
@@ -94,6 +104,27 @@ export class SoundEffects {
   private async loadDogBark(context:AudioContext){
     try{const bytes=await this.dogBarkData;if(bytes)this.buffers.set('dog-bark',await context.decodeAudioData(bytes));}
     catch{/* A missing decorative bark must not interrupt gameplay. */}
+  }
+  private async loadFlowerNotes(context:AudioContext){
+    try{
+      const bytes=await this.flowerNoteData;if(!bytes)return;
+      const atlas=await context.decodeAudioData(bytes),frames=Math.round(FLOWER_SOUND_SECONDS*atlas.sampleRate);
+      if(atlas.length<frames*MUSICAL_FLOWERS.length)return;
+      MUSICAL_FLOWERS.forEach((_,i)=>{
+        const note=context.createBuffer(atlas.numberOfChannels,frames,atlas.sampleRate);
+        for(let channel=0;channel<atlas.numberOfChannels;channel++)note.copyToChannel(atlas.getChannelData(channel).subarray(i*frames,(i+1)*frames),channel);
+        this.buffers.set(`flower-note-${i}`,note);
+      });
+    }catch{/* A missing musical effect must never prevent entering the meadow. */}
+  }
+  playFlowerNote(index:number,dx=0,dz=0,cameraAzimuth=0){
+    const ctx=this.context,buffer=this.buffers.get(`flower-note-${index}`),distance=Math.hypot(dx,dz);
+    if(!validFlowerIndex(index)||!ctx||!buffer||!this.enabled||document.hidden||ctx.state!=='running'||distance>=34||this.active.size>=16)return;
+    const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
+    source.buffer=buffer;gain.gain.value=.9*(1-distance/34)**2;
+    pan.pan.value=Math.max(-.7,Math.min(.7,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/16));
+    source.connect(gain);gain.connect(pan);pan.connect(this.master!);
+    this.begin(source,gain,()=>pan.disconnect(),undefined,true);
   }
   playDogBark(dx:number,dz:number,cameraAzimuth:number){
     const ctx=this.context,buffer=this.buffers.get('dog-bark'),distance=Math.hypot(dx,dz);
@@ -114,6 +145,8 @@ export class SoundEffects {
     this.npcEffectAfter=this.voiceAfter=this.wheelAfter=this.cheerAfter=0;
   }
   private stopAll() {
+    this.pigeonVoiceToken++;
+    this.pigeonSoundGeneration++;
     for (const voice of this.active) { try { voice.source.stop(); } catch { continue; } }
     this.active.clear(); this.buzz=undefined; this.rewardAfter=0;
   }
@@ -305,7 +338,32 @@ export class SoundEffects {
     this.begin(source,gain,undefined,Math.max(ctx.currentTime,Math.min(this.rewardAfter,ctx.currentTime+.75)),true);
   }
 
-  playEmote(kind:Emote){
+  private async playPigeonEmote(kind:Emote){
+    const ctx=this.context,token=++this.pigeonVoiceToken,started=performance.now();
+    if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const buffer=(await this.pigeonVoices)?.get(kind);
+    if(!buffer||token!==this.pigeonVoiceToken||performance.now()-started>500||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;gain.gain.value=.72;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);this.voiceAfter=ctx.currentTime+buffer.duration;
+  }
+
+  /** Positional native coo for a nearby bird; the caller observes its fear event once. */
+  async playPigeonEmoteAt(kind:Emote,dx:number,dz:number,cameraAzimuth:number){
+    const ctx=this.context,distance=Math.hypot(dx,dz),generation=this.pigeonSoundGeneration,started=performance.now();
+    if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||!Number.isFinite(distance)||!Number.isFinite(cameraAzimuth)||distance>=24||this.active.size>=12)return;
+    const key=`pigeon-emote-${kind}`;
+    const buffer=this.buffers.get(key)??(await this.pigeonVoices)?.get(kind);
+    if(!buffer||generation!==this.pigeonSoundGeneration||performance.now()-started>500||!this.enabled||document.hidden||ctx.state!=='running'||this.active.size>=12)return;
+    this.buffers.set(key,buffer);
+    const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
+    source.buffer=buffer;gain.gain.value=.72*(1-distance/24)**2;
+    pan.pan.value=Math.max(-.8,Math.min(.8,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/12));
+    source.connect(gain);gain.connect(pan);pan.connect(this.master!);
+    this.begin(source,gain,()=>pan.disconnect(),undefined,true);
+  }
+
+  playEmote(kind:Emote,pigeon=false){
+    if(pigeon){void this.playPigeonEmote(kind);return;}
     if(kind==='Hello'){this.sayHello();return;}
     const ctx=this.context;if(!ctx || !this.enabled || document.hidden || ctx.state!=='running')return;
     const key=`emote-${kind}`;

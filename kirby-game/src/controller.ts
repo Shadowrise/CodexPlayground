@@ -7,6 +7,8 @@ import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRe
 import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
 import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
+import {PIGEON_CLIP_BY_NAME, type PigeonClipName} from './pigeon-clips';
+import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
 type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
@@ -15,15 +17,21 @@ export class CharacterController {
   readonly actor = new Group();
   readonly mixer: AnimationMixer;
   readonly actions = new Map<string, AnimationAction>();
+  readonly isPigeon: boolean;
   state = 'Idle';
   swimming = false;
   surfaceY = 0;
   yaw = 0;
   private active?: AnimationAction;
-  private emotion?:EmotePose;
+  private emotion?:Pick<EmotePose,'kind'|'elapsed'|'clear'|'update'>;
+  private flightElapsed=0;
+  private readonly gaitFrom=new Vector3();
+  private gaitFrame?:{state:PigeonGait;rate:number;mixerTime:number};
   startEmote(kind:Emote){
     if(this.emotion || this.flight.active || this.swimming || !['Idle','Run','WalkBackward','RotateLeft','RotateRight'].includes(this.state))return false;
-    this.setActivity(kind);this.emotion=new EmotePose(kind,this.animationRoot);return true;
+    this.setActivity(kind);
+    this.emotion=this.isPigeon?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=PIGEON_CLIP_BY_NAME[kind].duration;}}:new EmotePose(kind,this.animationRoot);
+    return true;
   }
   private turn?: Turn;
   readonly flight = new Flight();
@@ -82,6 +90,9 @@ export class CharacterController {
   readonly turnDuration = .1;
 
   constructor(model: Object3D, clips: AnimationClip[]) {
+    let pigeon=false;
+    model.traverse(node=>{if(node.userData.character==='pigeon')pigeon=true;});
+    this.isPigeon=pigeon;
     this.actor.add(model);
     this.actor.add(this.cloud);
     this.mixer = new AnimationMixer(model);
@@ -98,7 +109,7 @@ export class CharacterController {
     this.animationRoot = root;
     for (const source of clips) {
       if(source.name==='Attack')continue;
-      const clip = source.name==='Jump' ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
+      const clip = source.name==='Jump' && !this.isPigeon ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
       // Heading belongs to the game actor. Strip the GLB root yaw from ALL clips
       // so returning to Run/Idle never undoes a completed 90-degree turn.
       clip.tracks = clip.tracks.filter(track => {
@@ -108,7 +119,7 @@ export class CharacterController {
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
     const idleClip=clips.find(c=>c.name==='Idle')!;
-    this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
+    if(!this.isPigeon)this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
     for(const [label,side] of [['Left',-1],['Right',1]] as const){
       const arm=model.getObjectByName(`${label}_shoulder`);if(!arm)continue;
       const rotation=idleClip.tracks.find(track=>track.name===arm.name+'.quaternion');
@@ -118,7 +129,7 @@ export class CharacterController {
     for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Push', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
-    this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
+    if(!this.isPigeon)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
     this.play('Idle');
   }
 
@@ -126,7 +137,7 @@ export class CharacterController {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
     next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
-    const turning = name === 'Push' || name === 'Eat';
+    const turning = this.isPigeon ? !(PIGEON_CLIP_BY_NAME[name as PigeonClipName]?.loop??true) : name === 'Push' || name === 'Eat';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
@@ -149,7 +160,7 @@ export class CharacterController {
     this.pushArmed = false;
     this.pushReady = PUSH_COOLDOWN_MS / 1000;
     this.attackElapsed = 0;
-    if (input.forward || input.backward) this.state = 'Push';
+    if (!this.isPigeon && (input.forward || input.backward)) this.state = 'Push';
     else this.replayPush();
   }
 
@@ -163,9 +174,9 @@ export class CharacterController {
     this.clearAirPose();this.airPush=undefined;
     this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
-    this.flight.reset();this.cloud.visible=false;this.turn=undefined;
+    this.flight.reset();this.flightElapsed=0;this.cloud.visible=false;this.turn=undefined;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
-    this.play('Idle');this.state=name;
+    this.play(this.isPigeon && this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
   }
 
@@ -177,22 +188,73 @@ export class CharacterController {
     this.actor.position.z += Math.cos(this.yaw) * speed * direction * dt * factor;
   }
 
+  /** A pigeon flies with its wings; Kirby keeps his original flight puffs. */
+  updateFlightVisual(){
+    if(this.isPigeon)this.cloud.visible=false;
+    else updateFlightCloud(this.cloud,this.flight);
+  }
+
+  /** Native stance travel determines cadence, including size, sprint and boosts. */
+  syncPigeonLocomotion(dt:number,distance:number){
+    if(!this.isPigeon||this.flight.active||this.swimming||!isPigeonGait(this.state))return false;
+    const model=this.animationRoot.parent;
+    const visualScale=this.actor.scale.x*(model&&model!==this.actor?model.scale.x:1);
+    this.actions.get(this.state)!.setEffectiveTimeScale(pigeonGaitRate(this.state,distance,dt,visualScale));
+    return true;
+  }
+
+  private advanceGroundMixer(dt:number){
+    if(this.isPigeon&&isPigeonGait(this.state)){
+      constrainToMeadow(this.actor.position,this.actor.scale.x);
+      const distance=Math.hypot(this.actor.position.x-this.gaitFrom.x,this.actor.position.z-this.gaitFrom.z);
+      if(this.syncPigeonLocomotion(dt,distance)){
+        this.gaitFrame={state:this.state,rate:this.actions.get(this.state)!.getEffectiveTimeScale(),mixerTime:this.mixer.time+dt};
+      }
+    }
+    this.mixer.update(dt);
+  }
+
+  /** Correct the current gait after walls or deck movement resolve the actor position. */
+  finishPigeonGroundMovement(dt:number,previousX:number,previousZ:number){
+    const frame=this.gaitFrame;this.gaitFrame=undefined;
+    if(dt<=0||!this.isPigeon||!isPigeonGait(this.state)||this.flight.active||this.swimming)return;
+    const action=this.actions.get(this.state)!;
+    const consumed=frame&&frame.state===this.state&&Math.abs(frame.mixerTime-this.mixer.time)<1e-8?frame.rate:action.getEffectiveTimeScale();
+    const distance=Math.hypot(this.actor.position.x-previousX,this.actor.position.z-previousZ);
+    this.syncPigeonLocomotion(dt,distance);
+    const correction=(action.getEffectiveTimeScale()-consumed)*dt,duration=action.getClip().duration;
+    if(Math.abs(correction)>1e-9){
+      action.time=((action.time+correction)%duration+duration)%duration;
+      this.mixer.update(0);
+    }
+  }
+
+  private updateGrowth(dt:number){
+    const g=this.growth;if(!g)return;
+    g.elapsed+=dt;
+    const t=Math.min(1,g.elapsed/.45),blend=t*t*(3-2*t);
+    this.actor.scale.setScalar(g.from+(g.to-g.from)*blend);
+    if(t===1){this.actor.scale.setScalar(g.to);this.growth=undefined;}
+  }
+
+  /** A mount moves the actor while its native pose and growth continue. */
+  updateActivity(dt:number){
+    this.updateGrowth(dt);this.pushReady=Math.max(0,this.pushReady-dt);
+    this.mixer.update(dt);
+  }
+
   update(dt: number, input: Input) {
+    this.gaitFrame=undefined;
     this.clearAirPose();
     this.roll.clearPose();
     if(input.steer!==undefined)this.turn=undefined;
-    if (this.growth) {
-      const g=this.growth;
-      g.elapsed+=dt;
-      const t=Math.min(1,g.elapsed/.45), blend=t*t*(3-2*t);
-      this.actor.scale.setScalar(g.from+(g.to-g.from)*blend);
-      if(t===1){this.actor.scale.setScalar(g.to);this.growth=undefined;}
-    }
+    this.updateGrowth(dt);
     constrainToMeadow(this.actor.position, this.actor.scale.x);
+    this.gaitFrom.copy(this.actor.position);
     this.attackHit = false;
     this.eatBite = false;
     this.eatPull = false;
-    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY))this.roll.applyPose(this.animationRoot,this.yaw);else this.play('Idle');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
+    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.isPigeon)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
     if(this.emotion){
       this.emotion.clear();
       if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
@@ -221,6 +283,7 @@ export class CharacterController {
         this.eatElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
+        this.flightElapsed=0;
         this.flightBoost = this.starRemaining > 0 ? 2 : 1;
         this.flight.press();
       } else if (direction) {
@@ -229,7 +292,7 @@ export class CharacterController {
         this.play(this.locomotion(input));
       }
     }
-    this.actions.get('Run')!.setEffectiveTimeScale(input.sprint && input.forward && !input.backward ? 2 : 1);
+    if(!this.isPigeon)this.actions.get('Run')!.setEffectiveTimeScale(input.sprint && input.forward && !input.backward ? 2 : 1);
     if (this.eatElapsed !== undefined) {
       const previous = this.eatElapsed;
       this.eatElapsed += dt;
@@ -248,20 +311,22 @@ export class CharacterController {
       if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
       const moving=!!(input.forward||input.backward);
-      if(moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
+      if(!this.isPigeon && moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
       this.mixer.update(dt);
-      if(moving)applyPushArms(this.pushArms,this.attackElapsed);
+      if(moving && !this.isPigeon)applyPushArms(this.pushArms,this.attackElapsed);
       if (this.attackElapsed >= this.actions.get('Push')!.getClip().duration - 1e-6) {
         this.attackElapsed = undefined;
         const next=this.locomotion(input);
         if(this.active===this.actions.get(next))this.state=next;else this.play(next);
       }
     } else if (this.flight.active) {
+      this.flightElapsed+=dt;
+      if(this.isPigeon && this.flightElapsed>.18)this.play(this.airPush!==undefined?'Push':'Fly');
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x*this.flightBoost;
-      updateFlightCloud(this.cloud,this.flight);
+      this.updateFlightVisual();
       this.mixer.update(dt);
       if(this.airPush!==undefined){this.airPush+=dt;this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
       if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
@@ -278,7 +343,7 @@ export class CharacterController {
       this.yaw = t.startYaw + t.direction * this.turnStep * u * u * (3 - 2 * u);
       this.actor.rotation.y = this.yaw;
       this.move(dt,input);
-      this.mixer.update(dt);
+      this.advanceGroundMixer(dt);
       if (t.elapsed >= t.duration - 1e-8) {
         this.turn = undefined;
         const heldDirection = Number(input.left) - Number(input.right);
@@ -294,7 +359,7 @@ export class CharacterController {
         if(this.state.startsWith('Rotate'))this.actions.get(this.state)!.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(Math.max(.35,Math.abs(steering))*this.actions.get(this.state)!.getClip().duration/.4);
       }
       this.move(dt, input);
-      this.mixer.update(dt);
+      this.advanceGroundMixer(dt);
     }
     constrainToMeadow(this.actor.position, this.actor.scale.x);
   }

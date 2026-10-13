@@ -148,7 +148,8 @@ export class NightFireflies {
   moveRider(dt:number,input:Input){
     const c=this.rider;if(!c)return;
     // Keep growth and controller timers alive without playing a walking animation.
-    c.state='Idle';c.update(dt,{forward:false,left:false,right:false});c.state='FireflyRide';
+    if(c.isPigeon)c.updateActivity(dt);
+    else {c.state='Idle';c.update(dt,{forward:false,left:false,right:false});c.state='FireflyRide';}
     c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*Math.PI*.55*dt;c.actor.rotation.set(0,c.yaw,0);
     const direction=Number(input.forward)-Number(!!input.backward);this.moving=direction!==0;
     const speed=(direction>0?c.speed*(input.sprint?2:1):c.backwardSpeed)*2;

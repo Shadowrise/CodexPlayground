@@ -25,7 +25,7 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['/size','/tele','/unlock']);
  await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
  assert.equal(await page.locator('#chat-input').inputValue(),'/tele ');
- assert.equal(await page.locator('#chat-command-list button').count(),12);
+ assert.equal(await page.locator('#chat-command-list button').count(),13);
  await page.screenshot({path:new URL('chat-command-destinations.png',cache).pathname.replace(/^\/(\w:)/,'$1')});
  await page.locator('#chat-input').fill('/tele m');assert.equal(await page.locator('#chat-command-list button').count(),2);
  await page.keyboard.press('ArrowDown');assert.equal(await page.locator('#chat-input').getAttribute('aria-activedescendant'),'chat-command-0');
@@ -79,7 +79,7 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  assert(!(await page.evaluate(()=>window.commandCheck.log)).some(m=>m.text==='/size 999'));
  await page.evaluate(()=>window.commandCheck.online=false);await page.locator('#chat-input').fill('Обычное сообщение');await page.keyboard.press('Enter');
  assert((await page.evaluate(()=>window.commandCheck.log)).some(m=>m.chat&&m.text==='Обычное сообщение'));
- assert.deepEqual(errors,[]);console.log('PASS commands, localized suggestions, range, keyboard, all 12 destinations, 9 interrupted rides, online gating and ordinary chat');
+ assert.deepEqual(errors,[]);console.log('PASS commands, localized suggestions, range, keyboard, all 13 destinations, 9 interrupted rides, online gating and ordinary chat');
  await page.close();
  }
 

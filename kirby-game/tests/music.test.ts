@@ -18,7 +18,7 @@ test('all fifteen stereo tracks exist, main is triple length, audio has headroom
   }
 });
 
-test('fifteen tracks advance and wrap in both directions while preserving mute and volume', async () => {
+test('tracks preserve mute and configured volume, including temporary ducking and event soundtracks', async () => {
   class FakeElement extends EventTarget {
     value = ''; textContent = ''; title = ''; hidden = false;
     attributes = new Map<string, string>();
@@ -33,10 +33,13 @@ test('fifteen tracks advance and wrap in both directions while preserving mute a
   }
   const originalAudio = Object.getOwnPropertyDescriptor(globalThis, 'Audio');
   const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const storage = new Map<string,string>();
   const doc = new FakeElement(), button = new FakeElement(), volume = new FakeElement();
   const previous = new FakeElement(), next = new FakeElement(), label = new FakeElement();
   Object.defineProperty(globalThis, 'Audio', { configurable: true, value: FakeAudio });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: doc });
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {getItem:(key:string)=>storage.get(key)??null,setItem:(key:string,value:string)=>storage.set(key,value)} });
   try {
     const music = new BackgroundMusic(button as unknown as HTMLButtonElement, volume as unknown as HTMLInputElement,
       previous as unknown as HTMLButtonElement, next as unknown as HTMLButtonElement, label as unknown as HTMLElement);
@@ -65,10 +68,24 @@ test('fifteen tracks advance and wrap in both directions while preserving mute a
     volume.value='29';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.29);assert.equal(background.volume,.29);
     music.setEvent('celebrate');await Promise.resolve();assert(!event.loop);assert(event.src.endsWith('/audio/topotushka-victory.wav'));assert.equal(event.volume,.29);assert(!event.paused);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
+    music.updateDucking(true,.05);assert(background.volume<.29&&background.volume>.29*.2,'fade into the quieter mix');
+    for(let i=0;i<120;i++)music.updateDucking(true,1/60);
+    assert(Math.abs(background.volume-.29*.2)<1e-8);assert.equal(event.volume,background.volume);
+    assert.equal(volume.value,'29','temporary ducking must not move the slider');
+    volume.value='65';volume.dispatchEvent(new Event('input'));
+    assert(Math.abs(background.volume-.65*.2)<1e-8);assert.equal(event.volume,background.volume);
+    button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
+    assert.deepEqual(JSON.parse(storage.get('kirby.audio.music')!),{enabled:true,volume:.65},'persist the configured level, never the ducked level');
     music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);
+    next.dispatchEvent(new Event('click'));assert(Math.abs(background.volume-.65*.2)<1e-8,'changing tracks keeps the quieter mix');
+    music.updateDucking(false,.05);assert(background.volume>.65*.2&&background.volume<.65,'fade back rather than jump');
+    for(let i=0;i<240;i++)music.updateDucking(false,1/60);
+    assert.equal(background.volume,.65);assert.equal(event.volume,.65);
+    music.updateDucking(true,1);music.stop();assert(background.paused);assert.equal(background.volume,.65,'a new session must not inherit ducking');
   } finally {
     if (originalAudio) Object.defineProperty(globalThis, 'Audio', originalAudio); else Reflect.deleteProperty(globalThis, 'Audio');
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');
+    if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage); else Reflect.deleteProperty(globalThis, 'localStorage');
   }
 });
 

@@ -2,12 +2,18 @@ export const PUSH_COOLDOWN_MS = 100;
 export type PushCandidate={id:string;p:readonly number[];s:number;state:string};
 const BODY=.9,MARGIN=.6;
 export function pushRadius(scale:number){return (BODY+MARGIN)*scale;}
+export function pushReach(scale:number){return 3.1*scale;}
+/** Sweep down to a smaller target's centre instead of pushing over its head. */
+export function pushHeightGap(y:number,scale:number,targetY:number,targetScale=1){
+ const low=y+BODY*Math.min(scale,targetScale),high=y+BODY*scale;
+ return Math.max(low-targetY,targetY-high,0);
+}
 export function canPush(state:string){return ['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Jump','Fly','Push','Attack','Eat','Swim','Hello','Joy','Fear','Anger','Sad','FireflyRide'].includes(state)||state.startsWith('FireflyRide:')||state.startsWith('FireflyApproach:');}
 function pushReaches(p:readonly number[],yaw:number,scale:number,target:PushCandidate){
- const radius=pushRadius(target.s),reach=3.1*scale;
+ const radius=pushRadius(target.s),reach=pushReach(scale);
  const fx=Math.sin(yaw),fz=Math.cos(yaw);
- const y=p[1]+BODY*scale,ty=target.p[1]+BODY*target.s;
- const vx=target.p[0]-p[0],vy=ty-y,vz=target.p[2]-p[2];
+ const ty=target.p[1]+BODY*target.s;
+ const vx=target.p[0]-p[0],vy=pushHeightGap(p[1],scale,ty,target.s),vz=target.p[2]-p[2];
  const len2=reach*reach;
  let t=len2>0?(vx*fx*reach+vz*fz*reach)/len2:0;
  if(t<0)t=0;else if(t>1)t=1;

@@ -164,6 +164,19 @@ test('closed stomp and wheel rings bump from every direction, support flight and
  }
 });
 
+test('a 700% Kirby can push the back drum from the ground or the back, within reach and facing it',()=>{
+ const a=actor(),q=startCentipede(trail(),a,1000)!;q.phase=2;q.hits=3;q.stage='back';q.stageAt=2000;
+ const target=centipedeTarget(q);a.size=7;a.p=[target[0],0,target[2]+11];a.yaw=Math.PI;
+ for(const other of [{...a,size:1},{...a,p:[target[0],0,target[2]+25]},{...a,p:[target[0],10,target[2]+11]},{...a,yaw:0},{...a,available:false}]){
+  assert(!pushCentipede(structuredClone(q),other,2100));
+ }
+ for(const y of [0,2.9]){
+  const event=structuredClone(q);assert(pushCentipede(event,{...a,p:[a.p[0],y,a.p[2]]},2100));
+  assert.equal(event.stage,'bell');assert.equal(event.hits,4);assert.equal(event.players.a.hits,1);
+  assert(!pushCentipede(event,a,2101),'the same drum window rewards only one hit');
+ }
+});
+
 test('every ring birth pushes players out of the centre, including between network ticks',()=>{
  for(const stage of ['stomp','wheelRoll'] as const){
   const a=actor(),q=startCentipede(trail(),a,1)!;q.phase=stage==='stomp'?2:3;q.stage=stage;q.cycle=4;q.stageAt=1000;q.players.a.bumpedCycle=q.cycle;

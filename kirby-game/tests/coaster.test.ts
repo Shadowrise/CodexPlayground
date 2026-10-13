@@ -34,7 +34,7 @@ test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject 
   assert.equal(passengers.length,7);
   const parents=passengers.map(p=>p.parent);
   const actor=new Group(),scene=new Group();scene.add(actor);actor.position.copy(STATION);
-  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),setActivity(this:{state:string},name:string){this.state=name;},update:()=>{}} as unknown as CharacterController;
   carts.forEach(c=>c.wait=c.occupied?1:0);
   assert.equal(c.board(player),false);
   for(let i=0;i<7200;i++)c.update(1/60);
@@ -43,7 +43,7 @@ test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject 
 
 test('departure accelerates gradually; returning rider stays seated in the station queue',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);actor.position.copy(STATION);
-  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),setActivity(this:{state:string},name:string){this.state=name;},update:()=>{}} as unknown as CharacterController;
   assert(coaster.board(player));
   let previous=0,max=0;
   for(let i=0;i<240;i++) {
@@ -93,7 +93,7 @@ test('closed mountain circuit has height changes, inverted loop and continuous f
 
 test('player stays seated over multiple laps and can exit anywhere to the depot',()=>{
   const coaster=new Coaster(),actor=new Group(),scene=new Group();scene.add(actor);
-  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),update:()=>{}} as unknown as CharacterController;
+  const player={actor,state:'Idle',yaw:0,fruitsEaten:0,achievements:new Set(),mixer:new AnimationMixer(actor),setActivity(this:{state:string},name:string){this.state=name;},update:()=>{}} as unknown as CharacterController;
   assert.equal(coaster.board(player),false);
   actor.position.copy(STATION);
   assert(coaster.board(player));assert(coaster.riding);

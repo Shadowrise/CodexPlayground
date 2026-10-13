@@ -1,5 +1,6 @@
 import {BOSS_ARENA as A} from './boss-arena-site';
 import type {ChaseState} from './centipede-chasers';
+import {pushHeightGap,pushReach} from './push-target';
 
 /** Dependency-free rules and paths shared by solo play and the Cloudflare room. */
 export const CENTIPEDE_STEP=1.35*1.25, CENTIPEDE_PHASE_HITS=3, CENTIPEDE_HITS=9, CENTIPEDE_POINT_LIMIT=12;
@@ -312,8 +313,12 @@ export function advanceCentipede(q:CentipedeEvent|undefined,now:number,actors:re
 export function pushCentipede(q:CentipedeEvent|undefined,a:CentipedeActor,now:number){
  if(!q||!['exhausted','back','dizzy'].includes(q.stage)||!inside(a))return false;
  const target=centipedeTarget(q),dx=target[0]-a.p[0],dz=target[2]-a.p[2],d=Math.hypot(dx,dz),reach=q.stage==='dizzy'?2.5:3;
- if(d>reach+Math.min(4,a.size*.75)||a.p[1]>(q.stage==='back'?8:3))return false;
- if(q.stage==='back'&&(a.p[1]<1.25||Math.abs(a.p[1]+Math.min(3,a.size*.95)-target[1])>2))return false;
+ // The back's side collision keeps large bodies farther from the drum.
+ const range=reach+Math.min(4,a.size*.75);
+ if(d>(q.stage==='back'?Math.max(range,pushReach(a.size)):range))return false;
+ if(q.stage==='back'){
+  if(pushHeightGap(a.p[1],a.size,target[1])>2)return false;
+ }else if(a.p[1]>3)return false;
  const facing=q.stage==='dizzy'?centipedeWheel(q,now):{x:target[0],z:target[2]},fx=facing.x-a.p[0],fz=facing.z-a.p[2],fd=Math.hypot(fx,fz);
  if(fd>.5&&(fx*Math.sin(a.yaw)+fz*Math.cos(a.yaw))/fd<(q.stage==='dizzy'?.5:.15))return false;
  const p=q.players[a.id]??=member(a);p.hits++;reward(p);q.hits++;q.stage=q.stage==='exhausted'?'tickle':q.stage==='back'?'bell':'ballShot';q.stageAt=now;return true;

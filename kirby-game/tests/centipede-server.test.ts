@@ -28,9 +28,10 @@ test('Worker shares all three phases, awards both participants only at the final
    for(let hit=0;hit<9;hit++){
     let guard=0;while(!['exhausted','back','dizzy'].includes(q().stage)){assert(++guard<25);advance();}
     assert.equal(q().phase,1+Math.floor(hit/3));
-    const target=centipedeTarget(q()),wheel=centipedeWheel(q(),now),p=[target[0],q().stage==='back'?2.9:0,target[2]+(q().stage==='dizzy'?0:1)];
+    const giant=hit===3;
+    const target=centipedeTarget(q()),wheel=centipedeWheel(q(),now),p=[target[0],q().stage==='back'&&!giant?2.9:0,target[2]+(giant?11:q().stage==='dizzy'?0:1)];
     const yaw=q().stage==='dizzy'?Math.atan2(wheel.x-p[0],wheel.z-p[2]):Math.PI;
-    a.data.actor.p=p;a.data.actor.q=[0,Math.sin(yaw/2),0,Math.cos(yaw/2)];a.data.actor.state=q().stage==='back'?'Jump':'Push';
+    a.data.actor.s=giant?7:1;a.data.actor.p=p;a.data.actor.q=[0,Math.sin(yaw/2),0,Math.cos(yaw/2)];a.data.actor.state=q().stage==='back'&&!giant?'Jump':'Push';
     frame(a,[{type:'hit'}]);assert.equal(q().hits,hit+1);
     if(!a.data.actor.achievements.includes('centipede'))assert.equal(b.messages.filter(m=>m.type==='centipede-progress'&&m.completed).length,0,'no premature task completion');
    }

@@ -191,6 +191,7 @@ export class Coaster {
     if(this.riding || !['Idle','Run','WalkBackward'].includes(player.state) || !this.prompt(player))return false;
     const cart=this.carts.find(c=>c.wait>0 && !c.occupied && !this.networkBlocked.has(this.carts.indexOf(c)));if(!cart)return false;
     player.update(0,{forward:false,left:false,right:false});
+    player.setActivity('Cart');
     this.rider=player;this.ridden=cart;this.riderParent=player.actor.parent!;
     cart.wait=1.2;cart.speed=0;cart.group.scale.setScalar(1);fitRider(player,.9);return true;
   }
@@ -199,6 +200,7 @@ export class Coaster {
     const player=this.rider;this.riderParent!.add(player.actor);
     player.actor.position.set(0,0,214);player.actor.quaternion.identity();player.yaw=0;
     this.ridden.group.scale.setScalar(1);restoreRider(player);
+    player.setActivity('Idle');
     this.rider=undefined;this.ridden=undefined;this.rideMotion.speed=0;
   }
   private cosmeticClocks=new Map<T.Object3D,CosmeticClock>();

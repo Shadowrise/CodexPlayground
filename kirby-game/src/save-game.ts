@@ -18,6 +18,9 @@ export function captureGame(player:CharacterController,variant:KirbyVariant,npcs
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
+  // Keep saves made before the bird received its name compatible.
+  if(data?.player?.variant==='Голубь')data.player.variant='Пиджи';
+  if(Array.isArray(data?.npcs))for(const npc of data.npcs)if(npc?.variant==='Голубь')npc.variant='Пиджи';
   const actor=(a:ActorSave)=>a && KIRBY_VARIANTS.some(v=>v[0]===a.variant) && [a.x,a.z,a.yaw,a.size,a.fruitsEaten].every(Number.isFinite) && a.size>0 && Number.isInteger(a.fruitsEaten) && a.fruitsEaten>=0 && (a.achievements===undefined || validAchievements(a.achievements)) && (a.eventPoints===undefined||Number.isInteger(a.eventPoints)&&a.eventPoints>=0&&a.eventPoints<=12);
   if((data?.dayPhase!==undefined&&(!Number.isFinite(data.dayPhase)||data.dayPhase<0||data.dayPhase>=1)) || (data?.skyCheckpoint!==undefined&&(!Number.isInteger(data.skyCheckpoint)||data.skyCheckpoint<0||data.skyCheckpoint>4)) || (data?.festival!==undefined&&!validStarfall(data.festival)) || data?.version!==1 || (data.starRemaining!==undefined && (!Number.isFinite(data.starRemaining) || data.starRemaining<0 || data.starRemaining>30)) || (data.starCooldown!==undefined && (!Number.isFinite(data.starCooldown) || data.starCooldown<0 || data.starCooldown>120)) || (data.night!==undefined && typeof data.night!=='boolean') || (data.mazeStar!==undefined && typeof data.mazeStar!=='boolean') || !actor(data.player) || !Array.isArray(data.npcs) || data.npcs.length!==14 || !data.npcs.every(actor)
     || new Set([data.player.variant,...data.npcs.map(n=>n.variant)]).size!==15

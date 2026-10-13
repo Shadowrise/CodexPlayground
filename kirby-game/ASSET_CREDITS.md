@@ -1,5 +1,16 @@
 # Third-party assets
 
+## Musical flower bells
+
+- Game file: `public/audio/flower-bells.wav` — seven notes, one cached download.
+- Recordings: **Versilian Community Sample Library**, Versilian Studios LLC.
+- Source: https://github.com/sgossner/VCSL/tree/master/Idiophones/Struck%20Idiophones/Glockenspiel
+- License: **CC0 1.0 Universal**; copy in `public/audio/flower-bells-LICENSE.txt`.
+- Edits: soft C5/G5/C6 recordings retuned into C5–B5, level matched, trimmed,
+  gentle attack/release, converted to mono 32 kHz PCM and packed together.
+- Further provenance: `public/audio/flower-bells-CREDITS.md`.
+- Retrieved: 2026-10-13.
+
 ## Apple bite sound
 
 Game file: `public/audio/apple-bite.wav`
@@ -27,6 +38,13 @@ commercial projects. Attribution is kept here for provenance.
 - License: Creative Commons Attribution 4.0 (https://creativecommons.org/licenses/by/4.0/)
 - Changes: uniformly scaled and placed in a procedural dog house; resting haunches, animated tail/muzzle morphs, lip seam, mouth interior and tongue added; original texture preserved.
 - Attribution is also displayed in the game's controls panel and supplied in `public/models/shiba-LICENSE.txt`.
+
+## Pigeon
+
+- Game file: `public/models/pigeon-animated.glb`.
+- Original procedural model, painted texture, rig and 31 animation clips created for this project from its approved pigeon sketch (`design/pigeon/concept.png`).
+- Five original pigeon coos: `public/audio/pigeon-{hello,joy,fear,anger,sad}.wav`.
+- Voices are synthesized by `scripts/make-pigeon-coos.py` using resonant harmonics, breath and pitch phrasing; no third-party recordings.
 
 ## Shiba bark
 

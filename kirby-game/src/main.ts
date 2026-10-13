@@ -16,11 +16,20 @@ import {BOSS_ARENA,constrainArena,constrainNpcOutsideArena} from './boss-arena-s
 import {prepareSurfaceTextures} from './texture-filtering';
 import {MillQuestHud} from './mill-quest-hud';
 import {PrankEffects} from './prank-effects';
+import {MusicalFlowers} from './musical-flowers';
+import {MusicalFlowerGameView} from './musical-flower-game-view';
+import {startFlowerGame,replayFlowerGame,advanceFlowerGame,playFlowerGame,nearFlowerButton,type FlowerGame,type FlowerActor} from './musical-flower-game';
+import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE} from './musical-flower-site';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {StarfallView} from './starfall-view';
 import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
+import {PidgieNpc} from './pidgie-npc';
+import type {PidgieState} from './pidgie-state';
+import {MeadowIndex} from './meadow-index';
+import {sceneryClearance} from './landmarks';
+import {flatGround} from './pond-layout';
 import {MeadowChat} from './chat';
 import {emoteMessage,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
@@ -71,7 +80,8 @@ import { SoundEffects } from './sfx';
 import { MEADOW_HALF_SIZE, MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
 import { addEnvironment } from './environment';
 import { createNpcs, type KirbyNpc } from './npcs';
-import { cloneVariant, KIRBY_VARIANTS, styleVariant, type KirbyVariant } from './variants';
+import { KIRBY_VARIANTS, styleVariant, type KirbyVariant } from './variants';
+import {createPlayerModel} from './player-model';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import './style.css';
 import './touch-controls.css';
@@ -135,13 +145,14 @@ let unlockStorage:Storage|undefined;try{unlockStorage=localStorage;}catch{}
 const characterUnlocks=new CharacterUnlocks(unlockStorage);
 const unlockView=new CharacterUnlockView(()=>sounds.playCharacterUnlock());
 const lockedCharacterTooltip=new LockedCharacterTooltip();
-let unlockAnnouncement=false;
+const unlockAnnouncements:('Бандана'|'Пиджи')[]=[];
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
+let loadedPigeon: GLTF | undefined;
 let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
 const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');loadButton.disabled=true;
@@ -219,10 +230,11 @@ loadButton.addEventListener('click',()=>{
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
-    if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncement=true;
+    if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncements.push('Бандана');
+    const savedCharacter=selected[0];
     const lockedSave=characterUnlocks.isLocked(selected[0]);
     if(lockedSave){
-      // A save created while Bandana was freely available still keeps all progress.
+      // A save made while a character was freely available keeps all progress.
       selected=KIRBY_VARIANTS.find(v=>!characterUnlocks.isLocked(v[0])&&!pendingSave!.npcs.some(n=>n.variant===v[0]))!;
       pendingSave.player.variant=selected[0];
     }
@@ -231,7 +243,7 @@ loadButton.addEventListener('click',()=>{
     (variantGrid.children[KIRBY_VARIANTS.indexOf(selected)] as HTMLButtonElement).click();
     variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>{b.disabled=i!==KIRBY_VARIANTS.indexOf(selected);});
     showCharacterSelection();
-    if(lockedSave){selectionMessage.textContent=t('Бандана пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.');selectionMessage.hidden=false;}
+    if(lockedSave){selectionMessage.textContent=t(savedCharacter==='Пиджи'?'Пиджи пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.':'Бандана пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.');selectionMessage.hidden=false;}
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
 saveButton.addEventListener('click',()=>{
@@ -258,13 +270,13 @@ for (const variant of KIRBY_VARIANTS) {
   button.innerHTML = `<span class="mini-kirby" aria-hidden="true"><i class="mini-feet"></i><i class="mini-body"><i class="mini-eyes"></i><i class="mini-mouth"></i></i></span><span>${t(variant[0])}</span><span class="choice-check" aria-hidden="true">✓</span><span class="variant-lock" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="9" width="16" height="13" rx="4" fill="currentColor"/><path d="M12 14v3" stroke="#253142" stroke-width="2.5" stroke-linecap="round"/></svg></span>`;
   button.addEventListener('click', () => {
     if(button.disabled)return;
-    if(characterUnlocks.isLocked(variant[0])){lockedCharacterTooltip.show(button);return;}
+    if(characterUnlocks.isLocked(variant[0])){lockedCharacterTooltip.show(button,variant[0]);return;}
     selected = variant;
     variantGrid.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
   });
-  button.addEventListener('pointerenter',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button);});
+  button.addEventListener('pointerenter',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button,variant[0]);});
   button.addEventListener('pointerleave',()=>lockedCharacterTooltip.leave(button));
-  button.addEventListener('focus',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button);});
+  button.addEventListener('focus',()=>{if(characterUnlocks.isLocked(variant[0]))lockedCharacterTooltip.show(button,variant[0]);});
   button.addEventListener('blur',()=>lockedCharacterTooltip.hide());
   variantGrid.appendChild(button);
 }
@@ -276,7 +288,6 @@ function updateVariantLocks(){
   b.title=t(!locked&&b.dataset.occupied==='true'?'Этот цвет уже занят':'');b.setAttribute('aria-label',t(variant[0]));
   if(locked)b.setAttribute('aria-describedby',lockedCharacterTooltip.element.id);else b.removeAttribute('aria-describedby');
  });
- if(characterUnlocks.bandanaUnlocked)lockedCharacterTooltip.hide();
 }
 function resetVariantAvailability(){
  lockedCharacterTooltip.hide();
@@ -367,6 +378,9 @@ const meadowWind=environmentRoots.find(root=>root.name==='Biome meadow details')
 const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
+const musicalFlowers=new MusicalFlowers();scene.add(musicalFlowers.group);
+let soloFlowerGame:FlowerGame|undefined;
+const flowerGameView=new MusicalFlowerGameView(index=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
 const coaster=new Coaster();scene.add(coaster.group);
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
@@ -388,6 +402,7 @@ const routePanel=document.createElement('div');routePanel.className='panel route
 const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint);
 document.querySelector('.tasks-panel')!.before(routePanel);
 const destinations:Destination[]=[
+ {id:'musical-flowers',name:'Цветочная мелодия',x:MUSICAL_FLOWER_SITE.x,z:MUSICAL_FLOWER_SITE.z+4},
  {id:'boss-arena',name:'Арена Топотушки',x:BOSS_ARENA.entry.x,z:BOSS_ARENA.entry.z},
  {id:'fountain',name:'Радужный фонтан',x:FOUNTAIN_SITE.x,z:FOUNTAIN_SITE.z+8},
  {id:'sky-trail',name:'Небесная тропа',x:skyTrail.entry.x,z:skyTrail.entry.z,radius:4},
@@ -407,7 +422,8 @@ chat.configureCommands({
   if(!character||network||networkIntent)return;
   if(command.kind==='size'){character.resizeTo(command.size,true);return;}
   if(command.kind==='unlock'){
-   if(characterUnlocks.unlockBandana()){unlockAnnouncement=true;updateVariantLocks();}
+   const pidgie=command.character==='pidgie';
+   if(pidgie?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana()){unlockAnnouncements.push(pidgie?'Пиджи':'Бандана');lockedCharacterTooltip.hide();updateVariantLocks();}
    return;
   }
   // Release every source of scripted movement before changing world position.
@@ -431,6 +447,33 @@ chat.configureCommands({
  }
 });
 const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((s:{kind:string})=>s.kind==='bush'||s.kind==='stump')];
+// Takeoff and landing need a dry clearing wide enough for the open wings.
+const pidgieGroundObstacles:{x:number;z:number;radius:number}[]=[
+ ...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]).map((p:{x:number;z:number;crownRadius:number})=>({x:p.x,z:p.z,radius:p.crownRadius+2.5})),
+ ...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((p:{kind:string})=>p.kind==='bush'||p.kind==='stump').map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5})),
+ ...(scene.getObjectByName('Ponds, flowers, mushrooms, rocks, picnics and ruins')?.userData.scenerySites??[]).map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5})),
+];
+const pidgieGroundIndex=new MeadowIndex(16,pidgieGroundObstacles);
+const pidgieGroundRadius=Math.max(3,...pidgieGroundObstacles.map(p=>p.radius));
+const pidgieFlightBounds=[treehouse.group,skyTrail.group].map(group=>new THREE.Box3().setFromObject(group));
+function pidgieSafeGround(x:number,z:number){
+ return Math.max(Math.abs(x),Math.abs(z))<MEADOW_HALF_SIZE-8&&flatGround(x,z,2.5)&&sceneryClearance(x,z,3)
+  &&!pidgieGroundIndex.some(x,z,pidgieGroundRadius,p=>(x-p.x)**2+(z-p.z)**2<p.radius**2);
+}
+function pidgieFlightHeight(from:THREE.Vector3,to:THREE.Vector3){
+ let height=26;
+ for(const box of pidgieFlightBounds){
+  let begin=0,end=1;
+  for(const axis of ['x','z'] as const){
+   const delta=to[axis]-from[axis],min=box.min[axis]-3,max=box.max[axis]+3;
+   if(Math.abs(delta)<1e-6){if(from[axis]<min||from[axis]>max){begin=1;end=0;}continue;}
+   const a=(min-from[axis])/delta,b=(max-from[axis])/delta;
+   begin=Math.max(begin,Math.min(a,b));end=Math.min(end,Math.max(a,b));
+  }
+  if(begin<=end)height=Math.max(height,box.max.y+4);
+ }
+ return Math.min(128,height);
+}
 const fruits = new FruitWorld(fruitObstacles);
 fruits.group.name='Фрукты на поляне';
 // Clear only the small footprints beneath fruit, keeping surrounding grass intact.
@@ -583,14 +626,18 @@ const npcPrevious = new THREE.Vector3();
 
 let character: CharacterController | undefined;
 let npcs: KirbyNpc[] = [];
+let pidgieNpc:PidgieNpc|undefined;
+let pidgieReady=false;
+let pidgieFearSeen=0;
 
 async function loadCharacter() {
   try {
-    const [gltf,bugModel,shibaModel,centipedeModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/centipede-animated.glb`)]);
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/centipede-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/pigeon-animated.glb?v=8`)]);
     arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
     home.dogHouse.placeDog(shibaModel.scene);
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
+    loadedPigeon = pigeonModel;
     startButton.disabled = false;
     loadButton.disabled = !hasSave;
     startButton.textContent = t('На поляну →');
@@ -627,7 +674,8 @@ startButton.addEventListener('click', async () => {
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
   coaster.addKirbyPassengers(template,animations,network?KIRBY_VARIANTS[0]:selected);
   boats.addPassengers(template,animations);
-  character = new CharacterController(cloneVariant(template, selected, false), animations);
+  const playerModel=createPlayerModel(loadedModel,selected,loadedPigeon);
+  character = new CharacterController(playerModel.model, playerModel.clips);
   character.actor.name='Игрок';
   const spawn=randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
@@ -639,10 +687,14 @@ startButton.addEventListener('click', async () => {
   maze.constrain(character.actor.position,character.actor.scale.x);
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
+  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,flightHeight:pidgieFlightHeight,people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
+  pidgieReady=!network||network.host||!!network.world?.pidgie;
+  if(network?.world?.pidgie)pidgieNpc.applyNetworkState(network.world.pidgie,true);
+  pidgieFearSeen=pidgieNpc.fearCount;
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
-  scene.add(character.actor, ...npcs.map(npc => npc.actor));
+  scene.add(character.actor, ...npcs.map(npc => npc.actor),pidgieNpc.actor);
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
   playing = true;startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
@@ -653,11 +705,13 @@ startButton.addEventListener('click', async () => {
   styleVariant(document.querySelector<HTMLElement>('#player-avatar')!,selected);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
-    remotePlayers=new RemotePlayers(scene,loadedModel);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
+    remotePlayers=new RemotePlayers(scene,loadedModel,loadedPigeon);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{tutorial.cancel();if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
-    network.onEmote=emote=>sounds.playEmote(emote);
+    network.onEmote=(emote,id)=>sounds.playEmote(emote,KIRBY_VARIANTS[network!.actors.get(id)?.variant??0]?.[0]==='Пиджи');
+    network.onFlowerNote=index=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index);};
+    network.onFlowerComplete=()=>{if(character)awardFirst(character,'flowers');};
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.activateStarPower();}};
     network.onResize=size=>{if(character)character.resizeTo(size);};
     network.onCentipedeProgress=(points,completed)=>{if(!character)return;character.eventPoints=points;if(completed&&awardFirst(character,'centipede'))sounds.playTaskComplete();};
@@ -679,8 +733,8 @@ startButton.addEventListener('click', async () => {
 
 function checkCharacterUnlock(){
  if(!character||!playing)return;
- if(characterUnlocks.complete(character.achievements)){unlockAnnouncement=true;updateVariantLocks();}
- if(unlockAnnouncement&&!tutorial.active){unlockAnnouncement=false;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]==='Бандана')!);}
+ if(characterUnlocks.complete(character.achievements)){unlockAnnouncements.push('Бандана');updateVariantLocks();}
+ if(unlockAnnouncements.length&&!tutorial.active&&unlockView.element.hidden){const name=unlockAnnouncements.shift()!;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]===name)!);}
 }
 
 /** End a session in place; the expensive scenery and loaded models stay reusable. */
@@ -689,12 +743,14 @@ function returnToMenu(){
  try{
   soloHistory?.stop();soloHistory=undefined;playing=false;tutorial.cancel();chat.close();unlockView.hide();clearTutorialInput();touch?.setEnabled(false);
   network?.close();network=undefined;joiningSession?.close();joiningSession=undefined;
-  coaster.disembark();boats.cancel();boats.syncRemoteRiders(new Map());
+  coaster.disembark();boats.cancel();boats.syncRemoteRiders(new Map());musicalFlowers.reset();
+  soloFlowerGame=undefined;flowerGameView.reset();
   balloons.reset();home.cancel();benches.cancel();treehouse.cancel();trampoline.cancel();skyTrail.cancel();fireflies?.reset();
   prankEffects.beginFrame();prankEffects.update([],Date.now(),()=>undefined,camera.position);
   maze.reset();
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
   for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
+  if(pidgieNpc)disposeActor(pidgieNpc);pidgieNpc=undefined;pidgieReady=false;pidgieFearSeen=0;
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
@@ -825,6 +881,7 @@ renderer.setAnimationLoop((time: number) => {
   if (character && !roundFinished()) {
     syncNetworkWorld(dt);
     const achievementsBefore=character.achievements.size,pointsBefore=achievementPoints(character.achievements);
+    const flowersBefore=character.achievements.has('flowers');
     watermill.tickQuest(network?.serverNow??Date.now(),millActor(character),sendMill,!!network);
     if(watermill.quest.stage==='running'&&watermill.quest.owner===(network?.id??'solo'))awardFirst(character,'millQuest');
     const previousX = character.actor.position.x;
@@ -834,7 +891,7 @@ renderer.setAnimationLoop((time: number) => {
     const skyWasActive=skyTrail.active;
     boats.update(dt,boatTime(),camera.position);
     if(pendingBoard)void interactOnline();
-    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !boats.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && !skyTrail.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
+    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !boats.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && !skyTrail.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote,character.isPigeon);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
@@ -849,7 +906,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
-    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);}
+    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){
       maze.constrain(character.actor.position,character.actor.scale.x,groundPrevious.set(previousX,0,previousZ));
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
@@ -863,6 +920,7 @@ renderer.setAnimationLoop((time: number) => {
     arenaCentipede?.collision.apply(character,previousPosition,dt,!onSkyTrail&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive);
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
     fireflies?.syncRider(dt);
+    character.finishPigeonGroundMovement(dt,previousX,previousZ);
     const availableInteraction=resolveInteraction(character);
     const candidate=network?resourceKey(character):undefined;
     const occupied=!!(candidate&&network?.room.locks[candidate]&&network.room.locks[candidate]!==network.id);
@@ -899,7 +957,17 @@ renderer.setAnimationLoop((time: number) => {
       if(onFoot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);
       ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
     }
+    if(playing&&pidgieNpc&&pidgieReady){
+      if(!network||network.host)pidgieNpc.update(dt,people,constrainNpc);
+      else pidgieNpc.updateRemote(dt);
+      if(pidgieFearSeen!==pidgieNpc.fearCount){
+        pidgieFearSeen=pidgieNpc.fearCount;
+        const bird=pidgieNpc.actor.position;
+        void sounds.playPigeonEmoteAt('Fear',bird.x-position.x,bird.z-position.z,followCamera.azimuth);
+      }
+    }
     centipedeTick();
+    if(!network){soloFlowerGame=advanceFlowerGame(soloFlowerGame,Date.now(),[flowerActor(character)]);if(soloFlowerGame?.winners.includes('solo'))awardFirst(character,'flowers');}
     if(character.attackHit&&!network&&pushCentipede(soloCentipede,centipedeActor(character),Date.now())){character.attackHit=false;centipedeSoloRewards();}
     if(character.attackHit&&!network){const index=millPushTarget(watermill.quest,millActor(character));if(index>=0){sendMill({kind:'push',index});character.attackHit=false;}}
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
@@ -920,7 +988,7 @@ renderer.setAnimationLoop((time: number) => {
     if(maze.update(dt,character,!network && !coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playStarPickup();setText(combatMessage,'★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!');hitMessageRemaining=5;
     }
-    if(character.achievements.size>achievementsBefore){sounds.playTaskComplete(character.achievements.size-achievementsBefore);setText(combatMessage,`+${achievementPoints(character.achievements)-pointsBefore} · Приключение выполнено!`);hitMessageRemaining=3;}
+    if(character.achievements.size>achievementsBefore){const soundsCount=character.achievements.size-achievementsBefore-Number(!flowersBefore&&character.achievements.has('flowers'));if(soundsCount>0)sounds.playTaskComplete(soundsCount);setText(combatMessage,`+${achievementPoints(character.achievements)-pointsBefore} · Приключение выполнено!`);hitMessageRemaining=3;}
     taskList.update(character.achievements);
     setText(fruitValue,String(scoreOf(character)));
     const playerPoints=scoreOf(character),teamPoints=npcs.reduce((sum,npc)=>sum+scoreOf(npc),0);
@@ -960,6 +1028,7 @@ renderer.setAnimationLoop((time: number) => {
   arenaCentipede?.update(boatTime(),camera.position,currentCentipede(),network?.serverNow??Date.now());
   ponds.update(dt);
   fountain.update(dt,lightTime.day,camera);
+  musicalFlowers.update(performance.now()/1000,camera);
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
   checkCharacterUnlock();
@@ -969,12 +1038,18 @@ renderer.setAnimationLoop((time: number) => {
   if(!centipedeView.hud.hidden)combatMessage.hidden=true;
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
+  const flowerGame=advanceFlowerGame(currentFlowerGame(),bossNow);
+  const hearingFlowers=playing&&!roundFinished()&&!!flowerGame&&!!character&&Math.hypot(character.actor.position.x-MUSICAL_FLOWER_SITE.x,character.actor.position.z-MUSICAL_FLOWER_SITE.z)<MUSICAL_FLOWER_SITE.radius+10;
+  music.updateDucking(hearingFlowers,dt);
   millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
+  flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
+  if(!flowerGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
   fruits.syncInstances();
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
+  if(pidgieNpc)updateVisibility(pidgieNpc.actor,camera.position,pidgieReady&&pidgieNpc.phase!=='hidden');
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
   if(character)updateVisibility(character.actor,camera.position,true,true);
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
@@ -998,6 +1073,16 @@ watermill.onFeedback=kind=>{if(!character||character.actor.position.distanceTo(M
 
 function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
 function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else watermill.apply(action,millActor(character));}
+
+function currentFlowerGame(){return network?network.room.flowerGame:soloFlowerGame;}
+function flowerActor(c:CharacterController):FlowerActor{const a=millActor(c);return {...a,available:a.available&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,present:playing&&!document.hidden};}
+function flowerButtonPrompt(c:CharacterController){if(network?.flowerStarting||network?.room.festival||!nearFlowerButton(flowerActor(c)))return;const q=currentFlowerGame();return !q?'E — Начать цветочную мелодию':q.stage==='repeat'?'E — Послушать мелодию ещё раз':undefined;}
+function startFlowerAdventure(){if(!character||!flowerButtonPrompt(character))return;const q=currentFlowerGame();if(network)network.event({type:q?'flower-replay':'flower-start'});else soloFlowerGame=q?replayFlowerGame(q,flowerActor(character),Date.now()):startFlowerGame(undefined,flowerActor(character),Date.now());}
+function playFlower(index:number){
+ if(!character||currentFlowerGame()&&currentFlowerGame()!.stage!=='repeat')return;
+ if(!musicalFlowers.press(index,performance.now()/1000))return;playFlowerSound(index);
+ if(network)network.event({type:'flower-note',index});else soloFlowerGame=playFlowerGame(soloFlowerGame,index,flowerActor(character),Date.now());
+}
 
 function currentCentipede(){return network?network.room.centipede:soloCentipede;}
 function centipedeActor(c:CharacterController):CentipedeActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,done:c.achievements.has('centipede'),points:c.eventPoints};}
@@ -1052,6 +1137,9 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,9.4,9.15)),[2.3,19.4,4.2]));
   }
   if(free&&centipedePrompt(c))return result(centipedePrompt(c)!,startCentipedeGame,object(arenaCentipede!.group.getObjectByName('Segment_0')));
+  if(free&&flowerButtonPrompt(c))return result(flowerButtonPrompt(c)!,startFlowerAdventure,object(flowerGameView.button.group));
+  const flower=free&&!c.flight.active?musicalFlowers.nearest(p,c.actor.scale.x):-1;
+  if(flower>=0&&(!currentFlowerGame()||currentFlowerGame()!.stage==='repeat'))return result(musicalFlowers.prompt(flower),()=>playFlower(flower),musicalFlowers.target(flower));
   if(watermill.prompt(millActor(c)))return result(watermill.prompt(millActor(c)),()=>{const action=watermill.action(millActor(c));if(action)sendMill(action);},object(watermill.target(millActor(c))));
   if(balloons.prompt(p))return c.flight.active?undefined:result(balloons.prompt(p),()=>balloons.board(c),object(balloons.outlineBalloon(p)));
   if(coaster.prompt(c))return result(coaster.prompt(c),()=>coaster.board(c),object(coaster.outlineCart(c)));
@@ -1061,9 +1149,14 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if(bug)return result(fireflies!.prompt(c),()=>fireflies!.board(c),object(bug));
 }
 
+function playFlowerSound(index:number){
+ if(!character)return;const flower=MUSICAL_FLOWERS[index],p=character.actor.position;
+ sounds.playFlowerNote(index,flower.x-p.x,flower.z-p.z,followCamera.azimuth);
+}
+
 function captureWorld():WorldState{
  const round=(rows:number[][])=>rows.map(row=>row.map(v=>Math.round(v*1000)/1000));
- return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState())};
+ return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState()),...(pidgieNpc&&pidgieReady?{pidgie:pidgieNpc.networkState()}:{})};
 }
 function applyRide(a:ActorState){
  if(!a.ride)return;const [kind,index]=a.ride.key.split(':'),i=Number(index);
@@ -1073,16 +1166,26 @@ function applyRide(a:ActorState){
 
 }
 function constrainNpc(position:THREE.Vector3,size:number,previous:THREE.Vector3){
- watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);constrainArena(position,size);constrainNpcOutsideArena(position,size,previous);
+ watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);constrainArena(position,size);constrainNpcOutsideArena(position,size,previous);flowerGameView.button.constrain(position,size);
 }
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
  const r=network.room;
- if(npcSnapshotHost!==r.host){npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;}
+ let pidgieHandoff:PidgieState|undefined;
+ if(npcSnapshotHost!==r.host){
+  if(npcSnapshotHost&&network.host&&pidgieReady&&pidgieNpc)pidgieHandoff=pidgieNpc.networkState();
+  npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;
+ }
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
  boats.networkBlocked=blocked('boat');coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');fireflies!.syncLandings(r.bugLandings??{});
  watermill.setQuest(r.millQuest??newMillQuest(),network.serverNow);
- if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);worldRevision=network.revision;}
+ if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);
+  if(w.pidgie&&pidgieNpc){
+   const checkpoint=pidgieHandoff&&pidgieHandoff.seed===w.pidgie.seed&&pidgieHandoff.fearCount===w.pidgie.fearCount?pidgieHandoff:w.pidgie;
+   pidgieNpc.applyNetworkState(checkpoint,network.host||worldRevision<0);pidgieReady=true;if(worldRevision<0)pidgieFearSeen=checkpoint.fearCount;
+  }
+  worldRevision=network.revision;}
+ if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;}
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
  r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id)character!.grow();else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.grow();});
@@ -1104,7 +1207,9 @@ async function interactOnline(){
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
  if(centipedePrompt(character)&&!heldResource){action.run();return;}
+ if(flowerButtonPrompt(character)&&!heldResource){action.run();return;}
  if(watermill.prompt(millActor(character))&&!heldResource&&!home.active&&!treehouse.active){action.run();return;}
+ if(musicalFlowers.nearest(character.actor.position,character.actor.scale.x)>=0&&!heldResource){action.run();return;}
  if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;

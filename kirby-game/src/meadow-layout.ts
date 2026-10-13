@@ -9,6 +9,7 @@ import {FOUNTAIN_SITE} from './fountain-site';
 import {SKY_TRAIL_SITE,SKY_PLATFORMS} from './sky-trail-layout';
 import {MEADOW_HALF_SIZE} from './world-bounds';
 import {MILL_BAGS} from './mill-quest';
+import {outsideMusicalFlowerClearing} from './musical-flower-site';
 
 export type MeadowTree={x:number;z:number;crownRadius:number};
 export type MeadowPoint={x:number;z:number};
@@ -55,6 +56,7 @@ export class MeadowLayout {
   const treeCells=new Map<string,MeadowTree[]>();
   for(const t of trees){const key=`${Math.floor(t.x/8)},${Math.floor(t.z/8)}`;if(!treeCells.has(key))treeCells.set(key,[]);treeCells.get(key)!.push(t);}
   const blocked=(x:number,z:number)=>{
+   if(!outsideMusicalFlowerClearing(x,z,2.7))return true;
    // Entrances lead to the actual door/ladder, not the centres of solid buildings.
    if(Math.abs(x-HOME_SITE.x)<7.5&&z>HOME_SITE.z-6.8&&z<HOME_SITE.z+5.2)return true;
    if(Math.abs(x-MAZE_SITE.x)<MAZE_HALF+2.6&&Math.abs(z-MAZE_SITE.z)<MAZE_HALF+2.6)return true;

@@ -27,6 +27,9 @@
 .rainbow-kirby .mini-kirby::after { content:'';position:absolute;z-index:2;left:20px;top:-5px;width:30px;height:19px;background:radial-gradient(ellipse at 50% 78%,#62dcff 0 9%,transparent 11%),linear-gradient(115deg,#be7d18,#fff2a0 42%,#eeb638 65%,#ffdf75);clip-path:polygon(0 0,18% 37%,25% 3%,38% 37%,50% 0,62% 37%,75% 3%,82% 37%,100% 0,89% 100%,11% 100%);filter:drop-shadow(0 1px 1px #51391d); }
 .bandana-kirby .mini-kirby::before { content: ''; position: absolute; left: 0; top: 0; width: 70px; height: 64px; background: url('/icons/bandana.svg') center / contain no-repeat; }
 .bandana-kirby .mini-kirby > i { visibility: hidden; }
+.pigeon-character .mini-kirby::before { content: ''; position: absolute; inset: 0; background: url('/icons/pidgie.svg?v=5') center / contain no-repeat; }
+.pigeon-character .mini-kirby > i { visibility: hidden; }
+.variant-button.pigeon-character .mini-kirby { transform: scale(1.08); }
 .variant-button.variant-locked { cursor: help; }
 .variant-locked .mini-kirby { opacity: .45; filter: saturate(.25); }
 .variant-locked > span:not(.variant-lock):not(.choice-check):not(.mini-kirby) { color: var(--ui-muted); }
@@ -405,3 +408,18 @@ body:not(.touch-ui) .hud-corner .right-hud {position:static;min-width:0;max-widt
 #centipede-event-hud strong{display:block;font-size:16px;margin-bottom:4px;}
 @media(max-width:900px){#centipede-event-hud{left:50%;top:92px;padding:9px 14px;font-size:12px;}#centipede-event-hud strong{font-size:14px;}}
 .touch-ui #centipede-event-hud{left:50%;top:max(4px,env(safe-area-inset-top));bottom:auto;z-index:60;width:min(520px,calc(100vw - var(--touch-left) - var(--touch-right)));max-width:none;padding:8px 12px;font-size:12px;}
+#flower-game-hud{width:min(460px,calc(100vw - 36px));box-sizing:border-box;font-size:14px;line-height:1.4;background:linear-gradient(120deg,#243e42f2,#394c5af2);border-color:#c4dcaf;}
+#flower-game-hud strong{display:block;font-size:17px;margin-bottom:4px;}
+.flower-game-notes{display:flex;justify-content:center;gap:8px;margin-top:8px;}
+.flower-game-notes span{display:grid;place-items:center;flex:0 1 32px;min-width:20px;height:42px;border-radius:10px;color:#bdc7cf;background:#14282e88;transition:color .16s,background .16s,transform .16s;}
+.flower-game-notes svg{width:27px;height:34px;overflow:visible;}
+.flower-game-notes .note-cross{display:none;}
+.flower-game-notes .correct{color:#91eaa8;background:#28543d;}
+.flower-game-notes .wrong{color:#ff979b;background:#652e3c;}
+.flower-game-notes .wrong .note-cross{display:block;}
+.flower-game-notes .playing{color:var(--note-color);transform:translateY(-3px);}
+.touch-ui #flower-game-hud{top:max(4px,env(safe-area-inset-top));z-index:60;padding:7px 12px;font-size:12px;width:min(460px,calc(100vw - 24px));}
+.touch-ui #flower-game-hud strong{font-size:14px;}
+.touch-ui .flower-game-notes{gap:5px;margin-top:5px;}
+.touch-ui .flower-game-notes span{flex-basis:26px;height:34px;}
+.touch-ui .flower-game-notes svg{width:20px;height:29px;}

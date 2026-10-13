@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
-import {Box3,BufferAttribute,InstancedMesh,Mesh,Vector3} from 'three';
+import {AnimationMixer,Box3,BufferAttribute,InstancedMesh,Mesh,SkinnedMesh,Vector3} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {BedQuilt} from '../src/bed-quilt';
+import {BedQuilt,BED_PIGEON_COVER_FOLD,BED_PIGEON_REST} from '../src/bed-quilt';
 import {KirbyHome} from '../src/kirby-home';
 import {CharacterController} from '../src/controller';
 
@@ -15,6 +15,50 @@ function quiltHeight(quilt:BedQuilt,x:number,z:number){
  const a=p.getY(j*25+i),b=p.getY((j+1)*25+i),d=p.getY(j*25+i+1),c=p.getY((j+1)*25+i+1);
  return u+v<=1?(1-u-v)*a+v*b+u*d:(1-u)*b+(1-v)*d+(u+v-1)*c;
 }
+
+test('pigeon quilt profile covers its side-sleeping torso, wings, feet and tail while exposing the face',async()=>{
+ const {createPigeon}=await import('../src/pigeon-model');
+ const {root,clips}=createPigeon(),quilt=new BedQuilt(),mixer=new AnimationMixer(root);
+ mixer.clipAction(clips.find(c=>c.name==='Sleep')!).play();
+ root.position.set(0,BED_PIGEON_REST.y,BED_PIGEON_REST.z);root.rotation.set(BED_PIGEON_REST.pitch,BED_PIGEON_REST.yaw,0);
+ quilt.setPose(1,BED_PIGEON_COVER_FOLD,'pigeon');
+ const top=quilt.geometry.getAttribute('position').getZ(0);
+ assert(Math.abs(top+.75)<1e-6);
+ for(const time of [0,.7,1.4,2.1,2.8,3.5]){
+  mixer.setTime(time);root.updateMatrixWorld(true);
+  let covered=0,closestTorso=Infinity;
+  root.traverse(node=>{
+   if(!(node instanceof Mesh))return;
+   if(node instanceof SkinnedMesh)node.skeleton.update();
+   const point=new Vector3(),vertices=node.geometry.getAttribute('position');
+   for(let i=0;i<vertices.count;i++){
+    node.getVertexPosition(i,point);point.applyMatrix4(node.matrixWorld);
+    if(/eye|pupil|beak|tuft/i.test(node.name)){assert(point.z<top,`${node.name}: face stays uncovered`);continue;}
+    const y=quiltHeight(quilt,point.x,point.z);if(y===undefined)continue;
+    covered++;
+    assert(y>point.y,`${node.name} at ${time}s pokes through quilt by ${point.y-y}`);
+    if(node.name==='Continuous pigeon body')closestTorso=Math.min(closestTorso,y-point.y);
+   }
+  });
+  assert(covered>4000,'coverage uses the actual posed/skinned sculpt');
+  assert(closestTorso<.12,'quilt rests close to the torso instead of forming a tent');
+ }
+ const p=quilt.geometry.getAttribute('position');
+ const centerline=Array.from({length:25},(_,row)=>p.getY(row*25+12));
+ let crests=0;
+ for(let i=1;i<24;i++)if(centerline[i]>1.6&&centerline[i]>centerline[i-1]&&centerline[i]>=centerline[i+1])crests++;
+ assert.equal(crests,1,'one torso mound, without Kirby’s separate boot peaks');
+});
+
+test('profile changes invalidate the quilt cache and flattening restores the same mattress cover',()=>{
+ const quilt=new BedQuilt(),flat=positions(quilt);
+ quilt.setPose(1,BED_PIGEON_COVER_FOLD,'kirby');const kirby=positions(quilt);
+ const attribute=quilt.geometry.getAttribute('position') as BufferAttribute,version=attribute.version;
+ quilt.setPose(1,BED_PIGEON_COVER_FOLD,'pigeon');assert.notDeepEqual(positions(quilt),kirby);assert(attribute.version>version);
+ const settled=attribute.version;quilt.setPose(1,BED_PIGEON_COVER_FOLD,'pigeon');assert.equal(attribute.version,settled);
+ quilt.setPose(0,0,'pigeon');assert.deepEqual(positions(quilt),flat);
+ quilt.setPose(0,0);assert.deepEqual(positions(quilt),flat);
+});
 test('quilt clears the entire mattress top and pillow fits inside the bed',()=>{
  const home=new KirbyHome(),quilt=home.group.getObjectByName('Soft blue bed quilt') as BedQuilt;
  const p=quilt.geometry.getAttribute('position');

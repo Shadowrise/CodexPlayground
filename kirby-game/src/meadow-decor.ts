@@ -12,6 +12,7 @@ import {createShrubGeometry,createShrubMaterial} from './shrub-model';
 import {instancedLod,type InstanceLodPart} from './instanced-lod';
 import {createGrassGeometry,createGrassMaterial} from './grass-model';
 import {createReedGeometry,createWaterPlantMaterial} from './water-plants';
+import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE,outsideMusicalFlowers,outsideMusicalFlowerClearing} from './musical-flower-site';
 
 type Kind='flowers'|'mushrooms'|'stump'|'bush'|'fern'|'reeds';
 export type DecorSite={x:number;z:number;radius:number;kind:Kind;biome:Biome};
@@ -34,12 +35,14 @@ function prototype(kind:Kind,biome:Biome,variant:number){
   for(let i=0;i<colors.length;i+=3){colors[i]=c.r;colors[i+1]=c.g;colors[i+2]=c.b;}copy.setAttribute('color',new T.BufferAttribute(colors,3));parts.push(copy);
  };
  if(kind==='flowers'){
-  const petals=variant?6:8,h=variant?.74:.52;
+  // The musical lawn reuses both little flower shapes, in its seven bloom colours.
+  const shape=variant%2,petals=shape?6:8,h=shape?.74:.52;
+  const petalColor=variant<2?palette.flowers[variant]:MUSICAL_FLOWERS[(variant-2)%MUSICAL_FLOWERS.length].color;
   add(stem,palette.leaf,0,h/2,0,.022,h,.022);
   add(leaf,palette.leaf,.12,h*.4,0,.38,1,.6,0,.5,-.65);
   add(leaf,palette.grass[1],-.11,h*.62,0,.33,1,.52,0,-.5,.75);
-  for(let i=0;i<petals;i++){const a=i/petals*Math.PI*2;add(leaf,palette.flowers[variant],Math.sin(a)*.17,h,Math.cos(a)*.17,.35,.5,.45,-.2,a);}
-  add(ball,variant?'#ce7a3b':'#eac65a',0,h+.055,0,.1,.075,.1);
+  for(let i=0;i<petals;i++){const a=i/petals*Math.PI*2;add(leaf,petalColor,Math.sin(a)*.17,h,Math.cos(a)*.17,.35,.5,.45,-.2,a);}
+  add(ball,shape?'#ce7a3b':'#eac65a',0,h+.055,0,.1,.075,.1);
   for(let i=0;i<3;i++){const a=i*2.399;add(ball,'#fff0b6',Math.sin(a)*.06,h+.105,Math.cos(a)*.06,.013,.018,.013);}
  }else if(kind==='mushrooms'){
   add(stem,'#e1ceb0',0,.26,0,.1,.52,.1,0,0,.08);
@@ -97,7 +100,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  const fruitIndex=new MeadowIndex(16,layout.fruitClearings);
  const nearTrunk=(x:number,z:number,r:number)=>treeIndex.some(x,z,r+.6,t=>(t.x-x)**2+(t.z-z)**2<(r+.6)**2);
  const tuft=(x:number,z:number,scale:number)=>{
-  if(blades>=48000||nearTrunk(x,z,.2)||!layout.clearOfTrails(x,z,.35))return;
+  if(blades>=48000||!outsideMusicalFlowers(x,z,-.4)||nearTrunk(x,z,.2)||!layout.clearOfTrails(x,z,.35))return;
   dummy.position.set(x,0,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(scale);dummy.updateMatrix();grass.setMatrixAt(blades,dummy.matrix);
   color.set(PALETTES[biomeAt(x,z)].grass[Math.floor(random()*3)]);grass.setColorAt(blades++,color);
  };
@@ -132,7 +135,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  const edge=MEADOW_HALF_SIZE-3,spacing=2.8;
  for(let x=-edge;x<edge;x+=spacing)for(let z=-edge;z<edge;z+=spacing){
   const px=x+spacing*(.15+random()*.7),pz=z+spacing*(.15+random()*.7);
-  if(sceneryClearance(px,pz,.45)&&dryGround(px,pz,.45))tuft(px,pz,.6+density(px,pz)*.45+random()*.15);
+  if((sceneryClearance(px,pz,.45)||!outsideMusicalFlowerClearing(px,pz,-.6))&&dryGround(px,pz,.45))tuft(px,pz,.6+density(px,pz)*.45+random()*.15);
  }
  // Low shrubs loosely frame both sides of the paths, never forming a hedge
  // across junctions or the worn entrance pads. Reuse the merged plant budget.
@@ -177,6 +180,19 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
   }
  }
  plantLimit=850000;
+ // Cover the entire musical lawn with low blooms, including its open front.
+ // Jittered rows avoid clumps and visible grids; keep stems/button approaches clear.
+ // Use the existing merged cells and triangle budget, with no new shadow passes.
+ const savedSeed=seed,beforeFlowers=sites.length;seed=873109;
+ const flowerSpacing=1.05,flowerRows=flowerSpacing*.866,radius=MUSICAL_FLOWER_SITE.radius-.5;
+ for(let row=0,z=-radius;z<=radius;row++,z+=flowerRows){
+  for(let x=-radius+(row%2)*flowerSpacing*.5;x<=radius;x+=flowerSpacing){
+   const px=MUSICAL_FLOWER_SITE.x+x+(random()-.5)*.5,pz=MUSICAL_FLOWER_SITE.z+z+(random()-.5)*.5;
+   if(Math.hypot(px-MUSICAL_FLOWER_SITE.x,pz-MUSICAL_FLOWER_SITE.z)>radius||!outsideMusicalFlowers(px,pz,.7))continue;
+   plant('flowers',px,pz,.75+random()*.3,2+Math.floor(random()*MUSICAL_FLOWERS.length),true);
+  }
+ }
+ root.userData.musicalClearingFlowers=sites.length-beforeFlowers;seed=savedSeed;
  // A loose, irregular shrub belt along all four mountain edges.
  for(let side=0;side<4;side++)for(let along=-edge+4;along<edge-4;along+=6){
   const inward=MEADOW_HALF_SIZE-6-random()*13,offset=along+(random()-.5)*3;

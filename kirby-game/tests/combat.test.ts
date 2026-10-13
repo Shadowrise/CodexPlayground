@@ -33,6 +33,17 @@ test('repeated pushes never flash red or cause sleep, and roll restores the mode
 test('push contacts on the first step and recovers in .62 seconds',async()=>{
  const {player}=await setup();let time=0,hitTime=0;do{player.update(.01,{...idle,attack:true});time+=.01;if(player.attackHit)hitTime=time;}while(player.state==='Push'&&time<4);assert(hitTime<=.02);assert(Math.abs(time-.62)<.02);
 });
+
+test('a 700% player pushes ordinary and minimum-size NPCs on the first step',async()=>{
+ const {player,npcs}=await setup();player.resizeTo(7,true);
+ for(const [index,size] of [1,.3].entries()){
+  const npc=npcs[index];npc.actor.scale.setScalar(size);npc.actor.position.set(0,0,8);
+  player.setActivity('Idle');player.update(.7,idle);player.update(.01,{...idle,attack:true});
+  assert.equal(resolveAttack(player,[npc])?.index,npc.index);assert.equal(npc.state,'Roll');
+  const before=npc.actor.position.z;npc.update(.1,[]);assert(npc.actor.position.z>before);
+  assert.equal(npc.health,3);assert.equal(npc.actor.scale.x,size);
+ }
+});
 test('one push rolls a firefly rider off without teleporting to the ground or sleeping',async()=>{
  const {player,npcs}=await setup(),n=npcs[0];n.beginFirefly(0);n.actor.position.set(0,6,2);player.attackHit=true;assert.equal(resolveAttack(player,[n]),n);assert.equal(n.state,'Roll');assert.equal(n.fireflyIndex,undefined);assert.equal(n.actor.position.y,6);
  n.update(.2,[]);assert(n.actor.position.y>0&&n.actor.position.y<6);for(let i=0;i<60&&n.roll.active;i++)n.update(.05,[]);assert(!n.roll.active);assert(!n.isDown);assert.equal(n.actor.position.y,0);assert(n.actor.position.z>5);
