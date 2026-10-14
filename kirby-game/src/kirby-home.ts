@@ -2,7 +2,7 @@ import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {batchRigidMeshes} from './rigid-batch';
 import {DogHouse} from './dog-house';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
-import {BedQuilt,BED_REST,BED_COVER_FOLD,BED_PIGEON_REST,BED_PIGEON_COVER_FOLD} from './bed-quilt';
+import {BedQuilt,BED_REST,BED_MATTRESS_Y,BED_COVER_FOLD,BED_PIGEON_REST,BED_PIGEON_COVER_FOLD} from './bed-quilt';
 import {fitRider,restoreRider,riderFit} from './rider-size';
 import { awardFirst } from './score';
 import * as T from 'three';
@@ -22,7 +22,8 @@ export class KirbyHome {
   private remoteWakeElapsed=0;
   private remoteWasWaking=false;
   private pigeonQuilt=false;
-  private quiltPose(lift:number,fold:number){this.quilt.setPose(lift,fold,this.pigeonQuilt?'pigeon':'kirby');}
+  private quiltSize=1;
+  private quiltPose(lift:number,fold:number){this.quilt.setPose(lift,fold,this.pigeonQuilt?'pigeon':'kirby',this.quiltSize);}
   private waking=false;
   private wakeScale=1;
   private sleeper?:CharacterController;
@@ -75,14 +76,14 @@ export class KirbyHome {
   }
   prompt(position:T.Vector3,size=1){return this.active?'E — встать с кровати':position.distanceTo(this.entrance)<6+.6*size && position.y<.6 ? 'E — лечь в кровать':'';}
   private fit(c:CharacterController,amount=1){this.group.scale.setScalar(1);fitRider(c,1,amount);}
-  private bed(pigeon=this.sleeper?.isPigeon??false){const s=this.group.scale.x,rest=pigeon?BED_PIGEON_REST:BED_REST;return new T.Vector3(HOME_SITE.x,rest.y*s,HOME_SITE.z+rest.z*s);}
+  private bed(pigeon=this.sleeper?.isPigeon??false){const s=this.group.scale.x,rest=pigeon?BED_PIGEON_REST:BED_REST;return new T.Vector3(HOME_SITE.x,(BED_MATTRESS_Y+(rest.y-BED_MATTRESS_Y)*this.quiltSize)*s,HOME_SITE.z+rest.z*s);}
   private door(){
     const size=this.sleeper?.actor.scale.x??1,p=new T.Vector3(HOME_SITE.x,0,HOME_SITE.z+Math.max(6,3.9+.6*size));
     // Enlarged Kirby must also clear the neighbouring dog house after waking.
     for(let i=0;i<4;i++)this.constrain(p,size);
     return p;
   }
-  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position,c.actor.scale.x) || c.flight.active)return false;this.sleeper=c;this.pigeonQuilt=c.isPigeon;this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c,0);return true;}
+  start(c:CharacterController){if(this.active || !this.prompt(c.actor.position,c.actor.scale.x) || c.flight.active)return false;this.sleeper=c;this.pigeonQuilt=c.isPigeon;this.quiltSize=Math.min(1,c.actor.scale.x);this.from.copy(c.actor.position);this.fromRotation.copy(c.actor.quaternion);this.elapsed=0;this.waking=false;c.setActivity('Sleep');this.fit(c,0);return true;}
   savePosition(c:CharacterController){return this.sleeper===c?this.door():undefined;}
   wake(){
     if(!this.sleeper || this.waking)return;
@@ -113,6 +114,7 @@ export class KirbyHome {
         this.remoteWasWaking=true;this.remoteWakeElapsed+=dt;this.uncover(this.remoteWakeElapsed);return;
       }
       this.remoteWasWaking=false;
+      if(remoteSleeper?.state==='Sleep')this.quiltSize=Math.min(1,remoteSleeper.actor.scale.x);
       const occupied=remoteSleeper?.state==='Sleep'&&remoteSleeper.actor.position.distanceToSquared(this.bed(this.pigeonQuilt))<.64;
       const target=occupied?1:0,blend=1-Math.exp(-dt*7);
       this.quiltLift=T.MathUtils.lerp(this.quiltLift,target,blend);
@@ -135,6 +137,7 @@ export class KirbyHome {
       return;
     }
     // Fold down during the approach, then pull up over Kirby, leaving his face free.
+    this.quiltSize=Math.min(1,c.actor.scale.x);
     const cover=T.MathUtils.smoothstep(t,.8,1.55);
     this.quiltLift=cover;
     this.quiltFold=T.MathUtils.smoothstep(t,0,.45)*(1-cover)+(this.pigeonQuilt?BED_PIGEON_COVER_FOLD:BED_COVER_FOLD)*cover;

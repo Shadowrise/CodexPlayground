@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { KIRBY_VARIANTS } from '../src/variants';
 
-test('short station stops keep all twelve carts circulating without overlap',()=>{
+test('short station stops keep all thirteen carts circulating without overlap',()=>{
   const c=new Coaster();
   const carts=(c as unknown as {carts:{distance:number;wait:number;occupied:boolean}[]}).carts;
   const laps=carts.map(()=>0);
@@ -19,17 +19,17 @@ test('short station stops keep all twelve carts circulating without overlap',()=
       }
     });
     const positions=carts.map(cart=>cart.distance).sort((a,b)=>a-b);
-    for(let i=0;i<positions.length;i++)assert((positions[(i+1)%12]-positions[i]+c.length)%c.length>4.9);
+    for(let i=0;i<positions.length;i++)assert((positions[(i+1)%positions.length]-positions[i]+c.length)%c.length>4.9);
   }
   assert(laps.every(n=>n>=3),'No cart gets stuck in the station queue');
 });
 
-test('twelve carts retain six Kirby passengers and Luigi, occupied carts reject boarding',async()=>{
+test('thirteen carts retain six Kirby passengers and Luigi, occupied carts reject boarding',async()=>{
   const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));
   const model=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
   const c=new Coaster();c.addKirbyPassengers(model.scene,model.animations,KIRBY_VARIANTS[0]);
   const carts=(c as unknown as {carts:{group:Group;wait:number;occupied:boolean}[]}).carts;
-  assert.equal(carts.length,12);assert.equal(carts.filter(c=>c.occupied).length,7);
+  assert.equal(carts.length,13);assert.equal(carts.filter(c=>c.occupied).length,8);
   const passengers=carts.flatMap(c=>c.group.children.filter(o=>o.name.startsWith('Permanent Kirby') || o.name==='Luigi · permanent passenger'));
   assert.equal(passengers.length,7);
   const parents=passengers.map(p=>p.parent);

@@ -59,7 +59,11 @@ test('every selection creates the other fourteen variants with green NPC feet', 
     });
     player.traverse(o => {
       if (o instanceof Mesh && (o.material as MeshStandardMaterial).name.startsWith('Kirby') && selected[0] !== 'Классический' && selected[0] !== 'Радуга') {
-        assert.equal((o.material as MeshStandardMaterial).color.getHexString(), selected[1].slice(1));
+        const material=o.material as MeshStandardMaterial;
+        if(selected[0]==='Бандана'&&o.name.startsWith('Body')){
+          assert(material.map,'Bandana body uses its authored face texture');
+          assert.equal(material.color.getHexString(),'ffffff');
+        }else assert.equal(material.color.getHexString(),selected[1].slice(1));
       }
     });
   }

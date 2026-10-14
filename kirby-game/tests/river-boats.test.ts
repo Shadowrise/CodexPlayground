@@ -25,12 +25,12 @@ test('closed boat circuit fits the water and clears all bridge decks at walking 
  assert.equal(bridges.size,3);
 });
 
-test('eight boats have four seated passengers and a bounded rendering budget',async()=>{
- const g=await model,b=new RiverBoats();b.addPassengers(g.scene,g.animations);b.addPassengers(g.scene,g.animations);assert.equal(b.boats.length,8);
+test('nine boats retain four Kirby passengers and a bounded rendering budget',async()=>{
+ const g=await model,b=new RiverBoats();b.addPassengers(g.scene,g.animations);b.addPassengers(g.scene,g.animations);assert.equal(b.boats.length,9);
  let triangles=0,draws=0,passengers=0;
  b.group.traverse(o=>{if(o.name.startsWith('River Kirby passenger'))passengers++;if(o instanceof T.Mesh){draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3;assert(!o.castShadow);}});
- assert.equal(passengers,4);assert(triangles<90000,`all boat+passenger triangles ${triangles}`);assert(draws<=68);
- const colors=b.boats.map(boat=>((boat.children[0] as T.Mesh).material as T.MeshStandardMaterial).color.getHex());assert.equal(new Set(colors).size,8);
+ assert.equal(passengers,4);assert(triangles<100000,`all boat+Kirby triangles ${triangles}`);assert(draws<=78,`boat+Kirby draws including three white emblem outlines: ${draws}`);
+ const colors=b.boats.map(boat=>((boat.children[0] as T.Mesh).material as T.MeshStandardMaterial).color.getHex());assert.equal(new Set(colors).size,9);
  assert.equal((b.boats[0].children[0] as T.Mesh).geometry,(b.boats[1].children[0] as T.Mesh).geometry);
  b.update(1,20,new T.Vector3(10000,0,10000));assert(b.boats.every(boat=>!boat.visible));
 });

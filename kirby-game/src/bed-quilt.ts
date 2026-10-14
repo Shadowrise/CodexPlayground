@@ -1,6 +1,7 @@
 import * as T from 'three';
 
 export const BED_REST={y:1.58,z:.4,pitch:-Math.PI*.38};
+export const BED_MATTRESS_Y=1.1;
 /** Native Sleep already turns the bird onto its flank; the bed supplies heading. */
 export const BED_PIGEON_REST={y:1.03,z:-.65,pitch:0,yaw:Math.PI};
 // Beyond the bottom lip, so even the breathing pose keeps the mouth uncovered.
@@ -34,6 +35,7 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
   private lift=-1;
   private fold=-1;
   private profile:BedQuiltProfile='kirby';
+  private size=1;
   constructor(){
     const geometry=new T.PlaneGeometry(1,1,24,24);
     geometry.rotateX(-Math.PI/2);
@@ -84,19 +86,24 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
     this.setPose(0,0);
     geometry.boundingSphere=new T.Sphere(new T.Vector3(0,1.9,0),4);
   }
-  setPose(lift:number,fold:number,profile:BedQuiltProfile='kirby'){
-    if(this.lift===lift&&this.fold===fold&&this.profile===profile)return;
-    this.lift=lift;this.fold=fold;this.profile=profile;
+  setPose(lift:number,fold:number,profile:BedQuiltProfile='kirby',size=1){
+    if(this.lift===lift&&this.fold===fold&&this.profile===profile&&this.size===size)return;
+    this.lift=lift;this.fold=fold;this.profile=profile;this.size=size;
     const envelope=profile==='pigeon'?this.pigeonResting:this.resting;
+    const rest=profile==='pigeon'?BED_PIGEON_REST:BED_REST,scale=T.MathUtils.lerp(1,size,lift);
     const positions=this.geometry.getAttribute('position'),uv=this.geometry.getAttribute('uv');
     const top=T.MathUtils.lerp(-1.15,.9,fold);
     for(let i=0;i<positions.count;i++){
       const u=uv.getX(i),v=1-uv.getY(i),x=(u-.5)*3.9,z=T.MathUtils.lerp(top,1.5,v);
-      const sides=T.MathUtils.smoothstep(Math.abs(x),1.76,1.95);
+      // Keep the skirts on the full mattress, concentrating the inner grid on
+      // the smaller body so its curved silhouette still has enough vertices.
+      const clothX=x*T.MathUtils.lerp(scale,1,T.MathUtils.smoothstep(Math.abs(x),1.625,1.95));
+      const clothZ=T.MathUtils.lerp(rest.z+(z-rest.z)*scale,z,T.MathUtils.smoothstep(v,.9,1));
+      const sides=T.MathUtils.smoothstep(Math.abs(clothX),1.76,1.95);
       const row=T.MathUtils.clamp((z+1.15)/PROFILE_STEP,0,PROFILE_ROWS),lo=Math.min(PROFILE_ROWS-1,Math.floor(row)),col=i%25;
       const resting=T.MathUtils.lerp(envelope[lo*25+col],envelope[(lo+1)*25+col],row-lo);
-      const wrinkles=.008*Math.sin(u*Math.PI*12)*Math.sin(v*Math.PI)*lift;
-      positions.setXYZ(i,x,1.16-.37*sides+lift*(resting-1.16)+wrinkles,z);
+      const wrinkles=.008*Math.sin(u*Math.PI*12)*Math.sin(v*Math.PI)*lift*size;
+      positions.setXYZ(i,clothX,1.16-.37*sides+lift*(resting-1.16)*size+wrinkles,clothZ);
     }
     positions.needsUpdate=true;this.geometry.computeVertexNormals();
   }

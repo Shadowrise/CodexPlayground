@@ -3,8 +3,10 @@ import {PONDS,RIVERS,streamX,WATER_Y} from './pond-layout';
 import {POND_SCALE} from './landmark-sites';
 
 export const BOAT_SPEED=3.4;
-export const BOAT_COUNT=8;
-export const BOAT_OCCUPIED=[1,3,5,7] as const;
+export const META_KNIGHT_BOAT=8;
+export const BOAT_COUNT=9;
+export const BOAT_KIRBY_PASSENGERS=[1,3,5,7] as const;
+export const BOAT_OCCUPIED=[...BOAT_KIRBY_PASSENGERS,META_KNIGHT_BOAT] as const;
 const points:T.Vector3[]=[];
 for(let i=0;i<PONDS.length;i++){
  const pond=PONDS[i];points.push(new T.Vector3(pond.x,WATER_Y,pond.z));

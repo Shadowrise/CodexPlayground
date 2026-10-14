@@ -1,0 +1,428 @@
+{
+  "clips": [
+    {
+      "name": "Idle",
+      "duration": 2.799999952316284
+    },
+    {
+      "name": "Walk",
+      "duration": 1.0399999618530273
+    },
+    {
+      "name": "Sitting",
+      "duration": 3.200000047683716
+    }
+  ],
+  "meshes": [
+    {
+      "name": "Eyes_glow_surface_4",
+      "parent": "Eyes_glow",
+      "vertices": 1362,
+      "material": "Eyes · golden glow",
+      "metalness": 0.05,
+      "roughness": 0.3
+    },
+    {
+      "name": "Mask_ridge_L_0_surface_5",
+      "parent": "Mask_ridge_L_0",
+      "vertices": 216,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Mask_ridge_L_1_surface_6",
+      "parent": "Mask_ridge_L_1",
+      "vertices": 216,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Mask_ridge_R_0_surface_7",
+      "parent": "Mask_ridge_R_0",
+      "vertices": 216,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Mask_ridge_R_1_surface_8",
+      "parent": "Mask_ridge_R_1",
+      "vertices": 216,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Mask_shell_surface_1",
+      "parent": "Mask_shell",
+      "vertices": 14148,
+      "material": "Armour · midnight blue",
+      "metalness": 0.55,
+      "roughness": 0.32
+    },
+    {
+      "name": "Mask_shell_surface_2",
+      "parent": "Mask_shell",
+      "vertices": 17184,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Mask_shell_surface_3",
+      "parent": "Mask_shell",
+      "vertices": 2544,
+      "material": "Visor · recessed shadow",
+      "metalness": 0.14,
+      "roughness": 0.52
+    },
+    {
+      "name": "Cape_surface_9",
+      "parent": "Cape",
+      "vertices": 5376,
+      "material": "Cape · midnight cloth",
+      "metalness": 0.04,
+      "roughness": 0.85
+    },
+    {
+      "name": "Cape_surface_10",
+      "parent": "Cape",
+      "vertices": 3072,
+      "material": "Galaxia · warm gold",
+      "metalness": 0.79,
+      "roughness": 0.24
+    },
+    {
+      "name": "Left_shoulder_armour_surface_11",
+      "parent": "Left_shoulder_armour",
+      "vertices": 3648,
+      "material": "Armour · midnight blue",
+      "metalness": 0.55,
+      "roughness": 0.32
+    },
+    {
+      "name": "Left_shoulder_armour_surface_12",
+      "parent": "Left_shoulder_armour",
+      "vertices": 6336,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Left_shoulder_armour_surface_13",
+      "parent": "Left_shoulder_armour",
+      "vertices": 2880,
+      "material": "Galaxia · warm gold",
+      "metalness": 0.79,
+      "roughness": 0.24
+    },
+    {
+      "name": "Left_fist_Gauntlet_satin_pearl",
+      "parent": "Left_fist",
+      "vertices": 5088,
+      "material": "Gauntlet · satin pearl",
+      "metalness": 0.4,
+      "roughness": 0.36
+    },
+    {
+      "name": "Left_fist_Gauntlet_wrist_edging",
+      "parent": "Left_fist",
+      "vertices": 1056,
+      "material": "Gauntlet · wrist edging",
+      "metalness": 0.48,
+      "roughness": 0.34
+    },
+    {
+      "name": "Left_fist_Gauntlet_shallow_seams",
+      "parent": "Left_fist",
+      "vertices": 216,
+      "material": "Gauntlet · shallow seams",
+      "metalness": 0.35,
+      "roughness": 0.46
+    },
+    {
+      "name": "Left_gauntlet_surface_15",
+      "parent": "Left_gauntlet",
+      "vertices": 3648,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Left_shoulder_surface_14",
+      "parent": "Left_shoulder",
+      "vertices": 3648,
+      "material": "Body · indigo velvet",
+      "metalness": 0.12,
+      "roughness": 0.53
+    },
+    {
+      "name": "Left_wing_pivot_surface_20",
+      "parent": "Left_wing_pivot",
+      "vertices": 3228,
+      "material": "Wings · violet silk",
+      "metalness": 0.13,
+      "roughness": 0.46
+    },
+    {
+      "name": "Left_wing_pivot_surface_21",
+      "parent": "Left_wing_pivot",
+      "vertices": 9408,
+      "material": "Wings · indigo ribs",
+      "metalness": 0.3,
+      "roughness": 0.36
+    },
+    {
+      "name": "Left_wing_pivot_surface_22",
+      "parent": "Left_wing_pivot",
+      "vertices": 3648,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Right_shoulder_armour_surface_23",
+      "parent": "Right_shoulder_armour",
+      "vertices": 3648,
+      "material": "Armour · midnight blue",
+      "metalness": 0.55,
+      "roughness": 0.32
+    },
+    {
+      "name": "Right_shoulder_armour_surface_24",
+      "parent": "Right_shoulder_armour",
+      "vertices": 6336,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Right_shoulder_armour_surface_25",
+      "parent": "Right_shoulder_armour",
+      "vertices": 2880,
+      "material": "Galaxia · warm gold",
+      "metalness": 0.79,
+      "roughness": 0.24
+    },
+    {
+      "name": "Galaxia_Galaxia_polished_gold_edge",
+      "parent": "Galaxia",
+      "vertices": 7824,
+      "material": "Galaxia · polished gold edge",
+      "metalness": 0.98,
+      "roughness": 0.07
+    },
+    {
+      "name": "Galaxia_Galaxia_brilliant_gold_face",
+      "parent": "Galaxia",
+      "vertices": 7044,
+      "material": "Galaxia · brilliant gold face",
+      "metalness": 0.95,
+      "roughness": 0.09
+    },
+    {
+      "name": "Galaxia_Galaxia_burgundy_guard",
+      "parent": "Galaxia",
+      "vertices": 2436,
+      "material": "Galaxia · burgundy guard",
+      "metalness": 0.66,
+      "roughness": 0.3
+    },
+    {
+      "name": "Galaxia_Galaxia_burgundy_bevel",
+      "parent": "Galaxia",
+      "vertices": 420,
+      "material": "Galaxia · burgundy bevel",
+      "metalness": 0.7,
+      "roughness": 0.28
+    },
+    {
+      "name": "Galaxia_Galaxia_midnight_purple_grip",
+      "parent": "Galaxia",
+      "vertices": 192,
+      "material": "Galaxia · midnight purple grip",
+      "metalness": 0.18,
+      "roughness": 0.6
+    },
+    {
+      "name": "Galaxia_Galaxia_grip_bands",
+      "parent": "Galaxia",
+      "vertices": 768,
+      "material": "Galaxia · grip bands",
+      "metalness": 0.32,
+      "roughness": 0.45
+    },
+    {
+      "name": "Galaxia_Galaxia_oval_ruby",
+      "parent": "Galaxia",
+      "vertices": 1188,
+      "material": "Galaxia · oval ruby",
+      "metalness": 0.35,
+      "roughness": 0.19
+    },
+    {
+      "name": "Galaxia_Galaxia_ruby_glint",
+      "parent": "Galaxia",
+      "vertices": 1188,
+      "material": "Galaxia · ruby glint",
+      "metalness": 0.15,
+      "roughness": 0.21
+    },
+    {
+      "name": "Right_grip_fingers_Gauntlet_satin_pearl",
+      "parent": "Right_grip_fingers",
+      "vertices": 5088,
+      "material": "Gauntlet · satin pearl",
+      "metalness": 0.4,
+      "roughness": 0.36
+    },
+    {
+      "name": "Right_grip_fingers_Gauntlet_wrist_edging",
+      "parent": "Right_grip_fingers",
+      "vertices": 1056,
+      "material": "Gauntlet · wrist edging",
+      "metalness": 0.48,
+      "roughness": 0.34
+    },
+    {
+      "name": "Right_grip_fingers_Gauntlet_shallow_seams",
+      "parent": "Right_grip_fingers",
+      "vertices": 216,
+      "material": "Gauntlet · shallow seams",
+      "metalness": 0.35,
+      "roughness": 0.46
+    },
+    {
+      "name": "Right_gauntlet_surface_27",
+      "parent": "Right_gauntlet",
+      "vertices": 3648,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Right_shoulder_surface_26",
+      "parent": "Right_shoulder",
+      "vertices": 3648,
+      "material": "Body · indigo velvet",
+      "metalness": 0.12,
+      "roughness": 0.53
+    },
+    {
+      "name": "Right_wing_pivot_surface_32",
+      "parent": "Right_wing_pivot",
+      "vertices": 3228,
+      "material": "Wings · violet silk",
+      "metalness": 0.13,
+      "roughness": 0.46
+    },
+    {
+      "name": "Right_wing_pivot_surface_33",
+      "parent": "Right_wing_pivot",
+      "vertices": 9408,
+      "material": "Wings · indigo ribs",
+      "metalness": 0.3,
+      "roughness": 0.36
+    },
+    {
+      "name": "Right_wing_pivot_surface_34",
+      "parent": "Right_wing_pivot",
+      "vertices": 3648,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Body_motion_surface_0",
+      "parent": "Body_motion",
+      "vertices": 3648,
+      "material": "Body · indigo velvet",
+      "metalness": 0.12,
+      "roughness": 0.53
+    },
+    {
+      "name": "Left_foot_pivot_surface_16",
+      "parent": "Left_foot_pivot",
+      "vertices": 3648,
+      "material": "Soles · deep plum",
+      "metalness": 0.1,
+      "roughness": 0.6
+    },
+    {
+      "name": "Left_foot_pivot_surface_17",
+      "parent": "Left_foot_pivot",
+      "vertices": 7296,
+      "material": "Boots · violet leather",
+      "metalness": 0.15,
+      "roughness": 0.39
+    },
+    {
+      "name": "Left_foot_pivot_surface_18",
+      "parent": "Left_foot_pivot",
+      "vertices": 3648,
+      "material": "Armour · midnight blue",
+      "metalness": 0.55,
+      "roughness": 0.32
+    },
+    {
+      "name": "Left_foot_pivot_surface_19",
+      "parent": "Left_foot_pivot",
+      "vertices": 576,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    },
+    {
+      "name": "Right_foot_pivot_surface_28",
+      "parent": "Right_foot_pivot",
+      "vertices": 3648,
+      "material": "Soles · deep plum",
+      "metalness": 0.1,
+      "roughness": 0.6
+    },
+    {
+      "name": "Right_foot_pivot_surface_29",
+      "parent": "Right_foot_pivot",
+      "vertices": 7296,
+      "material": "Boots · violet leather",
+      "metalness": 0.15,
+      "roughness": 0.39
+    },
+    {
+      "name": "Right_foot_pivot_surface_30",
+      "parent": "Right_foot_pivot",
+      "vertices": 3648,
+      "material": "Armour · midnight blue",
+      "metalness": 0.55,
+      "roughness": 0.32
+    },
+    {
+      "name": "Right_foot_pivot_surface_31",
+      "parent": "Right_foot_pivot",
+      "vertices": 576,
+      "material": "Mask · brushed moon silver",
+      "metalness": 0.78,
+      "roughness": 0.25
+    }
+  ],
+  "bounds": {
+    "min": [
+      -1.9952033356971617,
+      -1.1464906357616655e-8,
+      -1.9350786169068597
+    ],
+    "max": [
+      2.219667243725632,
+      2.9140449275461595,
+      1.1586361538822132
+    ]
+  },
+  "asset": {
+    "url": "http://127.0.0.1:5184/models/meta-knight-animated.glb?v=5",
+    "status": 200,
+    "bytes": 4667504
+  },
+  "errors": []
+}

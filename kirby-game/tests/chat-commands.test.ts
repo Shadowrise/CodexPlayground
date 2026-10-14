@@ -19,7 +19,7 @@ test('size parses full numbers within 30–1000%, never partial or non-finite va
 });
 test('single-player gating covers every command and ordinary chat is preserved',()=>{
  assert.equal(parseChatCommand('Hello /size 1000',false,places),undefined);
- for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/']){
+ for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/time 12','/']){
   assert(parseChatCommand(input,false,places)?.error);assert.deepEqual(commandSuggestions(input,false,places),[]);
  }
  assert(parseChatCommand('/other',true,places)?.error);
@@ -33,7 +33,7 @@ test('every destination has a unique Latin alias and teleports use original coor
  assert(parseChatCommand('/tele mz',true,[])?.error);
 });
 test('suggestions complete command names, filter tele prefixes and localize without altering aliases',()=>{
- setLocale('ru');assert.deepEqual(commandSuggestions('/',true,places).map(s=>s.value),['/size ','/tele ','/unlock ']);
+ setLocale('ru');assert.deepEqual(commandSuggestions('/',true,places).map(s=>s.value),['/size ','/tele ','/unlock ','/time ']);
  assert.deepEqual(commandSuggestions('/si',true,places).map(s=>s.value),['/size ']);
  assert.deepEqual(commandSuggestions('/size 100',true,places),[]);
  assert.equal(commandSuggestions('/tele',true,places).length,places.length);
@@ -43,6 +43,30 @@ test('suggestions complete command names, filter tele prefixes and localize with
   assert.equal(option.value,'/tele mz');assert.equal(option.label,'mz');assert(option.complete);
   if(locale==='ru')assert.equal(option.description,'Радужный лабиринт');else assert.notEqual(option.description,'Радужный лабиринт');
  }
+ setLocale('ru');
+});
+
+test('time accepts every whole hour from 0 through 23 and rejects malformed or out-of-range arguments',()=>{
+ for(let hour=0;hour<24;hour++)assert.deepEqual(parseChatCommand(`/time ${hour}`,true,places),{command:{kind:'time',hour}});
+ assert.deepEqual(parseChatCommand(' /TIME   07 ',true,places),{command:{kind:'time',hour:7}});
+ for(const argument of ['', '-1','24','100','12.5','12,5','12.0','+12','1e1','0xC','NaN','Infinity','12abc','12 13','12:00']){
+  const result=parseChatCommand('/time '+argument,true,places);
+  assert(result?.error,argument);assert.match(result.error,/\/time/);
+ }
+ assert.match(parseChatCommand('/other',true,places)!.error!,/\/time/);
+});
+
+test('time suggestions and validation messages are localized while the command stays unchanged',()=>{
+ for(const locale of ['ru','en','bg'] as const){
+  setLocale(locale);
+  const [option]=commandSuggestions('/ti',true,places);
+  assert.equal(option.value,'/time ');assert.equal(option.label,'/time');assert.equal(option.complete,false);
+  assert.match(option.description,/0–23/);
+  const error=parseChatCommand('/time 24',true,places)!.error!;
+  assert.match(t(error),/\/time 12/);
+  if(locale!=='ru'){assert.notEqual(option.description,'Установить час в игре: 0–23');assert.notEqual(t(error),error);}
+ }
+ assert.deepEqual(commandSuggestions('/time 12',true,places),[]);
  setLocale('ru');
 });
 

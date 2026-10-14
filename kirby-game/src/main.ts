@@ -22,7 +22,7 @@ import {MusicalFlowers} from './musical-flowers';
 import {MusicalFlowerGameView} from './musical-flower-game-view';
 import {startFlowerGame,replayFlowerGame,advanceFlowerGame,playFlowerGame,nearFlowerButton,type FlowerGame,type FlowerActor} from './musical-flower-game';
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE} from './musical-flower-site';
-import {cyclePhase,daylight} from './day-cycle';
+import {cyclePhase,daylight,phaseAtHour} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {MountainLedges} from './mountain-ledges';
 import {StarfallView} from './starfall-view';
@@ -488,6 +488,7 @@ chat.configureCommands({
  execute:command=>{
   if(!character||network||networkIntent)return;
   if(command.kind==='size'){character.resizeTo(command.size,true);return;}
+  if(command.kind==='time'){dayStart=Date.now();dayStartPhase=phaseAtHour(command.hour);return;}
   if(command.kind==='unlock'){
    const pidgie=command.character==='pidgie';
    if(pidgie?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana()){unlockAnnouncements.push(pidgie?'Пиджи':'Бандана');lockedCharacterTooltip.hide();updateVariantLocks();}
@@ -515,17 +516,23 @@ chat.configureCommands({
 });
 const fruitObstacles=[...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]),...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((s:{kind:string})=>s.kind==='bush'||s.kind==='stump')];
 // Takeoff and landing need a dry clearing wide enough for the open wings.
-const pidgieGroundObstacles:{x:number;z:number;radius:number}[]=[
- ...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]).map((p:{x:number;z:number;crownRadius:number})=>({x:p.x,z:p.z,radius:p.crownRadius+2.5})),
- ...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((p:{kind:string})=>p.kind==='bush'||p.kind==='stump').map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5})),
- ...(scene.getObjectByName('Ponds, flowers, mushrooms, rocks, picnics and ruins')?.userData.scenerySites??[]).map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5})),
+const pidgieGroundObstacles:{x:number;z:number;radius:number;walkRadius:number}[]=[
+ // A running bird fits beneath crowns; trunks and low scenery still block it.
+ ...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[]).map((p:{x:number;z:number;crownRadius:number})=>({x:p.x,z:p.z,radius:p.crownRadius+2.5,walkRadius:Math.min(1.5,p.crownRadius*.2)+.8})),
+ ...(scene.getObjectByName('Biome meadow details')?.userData.sites??[]).filter((p:{kind:string})=>p.kind==='bush'||p.kind==='stump').map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5,walkRadius:p.radius+.8})),
+ ...(scene.getObjectByName('Ponds, flowers, mushrooms, rocks, picnics and ruins')?.userData.scenerySites??[]).map((p:{x:number;z:number;radius:number})=>({x:p.x,z:p.z,radius:p.radius+2.5,walkRadius:p.radius+.8})),
 ];
 const pidgieGroundIndex=new MeadowIndex(16,pidgieGroundObstacles);
 const pidgieGroundRadius=Math.max(3,...pidgieGroundObstacles.map(p=>p.radius));
+const pidgieWalkRadius=Math.max(3,...pidgieGroundObstacles.map(p=>p.walkRadius));
 const pidgieFlightBounds=[treehouse.group,skyTrail.group].map(group=>new THREE.Box3().setFromObject(group));
 function pidgieSafeGround(x:number,z:number){
  return Math.max(Math.abs(x),Math.abs(z))<MEADOW_HALF_SIZE-8&&flatGround(x,z,2.5)&&sceneryClearance(x,z,3)
   &&!pidgieGroundIndex.some(x,z,pidgieGroundRadius,p=>(x-p.x)**2+(z-p.z)**2<p.radius**2);
+}
+function pidgieSafeWalk(x:number,z:number){
+ return Math.max(Math.abs(x),Math.abs(z))<MEADOW_HALF_SIZE-2.5&&flatGround(x,z,.8)&&sceneryClearance(x,z,.8)
+  &&!pidgieGroundIndex.some(x,z,pidgieWalkRadius,p=>(x-p.x)**2+(z-p.z)**2<p.walkRadius**2);
 }
 function pidgieFlightHeight(from:THREE.Vector3,to:THREE.Vector3){
  let height=26;
@@ -702,7 +709,9 @@ async function loadCharacter() {
   try {
     const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
     for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
-    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel]=models;
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel]=models;
+    coaster.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
+    boats.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     bread.setModel(breadModel.scene);
     arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
     await startupTask();
@@ -762,7 +771,7 @@ startButton.addEventListener('click', async () => {
   maze.constrain(character.actor.position,character.actor.scale.x);
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
-  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare'),onInterest:person=>logPidgieReaction(person,'pidgie-interest'),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
+  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare'),onInterest:person=>logPidgieReaction(person,'pidgie-interest'),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
   if(savedPidgie)pidgieNpc.applyNetworkState(savedPidgie,true);
   pidgieReady=!network||network.host||!!network.world?.pidgie;
   if(network?.world?.pidgie)pidgieNpc.applyNetworkState(network.world.pidgie,true);
@@ -1212,7 +1221,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     const bird=pidgieReady?pidgieNpc?.networkState():undefined;
     if(canFeedPidgie(bread.state,breadActor(c),bird)&&bird){
       const midpoint=c.actor.position.clone().add(new THREE.Vector3().fromArray(bird.p)).multiplyScalar(.5);
-      const clear=Array.from({length:9},(_,i)=>new THREE.Vector3().fromArray(bird.p).lerp(midpoint,i/8)).every(p=>pidgieSafeGround(p.x,p.z));
+      const clear=Array.from({length:9},(_,i)=>new THREE.Vector3().fromArray(bird.p).lerp(midpoint,i/8)).every(p=>pidgieSafeWalk(p.x,p.z));
       if(clear)return {text:'E — Угостить дикого Пиджи',run:()=>sendBread({kind:'feed'}),target:{key:pidgieNpc!,root:pidgieNpc!.actor}};
     }
     return {text:'E — Бросить хлебушек',run:()=>sendBread({kind:'drop'})};

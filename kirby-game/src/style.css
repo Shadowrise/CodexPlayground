@@ -27,9 +27,8 @@
 .rainbow-kirby .mini-kirby::after { content:'';position:absolute;z-index:2;left:20px;top:-5px;width:30px;height:19px;background:radial-gradient(ellipse at 50% 78%,#62dcff 0 9%,transparent 11%),linear-gradient(115deg,#be7d18,#fff2a0 42%,#eeb638 65%,#ffdf75);clip-path:polygon(0 0,18% 37%,25% 3%,38% 37%,50% 0,62% 37%,75% 3%,82% 37%,100% 0,89% 100%,11% 100%);filter:drop-shadow(0 1px 1px #51391d); }
 .bandana-kirby .mini-kirby::before { content: ''; position: absolute; left: 0; top: 0; width: 70px; height: 64px; background: url('/icons/bandana.svg') center / contain no-repeat; }
 .bandana-kirby .mini-kirby > i { visibility: hidden; }
-.pigeon-character .mini-kirby::before { content: ''; position: absolute; inset: 0; background: url('/icons/pidgie.svg?v=5') center / contain no-repeat; }
+.pigeon-character .mini-kirby::before { content: ''; position: absolute; inset: 0; background: url('/icons/pidgie.svg?v=6') center / contain no-repeat; }
 .pigeon-character .mini-kirby > i { visibility: hidden; }
-.variant-button.pigeon-character .mini-kirby { transform: scale(1.08); }
 .variant-button.variant-locked { cursor: help; }
 .variant-locked .mini-kirby { opacity: .45; filter: saturate(.25); }
 .variant-locked > span:not(.variant-lock):not(.choice-check):not(.mini-kirby) { color: var(--ui-muted); }

@@ -12,7 +12,7 @@ import {validPidgieState,type PidgieState} from './pidgie-state';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-13';
+export const BUILD='meadow-network-14';
 export type ActorState={p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][];pidgie?:PidgieState;mountainSteps?:number[][]};
 export type Event={type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
@@ -41,5 +41,5 @@ export function validWorld(v:unknown):v is WorldState{
  const rows=(a:unknown,count:number,length:number)=>Array.isArray(a)&&a.length===count&&a.every(r=>Array.isArray(r)&&r.length===length&&r.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e10));
  const balloons=Array.isArray(w?.balloons)&&w.balloons.length===3&&w.balloons.every(r=>Array.isArray(r)&&r.length===16&&['parked','boarding','flying','exiting'].includes(r[1] as string)&&r.every((x,i)=>i===1||typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e7));
  const mountainSteps=w?.mountainSteps===undefined||rows(w.mountainSteps,11,3)&&w.mountainSteps.every(r=>Number.isInteger(r[0])&&r[0]>=0&&r[0]<=3&&r[1]>=0&&r[1]<=[0,.7,4,.9][r[0]]&&r[2]>=0&&r[2]<=3);
- return !!w&&Array.isArray(w.npcs)&&w.npcs.length===14&&w.npcs.every(validActor)&&rows(w.npcLife,14,15)&&rows(w.carts,12,4)&&balloons&&rows(w.bugs,40,10)&&(w.pidgie===undefined||validPidgieState(w.pidgie))&&mountainSteps&&JSON.stringify(w).length<12500;
+ return !!w&&Array.isArray(w.npcs)&&w.npcs.length===14&&w.npcs.every(validActor)&&rows(w.npcLife,14,15)&&(rows(w.carts,12,4)||rows(w.carts,13,4))&&balloons&&rows(w.bugs,40,10)&&(w.pidgie===undefined||validPidgieState(w.pidgie))&&mountainSteps&&JSON.stringify(w).length<12500;
 }

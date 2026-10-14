@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'}|{kind:'time';hour:number};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -20,6 +20,7 @@ const commands=[
  {name:'size',description:'Изменить размер Кирби: 30–1000%'},
  {name:'tele',description:'Телепортироваться к приключению'},
  {name:'unlock',description:'Разблокировать персонажа'},
+ {name:'time',description:'Установить час в игре: 0–23'},
 ];
 const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'}] as const;
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
@@ -35,6 +36,11 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   if(!Number.isFinite(percent)||percent<MIN_BODY_SIZE*100||percent>MAX_BODY_SIZE*100)return {error:'Введи /size и число от 30 до 1000. Например: /size 100'};
   return {command:{kind:'size',size:percent/100}};
  }
+ if(name==='time'){
+  const hour=/^\d+$/.test(argument)?Number(argument):NaN;
+  if(!Number.isInteger(hour)||hour<0||hour>23)return {error:'Введи /time и целое число от 0 до 23. Например: /time 12'};
+  return {command:{kind:'time',hour}};
+ }
  if(name==='tele'){
   const destination=destinations.find(d=>TELE_ALIASES[d.id]===argument.toLowerCase());
   return destination?{command:{kind:'tele',destination}}:{error:'Выбери место из подсказок или введи его сокращение после /tele.'};
@@ -43,7 +49,7 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
   return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, чтобы открыть Бандану, или /unlock pidgie, чтобы открыть Пиджи.'};
  }
- return {error:'Доступные команды: /size, /tele и /unlock.'};
+ return {error:'Доступные команды: /size, /tele, /unlock и /time.'};
 }
 
 export function commandSuggestions(text:string,enabled:boolean,destinations:readonly Destination[]):CommandSuggestion[]{

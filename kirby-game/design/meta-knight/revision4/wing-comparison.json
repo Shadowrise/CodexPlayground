@@ -1,0 +1,656 @@
+{
+  "geometryUnchanged": true,
+  "localAnimationTracksUnchanged": true,
+  "old": {
+    "geometry": {
+      "Left": [
+        {
+          "material": "Mask · brushed moon silver",
+          "attributes": {
+            "position": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "fbe490d6e295fb0078edfa07340dd2da5c72c21be1745a14d172cb8f4f0bdc0a"
+            },
+            "normal": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "48633c511f3a0100265b1aa3f4fa8bc43ec47d972cf797e52b4bce4929688a7e"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · indigo ribs",
+          "attributes": {
+            "position": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "cf56a1b131ac641aeb5b4f46cca0b178564e7002201ae5e8b3fb8bc1a896ac08"
+            },
+            "normal": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "cb6ff7fe902a7437d99ef29f41abf790a5394b581b9248b3f70f85a9d739d954"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · violet silk",
+          "attributes": {
+            "position": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "b16f600862628db1b45000ced0e50df774b79cbb7209964d0150364665375514"
+            },
+            "color": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "d9d9deafe222f7b4e3ea056a76f4303847379fc5454f0c20b51ac598cb0a49cf"
+            },
+            "normal": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "659555f4e32b05f40516fbc1f673e48d996d8b5bc0889c985e05979fb2adbdc4"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "Right": [
+        {
+          "material": "Mask · brushed moon silver",
+          "attributes": {
+            "position": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "95f20e0d44906d9db4f6ce89116acc447b934f3453ab3db05f3dc63273222854"
+            },
+            "normal": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "66c2e8b142a5dba7c727ad526f3adbef67069a96851139119016da568d1e25b5"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · indigo ribs",
+          "attributes": {
+            "position": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "c009d273f3cb0d9a4f3e370438573fbb60356495a068792938cb5c08ca524cc7"
+            },
+            "normal": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "a6ff0e226cf8ae4a2b8ac065addea410b3aae959b431dfa2ee3e235204020e4d"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · violet silk",
+          "attributes": {
+            "position": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "96a463b033d0915c128ea9bc2413d277e13c7b9a8ca6bbd13c9b02a847c44659"
+            },
+            "color": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "d9d9deafe222f7b4e3ea056a76f4303847379fc5454f0c20b51ac598cb0a49cf"
+            },
+            "normal": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "e50c50ba93c7f8615f4838418508d2525e665fa9fc4c0b48958768bb7128d884"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    "animations": {
+      "Idle": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "49c2b5de2d37a17ca2006310bf835ca78b7d7451b2bd33bde873ab64c94044d0",
+          "values": "8ed403519474cfa7c01c26a1f4788ad045f05722dabdb8ed8ed7aeb528c74786"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "49c2b5de2d37a17ca2006310bf835ca78b7d7451b2bd33bde873ab64c94044d0",
+          "values": "f9060d39dfabc632251d9f774618b8c516cdb81c645ca6c53f239576b237f4c7"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ],
+      "Walk": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "84c6658c1dae0a561527be0d9312b809a1b60327c6929d20848c9dc3b9ca9f6d",
+          "values": "15e4ee2127cc5ff53ab48a05fc737694ef34560f52926b09b90be3b4e4cdc08c"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "84c6658c1dae0a561527be0d9312b809a1b60327c6929d20848c9dc3b9ca9f6d",
+          "values": "223900df34b2ca8c61acd1498d12d6791bd1e6075b8fdc52f219cd801afecff2"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ],
+      "Sitting": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "88564a17a760d447204dfd11e1d4a1e75c8a9cf5823b95f387b5dfa7d756bbe1",
+          "values": "0503788d4009be15af5c0126eed79031772262076d196c0200f5c7f783493339"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "88564a17a760d447204dfd11e1d4a1e75c8a9cf5823b95f387b5dfa7d756bbe1",
+          "values": "082b46b176c072ec57c32427c4d0b81998a41c08c69f64422783d7f378134d3d"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ]
+    }
+  },
+  "current": {
+    "geometry": {
+      "Left": [
+        {
+          "material": "Mask · brushed moon silver",
+          "attributes": {
+            "position": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "fbe490d6e295fb0078edfa07340dd2da5c72c21be1745a14d172cb8f4f0bdc0a"
+            },
+            "normal": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "48633c511f3a0100265b1aa3f4fa8bc43ec47d972cf797e52b4bce4929688a7e"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · indigo ribs",
+          "attributes": {
+            "position": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "cf56a1b131ac641aeb5b4f46cca0b178564e7002201ae5e8b3fb8bc1a896ac08"
+            },
+            "normal": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "cb6ff7fe902a7437d99ef29f41abf790a5394b581b9248b3f70f85a9d739d954"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · violet silk",
+          "attributes": {
+            "position": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "b16f600862628db1b45000ced0e50df774b79cbb7209964d0150364665375514"
+            },
+            "color": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "d9d9deafe222f7b4e3ea056a76f4303847379fc5454f0c20b51ac598cb0a49cf"
+            },
+            "normal": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "659555f4e32b05f40516fbc1f673e48d996d8b5bc0889c985e05979fb2adbdc4"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      ],
+      "Right": [
+        {
+          "material": "Mask · brushed moon silver",
+          "attributes": {
+            "position": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "95f20e0d44906d9db4f6ce89116acc447b934f3453ab3db05f3dc63273222854"
+            },
+            "normal": {
+              "count": 3648,
+              "itemSize": 3,
+              "hash": "66c2e8b142a5dba7c727ad526f3adbef67069a96851139119016da568d1e25b5"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · indigo ribs",
+          "attributes": {
+            "position": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "c009d273f3cb0d9a4f3e370438573fbb60356495a068792938cb5c08ca524cc7"
+            },
+            "normal": {
+              "count": 9408,
+              "itemSize": 3,
+              "hash": "a6ff0e226cf8ae4a2b8ac065addea410b3aae959b431dfa2ee3e235204020e4d"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "material": "Wings · violet silk",
+          "attributes": {
+            "position": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "96a463b033d0915c128ea9bc2413d277e13c7b9a8ca6bbd13c9b02a847c44659"
+            },
+            "color": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "d9d9deafe222f7b4e3ea056a76f4303847379fc5454f0c20b51ac598cb0a49cf"
+            },
+            "normal": {
+              "count": 3228,
+              "itemSize": 3,
+              "hash": "e50c50ba93c7f8615f4838418508d2525e665fa9fc4c0b48958768bb7128d884"
+            }
+          },
+          "index": null,
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "quaternion": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    "animations": {
+      "Idle": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "49c2b5de2d37a17ca2006310bf835ca78b7d7451b2bd33bde873ab64c94044d0",
+          "values": "8ed403519474cfa7c01c26a1f4788ad045f05722dabdb8ed8ed7aeb528c74786"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "49c2b5de2d37a17ca2006310bf835ca78b7d7451b2bd33bde873ab64c94044d0",
+          "values": "f9060d39dfabc632251d9f774618b8c516cdb81c645ca6c53f239576b237f4c7"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "8cf91038fd8df8046dba14fa6cf7cca8dc6cbe6f5eeb0af9498b23f27c0494f9",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ],
+      "Walk": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "84c6658c1dae0a561527be0d9312b809a1b60327c6929d20848c9dc3b9ca9f6d",
+          "values": "15e4ee2127cc5ff53ab48a05fc737694ef34560f52926b09b90be3b4e4cdc08c"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "84c6658c1dae0a561527be0d9312b809a1b60327c6929d20848c9dc3b9ca9f6d",
+          "values": "223900df34b2ca8c61acd1498d12d6791bd1e6075b8fdc52f219cd801afecff2"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "60dc9e239d55c809730b1c17b063682aeebfd9a97e21b22fe53facf003fd61a6",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ],
+      "Sitting": [
+        {
+          "name": "Left_wing_pivot.position",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "b03d02b34241d59fe10f9d89f5553fa50d52cdb446edd95c59d03f92c4b29ef5"
+        },
+        {
+          "name": "Left_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "88564a17a760d447204dfd11e1d4a1e75c8a9cf5823b95f387b5dfa7d756bbe1",
+          "values": "0503788d4009be15af5c0126eed79031772262076d196c0200f5c7f783493339"
+        },
+        {
+          "name": "Left_wing_pivot.scale",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        },
+        {
+          "name": "Right_wing_pivot.position",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "7170a795b6545d9bbf269d182ad684aad2079c207e0eb431e118d2b9ac321622"
+        },
+        {
+          "name": "Right_wing_pivot.quaternion",
+          "type": "quaternion",
+          "times": "88564a17a760d447204dfd11e1d4a1e75c8a9cf5823b95f387b5dfa7d756bbe1",
+          "values": "082b46b176c072ec57c32427c4d0b81998a41c08c69f64422783d7f378134d3d"
+        },
+        {
+          "name": "Right_wing_pivot.scale",
+          "type": "vector",
+          "times": "9ebe2081b2864cc90443881532630b380727ff837723f1a9cbcc2f48d0209bf3",
+          "values": "f46913286d895f62d646314f400fc3d7a543cf34eb4ae56df87f43dc4582a36b"
+        }
+      ]
+    }
+  }
+}

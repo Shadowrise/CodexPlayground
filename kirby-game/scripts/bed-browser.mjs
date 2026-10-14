@@ -1,10 +1,11 @@
 import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:900,height:750}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.route('**/bed-preview',r=>r.fulfill({contentType:'text/html',body:'<body style="margin:0"></body>'}));
- await page.goto('http://127.0.0.1:5174/bed-preview');
+ await page.goto(`${process.env.BASE_URL??'http://127.0.0.1:5174'}/bed-preview`);
  await page.evaluate(async()=>{
   const T=await import('/node_modules/.vite/deps/three.js'),{KirbyHome}=await import('/src/kirby-home.ts'),{CharacterController}=await import('/src/controller.ts'),{GLTFLoader}=await import('/node_modules/three/examples/jsm/loaders/GLTFLoader.js');
   const scene=new T.Scene();scene.background=new T.Color('#b9d5dd');const home=new KirbyHome();scene.add(home.group);
@@ -14,13 +15,19 @@ try{
   const g=await new GLTFLoader().loadAsync('/models/kirby-animated.glb'),c=new CharacterController(g.scene,g.animations);scene.add(c.actor);c.actor.position.copy(home.entrance);
   scene.add(new T.HemisphereLight('#ffffff','#778c64',2));const light=new T.DirectionalLight('#fff0d5',2.5);light.position.set(20,40,40);scene.add(light);
   const renderer=new T.WebGLRenderer({antialias:true});renderer.setSize(900,750);renderer.toneMapping=T.ACESFilmicToneMapping;document.body.append(renderer.domElement);
-  const camera=new T.PerspectiveCamera(40,1.2,.1,200);camera.position.copy(home.group.position).add(new T.Vector3(3.3,6.5,5));camera.lookAt(home.group.position.clone().add(new T.Vector3(0,1.8,-.5)));
+  const camera=new T.PerspectiveCamera(40,1.2,.1,200);camera.position.copy(home.group.position).add(new T.Vector3(3.3,4,5));camera.lookAt(home.group.position.clone().add(new T.Vector3(0,1.8,-.5)));
   window.preview={home,c,renderer,scene,camera};renderer.render(scene,camera);
  });
  await page.screenshot({path:process.env.TEMP+'/kirby-bed-empty.png'});
- for(const state of ['covered','uncover','stand','awake']){
-  const info=await page.evaluate(state=>{const {home,c,renderer,scene,camera}=window.preview;if(state==='covered')home.start(c);if(state==='uncover')home.wake();const frames=state==='covered'?120:state==='uncover'?18:state==='stand'?15:60;for(let i=0;i<frames;i++)home.update(1/60);renderer.render(scene,camera);return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles};},state);
-  await page.screenshot({path:process.env.TEMP+`/kirby-bed-${state}.png`});console.log({state,...info});
+ for(const size of [1,.3]){
+  await page.evaluate(size=>{const {home,c}=window.preview;c.resizeTo(1,true);if(size<1)c.shrink(1-size);c.actor.position.copy(home.entrance);},size);
+  for(const state of ['covered','uncover','stand','awake']){
+   const info=await page.evaluate(state=>{const {home,c,renderer,scene,camera}=window.preview;if(state==='covered')home.start(c);if(state==='uncover')home.wake();const frames=state==='covered'?120:state==='uncover'?18:state==='stand'?15:60;for(let i=0;i<frames;i++)home.update(1/60);renderer.render(scene,camera);const p=home.group.getObjectByName('Soft blue bed quilt').geometry.getAttribute('position');return {calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,size:c.actor.scale.x,active:home.active,peak:Math.max(...Array.from({length:p.count},(_,i)=>p.getY(i)))};},state);
+   assert(Math.abs(info.size-size)<1e-8);
+   if(state==='covered')assert(info.peak<1.16+1.8*size);
+   if(state==='awake')assert(!info.active);
+   await page.screenshot({path:process.env.TEMP+`/kirby-bed-${state}${size<1?'-small':''}.png`});console.log({state,...info});
+  }
  }
  await page.evaluate(()=>{const {home,c,renderer,scene,camera}=window.preview;c.actor.visible=false;home.group.getObjectByName('Kirby home tiled roof').visible=true;for(const o of home.group.children)if(o.isMesh)o.visible=true;camera.position.copy(home.group.position);camera.position.x+=12;camera.position.y+=7;camera.position.z+=13;camera.lookAt(home.group.position.x,5.5,home.group.position.z);renderer.render(scene,camera);});
  await page.screenshot({path:process.env.TEMP+'/kirby-roof-side.png'});

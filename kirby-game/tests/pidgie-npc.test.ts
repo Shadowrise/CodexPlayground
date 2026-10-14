@@ -200,6 +200,48 @@ test('following stops planted feet at a blocked route and never flies',()=>{
  assert.equal(notices,1);assert.equal(bird.fearCount,0);assert.equal(bird.actor.position.y,0);
 });
 
+test('ground following and its remote presentation can run beneath a canopy that blocks takeoff',()=>{
+ const bird=create({safeGround:(_x,z)=>z<3||z>20,walkGround:()=>true});
+ const player:PidgiePlayer={id:'guest',hasBread:true,position:new T.Vector3(0,0,35)};
+ bird.applyNetworkState({...bird.networkState(),phase:'follow',p:[0,0,0],yaw:0,elapsed:0,followId:player.id,followSpeed:0},true);
+ const remote=create({safeGround:(_x,z)=>z<3||z>20,walkGround:()=>true});let beneath=false;
+ for(let frame=0;frame<60*8;frame++){
+  bird.update(1/60,[player.position],undefined,[player]);
+  if(bird.actor.position.z>4&&bird.actor.position.z<18){
+   beneath=true;remote.applyNetworkState(bird.networkState(),true);const before=remote.actor.position.clone();remote.updateRemote(.05);
+   assert(remote.actor.position.distanceTo(before)>0,'a guest predicts the same legal ground route');
+  }
+ }
+ assert(beneath);assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);
+ assert.equal(bird.fearCount,0);assert.equal(bird.actor.position.y,0);
+});
+
+test('following detours around a broad obstacle instead of alternating side steps and stopping',()=>{
+ const safe=(x:number,z:number)=>!(Math.abs(x)<8&&z>7&&z<17),bird=create({safeGround:safe});
+ const player:PidgiePlayer={id:'guest',hasBread:true,position:new T.Vector3(0,0,35)};
+ bird.applyNetworkState({...bird.networkState(),phase:'follow',p:[0,0,0],yaw:0,elapsed:0,followId:player.id,followSpeed:0},true);
+ let detour=false;
+ for(let frame=0;frame<60*12;frame++){
+  bird.update(1/60,[player.position],undefined,[player]);
+  assert(safe(bird.actor.position.x,bird.actor.position.z));detour||=Math.abs(bird.actor.position.x)>=8;
+ }
+ assert(detour);assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);
+ assert.equal(bird.state,'Idle');assert.equal(bird.fearCount,0);
+});
+
+test('following leaves a concave grove even when the first steps must lead away from the bread carrier',()=>{
+ const safe=(x:number,z:number)=>!(Math.abs(x)<6&&z>5&&z<7)&&!(Math.abs(x)>4&&Math.abs(x)<6&&z>-5&&z<7);
+ const bird=create({safeGround:safe}),player:PidgiePlayer={id:'guest',hasBread:true,position:new T.Vector3(0,0,25)};
+ bird.applyNetworkState({...bird.networkState(),phase:'follow',p:[0,0,0],yaw:0,elapsed:0,followId:player.id,followSpeed:0},true);
+ let exited=false;
+ for(let frame=0;frame<60*18;frame++){
+  bird.update(1/60,[player.position],undefined,[player]);
+  assert(safe(bird.actor.position.x,bird.actor.position.z));exited||=bird.actor.position.z<-5;
+ }
+ assert(exited,'the route can temporarily increase the following gap');
+ assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);
+});
+
 test('running players remain within a bounded delayed following distance, and Pidgie settles eight metres away',()=>{
  const bird=create(),player:PidgiePlayer={id:'runner',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,9))};
  const lag=6.8*(PIDGIE_FOLLOW_REACTION_SECONDS+Math.PI/8)+1.2;

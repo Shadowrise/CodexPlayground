@@ -4,6 +4,8 @@ export const CELESTIAL_MAX_HEIGHT=Math.sin(35*Math.PI/180);
 const orbitHeight=CELESTIAL_MAX_HEIGHT,orbitReach=Math.cos(35*Math.PI/180);
 export const CELESTIAL_ORBIT_NORMAL:[number,number,number]=[eastZ*orbitHeight,orbitReach,-eastX*orbitHeight];
 export function cyclePhase(start:number,epoch:number,now:number){return ((start+(now-epoch)/DAY_CYCLE_MS)%1+1)%1;}
+// Phase zero is sunrise at 06:00; noon is .25 and midnight is .75.
+export function phaseAtHour(hour:number){return ((hour+18)%24)/24;}
 const smooth=(a:number,b:number,x:number)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
 export function daylight(phase:number){
  const angle=phase*Math.PI*2,elevation=Math.sin(angle),day=smooth(-.2,.35,elevation),twilight=Math.max(0,1-Math.abs(elevation)/.4)**2;

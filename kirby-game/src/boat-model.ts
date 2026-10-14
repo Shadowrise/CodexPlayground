@@ -1,8 +1,10 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {makeBoatWake} from './boat-wake';
+import {META_KNIGHT_BOAT} from './boat-route';
+import {META_KNIGHT_BODY,metaKnightPaint,makeMetaKnightEmblem} from './meta-knight-passenger';
 
-export const BOAT_COLORS=['#f16a71','#f4ab38','#6ac980','#50c8cf','#519beb','#a576e8','#ed85bd','#eb7750'];
+export const BOAT_COLORS=['#f16a71','#f4ab38','#6ac980','#50c8cf','#519beb','#a576e8','#ed85bd','#eb7750',META_KNIGHT_BODY];
 let hull:T.BufferGeometry|undefined,details:T.BufferGeometry|undefined;
 const umbrellas:T.BufferGeometry[]=[];
 const woodMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.62});
@@ -76,6 +78,17 @@ const canopyMaterial=new T.MeshStandardMaterial({vertexColors:true,roughness:.75
 export function makeBoat(index:number){
  if(!hull)build();
  const group=new T.Group();group.name=`River boat ${index+1}`;
- const shell=new T.Mesh(hull,paints[index]),trim=new T.Mesh(details,woodMaterial),umbrella=new T.Mesh(umbrellas[index],canopyMaterial);
- group.add(shell,trim,umbrella);group.traverse(o=>{if(o instanceof T.Mesh)o.receiveShadow=true;});group.add(makeBoatWake());return group;
+ const shell=new T.Mesh(hull,index===META_KNIGHT_BOAT?metaKnightPaint:paints[index]),trim=new T.Mesh(details,woodMaterial),umbrella=new T.Mesh(umbrellas[index],canopyMaterial);
+ shell.name='Boat hull';
+ group.add(shell,trim,umbrella);
+ if(index===META_KNIGHT_BOAT){
+  group.name='Meta Knight river boat';
+  for(const side of [-1,1]){
+   const emblem=makeMetaKnightEmblem('Meta Knight boat M');
+   emblem.position.set(side*.895,.12,0);emblem.rotation.set(Math.atan(.28/.62),side*Math.PI/2,0,'YXZ');emblem.scale.setScalar(.58);group.add(emblem);
+  }
+  const bow=makeMetaKnightEmblem('Meta Knight bow M');
+  bow.position.set(0,.18,.9);bow.rotation.x=-Math.PI/2;bow.scale.setScalar(.9);group.add(bow);
+ }
+ group.traverse(o=>{if(o instanceof T.Mesh)o.receiveShadow=true;});group.add(makeBoatWake());return group;
 }

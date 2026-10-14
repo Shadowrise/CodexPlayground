@@ -12,7 +12,7 @@ try{
  // This test-only hook never ships in the application.
  await page.route('**/src/main.ts*',async route=>{
   const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`
-window.commandCheck={get c(){return character},chat,places:destinations,coaster,boats,home,benches,seats:BENCH_SEATS,treehouse,balloons,trampoline,skyTrail,get fireflies(){return fireflies},get log(){return localLog},set online(value){networkIntent=value}};
+window.commandCheck={get c(){return character},chat,places:destinations,coaster,boats,home,benches,seats:BENCH_SEATS,treehouse,balloons,trampoline,skyTrail,get fireflies(){return fireflies},get log(){return localLog},get time(){return {phase:currentDayPhase(),startPhase:dayStartPhase,epoch:dayStart,night:home.night,exposure:renderer.toneMappingExposure}},set online(value){networkIntent=value}};
 `});
  });
  await page.goto(process.env.KIRBY_URL??'http://127.0.0.1:5174/');
@@ -22,7 +22,7 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  const open=()=>page.evaluate(()=>window.commandCheck.chat.show());
  const command=async text=>{await open();await page.locator('#chat-input').fill(text);await page.keyboard.press('Enter');assert(await page.locator('#chat-composer').isHidden(),text);};
  await open();await page.locator('#chat-input').fill('/');
- assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['/size','/tele','/unlock']);
+ assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['/size','/tele','/unlock','/time']);
  await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
  assert.equal(await page.locator('#chat-input').inputValue(),'/tele ');
  assert.equal(await page.locator('#chat-command-list button').count(),13);
@@ -38,6 +38,28 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  await open();await page.locator('#chat-input').fill('/size 1001');await page.keyboard.press('Enter');
  assert(await page.locator('#chat-command-error').isVisible());assert.equal(await page.evaluate(()=>window.commandCheck.c.savedSize),1);
  assert.equal(await page.locator('#chat-input').inputValue(),'/size 1001');
+ for(const [hour,label,night,exposure] of [[0,'Ночь',true,1],[6,'Рассвет',true,1.07],[12,'День',false,1.2],[18,'Закат',true,1.07],[23,'Ночь',true,1],[0,'Ночь',true,1],[12,'День',false,1.2]]){
+  await command(`/time ${hour}`);
+  await page.waitForFunction(({label,night,hour})=>{
+   const angle=Number(document.querySelector('#time-needle').getAttribute('transform').match(/rotate\(([^ ]+)/)[1]);
+   return document.querySelector('#time-dial').title===label&&window.commandCheck.time.night===night&&Math.abs(angle-((hour+18)%24)/24*360)<3;
+  },{label,night,hour});
+  const time=await page.evaluate(()=>window.commandCheck.time),phase=((hour+18)%24)/24;
+  assert.equal(time.startPhase,phase);assert(time.phase>=phase&&time.phase-phase<.01,JSON.stringify(time));
+  assert(Math.abs(time.exposure-exposure)<.03,JSON.stringify(time));
+  const angle=Number((await page.locator('#time-needle').getAttribute('transform')).match(/rotate\(([^ ]+)/)[1]);
+  assert(Math.abs(angle-phase*360)<3,`${hour}: ${angle}`);
+ }
+ const running=await page.evaluate(()=>window.commandCheck.time.phase);
+ await page.waitForFunction(phase=>window.commandCheck.time.phase>phase,running);
+ const unchanged=await page.evaluate(()=>window.commandCheck.time.epoch);
+ for(const text of ['/time','/time -1','/time 24','/time 12.5','/time 12 extra']){
+  await open();await page.locator('#chat-input').fill(text);await page.keyboard.press('Enter');
+  // A bare command first completes its name; a second Enter submits it without an argument.
+  if(await page.locator('#chat-command-error').isHidden())await page.keyboard.press('Enter');
+  assert(await page.locator('#chat-command-error').isVisible(),text);
+  assert.equal(await page.evaluate(()=>window.commandCheck.time.epoch),unchanged);
+ }
  const aliases=await page.evaluate(async()=>{const {TELE_ALIASES}=await import('/src/chat-commands.ts');return TELE_ALIASES;});
  for(const [id,alias] of Object.entries(aliases)){
   await command(`/tele ${alias}`);await page.waitForTimeout(150);
@@ -76,10 +98,13 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  const beforeOnline=await page.evaluate(()=>window.commandCheck.c.savedSize);
  await page.evaluate(()=>window.commandCheck.online=true);await open();await page.locator('#chat-input').fill('/');assert(await page.locator('#chat-command-list').isHidden());
  await page.locator('#chat-input').fill('/size 999');await page.keyboard.press('Enter');assert(await page.locator('#chat-command-error').isVisible());assert.equal(await page.evaluate(()=>window.commandCheck.c.savedSize),beforeOnline);
+ const onlineTime=await page.evaluate(()=>window.commandCheck.time.epoch);
+ await page.locator('#chat-input').fill('/time 0');await page.keyboard.press('Enter');assert(await page.locator('#chat-command-error').isVisible());
+ assert.equal(await page.evaluate(()=>window.commandCheck.time.epoch),onlineTime);
  assert(!(await page.evaluate(()=>window.commandCheck.log)).some(m=>m.text==='/size 999'));
  await page.evaluate(()=>window.commandCheck.online=false);await page.locator('#chat-input').fill('Обычное сообщение');await page.keyboard.press('Enter');
  assert((await page.evaluate(()=>window.commandCheck.log)).some(m=>m.chat&&m.text==='Обычное сообщение'));
- assert.deepEqual(errors,[]);console.log('PASS commands, localized suggestions, range, keyboard, all 13 destinations, 9 interrupted rides, online gating and ordinary chat');
+ assert.deepEqual(errors,[]);console.log('PASS commands, time and lighting, localized suggestions, range, keyboard, all 13 destinations, 9 interrupted rides, online gating and ordinary chat');
  await page.close();
  }
 

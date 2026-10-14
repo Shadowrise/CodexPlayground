@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111127">
+  <link rel="icon" href="/kirby-icon.svg">
+  <title>Мета-найт · мастерская персонажей</title>
+</head>
+<body>
+  <aside class="workshop">
+    <a class="back" href="/">← В игру</a>
+    <div class="eyebrow"><span></span> МАСТЕРСКАЯ ПЕРСОНАЖЕЙ</div>
+    <h1>Мета-найт<span>Маленький рыцарь.<br>Большая легенда.</span></h1>
+    <p class="intro">Серебряная маска, фиолетовые крылья и легендарный золотой меч.</p>
+    <div class="palette" aria-label="Палитра персонажа">
+      <i style="--swatch:#bfcce7" title="Серебро"></i><i style="--swatch:#7461c5" title="Фиолетовый"></i><i style="--swatch:#293366" title="Индиго"></i><i style="--swatch:#f3cc6c" title="Золото"></i>
+      <span>ЛУННОЕ СЕРЕБРО / ИНДИГО</span>
+    </div>
+    <div class="section-label">ПОСМОТРИ, КАК ОН ДВИГАЕТСЯ</div>
+    <div class="motions" role="group" aria-label="Анимации Мета-найта">
+      <button class="motion selected" data-clip="Idle" aria-pressed="true" disabled>
+        <span class="motion-number">01</span><span><strong>Стоит</strong><small>Спокойный и собранный</small></span><span class="motion-mark" aria-hidden="true">↗</span>
+      </button>
+      <button class="motion" data-clip="Walk" aria-pressed="false" disabled>
+        <span class="motion-number">02</span><span><strong>Идёт</strong><small>Каждый шаг — уверенно</small></span><span class="motion-mark" aria-hidden="true">↗</span>
+      </button>
+      <button class="motion" data-clip="Sitting" aria-pressed="false" disabled>
+        <span class="motion-number">03</span><span><strong>Сидит</strong><small>Даже герою нужен отдых</small></span><span class="motion-mark" aria-hidden="true">↗</span>
+      </button>
+    </div>
+    <p id="clip-description" class="description" aria-live="polite">Выбери анимацию и рассмотри рыцаря со всех сторон.</p>
+    <div class="download">
+      <a href="/models/meta-knight-animated.glb?v=5" download="meta-knight-animated.glb"><span>↓</span> Скачать 3D-модель <small>GLB</small></a>
+      <p>Персонаж и анимации в одном файле</p>
+    </div>
+    <div class="signature">СЕРЕБРО. ТЕНЬ. ОДИН ЗОЛОТОЙ БЛИК.</div>
+  </aside>
+  <main id="stage">
+    <div class="stage-caption"><span>ПОРТРЕТ ПЕРСОНАЖА / 04</span><p>За маской — целая история.</p></div>
+    <div class="views" role="group" aria-label="Ракурс модели">
+      <button data-view="three" class="selected" aria-pressed="true">¾</button>
+      <button data-view="front" aria-pressed="false">Спереди</button>
+      <button data-view="side" aria-pressed="false">Сбоку</button>
+      <button data-view="back" aria-pressed="false">Сзади</button>
+    </div>
+    <div class="stage-status"><i></i><span id="status" aria-live="polite">Знакомимся с Мета-найтом…</span></div>
+    <div class="playback">
+      <button id="pause" aria-label="Приостановить анимацию" disabled>Ⅱ <span>Пауза</span></button>
+      <button id="restart" class="restart" aria-label="Запустить анимацию сначала" title="Сначала" disabled>↺</button>
+      <span class="playback-divider"></span>
+      <label for="speed">Темп</label>
+      <input id="speed" type="range" min="0.25" max="2" step="0.25" value="1" aria-label="Скорость анимации" disabled>
+      <output id="speed-value" for="speed">1×</output>
+      <span class="orbit-hint">Потяни, чтобы повернуть · колесо — масштаб</span>
+    </div>
+    <div id="loading" role="status"><span class="loading-orbit"></span><p>Рыцарь выходит из тени…</p></div>
+    <div class="stage-corner" aria-hidden="true">META<br>KNIGHT</div>
+  </main>
+  <script type="module" src="/src/meta-knight-preview.ts"></script>
+</body>
+</html>

@@ -7,6 +7,7 @@ import {pigeonGaitRate} from './pigeon-locomotion';
 import {PIGEON_CLIP_BY_NAME} from './pigeon-clips';
 import {PIDGIE_CLIPS,PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_REACTION_SECONDS,PIDGIE_FOLLOW_MAX_SPEED,PIDGIE_PECK_REACH,beginPidgieFeeding,validPidgieState,type PidgieState,type PidgieClip,type PidgiePoint} from './pidgie-state';
 import type {BreadOffering} from './bread-state';
+import {pidgieFollowPath} from './pidgie-path';
 
 export const PIDGIE_APPROACH_DISTANCE=10;
 export const PIDGIE_REFUGE_RADIUS=8;
@@ -22,6 +23,8 @@ const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refu
 export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;points?:number};
 export type PidgieNpcOptions={
  safeGround:(x:number,z:number)=>boolean;
+ /** Grounded body clearance; takeoff/landing still require safeGround. */
+ walkGround?:(x:number,z:number)=>boolean;
  seed?:number;
  people?:readonly T.Vector3[];
  /** Absolute safe flight altitude for this route; the game knows its trees. */
@@ -41,6 +44,9 @@ export class PidgieNpc {
  private data:PidgieState;
  private remote?:PidgieState;
  private options:PidgieNpcOptions;
+ private followRoute:PidgiePoint[]=[];
+ private followRoutePlayer?:PidgiePoint;
+ private followRetry=0;
  get state(){return this.data.clip;}
  get phase(){return this.data.phase;}
  get fearCount(){return this.data.fearCount;}
@@ -67,6 +73,7 @@ export class PidgieNpc {
 
  private random(){this.data.seed=(Math.imul(this.data.seed,1664525)+1013904223)>>>0;return this.data.seed/0x100000000;}
  private safe(point:PidgiePoint){return insideMeadow({x:point[0],z:point[1]},this.actor.scale.x)&&this.options.safeGround(point[0],point[1]);}
+ private walkable(point:PidgiePoint){return insideMeadow({x:point[0],z:point[1]},this.actor.scale.x)&&(this.options.walkGround??this.options.safeGround)(point[0],point[1]);}
  private near(point:PidgiePoint,people:readonly T.Vector3[],radius:number){return people.some(person=>Number.isFinite(person.x)&&Number.isFinite(person.y)&&Number.isFinite(person.z)&&Math.hypot(point[0]-person.x,person.y,point[1]-person.z)<radius);}
 
  private refuge(people:readonly T.Vector3[],from?:PidgiePoint):PidgiePoint|undefined {
@@ -118,6 +125,7 @@ export class PidgieNpc {
   if(!nearest)return;
   const player=players.find(player=>player.position===nearest);
   if(player&&player.id.length>0&&player.id.length<=64&&player.hasBread){
+   this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
    this.data.phase='follow';this.data.followId=player.id;this.data.followSpeed=0;this.data.elapsed=0;
    this.data.pause=0;this.data.walkTimer=0;this.data.target=xz(this.actor.position);this.animate('Idle');
    this.options.onInterest?.(nearest);return;
@@ -169,6 +177,7 @@ export class PidgieNpc {
  }
 
  private follow(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
+  this.followRetry=Math.max(0,this.followRetry-dt);
   const player=players.find(player=>player.id===this.data.followId);
   if(player&&!player.hasBread){this.fleeFrom(player.position,people);return;}
   if(!player||!player.position.toArray().every(Number.isFinite)){
@@ -179,6 +188,7 @@ export class PidgieNpc {
   this.data.followSpeed=0;
   const facePlayer=()=>this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));
   if(Math.abs(gap)<=(this.data.elapsed>=PIDGIE_FOLLOW_REACTION_SECONDS?FOLLOW_BAND:FOLLOW_START_BAND)){
+   this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
    this.data.elapsed=0;
    this.data.target=xz(from);facePlayer();this.animate('Idle');return;
   }
@@ -187,22 +197,32 @@ export class PidgieNpc {
   this.data.elapsed=Math.min(PIDGIE_FOLLOW_REACTION_SECONDS,this.data.elapsed+dt);
   if(this.data.elapsed<PIDGIE_FOLLOW_REACTION_SECONDS-1e-8){this.data.target=xz(from);facePlayer();this.animate('Idle');return;}
   const away=d>1e-6?new T.Vector3(dx/d,0,dz/d):new T.Vector3(Math.sin(this.data.yaw),0,Math.cos(this.data.yaw));
-  const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE),yaw=this.heading(xz(goal));
-  const speed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,Math.max(FOLLOW_RUN_SPEED,Math.abs(gap)*12)),travel=Math.min(speed*dt,Math.abs(gap));
-  let heading:number|undefined,step:T.Vector3|undefined;
-  for(const offset of [0,.45,-.45,.90,-.90,1.35,-1.35,Math.PI/2,-Math.PI/2]){
-   const angle=yaw+offset,probe=from.clone().add(new T.Vector3(Math.sin(angle),0,Math.cos(angle)).multiplyScalar(Math.min(1.2,Math.abs(gap))));
-   if(!this.safe(xz(probe)))continue;
-   const point=from.clone().add(new T.Vector3(Math.sin(angle),0,Math.cos(angle)).multiplyScalar(travel));
-   constrain?.(point,this.actor.scale.x,from);point.y=0;
-   const moved=point.distanceTo(from);
-   const remaining=Math.abs(Math.hypot(point.x-player.position.x,point.z-player.position.z)-PIDGIE_FOLLOW_DISTANCE);
-   if(!this.safe(xz(point))||moved<travel*.5||moved>travel+1e-6||remaining>=Math.abs(gap)-1e-5)continue;
-   if(people.some(other=>other!==player.position&&point.distanceTo(other)<Math.min(3,from.distanceTo(other))-1e-6))continue;
-   heading=angle;step=point;break;
+  const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE);
+  const clear=(a:PidgiePoint,b:PidgiePoint)=>{
+   let previous=new T.Vector3(a[0],0,a[1]);const count=Math.max(1,Math.ceil(distance(a,b)/.35));
+   for(let i=1;i<=count;i++){
+    const point=new T.Vector3(T.MathUtils.lerp(a[0],b[0],i/count),0,T.MathUtils.lerp(a[1],b[1],i/count));
+    if(!this.walkable(xz(point)))return false;
+    const constrained=point.clone();constrain?.(constrained,this.actor.scale.x,previous);
+    if(!(Math.hypot(constrained.x-point.x,constrained.z-point.z)<=1e-5))return false;
+    if(people.some(other=>other!==player.position&&point.distanceTo(other)<Math.min(3,previous.distanceTo(other))-1e-6))return false;
+    previous=point;
+   }
+   return true;
+  };
+  if(this.followRoutePlayer&&distance(this.followRoutePlayer,xz(player.position))>3){this.followRoute=[];this.followRetry=0;}
+  while(this.followRoute.length&&distance(xz(from),this.followRoute[0])<.2)this.followRoute.shift();
+  if(this.followRoute.length&&!clear(xz(from),this.followRoute[0])){this.followRoute=[];this.followRetry=0;}
+  let target=from.clone().lerp(goal,Math.min(1,3/from.distanceTo(goal)));
+  if(!this.followRoute.length&&!clear(xz(from),xz(target))){
+   if(this.followRetry===0){this.followRoute=pidgieFollowPath(xz(from),xz(player.position),clear);this.followRoutePlayer=xz(player.position);this.followRetry=.6;}
+   if(!this.followRoute.length){this.data.target=xz(from);this.animate('Idle');return;}
   }
-  if(heading===undefined||!step){this.data.target=xz(from);this.animate('Idle');return;}
-  this.data.target=xz(from.clone().add(new T.Vector3(Math.sin(heading),0,Math.cos(heading)).multiplyScalar(Math.min(3,Math.abs(gap)))));
+  if(this.followRoute.length)target.set(this.followRoute[0][0],0,this.followRoute[0][1]);
+  const heading=this.heading(xz(target)),speed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,Math.max(FOLLOW_RUN_SPEED,Math.abs(gap)*12));
+  const step=from.clone().addScaledVector(target.clone().sub(from).normalize(),Math.min(speed*dt,from.distanceTo(target)));
+  if(!clear(xz(from),xz(step))){this.followRoute=[];this.data.target=xz(from);this.animate('Idle');return;}
+  this.data.target=xz(target);
   this.setYaw(this.data.yaw+T.MathUtils.clamp(wrap(heading-this.data.yaw),-8*dt,8*dt));
   if(Math.abs(wrap(heading-this.data.yaw))>.15){this.animate('Idle');return;}
   const moved=step.distanceTo(from);this.actor.position.copy(step);this.data.followSpeed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,moved/dt);
@@ -288,7 +308,7 @@ export class PidgieNpc {
    for(const offset of [0,.45,-.45,.9,-.9,1.35,-1.35]){
     const point=from.clone().add(new T.Vector3(Math.sin(yaw+offset),0,Math.cos(yaw+offset)).multiplyScalar(travel));
     constrain?.(point,this.actor.scale.x,from);point.y=food[1];
-    if(!this.safe(xz(point))||point.distanceTo(from)>travel+.001||Math.abs(Math.hypot(food[0]-point.x,food[2]-point.z)-reach)>=Math.abs(gap)-.00001)continue;
+    if(!this.walkable(xz(point))||point.distanceTo(from)>travel+.001||Math.abs(Math.hypot(food[0]-point.x,food[2]-point.z)-reach)>=Math.abs(gap)-.00001)continue;
     moved=point.distanceTo(from);this.actor.position.copy(point);break;
    }
    this.data.target=target;this.animate('Run');this.active!.setEffectiveTimeScale(pigeonGaitRate('Run',moved,dt,this.actor.scale.x));return;
@@ -319,6 +339,7 @@ export class PidgieNpc {
  /** Invalid snapshots do not corrupt either animation or the host checkpoint. */
  applyNetworkState(snapshot:PidgieState,snap=false){
   if(!validPidgieState(snapshot))return false;
+  this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
   const first=!this.remote,sameClip=this.data.clip===snapshot.clip;this.data=copyState(snapshot);this.remote=copyState(snapshot);
   this.actor.visible=snapshot.phase!=='hidden';
   if(snap||first){this.actor.position.fromArray(snapshot.p);this.setYaw(snapshot.yaw);}
@@ -354,7 +375,7 @@ export class PidgieNpc {
    const target=new T.Vector3(checkpoint.target[0],0,checkpoint.target[1]),remaining=point.distanceTo(target);
    const proposed=point.clone().addScaledVector(target.sub(point).normalize(),Math.min(remaining,checkpoint.followSpeed!*Math.min(dt,.2)));
    const travel=point.distanceTo(proposed);constrain?.(proposed,this.actor.scale.x,point);proposed.y=0;
-   if(this.safe(xz(proposed))&&point.distanceTo(proposed)<=travel+1e-6)point.copy(proposed);
+   if(this.walkable(xz(proposed))&&point.distanceTo(proposed)<=travel+1e-6)point.copy(proposed);
   }
   else if(checkpoint.phase==='wander'&&checkpoint.clip==='Walk'&&checkpoint.pause===0&&checkpoint.walkTimer>0){
    const direction=Math.atan2(checkpoint.target[0]-point.x,checkpoint.target[1]-point.z);checkpoint.yaw=wrap(checkpoint.yaw+wrap(direction-checkpoint.yaw)*(1-Math.exp(-5*dt)));

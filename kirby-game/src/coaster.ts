@@ -9,8 +9,11 @@ import {batchRigidMeshes} from './rigid-batch';
 import {CosmeticClock} from './cosmetic-clock';
 import { cloneVariant, remainingVariants, type KirbyVariant } from './variants';
 import type { CharacterController } from './controller';
+import {META_KNIGHT_BODY,metaKnightPaint,makeMetaKnightEmblem,makeSeatedMetaKnight} from './meta-knight-passenger';
 
 export const STATION = new T.Vector3(0,0,222);
+export const META_KNIGHT_CART=12;
+export const COASTER_CART_COUNT=13;
 export function createCoasterCurve() {
   const p=[[0,2,232],[25,3,232],[50,28,232],[76,72,232],[88,82,232],[94,79,232],[103,48,232],[114,13,232],[140,7,232],[165,27,232],[188,9,232],[220,15,220],[230,32,178],[223,8,145],[220,12,115],[220,12,90]].map(v=>new T.Vector3(...v as [number,number,number]));
   // Separate entrance and exit sideways so the returning rail cannot cross riders' heads.
@@ -39,6 +42,7 @@ export class Coaster {
   private passengerMixers:T.AnimationMixer[]=[];
   private kirbysAdded=false;
   private luigi?:T.Group;
+  private metaKnightAdded=false;
   private rider?:CharacterController;
   private ridden?:typeof this.carts[number];
   private riderParent?:T.Object3D;
@@ -134,10 +138,10 @@ export class Coaster {
     const batches=new Map<string,T.Mesh[]>();
     for(const m of parts){const k=m.geometry.uuid+(m.material as T.Material).uuid+m.castShadow;if(!batches.has(k))batches.set(k,[]);batches.get(k)!.push(m);}
     for(const list of batches.values()){const m=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>m.setMatrixAt(i,p.matrix));m.castShadow=list[0].castShadow;m.receiveShadow=list[0].castShadow;m.name=m.castShadow?'Coaster structure':'Detailed coaster ties';this.group.add(m);}
-    for(const [i,c] of ['#e74b6b','#f3b62d','#48bccc','#9357d8','#70ba47','#f17b38','#dd538f','#4a91de','#bd76df','#c4d947','#dd7657','#48b798'].entries()) {
+    for(const [i,c] of ['#e74b6b','#f3b62d','#48bccc','#9357d8','#70ba47','#f17b38','#dd538f','#4a91de','#bd76df','#c4d947','#dd7657','#48b798',META_KNIGHT_BODY].entries()) {
       const g=new T.Group(),wheels:T.Object3D[]=[];
-      g.name=`Rounded coaster cart ${i+1}`;
-      const part=(size:number[],pos:number[],color:string)=>{const m=new T.Mesh(new RoundedBoxGeometry(size[0],size[1],size[2],4,Math.min(.3,...size.map(s=>s*.45))),material(color));m.position.set(...pos as [number,number,number]);g.add(m);m.castShadow=true;return m;};
+      g.name=i===META_KNIGHT_CART?'Meta Knight coaster cart':`Rounded coaster cart ${i+1}`;
+      const part=(size:number[],pos:number[],color:string)=>{const m=new T.Mesh(new RoundedBoxGeometry(size[0],size[1],size[2],4,Math.min(.3,...size.map(s=>s*.45))),i===META_KNIGHT_CART&&color===c?metaKnightPaint:material(color));m.position.set(...pos as [number,number,number]);g.add(m);m.castShadow=true;return m;};
       part([2.6,.3,3.1],[0,.4,0],'#3c4b53');part([2.65,.8,3.25],[0,.85,0],c);
       for(const x of [-1.22,1.22])part([.3,.65,2.95],[x,1.35,0],c);
       part([2.6,1, .35],[0,1.35,-1.4],c);part([2.6,.7,.65],[0,1.15,1.3],c);
@@ -159,8 +163,16 @@ export class Coaster {
         hood.position.set(0,1.507,1.3);hood.rotation.x=-Math.PI/2;hood.scale.set(1.25,.55,1);
         g.add(hood);
       }
+      if(i===META_KNIGHT_CART){
+        for(const side of [-1,1]){
+          const emblem=makeMetaKnightEmblem('Meta Knight door M');
+          emblem.position.set(side*1.376,1.06,0);emblem.rotation.y=side*Math.PI/2;g.add(emblem);
+        }
+        const hood=makeMetaKnightEmblem('Meta Knight hood M');
+        hood.position.set(0,1.507,1.3);hood.rotation.x=-Math.PI/2;hood.scale.set(1.25,.55,1);g.add(hood);
+      }
       batchRigidMeshes(g,new Set([...wheels,...g.children.filter(o=>!!o.name)]));
-      this.group.add(g);this.carts.push({group:g,distance:i*this.length/12,wait:i===0?2.5:0,speed:i===0?0:64,wheels,occupied:i%2===1 || i===10});
+      this.group.add(g);this.carts.push({group:g,distance:i*this.length/COASTER_CART_COUNT,wait:i===0?2.5:0,speed:i===0?0:64,wheels,occupied:i%2===1 || i===10 || i===META_KNIGHT_CART});
     }
   }
   addKirbyPassengers(template:T.Object3D,clips:T.AnimationClip[],selected:KirbyVariant) {
@@ -172,6 +184,12 @@ export class Coaster {
       const mixer=new T.AnimationMixer(model),clip=clips.find(c=>c.name==='Idle');
       if(clip)mixer.clipAction(clip).play();this.passengerMixers.push(mixer);
     }
+  }
+  addMetaKnightPassenger(template:T.Object3D,clips:readonly T.AnimationClip[]){
+    if(this.metaKnightAdded)return;
+    const {model,mixer}=makeSeatedMetaKnight(template,clips);this.metaKnightAdded=true;
+    model.position.set(0,1.3,-.55);model.scale.setScalar(.9);
+    this.carts[META_KNIGHT_CART].group.add(model);this.passengerMixers.push(mixer);
   }
   pose(distance:number) {
     const u=((distance/this.length)%1+1)%1,f=u*this.sampleCount,i=Math.floor(f);

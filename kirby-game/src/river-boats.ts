@@ -5,11 +5,12 @@ import {awardFirst} from './score';
 import {dryGround,WATER_Y} from './pond-layout';
 import {insideMeadow} from './world-bounds';
 import {showSwimRing} from './ponds';
-import {BOAT_COUNT,BOAT_OCCUPIED,BOAT_ROUTE_LENGTH,boatDistance,boatPose} from './boat-route';
+import {BOAT_COUNT,BOAT_OCCUPIED,BOAT_KIRBY_PASSENGERS,META_KNIGHT_BOAT,BOAT_ROUTE_LENGTH,boatDistance,boatPose} from './boat-route';
 import {makeBoat} from './boat-model';
 import {updateBoatWake} from './boat-wake';
 import {lightenBoatPassenger} from './boat-passenger';
 import {CosmeticClock} from './cosmetic-clock';
+import {makeSeatedMetaKnight} from './meta-knight-passenger';
 
 type Ride={player:CharacterController;index:number;start:number;from:T.Vector3;elapsed:number;leaving?:T.Vector3};
 export const BOAT_QUEST_FRACTION=.1;
@@ -22,7 +23,7 @@ export class RiverBoats {
  networkBlocked=new Set<number>();
  private ride?:Ride;
  private seconds=0;
- private passengers:{model:T.Object3D;mixer:T.AnimationMixer;index:number;clock:CosmeticClock}[]=[];
+ private passengers:{model:T.Object3D;mixer:T.AnimationMixer;index:number;clock:CosmeticClock;nativeSitting?:boolean}[]=[];
  private seatPosition=new T.Vector3();
  private fitted=new Map<CharacterController,T.Object3D>();
  get riding(){return !!this.ride;}
@@ -30,14 +31,21 @@ export class RiverBoats {
  networkData(){const r=this.ride;return [r?(r.leaving?-Math.max(.0001,smooth(r.elapsed/.7)):smooth(r.elapsed/.55)):1];}
  constructor(){this.group.name='Colourful river boats';this.group.add(...this.boats);this.update(0,0);}
  addPassengers(template:T.Object3D,clips:T.AnimationClip[]){
-  if(this.passengers.length)return;
-  for(const [i,index] of BOAT_OCCUPIED.entries()){
+  if(this.passengers.some(p=>!p.nativeSitting))return;
+  for(const [i,index] of BOAT_KIRBY_PASSENGERS.entries()){
    const model=cloneVariant(template,KIRBY_VARIANTS[1+i*3],true);model.name=`River Kirby passenger ${i+1}`;
    lightenBoatPassenger(model);
    model.position.copy(seat);model.scale.setScalar(.85);model.traverse(o=>{o.castShadow=false;});
    const mixer=new T.AnimationMixer(model),idle=clips.find(c=>c.name==='Idle');if(idle)mixer.clipAction(idle).play();
    this.boats[index].add(model);this.passengers.push({model,mixer,index,clock:new CosmeticClock()});this.sittingPose(model);
   }
+ }
+ addMetaKnightPassenger(template:T.Object3D,clips:readonly T.AnimationClip[]){
+  if(this.passengers.some(p=>p.nativeSitting))return;
+  const {model,mixer}=makeSeatedMetaKnight(template,clips);
+  model.position.set(0,.57,-.18);model.scale.setScalar(.62);model.traverse(o=>{o.castShadow=false;});
+  this.boats[META_KNIGHT_BOAT].add(model);
+  this.passengers.push({model,mixer,index:META_KNIGHT_BOAT,clock:new CosmeticClock(),nativeSitting:true});
  }
  private sittingPose(model:T.Object3D){
   for(const side of ['Left','Right']){
@@ -111,7 +119,7 @@ export class RiverBoats {
    b.rotation.set(.012*Math.sin(seconds*1.3+i),yaw,.014*Math.sin(seconds*1.1+i*2),'YXZ');
    b.visible=!camera||b.position.distanceToSquared(camera)<280**2||i===this.ride?.index;
   }
-  for(const p of this.passengers){const distance=camera?this.boats[p.index].position.distanceToSquared(camera):0;p.model.visible=!camera||distance<120**2;const elapsed=p.clock.step(dt,distance,this.boats[p.index].visible&&p.model.visible);if(elapsed){p.mixer.update(elapsed);this.sittingPose(p.model);}}
+  for(const p of this.passengers){const distance=camera?this.boats[p.index].position.distanceToSquared(camera):0;p.model.visible=!camera||distance<120**2;const elapsed=p.clock.step(dt,distance,this.boats[p.index].visible&&p.model.visible);if(elapsed){p.mixer.update(elapsed);if(!p.nativeSitting)this.sittingPose(p.model);}}
   const r=this.ride;if(!r)return;
   r.elapsed+=dt;r.player.mixer.update(dt);
   if(r.leaving){

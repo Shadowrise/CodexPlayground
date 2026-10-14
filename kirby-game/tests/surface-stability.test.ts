@@ -6,6 +6,7 @@ import {KirbyHome} from '../src/kirby-home';
 import {Watermill} from '../src/watermill';
 import {Treehouse} from '../src/treehouse';
 import {prepareSurfaceTextures} from '../src/texture-filtering';
+import {rigidComponents} from '../src/rigid-batch';
 
 test('all three detailed roofs have disjoint tile volumes, including side faces and ridge',()=>{
  const roofs=[{root:new KirbyHome().group,colors:['b9516b','c7687d','a94764']},
@@ -14,17 +15,28 @@ test('all three detailed roofs have disjoint tile volumes, including side faces 
  for(const {root,colors} of roofs){
   const volumes:OBB[]=[];
   const tiles:{p:T.Vector3;n:T.Vector3;x:T.Vector3;z:T.Vector3;hx:number;hz:number}[]=[];
+  const record=(m:T.Matrix4)=>{
+   const p=new T.Vector3(0,.5,0).applyMatrix4(m),scale=new T.Vector3().setFromMatrixScale(m);
+   volumes.push(new OBB(new T.Vector3(),new T.Vector3(.5,.5,.5)).applyMatrix4(m));
+   tiles.push({p,n:new T.Vector3(0,1,0).transformDirection(m),x:new T.Vector3(1,0,0).transformDirection(m),z:new T.Vector3(0,0,1).transformDirection(m),hx:scale.x/2,hz:scale.z/2});
+  };
   root.updateMatrixWorld(true);
   root.traverse(o=>{
-   if(!(o instanceof T.InstancedMesh)||!(o.material instanceof T.MeshStandardMaterial)||!colors.includes(o.material.color.getHexString()))return;
-   for(let i=0;i<o.count;i++){
-    const m=new T.Matrix4();o.getMatrixAt(i,m);m.premultiply(o.matrixWorld);
-    const p=new T.Vector3(0,.5,0).applyMatrix4(m),scale=new T.Vector3().setFromMatrixScale(m);
-    volumes.push(new OBB(new T.Vector3(),new T.Vector3(.5,.5,.5)).applyMatrix4(m));
-    tiles.push({p,n:new T.Vector3(0,1,0).transformDirection(m),x:new T.Vector3(1,0,0).transformDirection(m),z:new T.Vector3(0,0,1).transformDirection(m),hx:scale.x/2,hz:scale.z/2});
+   if(!(o instanceof T.Mesh)||!(o.material instanceof T.MeshStandardMaterial))return;
+   const components=rigidComponents(o);
+   if(components){
+    // Batching bakes tile colours into vertices but retains each original box
+    // and transform. Inspect those volumes rather than losing merged tiles.
+    const color=o.geometry.getAttribute('color');let offset=0;
+    for(const part of components){
+     if(colors.includes(new T.Color().fromBufferAttribute(color,offset).getHexString()))record(new T.Matrix4().multiplyMatrices(o.matrixWorld,part.matrix));
+     offset+=part.geometry.getAttribute('position').count;
+    }
+   }else if(o instanceof T.InstancedMesh&&colors.includes(o.material.color.getHexString()))for(let i=0;i<o.count;i++){
+    const m=new T.Matrix4();o.getMatrixAt(i,m);record(m.premultiply(o.matrixWorld));
    }
   });
-  assert(tiles.length>=200);
+  assert(tiles.length>=200,`${root.name}: all roof tiles are inspected`);
   for(let i=0;i<tiles.length;i++)for(let j=i+1;j<tiles.length;j++){
    assert(!volumes[i].intersectsOBB(volumes[j]),`${root.name}: intersecting tile sides ${i}/${j}`);
    const a=tiles[i],b=tiles[j],d=b.p.clone().sub(a.p);
