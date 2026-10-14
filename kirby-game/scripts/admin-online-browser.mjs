@@ -7,6 +7,7 @@ import {readFile} from 'node:fs/promises';
 const base='http://127.0.0.1:8791'; // Dedicated local room: never exercise admin mutations in production.
 
 const password=(await readFile(new URL('../../game-server/.dev.vars',import.meta.url),'utf8')).match(/^ADMIN_PASSWORD=(.+)$/m)[1].trim();
+const build=(await readFile(new URL('../src/network-protocol.ts',import.meta.url),'utf8')).match(/export const BUILD='([^']+)'/)[1];
 
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 
@@ -14,7 +15,7 @@ const sockets=[];
 
 const wait=async fn=>{for(let i=0;i<100;i++){const value=await fn();if(value)return value;await new Promise(r=>setTimeout(r,50));}throw Error('Timed out');};
 
-async function join(name,variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build=meadow-network-8&name='+encodeURIComponent(name)+'&variant='+variant),messages=[];sockets.push(socket);socket.onmessage=e=>{if(e.data!=='pong'){const m=JSON.parse(e.data);messages.push(m);if(m.type==='error')socket.close();}};const welcome=await wait(()=>messages.find(m=>m.type==='welcome'));return {socket,messages,welcome};}
+async function join(name,variant){const socket=new WebSocket(base.replace('http','ws')+'/ws?build='+build+'&name='+encodeURIComponent(name)+'&variant='+variant),messages=[];sockets.push(socket);socket.onmessage=e=>{if(e.data!=='pong'){const m=JSON.parse(e.data);messages.push(m);if(m.type==='error')socket.close();}};const welcome=await wait(()=>messages.find(m=>m.type==='welcome'));return {socket,messages,welcome};}
 
 try{
 
@@ -23,12 +24,15 @@ try{
  assert.equal((await page.request.get(base+'/admin/api/online')).status(),401);
 
  assert.equal((await page.request.post(base+'/admin/api/online/recreate',{headers:{Origin:base},data:{roomId:'test'}})).status(),401);
+ assert.equal((await page.request.get(base+'/admin/api/online/chat?roomId=test')).status(),401);
+ assert.equal((await page.request.post(base+'/admin/api/online/chat',{headers:{Origin:base},data:{roomId:'test',text:'Нет доступа'}})).status(),401);
 
  await page.goto(base+'/admin');await page.locator('#password').fill(password);await page.locator('#login-form button').click();await page.locator('#dashboard').waitFor({state:'visible'});
 
  await page.locator('#online-tab').click();await page.waitForFunction(()=>!document.querySelector('#online-message').textContent);
 
  assert(await page.locator('#history-panel').isHidden());assert(await page.locator('#starfall').isDisabled());
+ assert(await page.locator('#room-chat-send').isDisabled());
 
  const icon=await page.request.get(base+'/admin/favicon.svg');assert.equal(icon.status(),200);assert.match(icon.headers()['content-type'],/svg/);
 
@@ -39,6 +43,22 @@ try{
  await page.locator('#refresh').click();await page.waitForFunction(()=>document.querySelectorAll('#online-rows tr').length===2);
 
  assert.equal(await page.locator('#room-id').textContent(),oldId);
+ // The player's ordinary chat arrives in the admin without pressing Refresh.
+ a.socket.send(JSON.stringify({type:'frame',events:[{type:'chat',text:'Привет админу!'}]}));
+ await page.locator('#room-chat-log').getByText('Привет админу!',{exact:true}).waitFor();
+ await page.locator('#room-chat-input').fill('<b>Привет всем игрокам!</b>');await page.locator('#room-chat-send').click();
+ for(const player of [a,b]){const m=await wait(()=>player.messages.find(m=>m.type==='log'&&m.entry.text==='<b>Привет всем игрокам!</b>'));assert.equal(m.entry.name,'Ветерок');assert.equal(m.entry.variant,-1);assert.equal(m.entry.chat,true);}
+ await page.locator('#room-chat-log').getByText('<b>Привет всем игрокам!</b>',{exact:true}).waitFor();assert.equal(await page.locator('#room-chat-log b').count(),0);
+ assert.equal((await page.request.post(base+'/admin/api/online/chat',{headers:{Origin:'https://unrelated.example'},data:{roomId:oldId,text:'Нет'}})).status(),403);
+ assert.equal((await page.request.post(base+'/admin/api/online/chat',{headers:{Origin:base},data:{roomId:'stale',text:'Нет'}})).status(),409);
+ for(const text of ['',' '.repeat(5),{},'a'.repeat(256)])assert.equal((await page.request.post(base+'/admin/api/online/chat',{headers:{Origin:base},data:{roomId:oldId,text}})).status(),400);
+ for(const query of ['','?roomId='+oldId+'&after=-1','?roomId='+oldId+'&after=NaN','?roomId='+oldId+'&after=9007199254740992','?roomId='+oldId+'&after=1&before=2'])assert.equal((await page.request.get(base+'/admin/api/online/chat'+query)).status(),400);
+ // All messages remain accessible beyond both the 10-entry player snapshot and
+ // the 100-entry admin page. A new page starts at the newest history segment.
+ for(let i=0;i<105;i++)assert.equal((await page.request.post(base+'/admin/api/online/chat',{headers:{Origin:base},data:{roomId:oldId,text:'Архив '+i}})).status(),200);
+ await page.reload();await page.locator('#dashboard').waitFor({state:'visible'});await page.locator('#online-tab').click();await page.locator('#chat-earlier').waitFor({state:'visible'});
+ assert.equal(await page.locator('#room-chat-log .chat-entry').count(),100);await page.locator('#chat-earlier').click();await page.locator('#room-chat-log').getByText('Привет админу!',{exact:true}).waitFor();
+ assert.equal(await page.locator('#room-chat-log').getByText('Архив 0',{exact:true}).count(),1);
  await page.locator('#online-rows tr').filter({hasText:'Хост тест'}).getByRole('button',{name:/Икота/}).click();
  const prank=await wait(()=>a.messages.find(m=>m.type==='room'&&m.room.pranks?.length));await wait(()=>b.messages.find(m=>m.type==='room'&&m.room.pranks?.length));
  assert.equal(prank.room.pranks[0].kind,'hiccup');assert.equal(prank.room.pranks[0].playerId,a.welcome.playerId);
@@ -58,6 +78,7 @@ try{
  await page.locator('#recreate').click();await wait(()=>b.messages.find(m=>m.type==='error'));assert.notEqual(b.socket.readyState,WebSocket.OPEN);await page.waitForFunction(old=>document.querySelector('#room-id').textContent!==old&&document.querySelector('#room-id').textContent!=='—',oldId);
 
  const newId=await page.locator('#room-id').textContent();assert.notEqual(newId,oldId);await page.waitForFunction(()=>!document.querySelector('#refresh').disabled);assert(await page.locator('#starfall').isDisabled());
+ assert.equal(await page.locator('#room-chat-log .chat-entry').count(),0);assert(await page.locator('#room-chat-send').isDisabled());
 
  const c=await join('Новая игра',2);assert.equal(c.welcome.room.id,newId);assert(!c.welcome.resume);
 
@@ -75,7 +96,7 @@ try{
 
  await page.locator('#online-tab').click();await page.waitForFunction(()=>!document.querySelector('#refresh').disabled);await page.setViewportSize({width:390,height:844});await page.screenshot({path:process.env.TEMP+'/kirby-admin-online-mobile.png'});
 
- assert.deepEqual(errors,[]);console.log('PASS Online UI, favicon, authentication, CSRF, stale actions, host disconnect, room reset, starfall, immediate results and archive');
+ assert.deepEqual(errors,[]);console.log('PASS Online UI, live chat, Veterok broadcast to both players, full chat pagination, plain text, auth/CSRF, stale actions, room reset, starfall and archive');
 
 }finally{for(const socket of sockets)socket.close();await browser.close();}
 

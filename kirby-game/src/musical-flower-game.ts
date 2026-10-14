@@ -5,16 +5,16 @@ import {FLOWER_FULL_MELODIES} from './musical-flower-melodies';
  * Traditional nursery tunes and Beethoven; note/beat references:
  * https://www.printablegarden.com/sheet-music/ (no recordings copied). */
 export const FLOWER_MELODIES=[
- {name:'Маленькая звёздочка',notes:[0,0,4,4,5,5,4,3,3,2],beats:[1,1,1,1,1,1,2,1,1,1]},
- {name:'У Мэри был барашек',notes:[2,1,0,1,2,2,2,1,1,1],beats:[1,1,1,1,1,1,2,1,1,2]},
- {name:'Брат Жак',notes:[0,1,2,0,0,1,2,0,2,3],beats:[1,1,1,1,1,1,1,1,1,1]},
- {name:'Лондонский мост',notes:[4,5,4,3,2,3,4,1,2,3],beats:[1.5,.5,1,1,1,1,2,1,1,2]},
- {name:'Ода к радости',notes:[2,2,3,4,4,3,2,1,0,0],beats:[1,1,1,1,1,1,1,1,1,1]},
- {name:'При свете луны',notes:[4,4,4,5,6,5,4,6,5,5],beats:[1,1,1,1,2,2,1,1,1,1]},
- {name:'Горячие булочки',notes:[6,5,4,6,5,4,4,4,4,4],beats:[1,1,2,1,1,2,.5,.5,.5,.5]},
- {name:'Греби на лодочке',notes:[0,0,0,1,2,2,1,2,3,4],beats:[1.5,1.5,1,.5,1.5,1,.5,1,.5,3]},
- {name:'Янки Дудл',notes:[4,4,5,6,4,6,5,1,4,4],beats:[.5,.5,.5,.5,.5,.5,1,.5,.5,.5]},
- {name:'Звенят колокольчики',notes:[2,4,0,1,2,3,3,3,3,3],beats:[1,1,1.5,.5,4,1,1,1.5,.5,1]},
+ {name:'Маленькая звёздочка',originalTitle:'Twinkle, Twinkle, Little Star',notes:[0,0,4,4,5,5,4,3,3,2],beats:[1,1,1,1,1,1,2,1,1,1]},
+ {name:'У Мэри был барашек',originalTitle:'Mary Had a Little Lamb',notes:[2,1,0,1,2,2,2,1,1,1],beats:[1,1,1,1,1,1,2,1,1,2]},
+ {name:'Брат Жак',originalTitle:'Frère Jacques',notes:[0,1,2,0,0,1,2,0,2,3],beats:[1,1,1,1,1,1,1,1,1,1]},
+ {name:'Лондонский мост',originalTitle:'London Bridge Is Falling Down',notes:[4,5,4,3,2,3,4,1,2,3],beats:[1.5,.5,1,1,1,1,2,1,1,2]},
+ {name:'Ода к радости',originalTitle:'Ode to Joy',notes:[2,2,3,4,4,3,2,1,0,0],beats:[1,1,1,1,1,1,1,1,1,1]},
+ {name:'При свете луны',originalTitle:'Au clair de la lune',notes:[4,4,4,5,6,5,4,6,5,5],beats:[1,1,1,1,2,2,1,1,1,1]},
+ {name:'Горячие булочки',originalTitle:'Hot Cross Buns',notes:[6,5,4,6,5,4,4,4,4,4],beats:[1,1,2,1,1,2,.5,.5,.5,.5]},
+ {name:'Греби на лодочке',originalTitle:'Row, Row, Row Your Boat',notes:[0,0,0,1,2,2,1,2,3,4],beats:[1.5,1.5,1,.5,1.5,1,.5,1,.5,3]},
+ {name:'Янки Дудл',originalTitle:'Yankee Doodle',notes:[4,4,5,6,4,6,5,1,4,4],beats:[.5,.5,.5,.5,.5,.5,1,.5,.5,.5]},
+ {name:'Звенят колокольчики',originalTitle:'Jingle Bells',notes:[2,4,0,1,2,3,3,3,3,3],beats:[1,1,1.5,.5,4,1,1,1.5,.5,1]},
 ] as const;
 export const FLOWER_ROUNDS=10;
 export const FLOWER_BEAT_MS=450,FLOWER_EMPTY_MS=10000,FLOWER_CELEBRATE_MS=9600;

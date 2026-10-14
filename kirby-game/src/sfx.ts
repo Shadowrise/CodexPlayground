@@ -347,7 +347,7 @@ export class SoundEffects {
     source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);this.voiceAfter=ctx.currentTime+buffer.duration;
   }
 
-  /** Positional native coo for a nearby bird; the caller observes its fear event once. */
+  /** Positional native coo for a nearby bird, once per reaction or emotion. */
   async playPigeonEmoteAt(kind:Emote,dx:number,dz:number,cameraAzimuth:number){
     const ctx=this.context,distance=Math.hypot(dx,dz),generation=this.pigeonSoundGeneration,started=performance.now();
     if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||!Number.isFinite(distance)||!Number.isFinite(cameraAzimuth)||distance>=24||this.active.size>=12)return;

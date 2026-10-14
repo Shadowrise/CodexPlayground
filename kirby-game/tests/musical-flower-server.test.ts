@@ -1,3 +1,4 @@
+import {roomSql} from './room-sql';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -17,7 +18,7 @@ test('authoritative shared flower game validates notes, awards both participants
  try{
   class Socket {readyState=1;messages:any[]=[];data:any;constructor(id:string){this.data={id,variant:0,announced:true,seen:now,visible:true,actor:{p:[SITE.x,0,SITE.z+2],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:id,variant:0,star:0}};}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(text:string){this.messages.push(JSON.parse(text));}}
   const a=new Socket('a'),b=new Socket('b'),storage=new Map<string,any>(),alarms:number[]=[];
-  const ctx={blockConcurrencyWhile:(f:()=>unknown)=>f(),waitUntil(p:Promise<unknown>){p.catch(e=>{throw e;});},getWebSockets:()=>[a,b],setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp(){return null;},storage:{async get(key:string){return storage.get(key);},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(at:number){alarms.push(at);}}};
+  const ctx={blockConcurrencyWhile:(f:()=>unknown)=>f(),waitUntil(p:Promise<unknown>){p.catch(e=>{throw e;});},getWebSockets:()=>[a,b],setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp(){return null;},storage:{sql:roomSql(),async get(key:string){return storage.get(key);},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(at:number){alarms.push(at);}}};
   const GameRoom=await worker(),room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{},world:{marker:'a large world would be wasteful here'}};
   const frame=(s:Socket,events:any[]=[],actor?:any)=>room.webSocketMessage(s,JSON.stringify({type:'frame',events,actor}));
   frame(a,[{type:'flower-start'}]);const startedAt=room.room.flowerGame.startedAt;

@@ -1,3 +1,4 @@
+import {roomSql} from './room-sql';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -18,7 +19,7 @@ const actor=(id='solo',p:readonly number[]=BREAD_SPAWN):BreadActor=>({id,p:[...p
 test('feeding requires carried bread, a nearby grounded bird and a facing player; the throw lands midway and cannot be reclaimed',()=>{
  const a=actor('solo',[0,0,0]),b={...newBread(),owner:'solo'},bird={phase:'follow',p:[0,0,4]};
  assert(canFeedPidgie(b,a,bird));assert(!canFeedPidgie(b,{...a,yaw:Math.PI},bird));
- assert(!canFeedPidgie(newBread(),a,bird));assert(!canFeedPidgie(b,a,{...bird,p:[0,0,9]}));assert(!canFeedPidgie(b,a,{...bird,phase:'fly'}));
+ assert(!canFeedPidgie(newBread(),a,bird));assert(canFeedPidgie(b,a,{...bird,p:[0,0,8.4]}));assert(!canFeedPidgie(b,a,{...bird,p:[0,0,10]}));assert(!canFeedPidgie(b,a,{...bird,phase:'fly'}));
  const offered=applyBread(b,{kind:'feed'},a,1000,undefined,bird);
  assert.deepEqual(offered.p,[0,0,2]);assert(offered.drop);assert.equal(offered.offering?.by,a.id);
  assert(breadPosition(offered,1200)[1]>0);assert(!canPickBread(offered,{...a,p:offered.p},100000));assert(validBread(offered));
@@ -105,7 +106,7 @@ test('the room arbitrates one loaf, blocks other interactions, and drops it when
  }
  let lastServer:Socket;const sockets:Socket[]=[],storage=new Map();
  globals.WebSocketPair=class {0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class {};
- const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
+ const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},storage:{sql:roomSql(),async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
  try{
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64')),room=new GameRoom(ctx,{});
   const join=async(name:string,variant:number)=>{await room.fetch(new Request(`https://test/ws?build=${BUILD}&variant=${variant}&name=${name}`,{headers:{Upgrade:'websocket'}}));return lastServer!;};

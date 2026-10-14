@@ -10,7 +10,7 @@ export type BreadBird={phase:string;p:readonly number[]};
 export function canFeedPidgie(b:BreadState,a:BreadActor,bird?:BreadBird){
  if(!bird||!a.available||b.owner!==a.id||b.offering||!['wander','follow'].includes(bird.phase)||Math.abs(a.p[1]-bird.p[1])>1.3)return false;
  const dx=bird.p[0]-a.p[0],dz=bird.p[2]-a.p[2],distance=Math.hypot(dx,dz);
- return distance<=5.5+Math.min(2,a.size*.7)&&(distance<.1||(dx*Math.sin(a.yaw)+dz*Math.cos(a.yaw))/distance>=.8);
+ return distance<=8.5+Math.min(2,a.size*.7)&&(distance<.1||(dx*Math.sin(a.yaw)+dz*Math.cos(a.yaw))/distance>=.8);
 }
 const spawn=mountainWorld(MOUNTAIN_SUMMIT.tangent,MOUNTAIN_SUMMIT.radial-.5);
 export const BREAD_SPAWN:readonly number[]=[spawn.x,MOUNTAIN_SUMMIT.y,spawn.z];

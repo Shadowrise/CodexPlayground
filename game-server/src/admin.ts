@@ -3,6 +3,7 @@ import {ADMIN_ICON} from './admin-icon';
 import {adminCookie,adminToken,samePassword,validAdminToken} from './admin-auth';
 import {soloVisit,type HistoryFilter} from './history-store';
 import {validSoloReport} from '../../kirby-game/src/history-types';
+import {chatText} from '../../kirby-game/src/world-log';
 const baseHeaders={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
 const json=(v:unknown,status=200,extra:Record<string,string>={})=>Response.json(v,{status,headers:{...baseHeaders,...extra}});
 async function smallBody(request:Request){
@@ -40,6 +41,17 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  if(!await validAdminToken(cookie,env.ADMIN_PASSWORD))return json({error:'Войди в админку'},401);
  if(path==='/admin/api/online'&&request.method==='GET'){
   try{return json(await env.ROOMS.getByName('main').adminOnline());}catch{return json({error:'Не удалось загрузить комнату'},503);}
+ }
+ if(path==='/admin/api/online/chat'&&request.method==='GET'){
+  const roomId=url.searchParams.get('roomId'),cursor:{after?:number;before?:number}={};
+  if(!roomId||roomId.length>80||url.searchParams.has('after')&&url.searchParams.has('before'))return json({error:'Некорректный запрос'},400);
+  for(const key of ['after','before'] as const)if(url.searchParams.has(key)){const raw=url.searchParams.get(key)!;if(!/^\d{1,16}$/.test(raw)||!Number.isSafeInteger(Number(raw)))return json({error:'Некорректная страница'},400);cursor[key]=Number(raw);}
+  try{const result=await env.ROOMS.getByName('main').adminChat(roomId,cursor);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось загрузить чат'},503);}
+ }
+ if(path==='/admin/api/online/chat'&&request.method==='POST'){
+  let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
+  if(!data||typeof data.roomId!=='string'||!data.roomId||data.roomId.length>80||typeof data.text!=='string'||data.text.length>255||!chatText(data.text))return json({error:'Напиши сообщение длиной до 255 символов'},400);
+  try{const result=await env.ROOMS.getByName('main').adminChatMessage(data.roomId,data.text);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось отправить сообщение'},503);}
  }
  if(path==='/admin/api/online/resize'&&request.method==='POST'){
   let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}

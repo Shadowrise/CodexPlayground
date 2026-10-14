@@ -1,3 +1,4 @@
+import {roomSql} from './room-sql';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -17,7 +18,7 @@ test('Worker shares all three phases, awards both participants only at the final
   class Socket{readyState=1;messages:any[]=[];constructor(public data:any){}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(m:string){this.messages.push(JSON.parse(m));}}
   const a=new Socket({id:'a',session:'room',name:'Первый',variant:0,seen:now,visible:true,announced:true,actor:actor('Первый',0)}),b=new Socket({id:'b',session:'room',name:'Второй',variant:1,seen:now,visible:true,announced:true,actor:actor('Второй',1)}),sockets=[a,b];
   const stored=new Map<string,any>(),pending:Promise<any>[]=[];let writes=0;
-  const ctx={getWebSockets:()=>sockets,getWebSocketAutoResponseTimestamp:()=>undefined,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{writes++;stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
+  const ctx={getWebSockets:()=>sockets,getWebSocketAutoResponseTimestamp:()=>undefined,setWebSocketAutoResponse(){},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();pending.push(p);return p;},waitUntil(p:Promise<any>){pending.push(p);},storage:{sql:roomSql(),get:async(k:string)=>structuredClone(stored.get(k)),put:async(k:string,v:any)=>{writes++;stored.set(k,structuredClone(v));},delete:async(k:string)=>{stored.delete(k);},setAlarm:async()=>{}}};
   let room=new GameRoom(ctx,{});await Promise.all(pending);room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const trail=Array.from({length:12},(_,i)=>{const p=centipedeRoute(centipedeRoam(0).distance-(11-i)*CENTIPEDE_STEP,new Vector3());return [140+p.x,-45+p.z];});
   const frame=(socket:Socket,events:any[]=[])=>{now+=200;room.webSocketMessage(socket,JSON.stringify({type:'frame',actor:structuredClone(socket.data.actor),events}));};

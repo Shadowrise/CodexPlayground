@@ -3,7 +3,7 @@ import {getLocale,t} from './i18n';
 import {CentipedeFireworks} from './centipede-fireworks';
 import {MusicalFlowerButton} from './musical-flower-button';
 import {MUSICAL_FLOWER_SITE as SITE,MUSICAL_FLOWERS} from './musical-flower-site';
-import {advanceFlowerGame,flowerPlayback,FLOWER_ROUNDS,FLOWER_EMPTY_MS,type FlowerGame,type FlowerPlaybackNote} from './musical-flower-game';
+import {advanceFlowerGame,flowerPlayback,FLOWER_MELODIES,FLOWER_ROUNDS,FLOWER_EMPTY_MS,type FlowerGame,type FlowerPlaybackNote} from './musical-flower-game';
 
 const NOTE='<svg viewBox="0 0 32 40" aria-hidden="true"><path d="M19 4v24c-1 6-15 9-16 2-1-6 9-9 13-7V3h4c1 5 12 4 9 14-1-5-7-4-9-7v18h-1Z" fill="currentColor"/><path class="note-cross" d="m3 5 26 30M29 5 3 35" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>';
 export class MusicalFlowerGameView {
@@ -34,7 +34,7 @@ export class MusicalFlowerGameView {
   if(q.stage==='celebrate')once('finish:'+q.stageAt,q.stageAt,()=>this.feedback('finish'));
   this.hud.hidden=!visible||(!nearby&&!q.players.includes(id));if(this.hud.hidden)return;
   const seconds=q.emptySince===undefined?0:Math.max(0,Math.ceil((q.emptySince+FLOWER_EMPTY_MS-now)/1000));
-  const text=seconds?t('Вернитесь на цветочную полянку! Игра сбросится через {0} с.',[seconds]):t(q.stage==='listen'?'Слушай мелодию и смотри, какие цветочки загораются.':q.stage==='repeat'?'Повтори нотки по порядку. Подойди к цветочку и нажми действие.':q.stage==='error'?'Не та нотка! Сейчас цветочки сыграют ещё раз.':q.stage==='echo'?'Правильно! Переходим к следующему шагу.':'Отличная память! Теперь цветочки сыграют мелодию целиком.');
+  const text=seconds?t('Вернитесь на цветочную полянку! Игра сбросится через {0} с.',[seconds]):q.stage==='celebrate'?t('Отличная память! Наслаждаемся мелодией «{0}».',[FLOWER_MELODIES[q.melody].originalTitle]):t(q.stage==='listen'?'Слушай мелодию и смотри, какие цветочки загораются.':q.stage==='repeat'?'Повтори нотки по порядку. Подойди к цветочку и нажми действие.':q.stage==='error'?'Не та нотка! Сейчас цветочки сыграют ещё раз.':'Правильно! Переходим к следующему шагу.');
   const signature=JSON.stringify([getLocale(),q.round,q.cursor,q.stage,text,active]);if(signature===this.signature)return;this.signature=signature;
   this.title.textContent=t(q.stage==='celebrate'?'Цветочная мелодия · Готово!':'Цветочная мелодия · Этап {0}/{1}',[q.round,FLOWER_ROUNDS]);this.message.textContent=text;
   this.notes.replaceChildren();

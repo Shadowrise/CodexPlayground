@@ -12,6 +12,7 @@ import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/hi
 import {SCORE_ACTIONS,achievementPoints} from '../../kirby-game/src/score';
 import {isPrankKind,makePrank,PRANKS} from '../../kirby-game/src/pranks';
 import {historyRoutes} from './admin';
+import {initRoomChat,writeRoomChat,roomChatPage,type ChatCursor} from './room-chat';
 import {initHistory,writeVisits,historyPage,type Visit,type HistoryFilter} from './history-store';
 import {allTasks,createStarfall,collectStar,finishStarfall,COLLECT_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
 import {chatText,emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,type LogEntry} from '../../kirby-game/src/world-log';
@@ -31,11 +32,25 @@ export class HistoryStore extends DurableObject<Env>{
  list(filter:HistoryFilter){return historyPage(this.ctx.storage.sql,filter);}
 }
 export class GameRoom extends DurableObject<Env>{
- private room?:RoomState;private bossSaved='';private flowerSaved='null';private chaseSentAt=0;
+ private room?:RoomState;private bossSaved='';private flowerSaved='null';private chaseSentAt=0;private chatRoom?:string;
  constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}ctx.blockConcurrencyWhile(async()=>{const [event,flowers]=await Promise.all([ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game')]);if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}});}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),locks:{}};}
+ private chatStorage(){
+  if(this.room&&this.chatRoom!==this.room.id){initRoomChat(this.ctx.storage.sql,this.room.log);this.chatRoom=this.room.id;}
+  return this.ctx.storage.sql;
+ }
+ adminChat(roomId:string,cursor:ChatCursor={}){return this.ctx.blockConcurrencyWhile(async()=>{
+  const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
+  if(!room||room.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  return {ok:true,roomId,entries:[],more:false,...(this.room?roomChatPage(this.chatStorage(),cursor):{})};
+ });}
+ adminChatMessage(roomId:string,value:unknown){return this.ctx.blockConcurrencyWhile(async()=>{
+  if(!this.room||this.room.id!==roomId||!this.players().length)return {ok:false,error:'Активной комнаты уже нет. Обнови список.'};
+  const text=chatText(value);if(!text)return {ok:false,error:'Напиши сообщение.'};
+  this.logEntry({id:crypto.randomUUID(),name:'Ветерок',variant:-1,text,chat:true});return {ok:true};
+ });}
  adminPrank(roomId:string,playerId:string,kind:unknown){return this.ctx.blockConcurrencyWhile(async()=>{
   const r=this.room,now=Date.now();if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
   if(!isPrankKind(kind))return {ok:false,error:'Неизвестный розыгрыш.'};
@@ -187,7 +202,7 @@ export class GameRoom extends DurableObject<Env>{
   const flowers=JSON.stringify(this.room.flowerGame??null);if(flowers!==this.flowerSaved){this.flowerSaved=flowers;this.ctx.waitUntil(this.room.flowerGame?this.ctx.storage.put('flower-game',this.room.flowerGame):this.ctx.storage.delete('flower-game'));}
   for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.id===this.room.host){a.room={...this.room,centipede:undefined,flowerGame:undefined};s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}
  }
- private logEntry(entry:LogEntry){if(!this.room)return;this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
+ private logEntry(entry:LogEntry){if(!this.room)return;writeRoomChat(this.chatStorage(),entry);this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
  private log(a:Attachment,text:string,chat=false){if(!a.actor)return;this.logEntry({id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat});}
  private finishFestival(now=Date.now()){
   const f=this.room?.festival;if(!f)return;

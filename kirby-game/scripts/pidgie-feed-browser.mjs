@@ -14,6 +14,13 @@ try{
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/THREE|WebGL|shader/i.test(m.text()))errors.push(m.text());});
  page.on('dialog',dialog=>dialog.accept());
  await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
+ await page.addInitScript(()=>{
+  window.pigeonCooStarts=[];const start=AudioBufferSourceNode.prototype.start;
+  AudioBufferSourceNode.prototype.start=function(...args){
+   if(this.buffer&&Math.abs(this.buffer.duration-2.04)<.001)window.pigeonCooStarts.push(performance.now());
+   return start.apply(this,args);
+  };
+ });
  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+'\nwindow.feedTest={bread,mountainLedges,scene,renderer,camera,cameraTarget,followCamera,pidgieSafeGround,resolveInteraction,localLog,returnToMenu,get bird(){return pidgieNpc;},get character(){return character;},points(){return scoreOf(character);}};'});});
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
@@ -46,24 +53,33 @@ try{
  assert.equal(result.points-before.points,10);assert.equal(result.phase,'joy');
  assert(Math.abs(result.bread.p[0]-(before.player[0]+before.bird[0])/2)<.12);assert(Math.abs(result.bread.p[2]-(before.player[2]+before.bird[2])/2)<.12);
  assert.equal(result.log,'Пекарь угостил дикого Пиджи хлебушком, теперь Пиджи его лучший друг.');
+ await page.waitForFunction(()=>window.pigeonCooStarts.length===1,undefined,{timeout:5000});
  await page.locator('#character-unlock').waitFor({state:'visible'});assert.match(await page.locator('#character-unlock').innerText(),/Пиджи/);assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-pidgie-unlocked-v1')),'1');
  await page.screenshot({path:output+'/pidgie-unlocked.png'});
  await page.waitForFunction(()=>window.feedTest.bird.phase==='toBread');await page.waitForFunction(()=>window.feedTest.bird.phase==='feast');
  const food=result.bread.p;await move(food,0);await page.waitForTimeout(350);assert.equal(await page.evaluate(()=>window.feedTest.bread.state.owner),'');
  await move([food[0]-4,0,food[2]-5],.6);
  const clips=new Set();for(let i=0;i<16;i++){clips.add(await page.evaluate(()=>window.feedTest.bird.state));await page.waitForTimeout(400);}assert(clips.has('Peck')&&clips.has('Joy'));
+ const coos=await page.evaluate(()=>window.pigeonCooStarts);assert(coos.length>=2,'the first joy and subsequent feeding joy start the native coo');
+ for(let i=1;i<coos.length;i++)assert(coos[i]-coos[i-1]>5000,'each joy starts exactly one coo');
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.locator('#settings-toggle').click();
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')));assert(saved.bread.offering);assert.equal(saved.pidgie.phase,'feast');assert(saved.player.achievements.includes('pidgieFriend'));
  await page.evaluate(()=>window.feedTest.returnToMenu());await page.locator('#load-game').click();await page.locator('#start-game').click();await page.waitForFunction(()=>window.feedTest.character&&window.feedTest.bird.phase==='feast');
  assert.equal(await page.evaluate(()=>window.feedTest.points()),result.points);assert(await page.evaluate(()=>!!window.feedTest.bread.state.offering));
  await page.waitForFunction(()=>window.feedTest.bread.loaf.visible&&!window.feedTest.bread.aura.visible);
- await page.evaluate(async()=>{
+ const alignment=await page.evaluate(async()=>{
   const w=window.feedTest;w.renderer.setAnimationLoop(null);const food=w.bread.state.p;
   document.body.replaceChildren(w.renderer.domElement);w.renderer.domElement.style.display='block';
   const T=await import('/node_modules/.vite/deps/three.js');w.scene.add(new T.HemisphereLight('#e6f3ff','#69934d',1.6));
   while(w.bird.state!=='Peck')w.bird.update(.05,[]);w.bird.update(.6,[]);w.character.actor.visible=false;
+  const action=w.bird.actions.get('Peck');action.time=action.getClip().duration*.3;w.bird.mixer.update(0);w.bird.actor.updateMatrixWorld(true);
+  const beak=w.bird.model.getObjectByName('Beak_sculpt_paint'),positions=beak.geometry.attributes.position;let front=0;
+  for(let i=1;i<positions.count;i++)if(positions.getZ(i)>positions.getZ(front))front=i;
+  const tip=new T.Vector3().fromBufferAttribute(positions,front).applyMatrix4(beak.matrixWorld);
   w.camera.fov=58;w.camera.updateProjectionMatrix();w.camera.position.set(food[0]+.5,5.3,food[2]-1.7);w.camera.lookAt(food[0],1.05,food[2]+.4);w.renderer.render(w.scene,w.camera);
+  return {tip:tip.toArray(),food,error:Math.hypot(tip.x-food[0],tip.z-food[2])};
  });
+ assert(alignment.error<.025,'the native GLB beak contact meets the centre of the loaf');
  await page.screenshot({path:output+'/pidgie-feast.png'});
- assert.deepEqual(errors,[]);console.log(JSON.stringify({result,clips:[...clips],errors,output}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({result,clips:[...clips],coos,alignment,errors,output}));
 }finally{await browser?.close();vite?.kill();}

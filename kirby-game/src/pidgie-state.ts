@@ -1,6 +1,9 @@
 /** Complete host-owned NPC checkpoint; shared by the browser and Worker. */
 import {validBreadOffering,type BreadOffering} from './bread-state';
-export const PIDGIE_FOLLOW_DISTANCE=4;
+export const PIDGIE_FOLLOW_DISTANCE=8;
+export const PIDGIE_FOLLOW_REACTION_SECONDS=.6;
+/** Measured forward beak contact in the native ground-peck animation. */
+export const PIDGIE_PECK_REACH=1.4;
 export const PIDGIE_FOLLOW_MAX_SPEED=18;
 export const PIDGIE_PHASES = ['hidden','wander','fear','takeoff','fly','landing','follow','joy','toBread','feast'] as const;
 export const PIDGIE_CLIPS = ['Idle','Walk','Fear','Jump','Fly','Peck','Run','Joy'] as const;

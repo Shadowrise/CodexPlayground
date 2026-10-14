@@ -1,3 +1,4 @@
+import {roomSql} from './room-sql';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -15,7 +16,7 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  class Socket {readyState=1;data:any;messages:any[]=[];constructor(id:string,variant:number){this.data={id,variant,seen:now,visible:true,actor:actor(variant)};}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(v:string){this.messages.push(JSON.parse(v));}close(){this.readyState=3;}}
  const a=new Socket('a',0),b=new Socket('b',1),sockets=[a,b];let alarm=0,cleared=false;const visits:any[]=[];
  for(const socket of sockets)socket.data.history={id:'online:'+socket.data.id,startedAt:now,activeMs:0,tick:now,lastWrite:now,startScore:0,seq:0,device:{}};
- const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{async get(){return undefined;},async delete(){},async put(){},async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
+ const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp:()=>new Date(now),storage:{sql:roomSql(),async get(){return undefined;},async delete(){},async put(){},async setAlarm(t:number){alarm=t;},async deleteAlarm(){alarm=0;},async deleteAll(){cleared=true;}}};
  const room=new GameRoom(ctx,{HISTORY:{getByName:()=>({write:async(rows:any[])=>{visits.push(...structuredClone(rows));}})}});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
  // The room, not the incoming actor frame, awards the three protected quests.
  a.data.actor.achievements=['millQuest','centipede','flowers'];

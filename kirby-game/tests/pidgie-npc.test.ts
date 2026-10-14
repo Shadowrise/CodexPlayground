@@ -1,11 +1,23 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
-import {createPigeon} from '../src/pigeon-model';
+import {readFile} from 'node:fs/promises';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PidgieNpc,PIDGIE_APPROACH_DISTANCE,PIDGIE_REFUGE_RADIUS,PIDGIE_FLIGHT_DISTANCE,type PidgieNpcOptions,type PidgiePlayer} from '../src/pidgie-npc';
-import {PIDGIE_FOLLOW_DISTANCE,validPidgieState,type PidgieState} from '../src/pidgie-state';
+import {PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_REACTION_SECONDS,PIDGIE_PECK_REACH,validPidgieState,type PidgieState} from '../src/pidgie-state';
 import {worldLimit} from '../src/world-bounds';
 import {applyBread,canPickBread,newBread} from '../src/bread-state';
+
+// Exercise the same rig and beak trajectory as the game without rebuilding
+// the authored sculpt and its paint atlas for every regression run.
+const template=await (async()=>{
+ const bytes=await readFile(new URL('../public/models/pigeon-animated.glb',import.meta.url)),loader=new GLTFLoader();
+ loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new T.Texture())}));
+ return loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+})();
+const create=(options:Partial<PidgieNpcOptions>={})=>new PidgieNpc(template,{seed:131,safeGround:()=>true,...options});
+const bodyMesh=(root:T.Object3D)=>root.getObjectByProperty('type','SkinnedMesh') as T.SkinnedMesh;
+const advance=(bird:PidgieNpc,seconds:number,people:readonly T.Vector3[]=[],players:readonly PidgiePlayer[]=[])=>{for(let i=0;i<Math.ceil(seconds*60);i++)bird.update(Math.min(1/60,seconds-i/60),people,undefined,players);};
 
 test('dropping the carried bread ends interest with exactly one scare and flight',()=>{
  const scares:T.Vector3[]=[],bird=create({onScare:p=>scares.push(p)}),player:PidgiePlayer={id:'baker',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,4))};
@@ -30,9 +42,6 @@ test('offered bread becomes permanent: joy, a run to its midpoint, then repeated
  assert.deepEqual(remote.networkState(),next.networkState(),'late joins and host changes keep the feeding cycle');
 });
 
-const template=(()=>{const {root,clips}=createPigeon(),scene=new T.Group();scene.add(root);return {scene,animations:clips};})();
-const create=(options:Partial<PidgieNpcOptions>={})=>new PidgieNpc(template,{seed:131,safeGround:()=>true,...options});
-const advance=(bird:PidgieNpc,seconds:number,people:readonly T.Vector3[]=[],players:readonly PidgiePlayer[]=[])=>{for(let i=0;i<Math.ceil(seconds*60);i++)bird.update(Math.min(1/60,seconds-i/60),people,undefined,players);};
 function approach(bird:PidgieNpc){const p=bird.actor.position.clone();p.x+=PIDGIE_APPROACH_DISTANCE-1;bird.update(.01,[p]);assert.equal(bird.phase,'fear');return p;}
 function nearXZ(a:readonly number[],b:readonly number[]){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
 function startPeck(bird:PidgieNpc){
@@ -45,7 +54,7 @@ test('a seeded independent pigeon spawns on safe ground away from players withou
  assert.deepEqual(a.actor.position.toArray(),b.actor.position.toArray());assert(a.actor.visible);assert.equal(a.phase,'wander');
  assert(a.actor.position.distanceTo(people[0])>=12);assert(validPidgieState(a.networkState()));
  assert(!a.actor.getObjectByName('Flight cloud'));assert(!('fruitsEaten' in a));assert(!('achievements' in a));assert(!('takePush' in a));assert(!('canEat' in a));
- const source=template.scene.getObjectByName('Continuous pigeon body') as T.SkinnedMesh,clone=a.model.getObjectByName('Continuous pigeon body') as T.SkinnedMesh;
+ const source=bodyMesh(template.scene),clone=bodyMesh(a.model);
  assert(clone instanceof T.SkinnedMesh);assert.notEqual(clone.skeleton.bones[0],source.skeleton.bones[0]);assert.notEqual(clone.material,source.material);assert.equal(clone.geometry,source.geometry);
  const original=source.skeleton.bones[0].quaternion.clone();approach(a);advance(a,.4);assert(source.skeleton.bones[0].quaternion.equals(original),'NPC animation cannot deform the player template');
 });
@@ -83,8 +92,8 @@ test('wild pigeon periodically stops for a complete three-peck bout before walki
 test('a pecking checkpoint survives late join and host handoff, and proximity interrupts the bout',()=>{
  const host=create();startPeck(host);advance(host,.85);
  const checkpoint=host.networkState();assert.equal(checkpoint.clip,'Peck');assert(checkpoint.pause>0&&checkpoint.clipTime>.8);
- const body=host.model.getObjectByName('Continuous pigeon body') as T.SkinnedMesh;
- const source=template.scene.getObjectByName('Continuous pigeon body') as T.SkinnedMesh;
+ const body=bodyMesh(host.model);
+ const source=bodyMesh(template.scene);
  assert.notEqual(body.morphTargetInfluences,source.morphTargetInfluences,'each pigeon owns its belly animation weights');
  assert(body.morphTargetInfluences![0]>.99,'the wild pigeon tucks its belly during the pecking bout');
  assert.equal(source.morphTargetInfluences![0],0,'the wild bird cannot shrink the shared player template');
@@ -191,16 +200,51 @@ test('following stops planted feet at a blocked route and never flies',()=>{
  assert.equal(notices,1);assert.equal(bird.fearCount,0);assert.equal(bird.actor.position.y,0);
 });
 
-test('running players retain a close feeding distance while being followed or approaching Pidgie',()=>{
+test('running players remain within a bounded delayed following distance, and Pidgie settles eight metres away',()=>{
  const bird=create(),player:PidgiePlayer={id:'runner',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,9))};
+ const lag=6.8*(PIDGIE_FOLLOW_REACTION_SECONDS+Math.PI/8)+1.2;
  advance(bird,1,[player.position],[player]);
  for(let i=0;i<360;i++){
   player.position.z+=6.8/60;bird.update(1/60,[player.position],undefined,[player]);
-  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<1);
+  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<lag);
  }
  for(let i=0;i<360;i++){
   const towards=bird.actor.position.clone().sub(player.position).normalize();player.position.addScaledVector(towards,6.8/60);bird.update(1/60,[player.position],undefined,[player]);
-  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<1);
+  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<lag);
+ }
+ advance(bird,3,[player.position],[player]);assert(Math.abs(bird.actor.position.distanceTo(player.position)-8)<.5);assert.equal(bird.state,'Idle');
+});
+
+test('following waits before starting, ignores small steps, and preserves a pending reaction across host handoff',()=>{
+ const host=create(),player:PidgiePlayer={id:'leader',hasBread:true,position:new T.Vector3(0,0,8)};
+ host.applyNetworkState({...host.networkState(),phase:'follow',p:[0,0,0],yaw:0,elapsed:0,followId:player.id,followSpeed:0},true);
+ advance(host,.2,[player.position],[player]);const planted=host.actor.position.clone();
+ player.position.z+=2;advance(host,.4,[player.position],[player]);
+ assert(host.actor.position.equals(planted));assert.equal(host.state,'Idle');assert(host.networkState().elapsed>.39);
+ const successor=create();successor.applyNetworkState(host.networkState(),true);
+ for(let frame=0;frame<9;frame++){host.update(1/60,[player.position],undefined,[player]);successor.update(1/60,[player.position],undefined,[player]);}
+ assert(host.actor.position.equals(planted),'no motion before the 0.6-second reaction');assert.deepEqual(successor.networkState(),host.networkState());
+ for(let frame=0;frame<90;frame++){host.update(1/60,[player.position],undefined,[player]);successor.update(1/60,[player.position],undefined,[player]);}
+ assert(host.actor.position.z>planted.z);assert.equal(host.state,'Idle');assert.deepEqual(successor.networkState(),host.networkState());
+ const resting=host.actor.position.clone(),leader=player.position.clone();
+ for(let frame=0;frame<180;frame++){player.position.z=leader.z+.15*Math.sin(frame);host.update(1/60,[player.position],undefined,[player]);assert.equal(host.state,'Idle');}
+ assert(host.actor.position.equals(resting),'tiny movements cannot produce mincing Run/Idle bursts');
+});
+
+test('all three native beak contacts hit the bread centre from different approach angles, including a close toss',()=>{
+ for(const angle of [-1.7,0,.9])for(const separation of [2,4,8]){
+  const bird=create(),start=bird.actor.position.clone(),player={id:'baker',p:[start.x+Math.sin(angle)*separation,0,start.z+Math.cos(angle)*separation],yaw:angle+Math.PI,size:1,available:true};
+  const bread=applyBread({...newBread(),owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());assert(bread.offering);
+  bird.acceptBread(bread.offering);advance(bird,6);assert.equal(bird.phase,'feast');
+  const food=new T.Vector3().fromArray(bread.p);assert(Math.abs(bird.actor.position.distanceTo(food)-PIDGIE_PECK_REACH)<.011);
+  const beak=bird.model.getObjectByName('Beak_sculpt_paint') as T.Mesh,positions=beak.geometry.attributes.position;let front=0;
+  for(let vertex=1;vertex<positions.count;vertex++)if(positions.getZ(vertex)>positions.getZ(front))front=vertex;
+  const action=bird.actions.get('Peck')!;bird.mixer.stopAllAction();action.reset().stopFading().setEffectiveWeight(1).play();
+  for(const fraction of [.3,.5,.7]){
+   bird.mixer.setTime(action.getClip().duration*fraction);bird.actor.updateMatrixWorld(true);
+   const tip=new T.Vector3().fromBufferAttribute(positions,front).applyMatrix4(beak.matrixWorld);
+   assert(Math.hypot(tip.x-food.x,tip.z-food.z)<.025,`beak centre at angle ${angle}, separation ${separation}, peck ${fraction}`);
+  }
  }
 });
 

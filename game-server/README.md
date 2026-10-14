@@ -109,10 +109,19 @@ on its first use. No D1 resource or database migration command is needed.
 ### Online administration
 
 The **Online** tab shows the current room ID and connected players (including
-the host), refreshed on demand to avoid background polling. Admin actions use
+the host), refreshed on demand. It also shows the room's chat and events, with a
+composer that sends ordinary chat messages as **Ветерок** to every connected
+player. Chat updates every three seconds while Online is open and the admin page
+is visible; it stops on tab changes, hiding the page and logout. Admin actions use
 the same signed session and same-origin POST checks as history/login:
 
 - `GET /admin/api/online` — room and player list.
+- `GET /admin/api/online/chat?roomId=...` — newest 100 chat messages/events in
+  chronological order. `before=<seq>` reads earlier pages; `after=<seq>` reads
+  new entries in ascending order. `more` indicates another page is available.
+- `POST /admin/api/online/chat` with `{roomId, text}` — sends a message as
+  Ветерок; non-empty plain text, up to 255 characters. The sender identity is
+  assigned by the server. The admin does not occupy a player slot.
 - `POST /admin/api/online/disconnect` with `{roomId, playerId}` — disconnects
   a player without banning them; normal progress/history and host handover apply.
 - `POST /admin/api/online/recreate` with `{roomId}` — disconnects everyone,
@@ -131,6 +140,14 @@ the same signed session and same-origin POST checks as history/login:
 
 Stale room/player actions return 409. Destructive controls ask for confirmation.
 `/admin/favicon.svg` provides a Kirby-with-shield icon for admin browser tabs.
+
+The full chat is stored in the room's own SQLite table, separately from the
+bounded ten-entry WebSocket snapshot. It survives hibernation and host changes;
+«Ранее» makes every earlier page accessible. Each new message/event writes one
+row, with no movement or heartbeat writes. Emptying, recreating or expiring the
+room deletes its chat alongside progress, while the visit archive is retained.
+An occupied room upgraded from an earlier Worker seeds the available ten-entry
+snapshot; older messages that were already discarded cannot be reconstructed.
 
 Local interactive checks: run `npx wrangler dev --port 8791 --persist-to
 .wrangler/admin-online-tests` in this directory, then
@@ -161,9 +178,11 @@ local room and never mutates a production room.
 
 ## Publish
 
-`npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2 was deployed on 2026-10-14 and verified through the public health
-endpoint. Worker version:
-`02718c1a-a143-4fe2-aea3-8398d1e797ad`. Credentials and `.wrangler/` are not tracked.
+`npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2
+(`meadow-network-13`) was deployed on 2026-10-14 with admin chat and the current
+gameplay changes. The public health endpoint and admin chat markup were verified.
+Worker version: `6448e2e6-605e-4dca-913a-9520f6eb09c4`.
+Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event
 

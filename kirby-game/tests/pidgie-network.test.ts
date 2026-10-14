@@ -1,3 +1,4 @@
+import {roomSql} from './room-sql';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -76,7 +77,7 @@ test('Worker keeps host-owned Pidgie pecking through late join, host transfer an
  const sockets:Socket[]=[],storage=new Map<string,unknown>();
  const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(),
   getWebSockets:()=>sockets,acceptWebSocket:(socket:Socket)=>sockets.push(socket),setWebSocketAutoResponse(){},
-  storage:{async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},
+  storage:{sql:roomSql(),async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){storage.set(key,structuredClone(value));},
    async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();}}};
  try{
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));let room=new GameRoom(ctx,{});

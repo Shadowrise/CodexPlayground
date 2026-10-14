@@ -5,14 +5,14 @@ import type {NpcConstraint} from './npcs';
 import {constrainToMeadow,insideMeadow,worldLimit} from './world-bounds';
 import {pigeonGaitRate} from './pigeon-locomotion';
 import {PIGEON_CLIP_BY_NAME} from './pigeon-clips';
-import {PIDGIE_CLIPS,PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_MAX_SPEED,beginPidgieFeeding,validPidgieState,type PidgieState,type PidgieClip,type PidgiePoint} from './pidgie-state';
+import {PIDGIE_CLIPS,PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_REACTION_SECONDS,PIDGIE_FOLLOW_MAX_SPEED,PIDGIE_PECK_REACH,beginPidgieFeeding,validPidgieState,type PidgieState,type PidgieClip,type PidgiePoint} from './pidgie-state';
 import type {BreadOffering} from './bread-state';
 
 export const PIDGIE_APPROACH_DISTANCE=10;
 export const PIDGIE_REFUGE_RADIUS=8;
 export const PIDGIE_FLIGHT_DISTANCE=60;
 const FEAR_SECONDS=.9,STEP=.05,WALK_SPEED=.95;
-const FOLLOW_BAND=.45,FOLLOW_RUN_SPEED=6.5;
+const FOLLOW_BAND=.45,FOLLOW_START_BAND=.85,FOLLOW_RUN_SPEED=6.5;
 const wrap=(angle:number)=>Math.atan2(Math.sin(angle),Math.cos(angle));
 const smooth=(u:number)=>{const v=T.MathUtils.clamp(u,0,1);return v*v*(3-2*v);};
 const xz=(p:T.Vector3):PidgiePoint=>[p.x,p.z];
@@ -177,10 +177,15 @@ export class PidgieNpc {
   }
   const from=this.actor.position,dx=from.x-player.position.x,dz=from.z-player.position.z,d=Math.hypot(dx,dz),gap=d-PIDGIE_FOLLOW_DISTANCE;
   this.data.followSpeed=0;
-  if(Math.abs(gap)<=FOLLOW_BAND){
-   this.data.target=xz(from);this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));this.animate('Idle');return;
+  const facePlayer=()=>this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));
+  if(Math.abs(gap)<=(this.data.elapsed>=PIDGIE_FOLLOW_REACTION_SECONDS?FOLLOW_BAND:FOLLOW_START_BAND)){
+   this.data.elapsed=0;
+   this.data.target=xz(from);facePlayer();this.animate('Idle');return;
   }
-  // Approach the bread closely enough for a facing player to offer it.
+  // A wider start band and a checkpointed reaction clock avoid tiny Run/Idle
+  // bursts whenever the player takes a step or the network pose shifts.
+  this.data.elapsed=Math.min(PIDGIE_FOLLOW_REACTION_SECONDS,this.data.elapsed+dt);
+  if(this.data.elapsed<PIDGIE_FOLLOW_REACTION_SECONDS-1e-8){this.data.target=xz(from);facePlayer();this.animate('Idle');return;}
   const away=d>1e-6?new T.Vector3(dx/d,0,dz/d):new T.Vector3(Math.sin(this.data.yaw),0,Math.cos(this.data.yaw));
   const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE),yaw=this.heading(xz(goal));
   const speed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,Math.max(FOLLOW_RUN_SPEED,Math.abs(gap)*12)),travel=Math.min(speed*dt,Math.abs(gap));
@@ -277,13 +282,13 @@ export class PidgieNpc {
    return;
   }
   if(this.data.phase==='toBread'){
-   const from=this.actor.position.clone(),gap=Math.hypot(food[0]-from.x,food[2]-from.z)-1;
-   if(gap<=.05){this.data.phase='feast';this.data.elapsed=0;this.animate('Peck',true);return;}
-   const yaw=this.heading(target),travel=Math.min(gap,4.2*dt);let moved=0;
+   const from=this.actor.position.clone(),reach=PIDGIE_PECK_REACH*this.actor.scale.x,gap=Math.hypot(food[0]-from.x,food[2]-from.z)-reach;
+   if(Math.abs(gap)<=.01){this.setYaw(this.heading(target));this.data.phase='feast';this.data.elapsed=0;this.animate('Peck',true);return;}
+   const yaw=this.heading(target)+(gap<0?Math.PI:0),travel=Math.min(Math.abs(gap),4.2*dt);let moved=0;
    for(const offset of [0,.45,-.45,.9,-.9,1.35,-1.35]){
     const point=from.clone().add(new T.Vector3(Math.sin(yaw+offset),0,Math.cos(yaw+offset)).multiplyScalar(travel));
     constrain?.(point,this.actor.scale.x,from);point.y=food[1];
-    if(!this.safe(xz(point))||point.distanceTo(from)>travel+.001||Math.hypot(food[0]-point.x,food[2]-point.z)>=gap+1-.00001)continue;
+    if(!this.safe(xz(point))||point.distanceTo(from)>travel+.001||Math.abs(Math.hypot(food[0]-point.x,food[2]-point.z)-reach)>=Math.abs(gap)-.00001)continue;
     moved=point.distanceTo(from);this.actor.position.copy(point);break;
    }
    this.data.target=target;this.animate('Run');this.active!.setEffectiveTimeScale(pigeonGaitRate('Run',moved,dt,this.actor.scale.x));return;

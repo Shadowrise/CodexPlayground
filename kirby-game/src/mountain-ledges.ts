@@ -14,6 +14,7 @@ import {
 type Phase = 'ready' | 'retracting' | 'hidden' | 'extending';
 const PHASES: Phase[] = ['ready', 'retracting', 'hidden', 'extending'];
 const durations = { ready: 0, retracting: LEDGE_RETRACT_SECONDS, hidden: LEDGE_HIDDEN_SECONDS, extending: LEDGE_EXTEND_SECONDS };
+const EMBED_DEPTH = 5;
 type Step = { mesh: T.Mesh; phase: Phase; elapsed: number; standing: number; slide: number };
 
 /** Individual ledges attach to the existing mountain slope; no extra cliff mesh. */
@@ -61,7 +62,7 @@ export class MountainLedges {
   }
 
   private slab(p: MountainLedge, thickness: number, seed: number) {
-    const w = p.width / 2, front = -p.depth / 2, back = p.depth / 2 + 5, cut = .16;
+    const w = p.width / 2, front = -p.depth / 2, back = p.depth / 2 + EMBED_DEPTH, cut = .16;
     const outline = p.shape === 'semicircle'
       ? [...Array.from({length:33},(_,i)=>{const angle=Math.PI*i/32;return [Math.cos(angle)*w,p.depth/2-Math.sin(angle)*w];}),[-w,back],[w,back]]
       : [[-w + cut, front], [w - cut, front], [w, front + cut], [w, back], [-w, back], [-w, front + cut]];
@@ -92,11 +93,11 @@ export class MountainLedges {
   restorePosition(c: CharacterController) { this.base = this.contains(c.actor.position) ? c.surfaceY : 0; this.fall = undefined; }
   resetPlayer() { this.base = 0; this.fall = undefined; }
 
-  private surface(p: MountainLedge, index: number) {
+  private surface(p: MountainLedge, index: number, tangent: number) {
     const slide = index < STEPS.length ? this.steps[index].slide : 0;
     if (index < STEPS.length && this.steps[index].phase === 'hidden') return undefined;
     const front = p.radial - p.depth / 2 + slide, back = index < STEPS.length
-      ? Math.min(p.radial + p.depth / 2 + slide, mountainFace(p.y,p.tangent))
+      ? Math.min(p.radial + p.depth / 2 + slide + EMBED_DEPTH, mountainFace(p.y,tangent))
       : p.radial + p.depth / 2;
     return back > front ? { height: p.y, index, tangent: p.tangent, radial: (front + back) / 2, halfWidth: p.width / 2, halfDepth: (back - front) / 2 } : undefined;
   }
@@ -104,7 +105,7 @@ export class MountainLedges {
   surfaces(c: CharacterController) {
     const p = mountainLocal(c.actor.position.x, c.actor.position.z), footprint = standingFootprint(c.actor.scale.x, c.yaw - YAW);
     return [...STEPS, SUMMIT].flatMap((ledge, i) => {
-      const s = this.surface(ledge, i);
+      const s = this.surface(ledge, i, p.tangent);
       if(!s)return [];
       if(ledge.shape==='semicircle'){
         const slide=i<STEPS.length?this.steps[i].slide:0;
@@ -116,11 +117,12 @@ export class MountainLedges {
 
   private onSemicircle(ledge:MountainLedge,slide:number,clippedBack:number,tangent:number,radial:number,f:ReturnType<typeof standingFootprint>){
     const radius=ledge.width/2,back=ledge.radial+ledge.depth/2+slide,x=tangent+f.dx-ledge.tangent,z=radial+f.dz-back;
-    if(radial+f.dz<=clippedBack&&z<=0&&x*x+z*z<=radius*radius)return true;
+    if(radial+f.dz<=clippedBack&&Math.abs(x)<=radius&&(z>=0||x*x+z*z<=radius*radius))return true;
     if(f.rx<=0||f.rz<=0)return false;
-    let outline=Array.from({length:33},(_,i)=>{const a=Math.PI*i/32;return [ledge.tangent+Math.cos(a)*radius,back-Math.sin(a)*radius];});
-    // Retracting rocks only support feet on the arc still outside the mountain.
-    if(clippedBack<back){
+    let outline=[...Array.from({length:33},(_,i)=>{const a=Math.PI*i/32;return [ledge.tangent+Math.cos(a)*radius,back-Math.sin(a)*radius];}),[ledge.tangent-radius,back+EMBED_DEPTH],[ledge.tangent+radius,back+EMBED_DEPTH]];
+    // Include the slab's exposed connection to the uneven slope, then clip at
+    // the mountain face beside the player rather than at the step's centre.
+    if(clippedBack<back+EMBED_DEPTH){
       const clipped:number[][]=[];let previous=outline.at(-1)!;
       for(const point of outline){
         if((previous[1]<=clippedBack)!==(point[1]<=clippedBack)){

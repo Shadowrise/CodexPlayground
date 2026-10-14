@@ -696,6 +696,7 @@ let npcs: KirbyNpc[] = [];
 let pidgieNpc:PidgieNpc|undefined;
 let pidgieReady=false;
 let pidgieFearSeen=0;
+let pidgieJoySeen=false;
 
 async function loadCharacter() {
   try {
@@ -766,6 +767,7 @@ startButton.addEventListener('click', async () => {
   pidgieReady=!network||network.host||!!network.world?.pidgie;
   if(network?.world?.pidgie)pidgieNpc.applyNetworkState(network.world.pidgie,true);
   pidgieFearSeen=pidgieNpc.fearCount;
+  pidgieJoySeen=pidgieNpc.state==='Joy';
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -826,7 +828,7 @@ function returnToMenu(){
   maze.reset();
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
   for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
-  if(pidgieNpc)disposeActor(pidgieNpc);pidgieNpc=undefined;pidgieReady=false;pidgieFearSeen=0;
+  if(pidgieNpc)disposeActor(pidgieNpc);pidgieNpc=undefined;pidgieReady=false;pidgieFearSeen=0;pidgieJoySeen=false;
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
@@ -1043,6 +1045,9 @@ renderer.setAnimationLoop((time: number) => {
         const bird=pidgieNpc.actor.position;
         void sounds.playPigeonEmoteAt('Fear',bird.x-position.x,bird.z-position.z,followCamera.azimuth);
       }
+      const joyful=pidgieNpc.state==='Joy';
+      if(joyful&&!pidgieJoySeen){const bird=pidgieNpc.actor.position;void sounds.playPigeonEmoteAt('Joy',bird.x-position.x,bird.z-position.z,followCamera.azimuth);}
+      pidgieJoySeen=joyful;
     }
     centipedeTick();
     if(!network){soloFlowerGame=advanceFlowerGame(soloFlowerGame,Date.now(),[flowerActor(character)]);if(soloFlowerGame?.winners.includes('solo'))awardFirst(character,'flowers');}
@@ -1294,10 +1299,10 @@ function syncNetworkWorld(dt:number){
   if(w.mountainSteps&&(!network.host||worldRevision<0))mountainLedges.networkApply(w.mountainSteps);
   if(w.pidgie&&pidgieNpc){
    const checkpoint=pidgieHandoff&&pidgieHandoff.seed===w.pidgie.seed&&pidgieHandoff.fearCount===w.pidgie.fearCount&&pidgieHandoff.friend?.at===w.pidgie.friend?.at?pidgieHandoff:w.pidgie;
-   pidgieNpc.applyNetworkState(checkpoint,network.host||worldRevision<0);pidgieReady=true;if(worldRevision<0)pidgieFearSeen=checkpoint.fearCount;
+   pidgieNpc.applyNetworkState(checkpoint,network.host||worldRevision<0);pidgieReady=true;if(worldRevision<0){pidgieFearSeen=checkpoint.fearCount;pidgieJoySeen=checkpoint.clip==='Joy';}
   }
   worldRevision=network.revision;}
- if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;}
+ if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;pidgieJoySeen=pidgieNpc.state==='Joy';}
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
  r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id){character!.eatFruit();showFruitPickup(fruits.fruits[i].type);}else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.eatFruit();});

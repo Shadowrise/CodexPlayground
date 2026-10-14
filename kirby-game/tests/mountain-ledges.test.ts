@@ -5,7 +5,7 @@ import { Vector3, MeshStandardMaterial, Raycaster } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CharacterController, type Input } from '../src/controller';
 import { MountainLedges } from '../src/mountain-ledges';
-import { MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT, MOUNTAIN_LEDGE_YAW as YAW, mountainWorld } from '../src/mountain-ledges-layout';
+import { MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT, MOUNTAIN_LEDGE_YAW as YAW, mountainWorld, mountainFace } from '../src/mountain-ledges-layout';
 import { createCoasterCurve } from '../src/coaster';
 import { insideMeadow } from '../src/world-bounds';
 import { createMountainTexture } from '../src/mountain-texture';
@@ -100,6 +100,26 @@ test('rounded steps support their visible arc and lose support as it retracts in
   place(p.tangent,front+.08);assert(!supported(),'the departed front edge no longer supports feet');
   place(p.tangent,front+world.steps[0].slide+.25);assert(supported(),'the remaining exposed arc still supports feet');
   place(p.tangent,back+.15);assert(!supported(),'the part buried inside the slope is not a landing surface');
+});
+
+test('the visible rock next to the uneven mountain supports feet while standing and turning before retraction',async()=>{
+  const c=await player(),world=new MountainLedges(),ray=new Raycaster();let checked=0;
+  world.group.updateMatrixWorld(true);
+  for(const [i,p] of STEPS.entries())for(const size of [.3,1,2])for(const fraction of [-.75,-.5,-.25,0,.25,.5,.75]){
+    const tangent=p.tangent+fraction*p.width/2,radial=mountainFace(p.y,tangent)-.35*size,xy=mountainWorld(tangent,radial);
+    const start=new Vector3(xy.x,p.y,xy.z);
+    ray.set(start.clone().add(new Vector3(0,1,0)),new Vector3(0,-1,0));
+    if(!ray.intersectObject(world.steps[i].mesh).some(hit=>Math.abs(hit.point.y-p.y)<.001))continue;
+    for(const turn of [0,Math.PI/2,Math.PI,-Math.PI/2]){
+      c.setActivity('Idle');c.actor.scale.setScalar(size);c.actor.position.copy(start);c.surfaceY=p.y;c.yaw=YAW+turn;c.actor.rotation.y=c.yaw;
+      world.resetPlayer();world.restorePosition(c);world.networkApply(STEPS.map(()=>[0,0,0]));
+      for(let frame=0;frame<12;frame++)tick(world,c,1/60);
+      assert.equal(world.steps[i].phase,'ready');
+      assert.equal(c.actor.position.y,p.y,`step ${i+1}, size ${size}, wall offset ${fraction}, turn ${turn}`);
+      assert.equal(c.surfaceY,p.y);checked++;
+    }
+  }
+  assert(checked>300,'cover the visible wall contact across the whole course and character sizes');
 });
 
 test('steps attach to the unchanged slope and the enlarged semicircular summit connects to the left rock', async () => {
