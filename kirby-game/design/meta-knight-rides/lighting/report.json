@@ -1,0 +1,44 @@
+{
+  "samples": {
+    "day-before": {
+      "mask": {
+        "mean": 120.96508541592868,
+        "pixels": 61005
+      },
+      "blade": {
+        "mean": 21.9145233885262,
+        "pixels": 25970
+      },
+      "sceneEnvironment": true,
+      "calls": 63,
+      "triangles": 71014
+    },
+    "day-after": {
+      "mask": {
+        "mean": 203.1555731498778,
+        "pixels": 61005
+      },
+      "blade": {
+        "mean": 163.88547453215708,
+        "pixels": 25970
+      },
+      "sceneEnvironment": true,
+      "calls": 63,
+      "triangles": 71014
+    },
+    "night-after": {
+      "mask": {
+        "mean": 87.20715595443181,
+        "pixels": 61005
+      },
+      "blade": {
+        "mean": 37.59971624952004,
+        "pixels": 25970
+      },
+      "sceneEnvironment": true,
+      "calls": 63,
+      "triangles": 71014
+    }
+  },
+  "errors": []
+}

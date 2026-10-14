@@ -71,6 +71,7 @@ import { Treehouse, TREEHOUSE_SITE } from './treehouse';
 import { Benches, BENCH_SEATS } from './benches';
 import { Balloons } from './balloons';
 import {RiverBoats} from './river-boats';
+import {createMetaKnightReflections,type MetaKnightReflections} from './meta-knight-reflections';
 import { HedgeMaze } from './maze';
 import { MAZE_SITE } from './maze-layout';
 import { MazeTrampoline } from './maze-trampoline';
@@ -704,12 +705,15 @@ let pidgieNpc:PidgieNpc|undefined;
 let pidgieReady=false;
 let pidgieFearSeen=0;
 let pidgieJoySeen=false;
+let metaKnightReflections:MetaKnightReflections|undefined;
 
 async function loadCharacter() {
   try {
     const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
     for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
     const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel]=models;
+    metaKnightReflections=createMetaKnightReflections(renderer,metaKnightModel.scene);
+    metaKnightReflections.update(daylight(currentDayPhase()));
     coaster.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     boats.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     bread.setModel(breadModel.scene);
@@ -1110,6 +1114,7 @@ renderer.setAnimationLoop((time: number) => {
   (scene.background as THREE.Color).copy(daySky).lerp(nightSky,night).lerp(sunsetSky,twilight*.65);
   (scene.fog as THREE.Fog).color.copy(dayFog).lerp(nightFog,night).lerp(sunsetFog,twilight*.7);
   celestialLighting.update(lightTime);
+  metaKnightReflections?.update(lightTime);
   updateTreeShadows(lightTime);
   shadows.update();
   renderer.toneMappingExposure=1+day*.2;
