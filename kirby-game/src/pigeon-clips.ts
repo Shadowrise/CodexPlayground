@@ -13,6 +13,7 @@ export const PIGEON_CLIPS = [
   {name:'Push',label:'Толчок',group:'actions',duration:.65,loop:false},
   {name:'Attack',label:'Толкаться',group:'actions',duration:.65,loop:false},
   {name:'Eat',label:'Клевать',group:'actions',duration:1.5,loop:false},
+  {name:'Peck',label:'Клевать с земли',group:'actions',duration:3.2,loop:false},
   {name:'Death',label:'Сбит с ног',group:'actions',duration:1.1,loop:false},
   {name:'Roll',label:'Перекат',group:'actions',duration:1.2,loop:true},
   {name:'Sitting',label:'На лавочке',group:'rides',duration:3.6,loop:true},

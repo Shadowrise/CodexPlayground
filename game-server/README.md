@@ -47,7 +47,7 @@ No additional periodic requests or per-frame database writes are introduced.
 
 ## Shared rules and synchronization
 
-The same controllers, NPC AI, fruit pickup/growth, combat, score rules, flight,
+The same controllers, NPC AI, fruit pickup/speed boosts, combat, score rules, flight,
 and attractions run offline and online. One visible client is elected to simulate
 NPCs and the shared world; the server transfers that role on disconnect or when
 the host hides its tab and another visible player exists. Remaining clients
@@ -161,9 +161,9 @@ local room and never mutates a production room.
 
 ## Publish
 
-`npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2 was deployed on 2026-09-24 and verified through the public health
-endpoint and a secure WebSocket connection. Worker version:
-`fe9ecc10-eb53-4174-ac65-7af42440b902`. Credentials and `.wrangler/` are not tracked.
+`npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2 was deployed on 2026-10-14 and verified through the public health
+endpoint. Worker version:
+`02718c1a-a143-4fe2-aea3-8398d1e797ad`. Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event
 

@@ -4,6 +4,7 @@ import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRe
 import { cloneVariant, KIRBY_VARIANTS, remainingVariants, type KirbyVariant } from './variants';
 import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 import { constrainToMeadow, insideMeadow, worldLimit, MEADOW_HALF_SIZE } from './world-bounds';
+import { FruitSpeedBoost } from './fruit-speed';
 export { NPC_COLORS } from './variants';
 
 const repertoire = ['Idle', 'Walk', 'Run', 'RotateLeft', 'RotateRight', 'Jump', 'Eat', 'Push'];
@@ -70,11 +71,11 @@ export class KirbyNpc {
   }
   fruitsEaten = 0;
   readonly achievements=new Set<ScoreAction>();
-  private growth?: { from: number; to: number; elapsed: number };
-  get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
-  grow() {
+  readonly fruitBoost = new FruitSpeedBoost();
+  get savedSize() { return this.actor.scale.x; }
+  eatFruit() {
     this.fruitsEaten++;
-    this.growth={from:this.actor.scale.x,to:(this.growth?.to ?? this.actor.scale.x)+.1,elapsed:0};
+    this.fruitBoost.eat();
   }
   get canEat() { return !this.isDown && !this.greeting && this.appetite <= 0 && ['Walk', 'Run', 'Idle', 'WalkBackward'].includes(this.state); }
   requestEat() {
@@ -206,12 +207,6 @@ export class KirbyNpc {
 
   update(dt: number, neighbors: readonly Vector3[], constrain?:NpcConstraint) {
     this.roll.clearPose();
-    if(this.growth) {
-      const g=this.growth;g.elapsed+=dt;
-      const t=Math.min(1,g.elapsed/.45);
-      this.actor.scale.setScalar(g.from+(g.to-g.from)*t*t*(3-2*t));
-      if(t===1)this.growth=undefined;
-    }
     this.hello=false;
     if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,0))this.roll.applyPose(this.animationRoot,this.yaw);else this.start('Walk');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
     if(this.fireflyIndex!==undefined){this.elapsed+=dt;this.mixer.update(dt);if(!this.approachingFirefly)this.poseFirefly();return;}
@@ -225,8 +220,8 @@ export class KirbyNpc {
       if(before<.5 && this.flightTime>=.5)this.flight.press();
       if(before<1.3 && this.flightTime>=1.3)this.flight.press();
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x;
-      this.actor.position.x+=Math.sin(this.yaw)*1.5*this.actor.scale.x*dt;
-      this.actor.position.z+=Math.cos(this.yaw)*1.5*this.actor.scale.x*dt;
+      this.actor.position.x+=Math.sin(this.yaw)*1.5*this.actor.scale.x*this.fruitBoost.multiplier*dt;
+      this.actor.position.z+=Math.cos(this.yaw)*1.5*this.actor.scale.x*this.fruitBoost.multiplier*dt;
       constrainToMeadow(this.actor.position,this.actor.scale.x);
       updateFlightCloud(this.cloud,this.flight);this.mixer.update(dt);
       if(!this.flight.active){this.cloud.visible=false;this.start('Walk');}
@@ -240,7 +235,7 @@ export class KirbyNpc {
       this.yaw+=Math.atan2(Math.sin(this.swimYaw-this.yaw),Math.cos(this.swimYaw-this.yaw))*(1-Math.exp(-5*dt));this.actor.rotation.y=this.yaw;
       if(!target||Math.hypot(target.x-p.x,target.z-p.z)>.8){
         if(!this.pathClear(this.yaw,Math.min(5,.7+this.actor.scale.x),neighbors,constrain)){this.swimYaw=this.yaw+this.clearTurn(neighbors,constrain);this.swimAvoid=.8;}
-        else if(this.pathClear(this.yaw,.95*this.actor.scale.x*dt,neighbors,constrain))p.copy(this.next);
+        else if(this.pathClear(this.yaw,.95*this.actor.scale.x*this.fruitBoost.multiplier*dt,neighbors,constrain))p.copy(this.next);
       }
       this.mixer.update(dt);return;
     }
@@ -273,7 +268,7 @@ export class KirbyNpc {
       this.yaw = this.turnStart + (this.state === 'RotateLeft' ? 1 : -1) * this.turnAngle * u * u * (3 - 2 * u);
       this.actor.rotation.y = this.yaw;
     }
-    const speed = (this.state === 'Walk' ? 1.725 : this.state === 'Run' ? 5.2 : 0) * this.actor.scale.x;
+    const speed = (this.state === 'Walk' ? 1.725 : this.state === 'Run' ? 5.2 : 0) * this.actor.scale.x * this.fruitBoost.multiplier;
     if (speed) {
       if(!this.pathClear(this.yaw,Math.max(speed*dt,Math.min(6,.6+this.actor.scale.x)),neighbors,constrain))this.avoid(neighbors,constrain);
       else if(this.pathClear(this.yaw,speed*dt,neighbors,constrain))this.actor.position.copy(this.next);

@@ -12,6 +12,7 @@ import { makePear } from './pear';
 import { makeCherry } from './cherry';
 import { makeGrapes } from './grapes';
 import { fruitLayout,type FruitObstacle } from './fruit-layout';
+import {startupTask} from './startup-tasks';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
 export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean };
@@ -76,8 +77,12 @@ export class FruitWorld {
   private readonly mists:{object:Mesh;center:Vector3;scale:Vector3}[]=[];
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
-  constructor(obstacles:readonly FruitObstacle[]=[]) {
-    const templates = FRUIT_TYPES.map((_, i) => makeFruit(i));
+  static async create(obstacles:readonly FruitObstacle[]=[]){
+    const templates:Group[]=[];
+    for(let i=0;i<FRUIT_TYPES.length;i++){templates.push(makeFruit(i));await startupTask();}
+    return new FruitWorld(obstacles,templates);
+  }
+  constructor(obstacles:readonly FruitObstacle[]=[],templates=FRUIT_TYPES.map((_, i) => makeFruit(i))) {
     const bounds=templates.map(template=>new Box3().setFromObject(template));
     const positions=fruitLayout(obstacles);
     for (let i = 0; i < 70; i++) {
@@ -192,7 +197,7 @@ export class FruitWorld {
       if(this.claim){this.claim(this.fruits.indexOf(nearest),eater);this.pickupAfter.set(eater.actor,this.time+.45);continue;}
       nearest.eaten = true;
       nearest.object.visible = false;
-      eater.grow();
+      eater.eatFruit();
       this.pickupAfter.set(eater.actor, this.time + (isPlayer ? .45 : 3));
       if (isPlayer) playerFruit = nearest;
       else this.npcEaten++;

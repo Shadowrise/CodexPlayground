@@ -27,7 +27,7 @@ try{
  a.send({type:'frame',actor,world,events:[]});await b.wait(m=>m.type==='frame'&&m.world?.bugs[0][1]===78&&m.world.bugs[0][2]===12);
  const c=await join();assert.equal(c.hello.room.bugLandings['0'][1],78);clients.push(c);assert.equal(c.hello.room.log.length,10);assert(c.hello.room.log.at(-1).text.includes('приветствует'));assert.equal(c.hello.room.fruits[0],a.hello.playerId);assert.equal(c.hello.room.world.npcs.length,14);
  const room=a.hello.room.id;a.socket.close();await b.wait(m=>m.type==='room'&&m.room.host!==a.hello.playerId&&!m.room.locks['cart:0']);
- const rejoined=await join('test');clients.push(rejoined);assert.equal(rejoined.hello.playerId,a.hello.playerId);assert.equal(rejoined.hello.room.id,room);assert.equal(rejoined.hello.resume.fruits,1);assert.equal(rejoined.hello.resume.variant,0);assert.equal(rejoined.hello.resume.s,1.1);assert.equal(rejoined.hello.resume.state,'Idle');rejoined.socket.close();
+ const rejoined=await join('test');clients.push(rejoined);assert.equal(rejoined.hello.playerId,a.hello.playerId);assert.equal(rejoined.hello.room.id,room);assert.equal(rejoined.hello.resume.fruits,1);assert.equal(rejoined.hello.resume.variant,0);assert.equal(rejoined.hello.resume.s,1);assert.equal(rejoined.hello.resume.state,'Idle');rejoined.socket.close();
  b.socket.close();c.socket.close();await pause(200);
  assert.equal((await (await fetch(base+'/players')).json()).players,0);
  const d=await join();clients.push(d);assert.notEqual(d.hello.room.id,room);assert(d.hello.room.fruits.every(x=>x===null));d.socket.close();

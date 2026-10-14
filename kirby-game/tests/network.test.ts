@@ -9,6 +9,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createNpcs} from '../src/npcs';
 import {KIRBY_VARIANTS} from '../src/variants';
 import {Coaster} from '../src/coaster';
+import {MountainLedges} from '../src/mountain-ledges';
 import {Balloons} from '../src/balloons';
 import {NightFireflies} from '../src/night-fireflies';
 import {actorState} from '../src/network-actors';
@@ -31,6 +32,11 @@ test('actual world fits the shared wire contract and attachment budget',async()=
  assert(validWorld(w));assert(new TextEncoder().encode(JSON.stringify(w)).length<11000);
  const withPidgie={...w,pidgie:pidgieFixture()};
  assert(validWorld(withPidgie));assert(new TextEncoder().encode(JSON.stringify(withPidgie)).length<12500);
+ const withLedges={...withPidgie,mountainSteps:new MountainLedges().networkState()};
+ assert(validWorld(withLedges));assert(new TextEncoder().encode(JSON.stringify(withLedges)).length<12500);
+ for(const bad of [[4,0,0],[1,4,0],[0,0,-1],[0,0,Number.NaN]]){
+  const mountainSteps=withLedges.mountainSteps.map(r=>r.slice());mountainSteps[0]=bad;assert(!validWorld({...withLedges,mountainSteps}));
+ }
  assert.equal(withPidgie.npcs.length,14);
  const pidgie=new PidgieNpc(pigeon,{safeGround:()=>true,seed:0x7bdea138});
  const approaching=pidgie.actor.position.clone();approaching.x+=9;

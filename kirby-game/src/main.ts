@@ -15,6 +15,8 @@ import {ArenaCentipede} from './arena-centipede';
 import {BOSS_ARENA,constrainArena,constrainNpcOutsideArena} from './boss-arena-site';
 import {prepareSurfaceTextures} from './texture-filtering';
 import {MillQuestHud} from './mill-quest-hud';
+import {BreadWorld} from './bread';
+import {applyBread,advanceBread,canPickBread,canFeedPidgie,newBread,type BreadActor,type BreadAction} from './bread-state';
 import {PrankEffects} from './prank-effects';
 import {MusicalFlowers} from './musical-flowers';
 import {MusicalFlowerGameView} from './musical-flower-game-view';
@@ -22,16 +24,17 @@ import {startFlowerGame,replayFlowerGame,advanceFlowerGame,playFlowerGame,nearFl
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE} from './musical-flower-site';
 import {cyclePhase,daylight} from './day-cycle';
 import {SkyTrail} from './sky-trail';
+import {MountainLedges} from './mountain-ledges';
 import {StarfallView} from './starfall-view';
 import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
-import {PidgieNpc} from './pidgie-npc';
+import {PidgieNpc,type PidgiePlayer} from './pidgie-npc';
 import type {PidgieState} from './pidgie-state';
 import {MeadowIndex} from './meadow-index';
 import {sceneryClearance} from './landmarks';
 import {flatGround} from './pond-layout';
 import {MeadowChat} from './chat';
-import {emoteMessage,type LogEntry} from './world-log';
+import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
@@ -78,7 +81,11 @@ import { createSky } from './sky';
 import { BackgroundMusic } from './music';
 import { SoundEffects } from './sfx';
 import { MEADOW_HALF_SIZE, MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
-import { addEnvironment } from './environment';
+import {createBossArena} from './boss-arena';
+import {preloadGameAssets} from './game-assets';
+import {restoreEnvironment,unpackEnvironment} from './prepared-environment';
+import {startupTask,startupFrame} from './startup-tasks';
+import {prepareStartupGraphics} from './startup-graphics';
 import { createNpcs, type KirbyNpc } from './npcs';
 import { KIRBY_VARIANTS, styleVariant, type KirbyVariant } from './variants';
 import {createPlayerModel} from './player-model';
@@ -98,6 +105,7 @@ document.body.classList.toggle('touch-ui',mobile);
 
 const mount = document.querySelector<HTMLDivElement>('#game')!;
 const sizeValue = document.querySelector<HTMLElement>('#player-size')!;
+const fruitSpeedValue = document.querySelector<HTMLElement>('#fruit-speed')!;
 const fruitValue = document.querySelector<HTMLElement>('#player-fruits')!;
 const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
 const playerPlace=document.querySelector<HTMLElement>('#player-place')!;
@@ -149,10 +157,18 @@ const unlockAnnouncements:('Бандана'|'Пиджи')[]=[];
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
+function logPidgieReaction(person:THREE.Vector3,type:'pidgie-scare'|'pidgie-interest'){
+ if(!network){localLog.push((type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(nameInput.value));if(localLog.length>10)localLog.shift();return;}
+ if(!network.host)return;
+ const playerId=person===character?.actor.position?network.id:Array.from(remotePlayers?.players??[]).find(([,player])=>player.actor.position===person)?.[0];
+ if(playerId)network.event({type,playerId});
+}
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
 let loadedPigeon: GLTF | undefined;
+let startupComplete=false;
+let firstSceneFrame=true;
 let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
 const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');loadButton.disabled=true;
@@ -208,9 +224,9 @@ const backButton=document.querySelector<HTMLButtonElement>('#character-back')!;
 backButton.addEventListener('click',showStartupMenu);
 function showStartupMenu(){
  selectionGeneration++;joiningSession?.close();joiningSession=undefined;
- music.stop();sounds.reset();clearTutorialInput();
+ music.stop();sounds.reset();if(startupComplete)clearTutorialInput();
  networkIntent=false;pendingSave=undefined;resetVariantAvailability();
- startButton.disabled=!loadedModel;startButton.textContent=t(loadedModel?'На поляну →':'Загрузка…');
+ startButton.disabled=!startupComplete;startButton.textContent=t(startupComplete?'На поляну →':'Загрузка…');
  selectionMessage.hidden=true;selectionMessage.textContent='';startupMessage.hidden=true;
  startupCard.hidden=false;selectionCard.hidden=true;
  document.querySelector<HTMLElement>('#character-select')!.hidden=false;
@@ -223,6 +239,7 @@ const saveButton=document.createElement('button');saveButton.type='button';saveB
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
 try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
+loadButton.disabled=!hasSave;
 selectionCard.hidden=true;
 loadButton.title=t(hasSave?'Загрузить сохранение':'Сохранений пока нет');
 loadButton.addEventListener('click',()=>{
@@ -230,6 +247,7 @@ loadButton.addEventListener('click',()=>{
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
+    if(pendingSave.player.achievements?.includes('pidgieFriend')&&characterUnlocks.unlockPidgie())unlockAnnouncements.push('Пиджи');
     if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncements.push('Бандана');
     const savedCharacter=selected[0];
     const lockedSave=characterUnlocks.isLocked(selected[0]);
@@ -250,7 +268,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase())));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState())));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -307,6 +325,44 @@ async function refreshVariantAvailability(){
  }catch{}finally{checkingVariants=false;}
 }
 setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
+let menuRepeat=0;
+function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:number,vertical:number,repeat:boolean){
+ if(!startupCard.hidden){
+  if(pad.pressed.has(2))loadButton.click();
+  else if(pad.pressed.has(0))newGameButton.click();
+ }else if(!selectionCard.hidden){
+  if(repeat){
+   const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length,delta=horizontal+vertical*columns;
+   let i=KIRBY_VARIANTS.indexOf(selected);
+   for(let step=0;delta&&step<KIRBY_VARIANTS.length;step++){
+    i=(i+delta+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;
+    const button=variantGrid.children[i] as HTMLButtonElement;
+    if(!button.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0])){button.click();break;}
+   }
+  }
+  if(pad.pressed.has(1))backButton.click();
+  else if(pad.pressed.has(0))startButton.click();
+ }
+}
+// Menu input remains available while world and graphics preparation yield.
+let earlyMenuFrame=0,earlyMenuTime=performance.now();
+function pollEarlyMenu(time:number){
+ if(startupComplete)return;
+ const dt=Math.min((time-earlyMenuTime)/1000,.05);earlyMenuTime=time;
+ const pad=gamepad.poll(),usingPad=!document.body.classList.contains('loading')&&gamepad.input.active!=='keyboard';
+ if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'');}
+ menuRepeat=Math.max(0,menuRepeat-dt);
+ const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
+ const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
+ const repeat=(horizontal!==0||vertical!==0)&&menuRepeat===0;
+ if(repeat)menuRepeat=.22;if(!horizontal&&!vertical)menuRepeat=0;
+ if(usingPad)navigateCharacterMenu(pad,horizontal,vertical,repeat);
+ earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
+}
+document.addEventListener('kirby-startup-failed',()=>cancelAnimationFrame(earlyMenuFrame),{once:true});
+earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
+localizeDOM();document.dispatchEvent(new Event('kirby-menu-ready'));
+await startupFrame();await startupTask();
 const scene = new THREE.Scene();
 const prankEffects=new PrankEffects((kind,gain)=>sounds.playPrank(kind,gain));scene.add(prankEffects.group);
 const interactionOutline=new InteractionOutline();scene.add(interactionOutline.group);
@@ -328,6 +384,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 mount.appendChild(renderer.domElement);
+renderer.domElement.style.visibility='hidden';
 
 const daySky=new THREE.Color('#b3d9ef'),nightSky=new THREE.Color('#0b1428'),sunsetSky=new THREE.Color('#dd8b9b'),dayFog=new THREE.Color('#d8e9eb'),nightFog=new THREE.Color('#182b4b'),sunsetFog=new THREE.Color('#ffc392');
 // Concentrate the existing texels around the player: fewer distant casters and
@@ -373,7 +430,10 @@ ground.rotation.x = -Math.PI / 2;
 ground.position.y = -.02;
 ground.receiveShadow = true;
 scene.add(ground);
-const environmentRoots=addEnvironment(scene);
+const environmentRoots=await restoreEnvironment(await unpackEnvironment(await preloadGameAssets(import.meta.env.BASE_URL).environment));
+scene.add(...environmentRoots);await startupTask();
+performance.mark('kirby-environment-ready');
+const arenaEnvironment=createBossArena();environmentRoots.push(arenaEnvironment);scene.add(arenaEnvironment);await startupTask();
 const meadowWind=environmentRoots.find(root=>root.name==='Biome meadow details')!.userData.windTime as {value:number};
 const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
 const npcSwimming=new NpcSwimming();
@@ -382,18 +442,25 @@ const musicalFlowers=new MusicalFlowers();scene.add(musicalFlowers.group);
 let soloFlowerGame:FlowerGame|undefined;
 const flowerGameView=new MusicalFlowerGameView(index=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
 const coaster=new Coaster();scene.add(coaster.group);
+await startupTask();
+const mountainLedges=new MountainLedges((scene.getObjectByName('Continuous square mountain range') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>).material);scene.add(mountainLedges.group);
+const bread=new BreadWorld();scene.add(bread.group);let lastBreadRequest=0;
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
 const millHud=new MillQuestHud();
 const watermill=new Watermill();scene.add(watermill.group);
+await startupTask();
 const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
+await startupTask();
 const benches=new Benches();
 const skyTrail=new SkyTrail(kind=>{if(kind==='star')sounds.playStarPickup();else if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(skyTrail.group);
 const home=new KirbyHome();scene.add(home.group);
+await startupTask();
 const dogSoundPosition=new THREE.Vector3();
 let fireflies:NightFireflies|undefined;
 const maze=new HedgeMaze();scene.add(maze.group);
+await startupTask();
 const trampoline=new MazeTrampoline(kind=>{if(kind==='bounce'){sounds.playBalloon('departure',.8);sounds.playTreehouse('cheer');}else sounds.playTreehouse('leaves');});scene.add(trampoline.group);
 let balloonSeed=6173;
 const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(0,1-position.distanceTo(character.actor.position)/35);if(gain>0)sounds.playBalloon(kind,gain);}},()=>{balloonSeed=(Math.imul(balloonSeed,1664525)+1013904223)>>>0;return balloonSeed/4294967296;});scene.add(balloons.group);
@@ -442,7 +509,7 @@ chat.configureCommands({
   // A teleport is not a swept move from the old position through all maze walls.
   const landing=character.actor.position.clone();maze.constrain(character.actor.position,character.actor.scale.x,landing);
   ponds.apply(character,landing,false);ponds.apply(character,character.actor.position.clone());
-  skyTrail.restorePosition(character);wayfinder.selectDestination('');
+  skyTrail.restorePosition(character);mountainLedges.restorePosition(character);wayfinder.selectDestination('');
   viewScale=character.actor.scale.x;cameraTarget.copy(character.actor.position).y+=.9*viewScale;
  }
 });
@@ -474,7 +541,7 @@ function pidgieFlightHeight(from:THREE.Vector3,to:THREE.Vector3){
  }
  return Math.min(128,height);
 }
-const fruits = new FruitWorld(fruitObstacles);
+const fruits = await FruitWorld.create(fruitObstacles);
 fruits.group.name='Фрукты на поляне';
 // Clear only the small footprints beneath fruit, keeping surrounding grass intact.
 const grassMatrix=new THREE.Matrix4();
@@ -632,15 +699,17 @@ let pidgieFearSeen=0;
 
 async function loadCharacter() {
   try {
-    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel] = await Promise.all([new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/kirby-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/firefly-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/shiba.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/centipede-animated.glb`),new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}models/pigeon-animated.glb?v=8`)]);
+    const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
+    for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel]=models;
+    bread.setModel(breadModel.scene);
     arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
+    await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);
+    await startupTask();
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
-    startButton.disabled = false;
-    loadButton.disabled = !hasSave;
-    startButton.textContent = t('На поляну →');
   } catch (error) {
     console.error(error);
     selectionMessage.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');selectionMessage.hidden=false;
@@ -649,11 +718,13 @@ async function loadCharacter() {
   }
 }
 export const ready=loadCharacter().then(async()=>{
-  await renderer.compileAsync(scene,camera);
-  renderer.render(scene,camera);
+  performance.mark('kirby-models-ready');
+  await prepareStartupGraphics(renderer,scene,camera);
+  performance.mark('kirby-graphics-ready');
+  startupComplete=true;renderer.domElement.style.visibility='';startButton.disabled=false;loadButton.disabled=!hasSave;startButton.textContent=t('На поляну →');
 });
 startButton.addEventListener('click', async () => {
-  if (!loadedModel || playing || joiningSession || selectionCard.hidden || characterUnlocks.isLocked(selected[0]) || !requirePlayerName()) return;
+  if (!startupComplete || !loadedModel || playing || joiningSession || selectionCard.hidden || characterUnlocks.isLocked(selected[0]) || !requirePlayerName()) return;
   lockedCharacterTooltip.hide();
   const generation=selectionGeneration;
   selectionMessage.hidden=true;selectionMessage.textContent='';
@@ -680,14 +751,18 @@ startButton.addEventListener('click', async () => {
   const spawn=randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
+  const savedPidgie=pendingSave?.pidgie;
+  bread.reset(pendingSave?.bread);lastBreadRequest=0;
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
-  if(network?.resume){restoreNetworkPlayer(character,network.resume);skyTrail.restorePosition(character);}
+  mountainLedges.resetPlayer();
+  if(network?.resume){restoreNetworkPlayer(character,network.resume);skyTrail.restorePosition(character);mountainLedges.restorePosition(character);}
   watermill.constrain(character.actor.position,character.actor.scale.x);
   treehouse.constrain(character.actor.position,character.actor.scale.x);
   maze.constrain(character.actor.position,character.actor.scale.x);
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
-  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,flightHeight:pidgieFlightHeight,people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
+  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare'),onInterest:person=>logPidgieReaction(person,'pidgie-interest'),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
+  if(savedPidgie)pidgieNpc.applyNetworkState(savedPidgie,true);
   pidgieReady=!network||network.host||!!network.world?.pidgie;
   if(network?.world?.pidgie)pidgieNpc.applyNetworkState(network.world.pidgie,true);
   pidgieFearSeen=pidgieNpc.fearCount;
@@ -733,6 +808,7 @@ startButton.addEventListener('click', async () => {
 
 function checkCharacterUnlock(){
  if(!character||!playing)return;
+ if(character.achievements.has('pidgieFriend')&&characterUnlocks.unlockPidgie()){unlockAnnouncements.push('Пиджи');updateVariantLocks();}
  if(characterUnlocks.complete(character.achievements)){unlockAnnouncements.push('Бандана');updateVariantLocks();}
  if(unlockAnnouncements.length&&!tutorial.active&&unlockView.element.hidden){const name=unlockAnnouncements.shift()!;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]===name)!);}
 }
@@ -754,7 +830,7 @@ function returnToMenu(){
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
-  fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());balloonSeed=6173;
+  fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());bread.reset();lastBreadRequest=0;balloonSeed=6173;
   soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
   interactionOutline.update(undefined);rideHint.textContent='';touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
@@ -787,7 +863,6 @@ const fpsLabel=document.createElement('span');fpsLabel.id='fps-counter';fpsLabel
 let previousTime = performance.now();
 let lastDialUpdate=-Infinity;
 let greetingCooldown=0;
-let menuRepeat=0;
 function navigateSettings(direction:number, adjust:number, confirm:boolean) {
   const elements=Array.from(document.querySelectorAll<HTMLElement>('#audio-panel button, #audio-panel input, #audio-panel select, #destination-select, #tasks-toggle')).filter(element=>element.getClientRects().length>0);
   if(!elements.length)return;
@@ -810,6 +885,7 @@ let controlMode='';
 let sceneProfiler:import('./scene-profiler').SceneProfiler|undefined;
 if(new URLSearchParams(location.search).get('perf')==='1')void import('./scene-profiler').then(({SceneProfiler})=>{sceneProfiler=new SceneProfiler(renderer,scene,camera,()=>playing&&!network,shadows);});
 renderer.setAnimationLoop((time: number) => {
+  if(!startupComplete){previousTime=time;return;}
   if(sceneProfiler?.busy){previousTime=time;fpsCounter.sample(time,false);return;}
   meadowWind.value=time*.001;
   const profileStart=sceneProfiler?performance.now():0;
@@ -843,22 +919,8 @@ renderer.setAnimationLoop((time: number) => {
     const repeat=(horizontal!==0 || vertical!==0) && menuRepeat===0;
     if(repeat)menuRepeat=.22;
     if(!horizontal && !vertical)menuRepeat=0;
-    if(!playing && !startupCard.hidden) {
-      if(pad.pressed.has(2))loadButton.click();
-      else if(pad.pressed.has(0))newGameButton.click();
-    } else if(!playing && !selectionCard.hidden) {
-      if(repeat){
-        const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length,delta=horizontal+vertical*columns;
-        let i=KIRBY_VARIANTS.indexOf(selected);
-        for(let step=0;delta&&step<KIRBY_VARIANTS.length;step++){
-          i=(i+delta+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;
-          const button=variantGrid.children[i] as HTMLButtonElement;
-          if(!button.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0])){button.click();break;}
-        }
-      }
-      if(pad.pressed.has(1))backButton.click();
-      else if(pad.pressed.has(0))startButton.click();
-    } else {
+    if(!playing)navigateCharacterMenu(pad,horizontal,vertical,repeat);
+    else {
       if(pad.pressed.has(1))settingsToggle.click();
       else if(repeat || pad.pressed.has(0))navigateSettings(repeat?vertical:0,repeat?horizontal:0,pad.pressed.has(0));
     }
@@ -880,6 +942,9 @@ renderer.setAnimationLoop((time: number) => {
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   if (character && !roundFinished()) {
     syncNetworkWorld(dt);
+    const carryingBread=bread.holds(network?.id??'solo');
+    // One clock for every activity, including rides, sleep and swimming.
+    character.fruitBoost.update(dt);
     const achievementsBefore=character.achievements.size,pointsBefore=achievementPoints(character.achievements);
     const flowersBefore=character.achievements.has('flowers');
     watermill.tickQuest(network?.serverNow??Date.now(),millActor(character),sendMill,!!network);
@@ -888,6 +953,8 @@ renderer.setAnimationLoop((time: number) => {
     const previousZ = character.actor.position.z;
     const previousYaw = character.yaw;
     const previousPosition=playerPrevious.copy(character.actor.position);
+    character.positionConstraint=mountainLedges.constrainTravel;
+    mountainLedges.update(dt,[character,...(remotePlayers?.players.values()??[])],!network||network.host);
     const skyWasActive=skyTrail.active;
     boats.update(dt,boatTime(),camera.position);
     if(pendingBoard)void interactOnline();
@@ -897,13 +964,13 @@ renderer.setAnimationLoop((time: number) => {
     const balloonWasActive=balloons.riding;
     const homeWasActive=home.active,bedOwner=network?.room.locks['home:0'];
     home.update(dt,bedOwner&&bedOwner!==network?.id?remotePlayers?.players.get(bedOwner):undefined);
-    if(!character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
+    if(!carryingBread && !character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: held('KeyQ') || pendingAttack, forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);}
@@ -912,15 +979,21 @@ renderer.setAnimationLoop((time: number) => {
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
     }
     const onSkyTrail=skyTrail.handles(character)&&!fireflies?.riding&&!homeWasActive&&!coaster.riding && !boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive;
+    const freeMountainMovement=!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive&&!skyWasActive&&!skyTrail.active;
+    const onMountainLedges=freeMountainMovement&&mountainLedges.handles(character);
     const skySurface=character.surfaceY;
-    ponds.apply(character,groundPrevious.set(previousX,0,previousZ),!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
-    fountain.bathe(dt,character);
-    if(onSkyTrail)character.surfaceY=skySurface;
+    ponds.apply(character,groundPrevious.set(previousX,0,previousZ),!onMountainLedges&&!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
+    if(!carryingBread)fountain.bathe(dt,character);
+    if(onSkyTrail||onMountainLedges)character.surfaceY=skySurface;
     if(onSkyTrail&&!skyWasActive&&!skyTrail.active)skyTrail.apply(character,previousPosition,dt);
-    arenaCentipede?.collision.apply(character,previousPosition,dt,!onSkyTrail&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive);
+    mountainLedges.apply(character,previousPosition,dt,freeMountainMovement&&!onSkyTrail);
+    arenaCentipede?.collision.apply(character,previousPosition,dt,!onMountainLedges&&!onSkyTrail&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive);
     sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
     fireflies?.syncRider(dt);
     character.finishPigeonGroundMovement(dt,previousX,previousZ);
+    const breadNow=network?.serverNow??Date.now();
+    if(!network)bread.state=advanceBread(bread.state,breadNow,mountainLedges.networkState());
+    if(canPickBread(bread.state,breadActor(character),breadNow)&&(!network||breadNow-lastBreadRequest>350)){lastBreadRequest=breadNow;sendBread({kind:'pick'});}
     const availableInteraction=resolveInteraction(character);
     const candidate=network?resourceKey(character):undefined;
     const occupied=!!(candidate&&network?.room.locks[candidate]&&network.room.locks[candidate]!==network.id);
@@ -951,6 +1024,7 @@ renderer.setAnimationLoop((time: number) => {
     if(!network||network.host)npcSwimming.update(dt,npcs,constrainNpc);
     fireflies?.prepareNpcs(npcs,!network||network.host,dt,character.actor.position);
     if(!network||network.host)for (const npc of npcs) {
+      npc.fruitBoost.update(dt);
       npcPrevious.copy(npc.actor.position);
       if(!balloons.owns(npc))npc.update(dt,neighbors,constrainNpc);
       const onFoot=npc.state!=='Balloon'&&npc.fireflyIndex===undefined;
@@ -958,8 +1032,12 @@ renderer.setAnimationLoop((time: number) => {
       ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
     }
     if(playing&&pidgieNpc&&pidgieReady){
-      if(!network||network.host)pidgieNpc.update(dt,people,constrainNpc);
-      else pidgieNpc.updateRemote(dt);
+      if(!network||network.host){
+        if(bread.state.offering)pidgieNpc.acceptBread(bread.state.offering);
+        const players:PidgiePlayer[]=[{id:network?.id??'solo',position:character.actor.position,hasBread:bread.holds(network?.id??'solo')},...Array.from(network?.actors??[],([id,actor])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(actor.p),hasBread:bread.holds(id)}))];
+        pidgieNpc.update(dt,people,constrainNpc,players);
+      }
+      else pidgieNpc.updateRemote(dt,constrainNpc);
       if(pidgieFearSeen!==pidgieNpc.fearCount){
         pidgieFearSeen=pidgieNpc.fearCount;
         const bird=pidgieNpc.actor.position;
@@ -973,19 +1051,20 @@ renderer.setAnimationLoop((time: number) => {
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
     const fireflyPickup=fireflies?.fruitPickupPosition;
-    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || boats.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
+    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], bread.holds(network?.id??'solo') || coaster.riding || boats.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sounds.updateBoat(dt,boats.riding);
     setText(sizeValue,`${Math.round(character.savedSize * 100)}%`);
+    fruitSpeedValue.hidden=character.fruitBoost.remaining===0;
+    setText(fruitSpeedValue,character.fruitBoost.remaining>0?`Фрукты: скорость ${Math.round(character.fruitBoost.multiplier*100)}% · ${Math.ceil(character.fruitBoost.remaining)} с`:'');
     setText(npcFruitValue,String(npcs.reduce((sum,npc)=>sum+scoreOf(npc),0)));
     setText(remainingFruitValue,String(fruits.onMap));
     if (eaten) {
-      setText(combatMessage,`${eaten.type} съеден! Размер +10% · ${Math.round(character.savedSize * 100)}%`);
-      hitMessageRemaining = 2.5;
+      showFruitPickup(eaten.type);
     }
-    if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
-    if(maze.update(dt,character,!network && !coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active)){
+    if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(!carryingBread && character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
+    if(maze.update(dt,character,!carryingBread && !network && !coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playStarPickup();setText(combatMessage,'★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!');hitMessageRemaining=5;
     }
     if(character.achievements.size>achievementsBefore){const soundsCount=character.achievements.size-achievementsBefore-Number(!flowersBefore&&character.achievements.has('flowers'));if(soundsCount>0)sounds.playTaskComplete(soundsCount);setText(combatMessage,`+${achievementPoints(character.achievements)-pointsBefore} · Приключение выполнено!`);hitMessageRemaining=3;}
@@ -1000,10 +1079,10 @@ renderer.setAnimationLoop((time: number) => {
     hitMessageRemaining = Math.max(0, hitMessageRemaining - dt);
     combatMessage.hidden = hitMessageRemaining === 0;
   }
-  else if(!character) {boats.update(dt,boatTime(),camera.position);skyTrail.update(dt);coaster.update(dt,camera.position);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
+  else if(!character) {mountainLedges.update(dt);boats.update(dt,boatTime(),camera.position);skyTrail.update(dt);coaster.update(dt,camera.position);treehouse.update(dt);balloons.update(dt);maze.update(dt);trampoline.update(dt);}
   const { azimuth, elevation, distance } = followCamera;
   camera.position.set(cameraTarget.x + distance * viewScale * Math.cos(elevation) * Math.sin(azimuth), cameraTarget.y + distance * viewScale * Math.sin(elevation), cameraTarget.z + distance * viewScale * Math.cos(elevation) * Math.cos(azimuth));
-  constrainToMeadow(camera.position, .5);
+  if(character&&mountainLedges.handles(character)){mountainLedges.constrainTravel(camera.position,.5);mountainLedges.constrain(camera.position,2);}else constrainToMeadow(camera.position, .5);
   camera.lookAt(cameraTarget);
   camera.updateMatrixWorld();
   if(home.dogHouse.update(dt,camera.position)&&playing&&character){
@@ -1031,6 +1110,8 @@ renderer.setAnimationLoop((time: number) => {
   musicalFlowers.update(performance.now()/1000,camera);
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
+  const breadActors=new Map<string,THREE.Object3D>();if(character)breadActors.set(network?.id??'solo',character.actor);for(const [id,c] of remotePlayers?.players??[])breadActors.set(id,c.actor);
+  bread.update(network?.serverNow??Date.now(),breadActors);
   checkCharacterUnlock();
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
@@ -1054,7 +1135,9 @@ renderer.setAnimationLoop((time: number) => {
   if(character)updateVisibility(character.actor,camera.position,true,true);
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
   const profileRender=sceneProfiler?performance.now():0;
+  const firstRenderStart=firstSceneFrame?performance.now():0;
   renderer.render(scene, camera);
+  if(firstSceneFrame){performance.measure('kirby-first-frame',{start:firstRenderStart,end:performance.now()});firstSceneFrame=false;}
   sceneProfiler?.frame(profileRender-profileStart,performance.now()-profileRender);
 });
 window.addEventListener('resize', () => {
@@ -1071,8 +1154,20 @@ window.addEventListener('resize', () => {
 
 watermill.onFeedback=kind=>{if(!character||character.actor.position.distanceTo(MILL_LEVER)>32)return;sounds.playMill(kind);};
 
-function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
+function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!bread.holds(network?.id??'solo')&&!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
 function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else watermill.apply(action,millActor(character));}
+function breadActor(c:CharacterController):BreadActor{
+ const id=network?.id??'solo',bag=watermill.quest.owner===id&&watermill.quest.carried>=0;
+ return {id,p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!bag&&!acquiring&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding};
+}
+function sendBread(action:BreadAction){
+ if(!character)return;if(network){network.event({type:'bread',action});return;}
+ const old=bread.state;bread.state=applyBread(old,action,breadActor(character),Date.now(),mountainLedges.networkState(),pidgieNpc?.networkState());
+ if(bread.state!==old&&bread.state.offering){
+  pidgieNpc?.acceptBread(bread.state.offering);character.achievements.add('pidgieFriend');
+  localLog.push(pidgieFriendLog(nameInput.value));if(localLog.length>10)localLog.shift();
+ }
+}
 
 function currentFlowerGame(){return network?network.room.flowerGame:soloFlowerGame;}
 function flowerActor(c:CharacterController):FlowerActor{const a=millActor(c);return {...a,available:a.available&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,present:playing&&!document.hidden};}
@@ -1108,6 +1203,15 @@ function centipedeTick(){
  else {const hit=centipedeContact(network.room.centipede,a,now);if(hit&&centipedeContactKey!==hit.key){centipedeContactKey=hit.key;network.event({type:'centipede-step'});}}
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
+  if(bread.holds(network?.id??'solo')){
+    const bird=pidgieReady?pidgieNpc?.networkState():undefined;
+    if(canFeedPidgie(bread.state,breadActor(c),bird)&&bird){
+      const midpoint=c.actor.position.clone().add(new THREE.Vector3().fromArray(bird.p)).multiplyScalar(.5);
+      const clear=Array.from({length:9},(_,i)=>new THREE.Vector3().fromArray(bird.p).lerp(midpoint,i/8)).every(p=>pidgieSafeGround(p.x,p.z));
+      if(clear)return {text:'E — Угостить дикого Пиджи',run:()=>sendBread({kind:'feed'}),target:{key:pidgieNpc!,root:pidgieNpc!.actor}};
+    }
+    return {text:'E — Бросить хлебушек',run:()=>sendBread({kind:'drop'})};
+  }
   const p=c.actor.position;
   if(c.roll.active)return undefined;
   const result=(text:string,run:()=>unknown,target?:OutlineTarget)=>({text,run,target});
@@ -1156,7 +1260,7 @@ function playFlowerSound(index:number){
 
 function captureWorld():WorldState{
  const round=(rows:number[][])=>rows.map(row=>row.map(v=>Math.round(v*1000)/1000));
- return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState()),...(pidgieNpc&&pidgieReady?{pidgie:pidgieNpc.networkState()}:{})};
+ return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),mountainSteps:round(mountainLedges.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState()),...(pidgieNpc&&pidgieReady?{pidgie:pidgieNpc.networkState()}:{})};
 }
 function applyRide(a:ActorState){
  if(!a.ride)return;const [kind,index]=a.ride.key.split(':'),i=Number(index);
@@ -1166,7 +1270,12 @@ function applyRide(a:ActorState){
 
 }
 function constrainNpc(position:THREE.Vector3,size:number,previous:THREE.Vector3){
+ mountainLedges.constrain(position,size);
  watermill.constrain(position,size);treehouse.constrain(position,size);maze.constrain(position,size,previous);home.constrain(position,size);constrainArena(position,size);constrainNpcOutsideArena(position,size,previous);flowerGameView.button.constrain(position,size);
+}
+function showFruitPickup(type:string){
+ setText(combatMessage,`${type} съеден! Скорость от фруктов ${Math.round(character!.fruitBoost.multiplier*100)}% · 20 с`);
+ hitMessageRemaining=2.5;
 }
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
@@ -1179,18 +1288,22 @@ function syncNetworkWorld(dt:number){
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
  boats.networkBlocked=blocked('boat');coaster.networkBlocked=blocked('cart');balloons.networkBlocked=blocked('balloon');fireflies!.networkBlocked=blocked('bug');fireflies!.syncLandings(r.bugLandings??{});
  watermill.setQuest(r.millQuest??newMillQuest(),network.serverNow);
+ bread.state=r.bread??newBread();
+ if(r.bread?.offering?.by===network.id)character.achievements.add('pidgieFriend');
  if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);
+  if(w.mountainSteps&&(!network.host||worldRevision<0))mountainLedges.networkApply(w.mountainSteps);
   if(w.pidgie&&pidgieNpc){
-   const checkpoint=pidgieHandoff&&pidgieHandoff.seed===w.pidgie.seed&&pidgieHandoff.fearCount===w.pidgie.fearCount?pidgieHandoff:w.pidgie;
+   const checkpoint=pidgieHandoff&&pidgieHandoff.seed===w.pidgie.seed&&pidgieHandoff.fearCount===w.pidgie.fearCount&&pidgieHandoff.friend?.at===w.pidgie.friend?.at?pidgieHandoff:w.pidgie;
    pidgieNpc.applyNetworkState(checkpoint,network.host||worldRevision<0);pidgieReady=true;if(worldRevision<0)pidgieFearSeen=checkpoint.fearCount;
   }
   worldRevision=network.revision;}
  if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;}
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
- r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id)character!.grow();else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.grow();});
+ r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id){character!.eatFruit();showFruitPickup(fruits.fruits[i].type);}else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.eatFruit();});
 }
 function resourceKey(c:CharacterController){
+ if(bread.holds(network?.id??'solo'))return;
  if(boats.riding)return boats.networkKey(c);
  if(skyTrail.active||skyTrail.prompt(c))return;
  if(coaster.riding)return coaster.networkKey(c);if(balloons.riding)return balloons.networkKey(c.actor.position);if(fireflies?.riding)return fireflies.networkKey(c);
@@ -1204,6 +1317,7 @@ function resourceKey(c:CharacterController){
  return boats.networkKey(c)??fireflies?.networkKey(c);
 }
 async function interactOnline(){
+ if(character&&bread.holds(network?.id??'solo')){resolveInteraction(character)?.run();return;}
  if(!character||acquiring)return;const action=resolveInteraction(character);if(!action)return;
  if(!network){action.run();return;}
  if(centipedePrompt(character)&&!heldResource){action.run();return;}

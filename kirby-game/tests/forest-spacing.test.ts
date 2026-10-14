@@ -10,9 +10,11 @@ test('tall tree crowns leave clearance between trees, attractions and the track'
   const trees=forest.userData.treePositions as {x:number;z:number;crownRadius:number}[];
   assert(trees.length>100);
   const base=forest.userData.baseTreeCount;
-  assert(trees.length>=base*4.8&&trees.length<=base*5,`about five times as many trees, with a bounded total: ${trees.length}/${base}`);
+  const cleared=forest.userData.clearedBaseTrees as typeof trees,anchors=base+cleared.length;
+  assert(trees.length>=anchors*4.8&&trees.length<=anchors*5,`about five times as many trees, with a bounded total: ${trees.length}/${anchors}`);
   const edge=trees.filter(p=>Math.max(Math.abs(p.x),Math.abs(p.z))>218);
-  assert.equal(trees.slice(0,base).filter(p=>Math.max(Math.abs(p.x),Math.abs(p.z))>218).length,153,'preserve mature mountain anchors');
+  assert.equal([...trees.slice(0,base),...cleared].filter(p=>Math.max(Math.abs(p.x),Math.abs(p.z))>218).length,153,'preserve mature mountain anchors, except trees removed for the new corner ledges');
+  assert(cleared.every(p=>!sceneryClearance(p.x,p.z,p.crownRadius+1)),'removed mature trees belong to the new attraction clearing');
   assert(edge.length>450);
   for(const side of [0,1,2,3])assert(edge.some(p=>side===0?p.x< -218:side===1?p.x>218:side===2?p.z< -218:p.z>218));
   forest.traverse(o=>{if(o.name.startsWith('Decorative forest leaves')||o.name.startsWith('Decorative forest birchLeaves'))o.traverse(child=>{if('castShadow' in child)assert(!child.castShadow);});});

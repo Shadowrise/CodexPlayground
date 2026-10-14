@@ -19,10 +19,10 @@ export function finishStarfall(s:StarfallState,now:number){if(s.results||now<s.e
 /** Nominations use the frozen final results and never change the score. */
 export function starfallAwards(results:readonly FestivalResult[],initiator:string){
  const humans=results.filter(r=>r.id!=='npc');
- const top=[...humans].sort((a,b)=>b.fruits-a.fruits||b.size-a.size)[0],best=Math.max(...humans.map(r=>r.bonus));
+ const mostFruits=Math.max(...humans.map(r=>r.fruits)),best=Math.max(...humans.map(r=>r.bonus));
  return new Map(humans.map(r=>{
   const awards:string[]=[];
-  if(top&&r.fruits===top.fruits&&r.size===top.size)awards.push('Толстячок');
+  if(r.fruits===mostFruits)awards.push('Толстячок');
   if(Math.abs(r.size-MIN_BODY_SIZE)<=1e-6)awards.push('Малявка');
   if(r.bonus===best)awards.push('Звёздный собиратель');
   if(r.name===initiator)awards.push('Любитель приключений');

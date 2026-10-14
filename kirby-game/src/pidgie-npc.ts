@@ -5,24 +5,30 @@ import type {NpcConstraint} from './npcs';
 import {constrainToMeadow,insideMeadow,worldLimit} from './world-bounds';
 import {pigeonGaitRate} from './pigeon-locomotion';
 import {PIGEON_CLIP_BY_NAME} from './pigeon-clips';
-import {validPidgieState,type PidgieState,type PidgieClip,type PidgiePoint} from './pidgie-state';
+import {PIDGIE_CLIPS,PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_MAX_SPEED,beginPidgieFeeding,validPidgieState,type PidgieState,type PidgieClip,type PidgiePoint} from './pidgie-state';
+import type {BreadOffering} from './bread-state';
 
 export const PIDGIE_APPROACH_DISTANCE=10;
 export const PIDGIE_REFUGE_RADIUS=8;
 export const PIDGIE_FLIGHT_DISTANCE=60;
 const FEAR_SECONDS=.9,STEP=.05,WALK_SPEED=.95;
+const FOLLOW_BAND=.45,FOLLOW_RUN_SPEED=6.5;
 const wrap=(angle:number)=>Math.atan2(Math.sin(angle),Math.cos(angle));
 const smooth=(u:number)=>{const v=T.MathUtils.clamp(u,0,1);return v*v*(3-2*v);};
 const xz=(p:T.Vector3):PidgiePoint=>[p.x,p.z];
 const distance=(a:PidgiePoint,b:PidgiePoint)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
-const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refuge],target:[...s.target],origin:[...s.origin],destination:[...s.destination]});
+const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refuge],target:[...s.target],origin:[...s.origin],destination:[...s.destination],...(s.friend?{friend:structuredClone(s.friend)}:{})});
 
+export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;points?:number};
 export type PidgieNpcOptions={
  safeGround:(x:number,z:number)=>boolean;
  seed?:number;
  people?:readonly T.Vector3[];
  /** Absolute safe flight altitude for this route; the game knows its trees. */
  flightHeight?:(from:T.Vector3,to:T.Vector3)=>number;
+ /** Fires once on the authoritative update, with the player that caused the scare. */
+ onScare?:(person:T.Vector3)=>void;
+ onInterest?:(person:T.Vector3)=>void;
 };
 
 /** A separate, elusive ambient bird: never enters the fourteen Kirby NPCs. */
@@ -50,7 +56,7 @@ export class PidgieNpc {
   });
   this.actor.name='Пиджи · неуловимый голубь';this.actor.userData.elusivePidgie=true;this.actor.add(this.model);
   this.mixer=new T.AnimationMixer(this.model);
-  for(const name of ['Idle','Walk','Fear','Jump','Fly'] as const){
+  for(const name of PIDGIE_CLIPS){
    const source=template.animations.find(clip=>clip.name===name);if(!source)throw new Error(`Пиджи: отсутствует анимация ${name}`);
    this.actions.set(name,this.mixer.clipAction(source.clone()));
   }
@@ -105,16 +111,28 @@ export class PidgieNpc {
   this.data.flightDuration=Math.max(3.5,distance(this.data.origin,destination)/18);
  }
 
- private scare(people:readonly T.Vector3[]){
+ private scare(people:readonly T.Vector3[],players:readonly PidgiePlayer[]){
   if(this.data.cooldown>0)return;
   let nearest:T.Vector3|undefined,best=PIDGIE_APPROACH_DISTANCE;
   for(const person of people){const d=person.distanceTo(this.actor.position);if(Number.isFinite(d)&&d<best){nearest=person;best=d;}}
   if(!nearest)return;
+  const player=players.find(player=>player.position===nearest);
+  if(player&&player.id.length>0&&player.id.length<=64&&player.hasBread){
+   this.data.phase='follow';this.data.followId=player.id;this.data.followSpeed=0;this.data.elapsed=0;
+   this.data.pause=0;this.data.walkTimer=0;this.data.target=xz(this.actor.position);this.animate('Idle');
+   this.options.onInterest?.(nearest);return;
+  }
+  this.fleeFrom(nearest,people);
+ }
+
+ private fleeFrom(person:T.Vector3,people:readonly T.Vector3[]){
   const destination=this.refuge(people,xz(this.actor.position));
   if(!destination){this.data.cooldown=.8;this.data.pause=.8;this.animate('Idle');return;}
   this.flightPlan(destination);this.data.phase='fear';this.data.elapsed=0;this.data.turnStart=this.data.yaw;
-  this.data.turnTarget=this.heading(xz(nearest));this.data.fearCount=Math.min(0xffffffff,this.data.fearCount+1);
+  this.data.turnTarget=this.heading(xz(person));this.data.fearCount=Math.min(0xffffffff,this.data.fearCount+1);
+  delete this.data.followId;delete this.data.followSpeed;
   this.animate('Idle');
+  this.options.onScare?.(person);
  }
 
  private chooseWalk(){
@@ -126,9 +144,15 @@ export class PidgieNpc {
   this.data.pause=1.5;this.data.walkTimer=0;this.animate('Idle');
  }
 
- private wander(dt:number,people:readonly T.Vector3[],constrain?:NpcConstraint){
-  this.scare(people);if(this.data.phase!=='wander')return;
-  if(this.data.pause>0){this.animate('Idle');return;}
+ private rest(){
+  const peck=this.random()<.4;
+  this.data.walkTimer=0;this.data.pause=peck?PIGEON_CLIP_BY_NAME.Peck.duration:.7+this.random()*1.6;
+  this.animate(peck?'Peck':'Idle');
+ }
+
+ private wander(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
+  this.scare(people,players);if(this.data.phase!=='wander')return;
+  if(this.data.pause>0){if(this.data.clip!=='Peck')this.animate('Idle');return;}
   if(this.data.walkTimer<=0)this.chooseWalk();
   if(this.data.clip!=='Walk')return;
   this.setYaw(this.data.yaw+wrap(this.heading(this.data.target)-this.data.yaw)*(1-Math.exp(-5*dt)));
@@ -141,7 +165,43 @@ export class PidgieNpc {
   if(legal&&moved<=WALK_SPEED*dt+.05)this.actor.position.copy(point);
   else {this.data.walkTimer=0;this.data.pause=.4+this.random()*.6;this.animate('Idle');}
   if(this.data.clip==='Walk')this.active!.setEffectiveTimeScale(pigeonGaitRate('Walk',this.actor.position.distanceTo(previous),dt,this.actor.scale.x));
-  if(distance(xz(this.actor.position),this.data.target)<.3||this.data.walkTimer<=0){this.data.pause=.7+this.random()*1.6;this.data.walkTimer=0;this.animate('Idle');}
+  if(distance(xz(this.actor.position),this.data.target)<.3||this.data.walkTimer<=0)this.rest();
+ }
+
+ private follow(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
+  const player=players.find(player=>player.id===this.data.followId);
+  if(player&&!player.hasBread){this.fleeFrom(player.position,people);return;}
+  if(!player||!player.position.toArray().every(Number.isFinite)){
+   delete this.data.followId;delete this.data.followSpeed;this.data.phase='wander';
+   this.data.refuge=xz(this.actor.position);this.data.target=[...this.data.refuge];this.data.pause=.6;this.data.walkTimer=0;this.animate('Idle');return;
+  }
+  const from=this.actor.position,dx=from.x-player.position.x,dz=from.z-player.position.z,d=Math.hypot(dx,dz),gap=d-PIDGIE_FOLLOW_DISTANCE;
+  this.data.followSpeed=0;
+  if(Math.abs(gap)<=FOLLOW_BAND){
+   this.data.target=xz(from);this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));this.animate('Idle');return;
+  }
+  // Approach the bread closely enough for a facing player to offer it.
+  const away=d>1e-6?new T.Vector3(dx/d,0,dz/d):new T.Vector3(Math.sin(this.data.yaw),0,Math.cos(this.data.yaw));
+  const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE),yaw=this.heading(xz(goal));
+  const speed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,Math.max(FOLLOW_RUN_SPEED,Math.abs(gap)*12)),travel=Math.min(speed*dt,Math.abs(gap));
+  let heading:number|undefined,step:T.Vector3|undefined;
+  for(const offset of [0,.45,-.45,.90,-.90,1.35,-1.35,Math.PI/2,-Math.PI/2]){
+   const angle=yaw+offset,probe=from.clone().add(new T.Vector3(Math.sin(angle),0,Math.cos(angle)).multiplyScalar(Math.min(1.2,Math.abs(gap))));
+   if(!this.safe(xz(probe)))continue;
+   const point=from.clone().add(new T.Vector3(Math.sin(angle),0,Math.cos(angle)).multiplyScalar(travel));
+   constrain?.(point,this.actor.scale.x,from);point.y=0;
+   const moved=point.distanceTo(from);
+   const remaining=Math.abs(Math.hypot(point.x-player.position.x,point.z-player.position.z)-PIDGIE_FOLLOW_DISTANCE);
+   if(!this.safe(xz(point))||moved<travel*.5||moved>travel+1e-6||remaining>=Math.abs(gap)-1e-5)continue;
+   if(people.some(other=>other!==player.position&&point.distanceTo(other)<Math.min(3,from.distanceTo(other))-1e-6))continue;
+   heading=angle;step=point;break;
+  }
+  if(heading===undefined||!step){this.data.target=xz(from);this.animate('Idle');return;}
+  this.data.target=xz(from.clone().add(new T.Vector3(Math.sin(heading),0,Math.cos(heading)).multiplyScalar(Math.min(3,Math.abs(gap)))));
+  this.setYaw(this.data.yaw+T.MathUtils.clamp(wrap(heading-this.data.yaw),-8*dt,8*dt));
+  if(Math.abs(wrap(heading-this.data.yaw))>.15){this.animate('Idle');return;}
+  const moved=step.distanceTo(from);this.actor.position.copy(step);this.data.followSpeed=Math.min(PIDGIE_FOLLOW_MAX_SPEED,moved/dt);
+  this.animate('Run');this.active!.setEffectiveTimeScale(pigeonGaitRate('Run',moved,dt,this.actor.scale.x));
  }
 
  private redirect(people:readonly T.Vector3[]){
@@ -156,13 +216,15 @@ export class PidgieNpc {
   this.animate('Fly');return true;
  }
 
- private tick(dt:number,people:readonly T.Vector3[],constrain?:NpcConstraint){
+ private tick(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
+  if(this.data.friend){this.feeding(dt,constrain);this.mixer.update(dt);this.syncPosition();return;}
   this.data.cooldown=Math.max(0,this.data.cooldown-dt);this.data.pause=Math.max(0,this.data.pause-dt);this.data.walkTimer=Math.max(0,this.data.walkTimer-dt);
   if(this.data.phase==='hidden'){if(this.data.walkTimer===0)this.spawn(people);return;}
   if(this.data.phase==='wander'){
-   this.wander(dt,people,constrain);
+   this.wander(dt,people,players,constrain);
    if(this.data.phase==='wander'){this.mixer.update(dt);this.syncPosition();return;}
   }
+  if(this.data.phase==='follow'){this.follow(dt,people,players,constrain);this.mixer.update(dt);this.syncPosition();return;}
   this.data.elapsed=Math.min(this.duration(),this.data.elapsed+dt);
   if(this.data.phase==='fear'){
    this.setYaw(this.data.turnStart+wrap(this.data.turnTarget-this.data.turnStart)*smooth(this.data.elapsed/.25));
@@ -199,8 +261,40 @@ export class PidgieNpc {
   this.mixer.update(dt);this.syncPosition();
  }
 
+ /** The offering is permanent; later proximity and dropped items cannot scare this bird. */
+ acceptBread(offering:BreadOffering){
+  const current=this.networkState(),next=beginPidgieFeeding(current,offering);
+  if(next===current)return false;
+  this.applyNetworkState(next,true);return true;
+ }
+
+ private feeding(dt:number,constrain?:NpcConstraint){
+  const food=this.data.friend!.bread,target:PidgiePoint=[food[0],food[2]];
+  this.actor.visible=true;this.setYaw(this.data.yaw+T.MathUtils.clamp(wrap(this.heading(target)-this.data.yaw),-8*dt,8*dt));
+  if(this.data.phase==='joy'){
+   this.animate('Joy');this.data.elapsed+=dt;
+   if(this.data.elapsed>=PIGEON_CLIP_BY_NAME.Joy.duration-1e-8){this.data.phase='toBread';this.data.elapsed=0;this.animate('Run');}
+   return;
+  }
+  if(this.data.phase==='toBread'){
+   const from=this.actor.position.clone(),gap=Math.hypot(food[0]-from.x,food[2]-from.z)-1;
+   if(gap<=.05){this.data.phase='feast';this.data.elapsed=0;this.animate('Peck',true);return;}
+   const yaw=this.heading(target),travel=Math.min(gap,4.2*dt);let moved=0;
+   for(const offset of [0,.45,-.45,.9,-.9,1.35,-1.35]){
+    const point=from.clone().add(new T.Vector3(Math.sin(yaw+offset),0,Math.cos(yaw+offset)).multiplyScalar(travel));
+    constrain?.(point,this.actor.scale.x,from);point.y=food[1];
+    if(!this.safe(xz(point))||point.distanceTo(from)>travel+.001||Math.hypot(food[0]-point.x,food[2]-point.z)>=gap+1-.00001)continue;
+    moved=point.distanceTo(from);this.actor.position.copy(point);break;
+   }
+   this.data.target=target;this.animate('Run');this.active!.setEffectiveTimeScale(pigeonGaitRate('Run',moved,dt,this.actor.scale.x));return;
+  }
+  this.data.phase='feast';this.data.elapsed+=dt;
+  const clip=this.data.clip==='Joy'?'Joy':'Peck';this.animate(clip);
+  if(this.data.elapsed>=PIGEON_CLIP_BY_NAME[clip].duration-1e-8){this.data.elapsed=0;this.animate(clip==='Peck'?'Joy':'Peck',true);}
+ }
+
  /** Only the solo game or current room host calls the decision-making update. */
- update(dt:number,people:readonly T.Vector3[],constrain?:NpcConstraint){
+ update(dt:number,people:readonly T.Vector3[],constrain?:NpcConstraint,players:readonly PidgiePlayer[]=[]){
   if(!Number.isFinite(dt)||dt<=0)return;
   if(this.remote){
    this.data=copyState(this.networkState());this.actor.position.fromArray(this.data.p);this.setYaw(this.data.yaw);this.remote=undefined;
@@ -208,7 +302,7 @@ export class PidgieNpc {
   let remaining=dt;
   while(remaining>1e-8){
    const until=this.duration()-this.data.elapsed;
-   const step=Math.min(remaining,STEP,until>1e-8?until:STEP);this.tick(step,people,constrain);remaining-=step;
+   const step=Math.min(remaining,STEP,until>1e-8?until:STEP);this.tick(step,people,players,constrain);remaining-=step;
   }
  }
 
@@ -229,10 +323,15 @@ export class PidgieNpc {
  }
 
  /** Remote presentation follows host checkpoints; it never starts another flee. */
- updateRemote(dt:number){
+ updateRemote(dt:number,constrain?:NpcConstraint){
   if(!this.remote||!Number.isFinite(dt)||dt<=0)return;
+  if(this.remote.friend){
+   const displayed=this.actor.position.clone();this.data=copyState(this.remote);this.remote=undefined;
+   this.actor.position.fromArray(this.data.p);this.setYaw(this.data.yaw);this.update(dt,[],constrain);
+   this.remote=copyState(this.data);this.actor.position.lerpVectors(displayed,new T.Vector3().fromArray(this.remote.p),1-Math.exp(-14*dt));return;
+  }
   const checkpoint=this.remote;
-  if(!['wander','hidden'].includes(checkpoint.phase))checkpoint.elapsed=Math.min(this.duration(),checkpoint.elapsed+dt);
+  if(!['wander','hidden','follow'].includes(checkpoint.phase))checkpoint.elapsed=Math.min(this.duration(),checkpoint.elapsed+dt);
   checkpoint.cooldown=Math.max(0,checkpoint.cooldown-dt);checkpoint.pause=Math.max(0,checkpoint.pause-dt);checkpoint.walkTimer=Math.max(0,checkpoint.walkTimer-dt);
   const point=new T.Vector3().fromArray(checkpoint.p);
   if(checkpoint.phase==='fear'){
@@ -246,6 +345,12 @@ export class PidgieNpc {
    const u=smooth(checkpoint.elapsed/checkpoint.flightDuration),a=checkpoint.origin,b=checkpoint.destination;
    point.set(T.MathUtils.lerp(a[0],b[0],u),checkpoint.height,T.MathUtils.lerp(a[1],b[1],u));checkpoint.yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);
   }else if(checkpoint.phase==='landing')point.set(checkpoint.destination[0],checkpoint.height*(1-smooth(checkpoint.elapsed/this.verticalDuration())),checkpoint.destination[1]);
+  else if(checkpoint.phase==='follow'&&checkpoint.clip==='Run'&&(checkpoint.followSpeed??0)>0){
+   const target=new T.Vector3(checkpoint.target[0],0,checkpoint.target[1]),remaining=point.distanceTo(target);
+   const proposed=point.clone().addScaledVector(target.sub(point).normalize(),Math.min(remaining,checkpoint.followSpeed!*Math.min(dt,.2)));
+   const travel=point.distanceTo(proposed);constrain?.(proposed,this.actor.scale.x,point);proposed.y=0;
+   if(this.safe(xz(proposed))&&point.distanceTo(proposed)<=travel+1e-6)point.copy(proposed);
+  }
   else if(checkpoint.phase==='wander'&&checkpoint.clip==='Walk'&&checkpoint.pause===0&&checkpoint.walkTimer>0){
    const direction=Math.atan2(checkpoint.target[0]-point.x,checkpoint.target[1]-point.z);checkpoint.yaw=wrap(checkpoint.yaw+wrap(direction-checkpoint.yaw)*(1-Math.exp(-5*dt)));
    const proposed=point.clone();proposed.x+=Math.sin(checkpoint.yaw)*WALK_SPEED*dt;proposed.z+=Math.cos(checkpoint.yaw)*WALK_SPEED*dt;
@@ -255,7 +360,7 @@ export class PidgieNpc {
   const previous=this.actor.position.clone(),blend=1-Math.exp(-14*dt);
   this.actor.position.lerp(point,blend);
   this.setYaw(this.actor.rotation.y+wrap(checkpoint.yaw-this.actor.rotation.y)*blend);
-  if(this.data.clip==='Walk')this.active!.setEffectiveTimeScale(pigeonGaitRate('Walk',this.actor.position.distanceTo(previous),dt,this.actor.scale.x));
+  if(this.data.clip==='Walk'||this.data.clip==='Run')this.active!.setEffectiveTimeScale(pigeonGaitRate(this.data.clip,this.actor.position.distanceTo(previous),dt,this.actor.scale.x));
   this.mixer.update(dt);
  }
 }

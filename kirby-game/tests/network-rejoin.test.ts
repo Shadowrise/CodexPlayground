@@ -39,7 +39,8 @@ test('room restores disconnected players by name, rejects online duplicates, and
   const actor={p:[12,8,-16],q:[0,0,0,1],s:2,state:'Fly',pose:[],fruits:0,achievements:['mill','bench'],name:'Попытка сменить имя',variant:7,star:30,progress:{size:2.2,checkpoint:2,ground:4}};
   send(first,actor,[{type:'fruit',index:0},{type:'lock',key:'bug:0'}]);
   assert.equal(first.data.actor.name,'Кирби Друг');assert.equal(first.data.actor.variant,0);assert.equal(first.data.actor.fruits,1);assert.equal(writes,0);
-  room.room.festival=createStarfall(now,'Кирби Друг');room.room.festival.players[id]={name:'Кирби Друг',variant:0,base:7,fruits:1,size:2.3,bonus:6,collected:[0,1,2,3,4,5]};
+  assert.equal(first.data.actor.s,2);assert.equal(first.data.actor.progress.size,2.2);assert.deepEqual(first.data.actor.fruitBoost,{stacks:1,remaining:20});
+  room.room.festival=createStarfall(now,'Кирби Друг');room.room.festival.players[id]={name:'Кирби Друг',variant:0,base:7,fruits:1,size:2.2,bonus:6,collected:[0,1,2,3,4,5]};
   await room.webSocketClose(first);
   assert.equal(writes,1);assert.equal(room.room.host,second.data.id);assert(!room.room.locks['bug:0']);
   // A new Durable Object instance recovers the room through the surviving host attachment.
@@ -47,7 +48,8 @@ test('room restores disconnected players by name, rejects online duplicates, and
   const returned=await join('кирби друг',3),welcome=returned.messages.find(m=>m.type==='welcome');
   assert.equal(welcome.playerId,id);assert.equal(welcome.room.id,roomId);assert.equal(welcome.resume.variant,0);
   assert.equal(welcome.resume.fruits,1);assert.deepEqual(welcome.resume.achievements,['mill','bench']);
-  assert.deepEqual(welcome.resume.p,[12,4,-16]);assert.equal(welcome.resume.progress.checkpoint,2);assert.equal(welcome.resume.progress.size,2.3);
+  assert.deepEqual(welcome.resume.p,[12,4,-16]);assert.equal(welcome.resume.progress.checkpoint,2);assert.equal(welcome.resume.progress.size,2.2);
+  assert.deepEqual(welcome.resume.fruitBoost,{stacks:1,remaining:15});
   assert.equal(welcome.resume.state,'Idle');assert(!welcome.resume.ride);assert.equal(welcome.resume.star,25);assert(validActor(welcome.resume));
   assert.equal(welcome.room.fruits[0],id);assert.equal(welcome.room.festival.players[id].bonus,6);
   // Rejoining cannot claim an already-collected festival star again.
@@ -68,7 +70,7 @@ test('room restores disconnected players by name, rejects online duplicates, and
   send(fresh,{...actor,name:'Кирби Друг',achievements:['bench']},[{type:'lock',key:'bug:0'}]);
   const online=await room.adminOnline();assert.equal(online.room.id,activeId);assert.equal(online.players.length,2);assert.equal(online.players.find((p:any)=>p.id===fresh.data.id).host,true);
   const host=online.players.find((p:any)=>p.id===fresh.data.id);assert.equal(host.ready,true);assert.equal(host.size,2.2);assert.equal(fresh.data.actor.fruits,0);
-  const grown=await room.adminResize(activeId,fresh.data.id,.5);assert.equal(grown.ok,true);assert.equal(grown.size,2.7);assert.equal(fresh.data.actor.fruits,0);assert.equal(fresh.data.actor.progress.size,2.7);
+  const grown=await room.adminResize(activeId,fresh.data.id,.5);assert.equal(grown.ok,true);assert.equal(grown.size,2.7);assert.equal(fresh.data.actor.fruits,0);assert.equal(fresh.data.actor.progress.size,2.7);assert.equal(fresh.data.actor.progress.speed,2.7);
   const last=(items:any[],pred:(m:any)=>boolean)=>items.filter(pred).at(-1);
   assert.equal(last(fresh.messages,m=>m.type==='resize').size,2.7);assert.equal(last(peer.messages,m=>m.type==='frame'&&m.actor).actor.s,2.7);
   assert.match(last(peer.messages,m=>m.type==='log').entry.text,/вырос до 270% — Ветерок налепил немного жирка/);
@@ -115,6 +117,25 @@ test('room restores disconnected players by name, rejects online duplicates, and
   const immediate=await join('Без ивента',2),immediateId=room.room.id;
   assert.equal((await room.adminFestival(immediateId,true)).ok,true);assert.equal(room.room.festival.results[0].name,'Без ивента');assert.equal(room.room.festival.results[0].points,0);
   await room.webSocketClose(immediate);assert.equal((await room.adminOnline()).room,null);
+  // Fruit claims preserve even a fountain-shrunk body with a separate admin speed.
+  const eater=await join('Фрукты',0),contender=await join('Сосед',1);
+  const small={...actor,s:.3,state:'Idle',star:0,fruits:0,achievements:[],progress:{size:.3,speed:2,checkpoint:0,ground:0}};
+  send(eater,small,[{type:'fruit',index:0}]);
+  assert.equal(eater.data.actor.s,.3);assert.equal(eater.data.actor.progress.speed,2);
+  now+=10000;
+  send(eater,{...eater.data.actor,fruitBoost:{stacks:1,remaining:10}},[{type:'fruit',index:1}]);
+  assert.deepEqual(eater.data.actor.fruitBoost,{stacks:2,remaining:20});assert.equal(eater.data.actor.progress.size,.3);
+  send(contender,small,[{type:'fruit',index:1}]);assert.equal(contender.data.actor.fruits,0);assert.equal(contender.data.actor.fruitBoost,undefined);
+  send(eater,{...eater.data.actor,fruitBoost:{stacks:2,remaining:10}},[{type:'fruit',index:1}]);
+  assert.deepEqual(eater.data.actor.fruitBoost,{stacks:2,remaining:10},'duplicate claims do not add or refresh a bonus');
+  await room.webSocketClose(eater);now+=11000;
+  const expired=await join('Фрукты',0);assert.equal(expired.messages[0].resume.fruitBoost,undefined);
+  assert.equal(expired.messages[0].resume.progress.size,.3);assert.equal(expired.messages[0].resume.progress.speed,2);
+  const resized=await room.adminResize(room.room.id,expired.data.id,.5);assert.equal(resized.size,.8);
+  send(expired,{...expired.data.actor,s:.79,progress:{size:.79,speed:.8,checkpoint:0,ground:0}});
+  assert.equal(expired.data.adminSize,undefined,'a fountain bath can shrink the body before the admin resize acknowledgement');
+  assert.equal(expired.data.actor.s,.79);assert.equal(expired.data.actor.progress.speed,.8);
+  await room.webSocketClose(expired);await room.webSocketClose(contender);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 
@@ -124,4 +145,7 @@ test('name identity and reconnect progress validation',()=>{
  const a={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Test',variant:0,star:0};
  for(const progress of [null,{}, {size:NaN,checkpoint:1,ground:0},{size:1,checkpoint:5,ground:0},{size:1,checkpoint:1,ground:Infinity}])assert(!validActor({...a,progress}));
  assert(validActor({...a,progress:{size:1.4,checkpoint:3,ground:12}}));
+ for(const fruitBoost of [null,{}, {stacks:11,remaining:20},{stacks:1,remaining:21},{stacks:1,remaining:0},{stacks:0,remaining:20}])assert(!validActor({...a,fruitBoost}));
+ assert(validActor({...a,fruitBoost:{stacks:10,remaining:20},progress:{size:.3,speed:2,checkpoint:0,ground:0}}));
+ assert(!validActor({...a,progress:{size:.3,speed:Infinity,checkpoint:0,ground:0}}));
 });

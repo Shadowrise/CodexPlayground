@@ -1,6 +1,9 @@
 /** Complete host-owned NPC checkpoint; shared by the browser and Worker. */
-export const PIDGIE_PHASES = ['hidden','wander','fear','takeoff','fly','landing'] as const;
-export const PIDGIE_CLIPS = ['Idle','Walk','Fear','Jump','Fly'] as const;
+import {validBreadOffering,type BreadOffering} from './bread-state';
+export const PIDGIE_FOLLOW_DISTANCE=4;
+export const PIDGIE_FOLLOW_MAX_SPEED=18;
+export const PIDGIE_PHASES = ['hidden','wander','fear','takeoff','fly','landing','follow','joy','toBread','feast'] as const;
+export const PIDGIE_CLIPS = ['Idle','Walk','Fear','Jump','Fly','Peck','Run','Joy'] as const;
 export type PidgiePhase = typeof PIDGIE_PHASES[number];
 export type PidgieClip = typeof PIDGIE_CLIPS[number];
 export type PidgiePoint = [number,number];
@@ -25,6 +28,10 @@ export type PidgieState = {
  seed:number;
  /** Monotonic scare sequence, so late joins and handoffs never replay a coo. */
  fearCount:number;
+ /** Stable player identity and current ground speed survive host handoff. */
+ followId?:string;
+ followSpeed?:number;
+ friend?:BreadOffering;
 };
 
 const finite=(v:unknown,min:number,max:number):v is number=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max;
@@ -35,6 +42,11 @@ const uint32=(v:unknown):v is number=>typeof v==='number'&&Number.isInteger(v)&&
 export function validPidgieState(value:unknown):value is PidgieState {
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
  const s=value as Partial<PidgieState>;
+ const followId=typeof s.followId==='string'&&s.followId.length>0&&s.followId.length<=64&&!/[\u0000-\u001f\u007f]/.test(s.followId);
+ if((s.followId!==undefined&&!followId)||(s.followSpeed!==undefined&&!finite(s.followSpeed,0,PIDGIE_FOLLOW_MAX_SPEED)))return false;
+ if(s.phase==='follow'&&(!followId||s.followSpeed===undefined))return false;
+ if(s.friend!==undefined&&!validBreadOffering(s.friend))return false;
+ if(['joy','toBread','feast'].includes(s.phase as string)&&!s.friend)return false;
  return PIDGIE_PHASES.includes(s.phase as PidgiePhase)
   &&PIDGIE_CLIPS.includes(s.clip as PidgieClip)
   &&Array.isArray(s.p)&&s.p.length===3&&finite(s.p[0],-512,512)&&finite(s.p[1],-20,256)&&finite(s.p[2],-512,512)
@@ -43,4 +55,9 @@ export function validPidgieState(value:unknown):value is PidgieState {
   &&finite(s.elapsed,0,3600)&&finite(s.walkTimer,0,3600)&&finite(s.pause,0,3600)&&finite(s.cooldown,0,3600)
   &&finite(s.height,0,256)&&finite(s.flightDuration,0,120)&&finite(s.clipTime,0,3600)
   &&uint32(s.seed)&&uint32(s.fearCount);
+}
+
+export function beginPidgieFeeding(state:PidgieState,offering:BreadOffering):PidgieState{
+ if(state.friend?.at===offering.at&&state.friend.by===offering.by&&['joy','toBread','feast'].includes(state.phase))return state;
+ return {...state,phase:'joy',p:[...offering.bird],elapsed:0,clip:'Joy',clipTime:0,pause:0,walkTimer:0,cooldown:0,followId:undefined,followSpeed:undefined,friend:structuredClone(offering),target:[offering.bread[0],offering.bread[2]]};
 }

@@ -45,6 +45,11 @@ class BoundsLOD extends T.LOD {
  }
 }
 
+/** Restore the same foliage-bound distance calculation after loading baked scenery. */
+export function restoreBoundsLod(lod:T.LOD,radius:number){
+ Object.setPrototypeOf(lod,BoundsLOD.prototype);Object.assign(lod,{radius,current:0});
+}
+
 /** One instanced draw per occupied cell and material. All levels reuse the same
  * transforms/colours unless detail filtering is explicitly requested. Keep any
  * separate continuous shadow silhouettes outside these visual LOD groups. */
@@ -71,6 +76,7 @@ export function instancedLod(name:string,geometry:T.BufferGeometry,material:T.Ma
    mesh.computeBoundingSphere();return mesh;
   };
   const lod=new BoundsLOD(radius);lod.name=name;lod.position.copy(center);lod.updateMatrix();lod.matrixAutoUpdate=false;
+  lod.userData.boundsLodRadius=radius;
   lod.addLevel(near,0);lod.addLevel(level(levels.middle,levels.middleDetail),levels.middleDistance??ACTOR_DISTANCE,.15);lod.addLevel(level(levels.far,levels.farDetail),levels.farDistance??ACTOR_DISTANCE*2,.15);
   if(levels.hideDistance!==undefined)lod.addLevel(new T.Group(),levels.hideDistance,.12);
   root.add(lod);

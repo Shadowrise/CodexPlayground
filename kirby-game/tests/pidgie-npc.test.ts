@@ -2,14 +2,43 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from 'three';
 import {createPigeon} from '../src/pigeon-model';
-import {PidgieNpc,PIDGIE_APPROACH_DISTANCE,PIDGIE_REFUGE_RADIUS,PIDGIE_FLIGHT_DISTANCE,type PidgieNpcOptions} from '../src/pidgie-npc';
-import {validPidgieState,type PidgieState} from '../src/pidgie-state';
+import {PidgieNpc,PIDGIE_APPROACH_DISTANCE,PIDGIE_REFUGE_RADIUS,PIDGIE_FLIGHT_DISTANCE,type PidgieNpcOptions,type PidgiePlayer} from '../src/pidgie-npc';
+import {PIDGIE_FOLLOW_DISTANCE,validPidgieState,type PidgieState} from '../src/pidgie-state';
+import {worldLimit} from '../src/world-bounds';
+import {applyBread,canPickBread,newBread} from '../src/bread-state';
+
+test('dropping the carried bread ends interest with exactly one scare and flight',()=>{
+ const scares:T.Vector3[]=[],bird=create({onScare:p=>scares.push(p)}),player:PidgiePlayer={id:'baker',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,4))};
+ advance(bird,.2,[player.position],[player]);assert.equal(bird.phase,'follow');
+ player.hasBread=false;bird.update(.05,[player.position],undefined,[player]);assert.equal(bird.phase,'fear');assert.equal(scares.length,1);assert.equal(scares[0],player.position);
+ advance(bird,2,[player.position],[player]);assert(['takeoff','fly'].includes(bird.phase));assert.equal(scares.length,1);
+});
+
+test('offered bread becomes permanent: joy, a run to its midpoint, then repeated pecking and joy despite nearby players',()=>{
+ const bird=create(),at=bird.actor.position.clone(),player={id:'baker',p:[at.x,0,at.z+4],yaw:Math.PI,size:1,available:true};
+ const bread=applyBread({...newBread(),owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());
+ assert(bread.offering);assert.equal(bread.p[2],at.z+2);assert(!canPickBread(bread,{...player,p:bread.p},100000));
+ assert(bird.acceptBread(bread.offering));assert(!bird.acceptBread(bread.offering));
+ advance(bird,2.2,[at]);assert.equal(bird.phase,'joy');assert.equal(bird.state,'Joy');
+ advance(bird,.3,[at]);assert.equal(bird.phase,'toBread');assert.equal(bird.state,'Run');
+ advance(bird,2,[at]);assert.equal(bird.phase,'feast');
+ const stop=bird.actor.position.clone(),seen=new Set<string>();
+ for(let i=0;i<60*70;i++){bird.update(1/60,[stop]);seen.add(bird.state);assert.equal(bird.phase,'feast');assert.equal(bird.fearCount,0);}
+ assert(seen.has('Joy')&&seen.has('Peck'));assert(bird.actor.position.distanceTo(stop)<1e-8);assert(validPidgieState(bird.networkState()));
+ const next=create(),remote=create();next.applyNetworkState(bird.networkState(),true);remote.applyNetworkState(bird.networkState(),true);
+ for(let i=0;i<90;i++){next.update(1/60,[stop]);remote.updateRemote(1/60);}
+ assert.deepEqual(remote.networkState(),next.networkState(),'late joins and host changes keep the feeding cycle');
+});
 
 const template=(()=>{const {root,clips}=createPigeon(),scene=new T.Group();scene.add(root);return {scene,animations:clips};})();
 const create=(options:Partial<PidgieNpcOptions>={})=>new PidgieNpc(template,{seed:131,safeGround:()=>true,...options});
-const advance=(bird:PidgieNpc,seconds:number,people:readonly T.Vector3[]=[])=>{for(let i=0;i<Math.ceil(seconds*60);i++)bird.update(Math.min(1/60,seconds-i/60),people);};
+const advance=(bird:PidgieNpc,seconds:number,people:readonly T.Vector3[]=[],players:readonly PidgiePlayer[]=[])=>{for(let i=0;i<Math.ceil(seconds*60);i++)bird.update(Math.min(1/60,seconds-i/60),people,undefined,players);};
 function approach(bird:PidgieNpc){const p=bird.actor.position.clone();p.x+=PIDGIE_APPROACH_DISTANCE-1;bird.update(.01,[p]);assert.equal(bird.phase,'fear');return p;}
 function nearXZ(a:readonly number[],b:readonly number[]){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
+function startPeck(bird:PidgieNpc){
+ for(let frame=0;frame<60*90&&bird.state!=='Peck';frame++)bird.update(1/60,[]);
+ assert.equal(bird.state,'Peck','wandering periodically chooses a ground-pecking bout');
+}
 
 test('a seeded independent pigeon spawns on safe ground away from players without joining gameplay rewards',()=>{
  const people=[new T.Vector3()],a=create({people}),b=create({people});
@@ -32,6 +61,43 @@ test('wandering remains inside its local refuge, obeys constraints and uses both
  const stopped=create(),origin=stopped.actor.position.clone();
  stopped.update(12,[],(point,_size,previous)=>point.copy(previous));assert(stopped.actor.position.distanceTo(origin)<1e-8,'a scenery collision cannot move the bird');
  if(stopped.state==='Walk')assert.equal(stopped.actions.get('Walk')!.getEffectiveTimeScale(),0,'blocked feet stop instead of sliding');
+});
+
+test('wild pigeon periodically stops for a complete three-peck bout before walking again',()=>{
+ const bird=create();let bouts=0,frames=0,origin=new T.Vector3(),previous=bird.state;
+ for(let frame=0;frame<60*90;frame++){
+  bird.update(1/60,[]);
+  if(bird.state==='Peck'){
+   if(previous!=='Peck'){bouts++;frames=0;origin.copy(bird.actor.position);assert.equal(bird.actions.get('Peck')!.loop,T.LoopOnce);}
+   frames++;assert(bird.actor.position.distanceTo(origin)<1e-8,'pecking cannot slide along the ground');
+   assert.equal(bird.phase,'wander');assert.equal(bird.actor.position.y,0);assert(validPidgieState(bird.networkState()));
+  }else if(previous==='Peck'){
+   assert(frames>=180&&frames<=194,'the bird finishes the full 3.2-second bout');
+   assert.equal(bird.state,'Walk','the completed bout returns to wandering');
+  }
+  previous=bird.state;
+ }
+ assert(bouts>=2,'ground pecking recurs among walking and idle pauses');
+});
+
+test('a pecking checkpoint survives late join and host handoff, and proximity interrupts the bout',()=>{
+ const host=create();startPeck(host);advance(host,.85);
+ const checkpoint=host.networkState();assert.equal(checkpoint.clip,'Peck');assert(checkpoint.pause>0&&checkpoint.clipTime>.8);
+ const body=host.model.getObjectByName('Continuous pigeon body') as T.SkinnedMesh;
+ const source=template.scene.getObjectByName('Continuous pigeon body') as T.SkinnedMesh;
+ assert.notEqual(body.morphTargetInfluences,source.morphTargetInfluences,'each pigeon owns its belly animation weights');
+ assert(body.morphTargetInfluences![0]>.99,'the wild pigeon tucks its belly during the pecking bout');
+ assert.equal(source.morphTargetInfluences![0],0,'the wild bird cannot shrink the shared player template');
+ const successor=create({seed:900}),remote=create({seed:400});
+ assert(successor.applyNetworkState(checkpoint,true));assert(remote.applyNetworkState(checkpoint,true));
+ const position=remote.actor.position.clone();remote.updateRemote(.2);
+ assert.equal(remote.state,'Peck');assert(remote.actor.position.distanceTo(position)<1e-8);
+ assert(remote.networkState().clipTime>checkpoint.clipTime,'late join continues the current peck instead of restarting it');
+ for(let frame=0;frame<60*8;frame++){host.update(1/60,[]);successor.update(1/60,[]);}
+ assert.deepEqual(successor.networkState(),host.networkState(),'the new host finishes the same bout and resumes the same seeded walk');
+ startPeck(host);advance(host,.4);approach(host);
+ assert.equal(host.state,'Idle','the facing/scare reaction immediately cancels ground pecking');
+ advance(host,.3);assert.equal(host.state,'Fear');assert.equal(host.fearCount,1);
 });
 
 test('any nearby ground player triggers one facing reaction, vertical takeoff, a distant flight and vertical safe landing',()=>{
@@ -58,12 +124,106 @@ test('any nearby ground player triggers one facing reaction, vertical takeoff, a
  advance(bird,.4);approach(bird);assert.equal(bird.fearCount,2,'the next ground approach starts another flight');
 });
 
+test('scare notification identifies the nearest player once and is not replayed by guests or a new host',()=>{
+ const notices:T.Vector3[]=[],bird=create({onScare:person=>notices.push(person)}),origin=bird.actor.position.clone();
+ const farther=origin.clone().add(new T.Vector3(8,0,0)),nearest=origin.clone().add(new T.Vector3(0,0,2)),airborne=origin.clone().add(new T.Vector3(0,20,0));
+ bird.update(.05,[farther,airborne,nearest]);assert.equal(notices.length,1);assert.equal(notices[0],nearest);
+ advance(bird,.4,[farther,nearest]);assert.equal(notices.length,1,'lingering near the frightened pigeon cannot repeat the hint');
+ const checkpoint=bird.networkState(),replayed:T.Vector3[]=[],guest=create({onScare:person=>replayed.push(person)});
+ guest.applyNetworkState(checkpoint,true);guest.updateRemote(.1);guest.update(.1,[nearest]);
+ assert.equal(replayed.length,0,'joining and taking over an existing flight cannot announce an old scare');
+ let safe=true;const blocked=create({safeGround:()=>safe,onScare:person=>replayed.push(person)});safe=false;
+ const person=blocked.actor.position.clone();person.x+=2;blocked.update(.05,[person]);
+ assert.equal(blocked.phase,'wander');assert.equal(replayed.length,0,'a failed flight plan is not a scare');
+});
+
 test('high-flying players do not scare a grounded bird and all players are considered in three dimensions',()=>{
  const bird=create(),overhead=bird.actor.position.clone();overhead.y=25;
  bird.update(.2,[overhead]);assert.equal(bird.phase,'wander');assert.equal(bird.fearCount,0);
  const far=new T.Vector3(300,0,300),close=bird.actor.position.clone();close.z-=3;
  bird.update(.01,[far,overhead,close]);assert.equal(bird.phase,'fear');assert.equal(bird.fearCount,1);
  advance(bird,.3,[close]);assert(Math.abs(Math.abs(bird.actor.rotation.y)-Math.PI)<1e-6,'the bird faces the actual nearby ground player');
+});
+
+test('bread in hand alone triggers interest; even a thousand points without bread still scares Pidgie',()=>{
+ for(const hasBread of [false,true]){
+  const interested:T.Vector3[]=[],scared:T.Vector3[]=[],bird=create({onInterest:p=>interested.push(p),onScare:p=>scared.push(p)});
+  const player:PidgiePlayer={id:'player',position:bird.actor.position.clone().add(new T.Vector3(0,0,9)),points:hasBread?0:1000,hasBread};
+  bird.update(.05,[player.position],undefined,[player]);
+  assert.equal(bird.phase,hasBread?'follow':'fear');assert.equal(interested.length,hasBread?1:0);assert.equal(scared.length,hasBread?0:1);
+  if(hasBread){
+   advance(bird,5,[player.position],[player]);assert.equal(interested.length,1);assert.equal(bird.fearCount,0);
+   assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);
+  }
+ }
+});
+
+test('interested Pidgie runs after the chosen player beyond its old refuge, retreats when approached, and rests close enough to offer bread',()=>{
+ let notices=0;const bird=create({onInterest:()=>notices++}),start=bird.actor.position.clone();
+ const player:PidgiePlayer={id:'leader',hasBread:true,position:start.clone().add(new T.Vector3(0,0,9))};
+ const other:PidgiePlayer={id:'other',hasBread:false,position:start.clone().add(new T.Vector3(30,0,0))};
+ const players=[player,other],people=players.map(p=>p.position);
+ advance(bird,2,people,players);player.position.z+=55;
+ advance(bird,1,people,players);assert.equal(bird.state,'Run');assert(bird.actions.get('Run')!.getEffectiveTimeScale()>0);assert.equal(bird.actor.position.y,0);
+ advance(bird,7,people,players);assert(bird.actor.position.distanceTo(start)>PIDGIE_REFUGE_RADIUS+20);
+ assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);assert.equal(bird.state,'Idle');
+ const still=bird.actor.position.clone();advance(bird,2,people,players);assert(bird.actor.position.distanceTo(still)<1e-8,'the distance band prevents running back and forth while the player stands still');
+ player.position.copy(bird.actor.position).add(new T.Vector3(0,0,2));advance(bird,.5,people,players);
+ assert.equal(bird.phase,'follow');assert(bird.actor.position.z<player.position.z,'the bird turns and moves away from an approaching player');
+ advance(bird,3.5,people,players);assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<.5);
+ assert.equal(notices,1);assert.equal(bird.fearCount,0);assert.equal(bird.networkState().followId,'leader');
+ bird.update(.05,[other.position],undefined,[other]);assert.equal(bird.phase,'wander');assert.equal(bird.networkState().followId,undefined,'leaving the room releases the followed player');
+});
+
+test('a player without bread is not mistaken for a farther bread carrier, and airborne players cannot start interest',()=>{
+ const bird=create(),poor:PidgiePlayer={id:'poor',hasBread:false,position:bird.actor.position.clone().add(new T.Vector3(0,0,2))};
+ const rich:PidgiePlayer={id:'rich',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,8))};
+ bird.update(.05,[poor.position,rich.position],undefined,[poor,rich]);assert.equal(bird.phase,'fear');
+ const grounded=create(),airborne:PidgiePlayer={id:'air',hasBread:true,position:grounded.actor.position.clone().add(new T.Vector3(0,25,0))};
+ grounded.update(.1,[airborne.position],undefined,[airborne]);assert.equal(grounded.phase,'wander');
+});
+
+test('following stops planted feet at a blocked route and never flies',()=>{
+ let notices=0;const bird=create({onInterest:()=>notices++}),player:PidgiePlayer={id:'player',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,9))};
+ advance(bird,1,[player.position],[player]);player.position.z+=40;const blocked=bird.actor.position.clone();
+ for(let i=0;i<120;i++)bird.update(1/60,[player.position],(point,_size,previous)=>point.copy(previous),[player]);
+ assert(bird.actor.position.distanceTo(blocked)<1e-8);assert.equal(bird.state,'Idle');assert.equal(bird.networkState().followSpeed,0);
+ assert.equal(notices,1);assert.equal(bird.fearCount,0);assert.equal(bird.actor.position.y,0);
+});
+
+test('running players retain a close feeding distance while being followed or approaching Pidgie',()=>{
+ const bird=create(),player:PidgiePlayer={id:'runner',hasBread:true,position:bird.actor.position.clone().add(new T.Vector3(0,0,9))};
+ advance(bird,1,[player.position],[player]);
+ for(let i=0;i<360;i++){
+  player.position.z+=6.8/60;bird.update(1/60,[player.position],undefined,[player]);
+  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<1);
+ }
+ for(let i=0;i<360;i++){
+  const towards=bird.actor.position.clone().sub(player.position).normalize();player.position.addScaledVector(towards,6.8/60);bird.update(1/60,[player.position],undefined,[player]);
+  if(i>60)assert(Math.abs(bird.actor.position.distanceTo(player.position)-PIDGIE_FOLLOW_DISTANCE)<1);
+ }
+});
+
+test('Pidgie retreats along the world boundary and steers around an obstacle without entering it',()=>{
+ const bird=create(),limit=worldLimit(),player:PidgiePlayer={id:'edge',hasBread:true,position:new T.Vector3(limit-2.3,0,0)};
+ const state=bird.networkState();bird.applyNetworkState({...state,phase:'follow',p:[limit-.3,0,0],yaw:Math.PI/2,followId:player.id,followSpeed:0},true);
+ for(let i=0;i<360;i++){bird.update(1/60,[player.position],undefined,[player]);assert(bird.actor.position.x<=limit);assert.equal(bird.actor.position.y,0);}
+ assert(bird.actor.position.distanceTo(player.position)>PIDGIE_FOLLOW_DISTANCE-.6,'the edge leaves a grounded route around the player');
+ const obstacle=create({safeGround:(x,z)=>Math.hypot(x,z-8)>2}),leader:PidgiePlayer={id:'leader',hasBread:true,position:new T.Vector3(0,0,25)};
+ obstacle.applyNetworkState({...state,phase:'follow',p:[0,0,0],yaw:0,followId:leader.id,followSpeed:0},true);
+ for(let i=0;i<600;i++){obstacle.update(1/60,[leader.position],undefined,[leader]);assert(Math.hypot(obstacle.actor.position.x,obstacle.actor.position.z-8)>2);}
+ assert(Math.abs(obstacle.actor.position.distanceTo(leader.position)-PIDGIE_FOLLOW_DISTANCE)<.5,'the pigeon continues after getting around the obstruction');
+});
+
+test('following checkpoint keeps the target, run cadence and one-shot notification through late join and host handoff',()=>{
+ const host=create(),player:PidgiePlayer={id:'guest',hasBread:true,position:host.actor.position.clone().add(new T.Vector3(0,0,9))};
+ advance(host,1,[player.position],[player]);player.position.z+=35;advance(host,1,[player.position],[player]);
+ const checkpoint=host.networkState();assert.equal(checkpoint.phase,'follow');assert.equal(checkpoint.clip,'Run');assert(validPidgieState(checkpoint));
+ let notices=0;const successor=create({onInterest:()=>notices++}),remote=create({onInterest:()=>notices++});
+ successor.applyNetworkState(checkpoint,true);remote.applyNetworkState(checkpoint,true);const before=remote.actor.position.clone();remote.updateRemote(.1);
+ assert(remote.actor.position.distanceTo(before)>0);assert.equal(remote.networkState().followId,player.id);assert.equal(remote.actor.position.y,0);
+ for(let i=0;i<90;i++){host.update(1/60,[player.position],undefined,[player]);successor.update(1/60,[player.position],undefined,[player]);}
+ assert.deepEqual(successor.networkState(),host.networkState());assert.equal(notices,0);
 });
 
 test('unsafe spawning stays hidden, and occupied landing ground redirects without another fear event',()=>{

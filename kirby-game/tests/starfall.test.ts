@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import {allTasks,createStarfall,collectStar,finishStarfall,starfallPhase,starfallAwards,PREPARE_MS,COLLECT_MS,CELEBRATE_MS,STAR_INTERVAL,validStarfall} from '../src/starfall';
 import {SCORE_ACTIONS,scoreOf} from '../src/score';
 const player=()=>({name:'Кирби',variant:0,base:36,fruits:4,size:1.4,bonus:0,collected:[] as number[]});
+test('Biggest muncher depends only on fruit count, including tied shrunk and admin-sized winners',()=>{
+ const s=createStarfall(0,'Кирби');
+ s.players.small={...player(),fruits:10,size:.3};s.players.big={...player(),fruits:10,size:8};s.players.other={...player(),fruits:9,size:10};
+ finishStarfall(s,s.endsAt);const awards=starfallAwards(s.results!,s.initiator);
+ assert(awards.get('small')?.includes('Толстячок'));assert(awards.get('big')?.includes('Толстячок'));
+ assert(!awards.get('other')?.includes('Толстячок'));
+});
 test('all fifteen adventures are required, without retired lake or maze trampoline actions',()=>{assert.equal(SCORE_ACTIONS.length,15);assert(!SCORE_ACTIONS.some(id=>String(id)==='trampoline'));assert(allTasks(SCORE_ACTIONS));assert(allTasks([...SCORE_ACTIONS,'trampoline']));assert(!allTasks([...SCORE_ACTIONS.filter(a=>a!=='fountain'),'swim']));for(const missing of SCORE_ACTIONS)assert(!allTasks(SCORE_ACTIONS.filter(a=>a!==missing)));});
 test('one shared timeline covers countdown, collection, celebration and results',()=>{const s=createStarfall(100,'Кирби');assert.equal(starfallPhase(s,100),'countdown');assert.equal(starfallPhase(s,100+PREPARE_MS),'collect');assert.equal(starfallPhase(s,100+PREPARE_MS+COLLECT_MS),'celebrate');assert.equal(starfallPhase(s,s.endsAt+CELEBRATE_MS),'done');});
 test('stars are personal, duplicate safe, time limited, with a strict 30 point cap',()=>{const s=createStarfall(0,'Кирби');s.players.a=player();s.players.b=player();assert(!collectStar(s,'a',0,0));assert(!collectStar(s,'unknown',0,s.startsAt+3000));assert(!collectStar(s,'a',NaN,s.startsAt+3000));assert(collectStar(s,'a',0,s.startsAt+3000));assert(collectStar(s,'b',0,s.startsAt+3000));assert(!collectStar(s,'a',0,s.startsAt+3000));assert(!collectStar(s,'a',4,s.startsAt+3000));for(let i=1;i<60;i++)collectStar(s,'a',i,s.startsAt+i*STAR_INTERVAL+3000);assert.equal(s.players.a.bonus,30);assert.equal(s.players.b.bonus,1);assert(!collectStar(s,'b',59,s.endsAt));assert(validStarfall(s));});

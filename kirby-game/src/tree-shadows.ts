@@ -85,6 +85,14 @@ function shadowMaterial(){
  projectionAspects=map.userData.projections.map((p:{aspect:number})=>p.aspect);spruceHalfWidth=map.userData.projections[1].halfWidth;
  masks.forEach(m=>m.dispose());
  material=new T.MeshBasicMaterial({color:'black',map,transparent:true,opacity:.64*.8,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+ return restoreTreeShadowMaterial(material);
+}
+
+export function restoreTreeShadowMaterial(restored:T.MeshBasicMaterial){
+ material=restored;
+ const {size,padding,tile}=material.map!.userData.atlas as {size:number;padding:number;tile:number},width=tile*2;
+ projectionAspects=material.map!.userData.projections.map((p:{aspect:number})=>p.aspect);
+ spruceHalfWidth=material.map!.userData.projections[1].halfWidth;
  material.customProgramCacheKey=()=> 'painted-tree-shadows-atlas-v3';
  material.onBeforeCompile=shader=>{
   shader.uniforms.treeShadowDirection=direction;shader.uniforms.treeShadowStretch=stretch;

@@ -6,6 +6,7 @@ import { EmotePose, type Emote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
 import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
+import { FruitSpeedBoost } from './fruit-speed';
 import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 import {PIGEON_CLIP_BY_NAME, type PigeonClipName} from './pigeon-clips';
 import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
@@ -21,6 +22,8 @@ export class CharacterController {
   state = 'Idle';
   swimming = false;
   surfaceY = 0;
+  positionConstraint?: (position: Vector3, size: number) => void;
+  private constrainPosition() { (this.positionConstraint ?? constrainToMeadow)(this.actor.position, this.actor.scale.x); }
   yaw = 0;
   private active?: AnimationAction;
   private emotion?:Pick<EmotePose,'kind'|'elapsed'|'clear'|'update'>;
@@ -63,29 +66,36 @@ export class CharacterController {
   starCooldown = 0;
   activateStarPower(){this.starRemaining=30;}
   private flightBoost = 1;
-  private growth?: { from: number; to: number; elapsed: number };
+  readonly fruitBoost = new FruitSpeedBoost();
+  // Keep the size used for speed when the fountain changes only the body.
+  private movementScale?: number;
+  private growth?: { from: number; to: number; speedFrom: number; speedTo: number; elapsed: number };
   get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
+  get sizeSpeedMultiplier() { return Math.max(1, this.movementScale ?? this.actor.scale.x); }
+  get savedSpeedSize() { return this.growth?.speedTo ?? this.movementScale ?? this.actor.scale.x; }
+  restoreMovementSpeed(size: number) { this.movementScale = Math.max(MIN_BODY_SIZE, size); }
   shrink(amount:number){
     if(amount<=0)return;
+    this.movementScale ??= this.actor.scale.x;
     const floor=(size:number)=>Math.max(MIN_BODY_SIZE,size-amount);
     this.actor.scale.setScalar(floor(this.actor.scale.x));
     if(this.growth){this.growth.from=floor(this.growth.from);this.growth.to=floor(this.growth.to);}
   }
   resizeTo(size:number,immediate=false){
     const to=Math.min(MAX_BODY_SIZE,Math.max(MIN_BODY_SIZE,size));
-    if(immediate){this.growth=undefined;this.actor.scale.setScalar(to);return;}
+    if(immediate){this.growth=undefined;this.actor.scale.setScalar(to);this.movementScale=to;return;}
     if(Math.abs(this.savedSize-to)<.001)return;
-    this.growth={from:this.actor.scale.x,to,elapsed:0};
+    this.growth={from:this.actor.scale.x,to,speedFrom:this.movementScale??this.actor.scale.x,speedTo:to,elapsed:0};
   }
-  grow() {
-    this.growth = { from: this.actor.scale.x, to: (this.growth?.to ?? this.actor.scale.x) + .1, elapsed: 0 };
+  eatFruit() {
+    this.fruitBoost.eat();
     this.fruitsEaten++;
     // Swallowing finishes the action; the unused Eat tail must not lock controls.
     this.eatElapsed = undefined;
   }
   readonly animationRoot: Object3D;
-  get speed() { return 3.4 * Math.max(1, this.actor.scale.x) * (this.starRemaining > 0 ? 2 : 1); }
-  get backwardSpeed() { return 1.65 * Math.max(1, this.actor.scale.x) * (this.starRemaining > 0 ? 2 : 1); }
+  get speed() { return 3.4 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
+  get backwardSpeed() { return 1.65 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
   readonly turnStep = Math.PI / 18;
   readonly turnDuration = .1;
 
@@ -205,7 +215,7 @@ export class CharacterController {
 
   private advanceGroundMixer(dt:number){
     if(this.isPigeon&&isPigeonGait(this.state)){
-      constrainToMeadow(this.actor.position,this.actor.scale.x);
+      this.constrainPosition();
       const distance=Math.hypot(this.actor.position.x-this.gaitFrom.x,this.actor.position.z-this.gaitFrom.z);
       if(this.syncPigeonLocomotion(dt,distance)){
         this.gaitFrame={state:this.state,rate:this.actions.get(this.state)!.getEffectiveTimeScale(),mixerTime:this.mixer.time+dt};
@@ -234,6 +244,7 @@ export class CharacterController {
     g.elapsed+=dt;
     const t=Math.min(1,g.elapsed/.45),blend=t*t*(3-2*t);
     this.actor.scale.setScalar(g.from+(g.to-g.from)*blend);
+    this.movementScale=g.speedFrom+(g.speedTo-g.speedFrom)*blend;
     if(t===1){this.actor.scale.setScalar(g.to);this.growth=undefined;}
   }
 
@@ -249,19 +260,19 @@ export class CharacterController {
     this.roll.clearPose();
     if(input.steer!==undefined)this.turn=undefined;
     this.updateGrowth(dt);
-    constrainToMeadow(this.actor.position, this.actor.scale.x);
+    this.constrainPosition();
     this.gaitFrom.copy(this.actor.position);
     this.attackHit = false;
     this.eatBite = false;
     this.eatPull = false;
-    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.isPigeon)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');constrainToMeadow(this.actor.position,this.actor.scale.x);return;}
+    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.isPigeon)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');this.constrainPosition();return;}
     if(this.emotion){
       this.emotion.clear();
       if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
       else {
         this.mixer.update(dt);
         const emote=this.emotion;
-        if(emote.kind==='Fear' && emote.elapsed<.3){const step=Math.min(dt,.3-emote.elapsed)*2*this.actor.scale.x;this.actor.position.x-=Math.sin(this.yaw)*step;this.actor.position.z-=Math.cos(this.yaw)*step;constrainToMeadow(this.actor.position,this.actor.scale.x);}
+        if(emote.kind==='Fear' && emote.elapsed<.3){const step=Math.min(dt,.3-emote.elapsed)*2*this.actor.scale.x;this.actor.position.x-=Math.sin(this.yaw)*step;this.actor.position.z-=Math.cos(this.yaw)*step;this.constrainPosition();}
         if(emote.update(dt)){emote.clear();this.emotion=undefined;this.play('Idle');}
         return;
       }
@@ -361,6 +372,6 @@ export class CharacterController {
       this.move(dt, input);
       this.advanceGroundMixer(dt);
     }
-    constrainToMeadow(this.actor.position, this.actor.scale.x);
+    this.constrainPosition();
   }
 }

@@ -123,8 +123,8 @@ export function createVeinedLeafSurface(){
 
 /** One time uniform; coherent height-based bending keeps every attachment intact.
  * Opaque Lambert leaves avoid alpha overdraw and additional lights/shadows. */
-export function createShrubMaterial(time:{value:number}){
- const material=new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,map:createVeinedLeafSurface()});
+export function createShrubMaterial(time:{value:number},map:T.Texture=createVeinedLeafSurface()){
+ const material=new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,map});
  material.onBeforeCompile=shader=>{
   shader.uniforms.shrubTime=time;
   shader.vertexShader=shader.vertexShader.replace('#include <common>',`#include <common>

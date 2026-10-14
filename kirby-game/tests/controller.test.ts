@@ -7,9 +7,9 @@ import { CharacterController, type Input } from '../src/controller';
 
 const idle: Input = { forward: false, left: false, right: false };
 test('an immediate resize replaces pending growth without changing earned fruits or points',async()=>{
- const c=await create();c.grow();c.bonusPoints=3;c.eventPoints=5;
+ const c=await create();c.resizeTo(1.1);c.fruitsEaten=1;c.bonusPoints=3;c.eventPoints=5;
  c.resizeTo(.3,true);assert.equal(c.actor.scale.x,.3);assert.equal(c.savedSize,.3);assert.equal(c.speed,3.4);
- advance(c,1);assert.equal(c.actor.scale.x,.3,'the old fruit growth cannot restore its size later');
+ advance(c,1);assert.equal(c.actor.scale.x,.3,'the old admin growth cannot restore its size later');
  c.setActivity('Balloon');c.resizeTo(10,true);assert.equal(c.actor.scale.x,10);assert.equal(c.savedSize,10);
  assert.equal(c.fruitsEaten,1);assert.equal(c.bonusPoints,3);assert.equal(c.eventPoints,5);
  c.setActivity('Idle');advance(c,1);assert.equal(c.actor.scale.x,10);
@@ -49,19 +49,18 @@ test('running, sprinting and backing turn without losing movement or animation c
   }
 });
 
-test('swallow starts smooth growth and immediately unlocks movement and jumping', async()=>{
+test('swallow boosts speed without growth and immediately unlocks movement and jumping', async()=>{
   const c=await create();
   advance(c,.95,{...idle,eat:true});assert.equal(c.state,'Eat');
-  c.grow();assert.equal(c.actor.scale.x,1);
+  c.eatFruit();assert.equal(c.actor.scale.x,1);
   c.update(1/60,{...idle,forward:true});
   assert.equal(c.state,'Run');assert(c.actor.position.z>0);
-  assert(c.actor.scale.x>1 && c.actor.scale.x<1.01);
-  let previous=c.actor.scale.x;
+  assert.equal(c.speed,3.4*1.2);
   for(let i=0;i<30;i++){
     c.update(1/60,{...idle,forward:true});
-    assert(c.actor.scale.x>=previous && c.actor.scale.x<=1.1);previous=c.actor.scale.x;
+    assert.equal(c.actor.scale.x,1);
   }
-  assert.equal(c.actor.scale.x,1.1);
+  assert.equal(c.actor.scale.x,1);
   c.update(1/60,{...idle,jump:true});assert.equal(c.state,'Jump');
 });
 async function create() {
@@ -86,7 +85,7 @@ test('actual GLB loads and forward movement uses Run', async () => {
 
 test('Shift doubles forward speed and Run cadence, releases immediately and scales with growth', async () => {
   const c = await create();
-  c.grow();
+  c.resizeTo(1.5);c.eatFruit();
   advance(c, .5);
   advance(c, 1, { ...idle, forward: true, sprint: true });
   assert(Math.abs(c.actor.position.z - c.speed * 2) < 1e-6);
@@ -192,17 +191,17 @@ test('small Kirby moves at full base speed, with sprint and star power still mul
   }
 });
 
-test('each fruit above base size increases actual forward and backward speed by ten percent', async () => {
+test('each fruit adds twenty percentage points to forward and backward speed without resizing', async () => {
   const c = await create();
-  c.grow(); c.grow();
+  c.eatFruit(); c.eatFruit();
   advance(c, .5);
   assert.equal(c.fruitsEaten, 2);
-  assert(Math.abs(c.actor.scale.x - 1.2) < 1e-9);
+  assert.equal(c.actor.scale.x,1);
   advance(c, 1, { ...idle, forward: true });
-  assert(Math.abs(c.actor.position.z - 3.4 * 1.2) < 1e-6);
+  assert(Math.abs(c.actor.position.z - 3.4 * 1.4) < 1e-6);
   const z = c.actor.position.z;
   advance(c, 1, { ...idle, backward: true });
-  assert(Math.abs(c.actor.position.z - (z - 1.65 * 1.2)) < 1e-6);
+  assert(Math.abs(c.actor.position.z - (z - 1.65 * 1.4)) < 1e-6);
 });
 test('fast heading steps preserve continuous half-speed footwork while held', async () => {
   const c = await create();

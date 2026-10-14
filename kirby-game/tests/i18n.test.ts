@@ -2,6 +2,11 @@ import {test,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {detectLocale,initializeLocale,getLocale,setLocale,t,LANGUAGE_KEY,onLocaleChange} from '../src/i18n';
 import {translations} from '../src/i18n-catalog';
+import {pidgieScareLog,pidgieInterestLog,pidgieFriendLog} from '../src/world-log';
+
+test('Pidgie friendship announcement translates while preserving the player name',()=>{
+ const {text}=pidgieFriendLog('Радуга');setLocale('en');assert.equal(t(text),'Радуга gave wild Pidgie some bread. Pidgie is now their best friend.');setLocale('ru');
+});
 import {sortedTasks,TASK_NAMES} from '../src/tasks';
 import {SCORE_ACTIONS,type ScoreAction} from '../src/score';
 
@@ -28,7 +33,8 @@ test('locale subscribers run once per change, including choosing an already acti
 });
 test('display templates translate nested labels and keep player names verbatim',()=>{
  setLocale('en');
- assert.equal(t('Яблоко съеден! Размер +10% · 110%'),'Apple eaten! Size +10% · 110%');
+ assert.equal(t('Яблоко съеден! Скорость от фруктов 120% · 20 с'),'Apple eaten! Fruit speed 120% · 20 s');
+ assert.equal(t('Фрукты: скорость 140% · 10 с'),'Fruit speed: 140% · 10 s');
  assert.equal(t('E — положи золотой мешочек в воронку'),'E — put the golden bag in the funnel');
  assert.equal(t('★ Радуга прошёл все приключения! Звездопад через 5 с'),'★ Радуга completed every adventure! Starfall in 5 s');
  assert.equal(t('Радуга: это мой текст!'),'Радуга: это мой текст!');
@@ -38,6 +44,18 @@ test('display templates translate nested labels and keep player names verbatim',
 });
 test('Tiny Tot nomination is localized in all supported languages',()=>{
  for(const [language,label] of [['ru','Малявка'],['en','Tiny tot'],['bg','Мъниче']] as const){setLocale(language);assert.equal(t('Малявка'),label);}
+});
+
+test('Pidgie bread hint translates as a system message without translating the player name',()=>{
+ const {text}=pidgieScareLog('Радуга');
+ setLocale('en');assert.equal(t(text),'Wild Pidgie gave Радуга a hungry look. Seeing no bread, he got scared and flew off to another clearing.');
+ setLocale('bg');assert.equal(t(text),'Дивият Пиджи погледна Радуга гладно. Не видя хлебче, уплаши се и отлетя на друга полянка.');
+});
+
+test('Pidgie interest announcement is localized while the player name stays unchanged',()=>{
+ const {text}=pidgieInterestLog('Радуга');
+ setLocale('en');assert.equal(t(text),'Wild Pidgie watches Радуга closely. Something has really caught his interest.');
+ setLocale('bg');assert.equal(t(text),'Дивият Пиджи гледа внимателно Радуга. Нещо силно привлече интереса му.');
 });
 test('every catalog entry has both translations and preserves all template slots',()=>{
  const slots=(s:string)=>[...s.matchAll(/\{\d+\}/g)].map(m=>m[0]).sort();

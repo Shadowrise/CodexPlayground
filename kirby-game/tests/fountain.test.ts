@@ -27,14 +27,30 @@ test('fountain ring floats at the waterline for different sizes and disappears o
  c.flight.reset();c.actor.position.set(FOUNTAIN_SITE.x+12,0,FOUNTAIN_SITE.z);ponds.apply(c,c.actor.position.clone());assert(!c.swimming);assert(!c.actor.getObjectByName('Rainbow swim ring')!.visible);
 });
 test('bathing shrinks gradually, preserves fruit points, awards once and stops on exit',async()=>{
- const c=await player(),f=new RainbowFountain(),ponds=new Ponds();c.actor.scale.setScalar(2);c.fruitsEaten=10;c.actor.position.set(FOUNTAIN_SITE.x+6,0,FOUNTAIN_SITE.z);
+ const c=await player(),f=new RainbowFountain(),ponds=new Ponds();c.resizeTo(2,true);c.fruitsEaten=10;c.actor.position.set(FOUNTAIN_SITE.x+6,0,FOUNTAIN_SITE.z);
+ const speed=c.speed,backwardSpeed=c.backwardSpeed;
  const step=(dt:number)=>{ponds.apply(c,c.actor.position.clone());f.bathe(dt,c);};
  step(.1);assert(c.swimming);assert(c.actor.scale.x<2&&c.actor.scale.x>1.9);assert(!c.achievements.has('swim'));assert(!c.achievements.has('fountain'));
  for(let i=0;i<20;i++)step(.1);assert(c.achievements.has('fountain'));assert.equal(scoreOf(c),13);assert.equal(c.fruitsEaten,10);
  c.actor.position.x+=20;const size=c.savedSize;step(1);assert(!c.swimming);assert.equal(c.savedSize,size);
  c.actor.position.x-=20;for(let i=0;i<100;i++)step(.1);assert.equal(c.savedSize,.3);assert.equal(scoreOf(c),13);
- c.grow();for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});assert(Math.abs(c.savedSize-.4)<1e-8);assert.equal(scoreOf(c),14);
+ assert.equal(c.speed,speed);assert.equal(c.backwardSpeed,backwardSpeed);
+ c.eatFruit();for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});assert.equal(c.savedSize,.3);assert.equal(scoreOf(c),14);
+ assert.equal(c.speed,speed*1.2);assert.equal(c.backwardSpeed,backwardSpeed*1.2);
+ const boosted=c.speed;step(1);assert.equal(c.speed,boosted);assert.equal(c.fruitBoost.remaining,20);
+ c.fruitBoost.update(20);assert.equal(c.speed,speed);assert.equal(c.savedSize,.3);
  assert(validAchievements([...c.achievements]));assert(validActor(actorState(c,'Кирби',0)));assert(sortedTasks(c.achievements).some(t=>t.id==='fountain'&&t.done));
+});
+test('bathing during an admin resize preserves its speed animation and fruit boost',async()=>{
+ const c=await player(),reference=await player(),f=new RainbowFountain();
+ for(const actor of [c,reference]){actor.resizeTo(3);actor.eatFruit();actor.swimming=true;actor.actor.position.set(FOUNTAIN_SITE.x+6,0,FOUNTAIN_SITE.z);}
+ for(let i=0;i<30;i++){
+  for(const actor of [c,reference])actor.update(1/60,{forward:false,left:false,right:false});
+  f.bathe(1/60,c);assert.equal(c.speed,reference.speed);assert.equal(c.backwardSpeed,reference.backwardSpeed);
+ }
+ assert(c.savedSize<3);assert.equal(reference.savedSize,3);assert.equal(c.fruitBoost.multiplier,1.2);
+ c.resizeTo(4);for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});
+ assert.equal(c.savedSize,4);assert.equal(c.speed,3.4*4*1.2);
 });
 test('flying over the fountain does not shrink or complete its task, and the centre is solid',async()=>{
  const c=await player(),f=new RainbowFountain(),ponds=new Ponds();c.actor.scale.setScalar(3);c.actor.position.set(FOUNTAIN_SITE.x+6,5,FOUNTAIN_SITE.z);c.flight.press();

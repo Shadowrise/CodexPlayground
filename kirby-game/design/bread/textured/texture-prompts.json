@@ -1,0 +1,13 @@
+{
+  "tool": "Built-in image_gen",
+  "prompts": [
+    {
+      "key": "crumb",
+      "prompt": "Use case: photorealistic-natural. Asset type: seamless square base color texture for the freshly cut interior crumb of a white sandwich bread slice in a 3D game. Primary request: a flat orthographic macro scan of soft white bread crumb, filling the entire square edge to edge. Off-white ivory cream crumb, naturally irregular fine and medium pores with delicate torn fibrous walls, a few slightly larger air bubbles, realistic softness. Medium pore size mostly 2–8 pixels on a 1024 square image, about 50–70 pores across width, not giant holes. Very subtle light beige tonal variation, shallow warm gray cavities, never black holes. Even diffuse light, no directional cast shadows, no depth of field, no perspective, no border or visible bread slice contour. All pixels are bread interior texture, no crust, no plate, no scene. Seamless tileable edge-to-edge texture. No text, no labels, no watermark. Square 1024 x 1024 texture."
+    },
+    {
+      "key": "crust",
+      "prompt": "Use case: photorealistic-natural. Asset type: seamless square base color texture for the thin golden-brown crust of white sandwich bread in a 3D game. Primary request: a flat orthographic macro surface scan of smooth, softly baked light golden bread crust, filling the square edge to edge. Natural amber honey and warm caramel tones, very fine tiny blistering and delicate baked wrinkles and microcracks, gentle toasted mottling. Soft matte sandwich loaf crust, not hard rustic sourdough bark. Even diffuse flat light, no directional cast shadows, no depth of field, no perspective. Seamless tileable texture; all pixels are the crust surface. No white crumb, no slice silhouette, no plate, no scene. No text, labels or watermark. Square 1024 x 1024 texture."
+    }
+  ]
+}

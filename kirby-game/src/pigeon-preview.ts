@@ -33,11 +33,12 @@ const descriptions: Record<string, string> = {
   RotateLeft:'Переступает лапками и поворачивается налево.',
   RotateRight:'Переступает лапками и поворачивается направо.',
   Jump:'Приседает, отталкивается лапками и мягко приземляется.',
-  Fly:'Взмахи крыльев, лапки подобраны под тело.',
+  Fly:'Взмахи крыльев, лапки подняты и отведены назад под животом.',
   Swim:'Держится на воде, плавно гребёт лапками.',
   Push:'Наклоняется вперёд, упираясь грудью.',
   Attack:'Короткий выпад грудью с раскрытием крыльев.',
   Eat:'Наклоняется к земле и клюёт.',
+  Peck:'Втягивает живот, наклоняется к земле и клюёт три раза подряд.',
   Death:'Теряет равновесие и оседает на бок.',
   Roll:'Подбирает лапки и крылья для переката.',
   Sitting:'Усаживается на живот, лапки расслаблены.',
@@ -185,6 +186,7 @@ let paused = false;
 let resting = false;
 let finished = false;
 let sideBounds: THREE.Box3 | undefined;
+let peckBounds: THREE.Box3 | undefined;
 
 function selectGroup(group: string) {
   activeGroup = group;
@@ -265,7 +267,11 @@ function presentPose(time = 0) {
 
 function fitSideCamera() {
   if (!sideBounds) return;
-  const bounds = !resting && ['Sleep','Wake'].includes(currentClip) ? new THREE.Box3().setFromObject(poseRoot) : sideBounds;
+  let bounds = sideBounds;
+  if (!resting) {
+    if (currentClip === 'Peck' && peckBounds) bounds = peckBounds;
+    else if (['Sleep','Wake'].includes(currentClip)) bounds = new THREE.Box3().setFromObject(poseRoot);
+  }
   const center = bounds.getCenter(new THREE.Vector3());
   const size = bounds.getSize(new THREE.Vector3());
   const aspect = stage.clientWidth / stage.clientHeight;
@@ -504,7 +510,7 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 resize();
 
-new GLTFLoader().load('/models/pigeon-animated.glb?v=8', gltf => {
+new GLTFLoader().load('/models/pigeon-animated.glb?v=15', gltf => {
   model = gltf.scene;
   model.animations = gltf.animations;
   let triangles = 0;
@@ -524,6 +530,20 @@ new GLTFLoader().load('/models/pigeon-animated.glb?v=8', gltf => {
     return;
   }
   for (const clip of gltf.animations) actions.set(clip.name, mixer.clipAction(clip));
+  // Fit the whole pecking motion once, so the forward reach stays in frame
+  // without making the camera zoom in and out with every nod.
+  const peck = actions.get('Peck');
+  if (peck) {
+    peck.reset().setLoop(THREE.LoopOnce, 1).play();
+    peck.clampWhenFinished = true;
+    peckBounds = sideBounds.clone();
+    for (let frame = 0; frame <= 32; frame++) {
+      peck.time = peck.getClip().duration * frame / 32;
+      mixer.update(0); model.updateMatrixWorld(true);
+      peckBounds.union(new THREE.Box3().setFromObject(model, true));
+    }
+    mixer.stopAllAction();
+  }
   buildClipControls(gltf.animations);
   mixer.addEventListener('finished', event => {
     if (event.action !== currentAction) return;

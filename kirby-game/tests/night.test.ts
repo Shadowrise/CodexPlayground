@@ -64,7 +64,7 @@ test('Kirby rides a nearby firefly at double speed, lands on stopping and keeps 
 });
 test('mounted turning, growth and day transition preserve valid state',async()=>{
  const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations);
- world.update(.01,true,world.bugs[0].home);c.actor.position.copy(world.bugs[0].carrier.position).setY(0);assert(world.board(c));c.grow();
+ world.update(.01,true,world.bugs[0].home);c.actor.position.copy(world.bugs[0].carrier.position).setY(0);assert(world.board(c));c.resizeTo(1.1);
  for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false,steer:.6});world.syncRider(1/60);world.update(1/60,true,c.actor.position);}
  assert(c.yaw>.9);assert(Math.abs(c.actor.scale.x-1.1)<1e-6);assert(!c.flight.active);assert(!c.swimming);
  world.update(.01,false,c.actor.position);assert(world.riding);assert(c.actor.position.y>0);assert(world.buzzLevel(c.actor.position)>=.7);world.disembark();assert(!world.riding);
@@ -87,9 +87,9 @@ test('landing a mounted firefly collects fruit under the mount, but flying does 
   assert.equal(world.fruitPickupPosition,undefined);assert.equal(collect(),undefined);assert(!fruit.eaten);
   world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);assert.equal(collect(),undefined,'Do not collect while descending');
   for(let i=0;i<180;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);}
-  assert(world.fruitPickupPosition);assert.equal(collect(),fruit);assert.equal(c.fruitsEaten,1);assert.equal(fruits.onMap,0);assert(!fruit.object.visible);assert.equal(c.actor.scale.x,size,'Growth must remain smooth');
+  assert(world.fruitPickupPosition);assert.equal(collect(),fruit);assert.equal(c.fruitsEaten,1);assert.equal(fruits.onMap,0);assert(!fruit.object.visible);assert.equal(c.actor.scale.x,size,'Fruit pickup must preserve body size');
   for(let i=0;i<30;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);collect();}
-  assert(Math.abs(c.actor.scale.x-(size+.1))<1e-6);assert.equal(c.fruitsEaten,1);assert(world.riding);
+  assert.equal(c.actor.scale.x,size);assert.equal(c.fruitBoost.multiplier,1.2);assert.equal(c.fruitsEaten,1);assert(world.riding);
  }
 });
 

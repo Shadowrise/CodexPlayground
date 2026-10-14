@@ -54,8 +54,8 @@ export function createGrassGeometry(){
  geometry.setIndex(indices);geometry.computeVertexNormals();return geometry;
 }
 
-export function createGrassMaterial(){
- const material=new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,map:grassSurface()});
+export function createGrassMaterial(map:T.Texture=grassSurface()){
+ const material=new T.MeshLambertMaterial({vertexColors:true,side:T.DoubleSide,map});
  // Keep the existing distance fade; no alpha blending or additional passes.
  material.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
  vec4 meadowPosition=vec4(transformed,1.0);

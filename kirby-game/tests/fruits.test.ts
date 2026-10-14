@@ -15,18 +15,18 @@ async function setup() {
 }
 
 function isolate(world: FruitWorld) { world.fruits.forEach((f,i)=>f.object.position.set(100+i,0,100)); }
-test('close fruit auto-picks from behind, grows smoothly and counts once',async()=>{
+test('close fruit auto-picks from behind, boosts speed without growth and counts once',async()=>{
   const {player,world}=await setup();isolate(world);
   assert.equal(FRUIT_TYPES.length,10);
   const fruit=world.fruits[0];fruit.object.position.set(0,0,-1);
   assert.equal(world.update(.016,player,[]),fruit);
   assert.equal(player.fruitsEaten,1);assert.equal(world.onMap,69);
   assert(!fruit.object.visible);assert.equal(player.actor.scale.x,1);
-  assert.equal(Math.round(player.savedSize*100),110,'the HUD size includes the fruit immediately, before visual growth');
+  assert.equal(player.savedSize,1);assert.equal(player.fruitBoost.multiplier,1.2);assert.equal(player.fruitBoost.remaining,20);
   player.update(.2,{...idle,forward:true});
-  assert(player.actor.scale.x>1 && player.actor.scale.x<1.1);
-  assert(player.actor.position.z>0,'growth does not lock movement');
-  player.update(.3,idle);assert.equal(player.actor.scale.x,1.1);
+  assert.equal(player.actor.scale.x,1);
+  assert(Math.abs(player.actor.position.z-3.4*1.2*.2)<1e-8,'fruit pickup does not lock movement');
+  player.update(.3,idle);assert.equal(player.actor.scale.x,1);
   world.update(1,player,[]);assert.equal(player.fruitsEaten,1);
 });
 test('distant fruit and fruit beside a riding player are not collected',async()=>{
@@ -37,7 +37,7 @@ test('distant fruit and fruit beside a riding player are not collected',async()=
   world.update(1,player,[],true);assert(!fruit.eaten);
   world.update(.016,player,[],false);assert(fruit.eaten);
 });
-test('NPC auto-pickup grows smoothly; rolling NPCs cannot collect',async()=>{
+test('NPC auto-pickup boosts speed without growth; rolling NPCs cannot collect',async()=>{
   const {player,npcs,world}=await setup();isolate(world);
   player.actor.position.set(-100,0,-100);
   const npc=npcs[1];npc.actor.position.set(0,0,0);
@@ -45,13 +45,27 @@ test('NPC auto-pickup grows smoothly; rolling NPCs cannot collect',async()=>{
   world.update(.016,player,[npc]);
   assert.equal(npc.fruitsEaten,1);assert.equal(world.eatenByNpcs,1);
   assert.equal(npc.actor.scale.x,1);
-  npc.update(.2,[]);assert(npc.actor.scale.x>1 && npc.actor.scale.x<1.1);
-  npc.update(.3,[]);assert.equal(npc.actor.scale.x,1.1);
-  npc.grow();npc.update(.5,[]);
-  assert(Math.abs(npc.actor.scale.x-1.2)<1e-9,'each fruit adds ten percent of the initial size');
+  npc.update(.2,[]);assert.equal(npc.actor.scale.x,1);assert.equal(npc.fruitBoost.multiplier,1.2);
+  npc.fruitBoost.update(10);npc.eatFruit();npc.update(.5,[]);
+  assert.equal(npc.actor.scale.x,1);assert.equal(npc.fruitBoost.multiplier,1.4);assert.equal(npc.fruitBoost.remaining,20);
   npc.takeHit();npc.takeHit();npc.takeHit();
   world.fruits[1].object.position.copy(npc.actor.position);
   world.update(4,player,[npc]);assert(!world.fruits[1].eaten);
+});
+test('successive fruit pickups refresh all stacks, cap at 300%, then expire together',async()=>{
+  const {player,world}=await setup();isolate(world);
+  const collect=(index:number)=>{world.fruits[index].object.position.copy(player.actor.position);world.update(.5,player,[]);};
+  collect(0);player.fruitBoost.update(10);
+  assert.equal(player.fruitBoost.remaining,10);assert.equal(player.fruitBoost.multiplier,1.2);
+  collect(1);assert.equal(player.fruitBoost.multiplier,1.4);assert.equal(player.fruitBoost.remaining,20);
+  for(let i=2;i<10;i++)collect(i);
+  assert.equal(player.fruitBoost.multiplier,3);player.fruitBoost.update(19);
+  collect(10);assert.equal(player.fruitBoost.multiplier,3);assert.equal(player.fruitBoost.remaining,20);
+  assert.equal(player.fruitsEaten,11);assert.equal(player.savedSize,1);
+  player.fruitBoost.update(19.99);assert.equal(player.fruitBoost.multiplier,3);
+  player.fruitBoost.update(.01);assert.equal(player.fruitBoost.multiplier,1);assert.equal(player.fruitBoost.remaining,0);
+  assert.equal(player.speed,3.4);assert.equal(player.backwardSpeed,1.65);
+  collect(11);assert.equal(player.fruitBoost.multiplier,1.2);assert.equal(player.fruitsEaten,12);
 });
 test('player and NPC cannot both collect the same fruit',async()=>{
   const {player,npcs,world}=await setup();isolate(world);

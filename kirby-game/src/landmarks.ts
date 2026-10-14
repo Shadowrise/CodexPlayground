@@ -2,6 +2,7 @@ import {BOSS_ARENA} from './boss-arena-site';
 import {MILL_BAGS} from './mill-quest';
 import {MUSICAL_FLOWER_SITE,outsideMusicalFlowerClearing} from './musical-flower-site';
 import {SKY_TRAIL_SITE} from './sky-trail-layout';
+import {MOUNTAIN_LEDGE_SITE} from './mountain-ledges-layout';
 import {FOUNTAIN_SITE} from './fountain-site';
 import { spatialInstances } from './spatial-instances';
 import {instancedLod} from './instanced-lod';
@@ -25,7 +26,8 @@ export const rockHasGround=dryGround;
 // Retain the original clearing so moving the sack does not reseed mature trees
 // and their connecting paths elsewhere on the meadow.
 const millBagClearings=[...MILL_BAGS,[76,0,61] as const,[68,0,54] as const];
-export function sceneryClearance(x:number,z:number,padding=0,shorePlants=false,ownSite?:typeof LANDMARKS[number]) {
+export function sceneryClearance(x:number,z:number,padding=0,shorePlants=false,ownSite?:typeof LANDMARKS[number],mountainClearing=true) {
+  if(mountainClearing&&Math.hypot(x-MOUNTAIN_LEDGE_SITE.x,z-MOUNTAIN_LEDGE_SITE.z)<MOUNTAIN_LEDGE_SITE.radius+padding)return false;
   if(!outsideMusicalFlowerClearing(x,z,padding))return false;
   if(Math.hypot(x-BOSS_ARENA.x,z-BOSS_ARENA.z)<BOSS_ARENA.radius+padding)return false;
   if(millBagClearings.some(p=>Math.hypot(x-p[0],z-p[2])<2.3+padding))return false;
@@ -33,18 +35,18 @@ export function sceneryClearance(x:number,z:number,padding=0,shorePlants=false,o
   if(Math.hypot(x-FOUNTAIN_SITE.x,z-FOUNTAIN_SITE.z)<=FOUNTAIN_SITE.radius+padding)return false;
   return Math.hypot(x-SKY_TRAIL_SITE.x,z-SKY_TRAIL_SITE.z)>SKY_TRAIL_SITE.radius+padding && (shorePlants||riverClearance(x,z,padding)) && Math.hypot(x-HOME_SITE.x,z-HOME_SITE.z)>HOME_SITE.radius+padding && Math.hypot(x-MAZE_SITE.x,z-MAZE_SITE.z)>MAZE_SITE.radius+padding && BALLOON_SITES.every(p=>Math.hypot(x-p.x,z-p.z)>22+padding) && Math.hypot(x-135,z-45)>25+padding && LANDMARKS.every(p=>p===ownSite||(shorePlants&&p.kind===0)||Math.hypot(x-p.x,z-p.z)>p.radius+padding);
 }
-export function outsideLandmarks(x:number,z:number,padding=0) {
+export function outsideLandmarks(x:number,z:number,padding=0,mountainClearing=true) {
   for(const p of [BOSS_ARENA,FOUNTAIN_SITE,SKY_TRAIL_SITE,MUSICAL_FLOWER_SITE,...LANDMARKS,{x:135,z:45,radius:25},...BALLOON_SITES.map(p=>({...p,radius:22})),MAZE_SITE,HOME_SITE]) {
     const dx=x-p.x,dz=z-p.z,d=Math.hypot(dx,dz),r=p.radius+padding;
     if(d<=r) { const a=d>.001?Math.atan2(dz,dx):0; x=p.x+Math.cos(a)*(r+.1);z=p.z+Math.sin(a)*(r+.1); }
   }
   const moved=outsideRivers(x,z,padding);
-  if(sceneryClearance(moved.x,moved.z,padding))return moved;
+  if(sceneryClearance(moved.x,moved.z,padding,false,undefined,mountainClearing))return moved;
   // A river bank can push a point back into an attraction in a narrow gap.
   // Search nearby dry verges instead of placing trees inside either obstacle.
   for(let radius=2;radius<=80;radius+=2)for(let i=0;i<24;i++){
     const a=i*Math.PI/12,px=moved.x+Math.cos(a)*radius,pz=moved.z+Math.sin(a)*radius;
-    if(sceneryClearance(px,pz,padding)&&dryGround(px,pz,padding))return {x:px,z:pz};
+    if(sceneryClearance(px,pz,padding,false,undefined,mountainClearing)&&dryGround(px,pz,padding))return {x:px,z:pz};
   }
   return moved;
 }

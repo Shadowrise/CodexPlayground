@@ -155,10 +155,12 @@ export function createGrassDetail(){
   return texture;
 }
 
-export function createGroundMaterial(half:number,layout?:MeadowLayout){
+const groundDetails=new WeakMap<T.Material,T.Texture>();
+export function groundDetailTexture(material:T.Material){return groundDetails.get(material);}
+export function createGroundMaterial(half:number,layout?:MeadowLayout,baked?:{map:T.Texture;detail:T.Texture}){
   // Dry turf and worn earth scatter light without a view-dependent specular sheen.
-  const material=new T.MeshLambertMaterial({map:createGroundTexture(half,512,layout)});
-  const detail=createGrassDetail();
+  const material=new T.MeshLambertMaterial({map:baked?.map??createGroundTexture(half,512,layout)});
+  const detail=baked?.detail??createGrassDetail();groundDetails.set(material,detail);
   material.onBeforeCompile=shader=>{
     shader.uniforms.groundDetail={value:detail};
     shader.vertexShader='varying vec2 vGroundDetail;\nvarying float vGroundShore;\n'+shader.vertexShader;

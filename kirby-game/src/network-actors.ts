@@ -1,6 +1,5 @@
 import {riderFit,restoreRider} from './rider-size';
 import {disposeActor} from './actor-lifecycle';
-import {MIN_BODY_SIZE} from './body-size';
 import type {PlayerSnapshots} from './player-snapshots';
 import {makeSwimRing,showSwimRing} from './ponds';
 import {updateFlightCloud} from './flight';
@@ -20,11 +19,13 @@ function poseNodes(c:CharacterController|KirbyNpc){
  return [c.animationRoot,...pairs.map(([kirby,pigeon])=>c.actor.getObjectByName(kirby)??c.actor.getObjectByName(pigeon)??c.animationRoot)];
 }
 export function actorState(c:CharacterController|KirbyNpc,name:string,variant:number):ActorState{
- return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
+ const fruitBoost=c.fruitBoost.snapshot();
+ return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(fruitBoost?{fruitBoost:{...fruitBoost,remaining:Math.max(.001,round(fruitBoost.remaining))}}:{}),...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),speed:round(c.savedSpeedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
 }
 /** Restore durable progress without resuming an abandoned ride or animation. */
 export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
- restoreRider(c);c.actor.position.fromArray(a.p);c.surfaceY=a.p[1];c.actor.scale.setScalar(Math.max(MIN_BODY_SIZE,a.progress?.size??a.s));
+ restoreRider(c);c.actor.position.fromArray(a.p);c.surfaceY=a.p[1];c.resizeTo(a.progress?.size??a.s,true);
+ c.restoreMovementSpeed(a.progress?.speed??c.savedSize);c.fruitBoost.restore(a.fruitBoost);
  c.yaw=new T.Euler().setFromQuaternion(new T.Quaternion().fromArray(a.q).normalize(),'YXZ').y;c.actor.rotation.set(0,c.yaw,0);
  c.fruitsEaten=a.fruits;c.achievements.clear();for(const action of a.achievements)c.achievements.add(action as import('./score').ScoreAction);
  c.eventPoints=a.eventPoints??0;
@@ -36,6 +37,7 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
  const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion).y;
  const model=c.animationRoot.parent;if(model&&model!==c.actor)model.scale.setScalar(T.MathUtils.lerp(model.scale.x,a.fit??1,blend));
  c.fruitsEaten=a.fruits;if(validAchievements(a.achievements)){c.achievements.clear();for(const v of a.achievements)c.achievements.add(v);}
+ c.fruitBoost.restore(a.fruitBoost);
  if(c instanceof CharacterController){
   c.eventPoints=a.eventPoints??0;
   if(c.state!==a.state){c.setActivity(a.state);c.actions.forEach(x=>x.stop());const action=c.actions.get(a.state)??c.actions.get('Idle');action?.reset().play();}

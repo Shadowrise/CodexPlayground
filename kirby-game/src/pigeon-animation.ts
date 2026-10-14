@@ -2,23 +2,28 @@ import * as T from 'three';
 import {PIGEON_CLIPS,type PigeonClipName} from './pigeon-clips';
 import {isPigeonGait,PIGEON_GAITS} from './pigeon-locomotion';
 
+export const PIGEON_PECK_CORRECTION_PHASES=[0,.25,.5,.75,1] as const;
+
 type Leg={hip:T.Group;knee:T.Group;foot:T.Group;side:number};
 type PigeonRig={
-  root:T.Group;rigs:T.Object3D[];motion:T.Group;body:T.Bone;neck:T.Bone;head:T.Bone;
+  root:T.Group;rigs:T.Object3D[];motion:T.Group;body:T.Bone;neck:T.Bone;head:T.Bone;sculpt:T.SkinnedMesh;
   wings:T.Group[];wingVanes:T.Group[];tail:T.Group;tuft:T.Group;eyelids:T.Group[];pupils:T.Group[];jaw:T.Group;
   legs:Leg[];legPose:(leg:Leg,z:number,lift:number,pitch:number)=>void;
 };
 
 /** Bake articulated bird poses, so they also work outside this game's controller. */
 export function createPigeonAnimations(rig:PigeonRig){
-  const {root,rigs,motion,body,neck,head,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose}=rig;
+  const {root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose}=rig;
   const rest=rigs.map(node=>({node,p:node.position.clone(),q:node.quaternion.clone(),s:node.scale.clone()}));
   const base=new Map(rest.map(row=>[row.node,row]));
   const tau=Math.PI*2,smooth=T.MathUtils.smoothstep,clamp=T.MathUtils.clamp;
   const euler=(node:T.Object3D,x=0,y=0,z=0)=>node.quaternion.copy(base.get(node)!.q).multiply(new T.Quaternion().setFromEuler(new T.Euler(x,y,z)));
   const pulse=(time:number,center:number,width:number)=>Math.max(0,1-Math.abs(time-center)/width)**2;
   const envelope=(u:number,start=.12,end=.88)=>smooth(u,0,start)*(1-smooth(u,end,1));
-  const reset=()=>rest.forEach(row=>{row.node.position.copy(row.p);row.node.quaternion.copy(row.q);row.node.scale.copy(row.s);});
+  const reset=()=>{
+    rest.forEach(row=>{row.node.position.copy(row.p);row.node.quaternion.copy(row.q);row.node.scale.copy(row.s);});
+    sculpt.morphTargetInfluences!.fill(0);
+  };
 
   function closeEyes(amount:number,left=amount,right=amount){
     eyelids.forEach((lid,i)=>{
@@ -86,11 +91,17 @@ export function createPigeonAnimations(rig:PigeonRig){
     }
   }
   function flight(u:number,amount=1){
-    const phase=u*tau,beat=Math.sin(phase*2);
-    euler(body,.055*amount,0,.017*Math.sin(phase));body.position.y+=.024*beat*amount;
+    const phase=u*tau,beat=Math.sin(phase*2),bob=.024*beat*amount;
+    euler(body,.055*amount,0,.017*Math.sin(phase));body.position.y+=bob;
     euler(neck,-.045*amount,0,-.008*Math.sin(phase));euler(head,-.025*amount,0,.011*Math.sin(phase));
     wings.forEach((_,i)=>flightWing(i,.60*beat,1.45+.065*Math.cos(phase*2)));
-    feetTucked(.29*amount,.035);euler(tail,-.12*amount,.016*Math.sin(phase),0);
+    // Draw the folded legs toward the tail as they rise. Keeping the same
+    // knee bend also keeps the feet level through takeoff/landing blends.
+    for(const leg of legs){
+      leg.hip.position.y=.50+bob;leg.hip.position.z-=.20*amount;
+      legPose(leg,-.14*amount,.21*amount+bob,-.08*amount);
+    }
+    euler(tail,-.12*amount,.016*Math.sin(phase),0);
   }
   function restSleep(u:number,amount=1){
     const breath=.5+.5*Math.sin(u*tau);
@@ -153,6 +164,22 @@ export function createPigeonAnimations(rig:PigeonRig){
         neck.position.y-=.11*dip;euler(neck,.40*dip);euler(head,.20*dip-.045*recover);
         head.position.z+=.07*dip;euler(jaw,.24*pulse(u,.35,.08)+.20*pulse(u,.75,.08));
         closeEyes(.36*dip);euler(tail,-.055*dip);break;
+      }
+      case 'Peck':{
+        const ready=smooth(u,.02,.18)*(1-smooth(u,.82,.99)),centers=[.30,.50,.70];
+        const peck=Math.max(0,...centers.map(center=>{
+          const distance=Math.abs(u-center)/.095;return distance<1?.5+.5*Math.cos(Math.PI*distance):0;
+        }));
+        // Three ground contacts share one forward lean; the planted feet
+        // stay still while the neck reaches down and recoils between pecks.
+        sculpt.morphTargetInfluences![0]=ready;
+        PIGEON_PECK_CORRECTION_PHASES.forEach((phase,i)=>{sculpt.morphTargetInfluences![i+1]=ready*Math.max(0,1-Math.abs(peck-phase)/.25);});
+        euler(body,.60*ready+.20*peck);
+        neck.position.y-=.10*peck;
+        euler(neck,.85*ready+.70*peck);euler(head,-.35*ready-.30*peck);
+        head.position.z+=.025*peck;
+        euler(jaw,.10*Math.max(...centers.map(center=>pulse(u,center+.05,.04))));
+        closeEyes(.15*peck);euler(tail,-.12*ready);break;
       }
       case 'Death':{
         const fall=smooth(u,.08,.65),kick=(1-smooth(u,.5,.83))*Math.sin(u*tau*3);
@@ -262,12 +289,13 @@ export function createPigeonAnimations(rig:PigeonRig){
     const count=(definition.name==='Walk'?84:Math.max(32,Math.ceil(definition.duration/cycles*40)))*cycles;
     const times=Array.from({length:count+1},(_,i)=>i/count*definition.duration);
     const values=rest.map(()=>({p:[] as number[],q:[] as number[],s:[] as number[]}));
-    const yaw:number[]=[];
+    const yaw:number[]=[],belly:number[]=[];
     for(let frame=0;frame<=count;frame++){
       reset();root.quaternion.identity();
       // Exact first/last samples make repeatable wingbeats and rides seamless.
       const u=definition.loop&&frame===count?0:frame/count;
       animate(definition.name,u);
+      belly.push(...sculpt.morphTargetInfluences!);
       rest.forEach((row,i)=>{values[i].p.push(...row.node.position.toArray());values[i].q.push(...row.node.quaternion.toArray());values[i].s.push(...row.node.scale.toArray());});
       if(definition.name==='RotateLeft'||definition.name==='RotateRight')yaw.push(...root.quaternion.toArray());
     }
@@ -277,6 +305,7 @@ export function createPigeonAnimations(rig:PigeonRig){
       new T.QuaternionKeyframeTrack(`${row.node.name}.quaternion`,times,values[i].q),
       new T.VectorKeyframeTrack(`${row.node.name}.scale`,times,values[i].s),
     ));
+    tracks.push(new T.NumberKeyframeTrack(`${sculpt.name}.morphTargetInfluences`,times,belly));
     if(yaw.length)tracks.push(new T.QuaternionKeyframeTrack(`${root.name}.quaternion`,times,yaw));
     const clip=new T.AnimationClip(definition.name,definition.duration,tracks);clip.optimize();return clip;
   });

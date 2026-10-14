@@ -2,25 +2,18 @@ import { createMountainTexture } from './mountain-texture';
 import * as THREE from 'three';
 import { MEADOW_HALF_SIZE as H, MOUNTAIN_WIDTH as W } from './world-bounds';
 import {BIOME_TERRAIN} from './biome-style';
+import {mountainElevation as height,MOUNTAIN_ALONG,MOUNTAIN_ACROSS} from './mountain-surface';
 
 /** Continuous square heightfield: adjoining sides share their corner vertices. */
 export function createMountains() {
   const positions: number[] = [], colors: number[] = [], uvs: number[] = [], indices: number[] = [];
-  const along = 240, across = 40;
+  const along = MOUNTAIN_ALONG, across = MOUNTAIN_ACROSS;
   const snow = new THREE.Color('#dce4df');
   // Same smooth boundaries as the meadow: spruce, birch, autumn and orchard.
   const order=['spruce','birch','autumn','orchard'] as const;
   const greens=order.map(b=>new THREE.Color(BIOME_TERRAIN[b].foothill));
   const rocks=order.map(b=>new THREE.Color(BIOME_TERRAIN[b].rock));
   const southColor=new THREE.Color(),green=new THREE.Color(),rock=new THREE.Color();
-  function height(x: number, z: number) {
-    const d = Math.max(Math.abs(x), Math.abs(z)) - H;
-    const envelope = Math.sin(Math.PI * Math.max(0, Math.min(1, d / W))) ** .85;
-    const broad = 51 + 18 * Math.sin(x * .037 + z * .029) + 15 * Math.cos(x * .061 - z * .043);
-    const ridges = 14 * Math.abs(Math.sin(x * .14 + Math.sin(z * .09) * 2)) + 7 * Math.sin(z * .25 - x * .12);
-    const crags = 3 * Math.sin(x * .71 + z * .53) + 1.5 * Math.cos(x * 1.21 - z * .91);
-    return Math.max(0, (broad + ridges + crags) * envelope);
-  }
   for (let side = 0; side < 4; side++) {
     const base = positions.length / 3;
     for (let j = 0; j <= across; j++) for (let i = 0; i <= along; i++) {

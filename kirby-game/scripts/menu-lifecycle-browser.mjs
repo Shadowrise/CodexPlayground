@@ -28,6 +28,7 @@ window.menuCheck={scene,renderer,shadows,gamepad,chat,fruits,coaster,station:STA
  });
  await page.goto(process.env.KIRBY_URL??'http://127.0.0.1:5174/');
  await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
+ await page.waitForFunction(()=>!!window.menuCheck,{},{timeout:120000});
  const token=await page.evaluate(()=>window.documentToken);let navigations=0;
  page.on('framenavigated',frame=>{if(frame===page.mainFrame())navigations++;});
  const checkMenu=async()=>{
@@ -54,7 +55,7 @@ window.menuCheck={scene,renderer,shadows,gamepad,chat,fruits,coaster,station:STA
  await page.evaluate(()=>window.testPad.buttons[1]={pressed:true,value:1,touched:true});await checkMenu();
  await page.evaluate(()=>{window.testPad.buttons[1]={pressed:false,value:0,touched:false};menuCheck.gamepad.input.select('keyboard');});await page.waitForFunction(()=>menuCheck.gamepad.input.active==='keyboard');
  await start(false);
- await page.evaluate(()=>{menuCheck.c.resizeTo(3,true);menuCheck.c.grow();menuCheck.c.skyCheckpoint=2;menuCheck.c.achievements.add('sleep');menuCheck.c.actor.position.copy(menuCheck.home.entrance);menuCheck.home.start(menuCheck.c);});
+ await page.evaluate(()=>{menuCheck.c.resizeTo(3,true);menuCheck.c.eatFruit();menuCheck.c.skyCheckpoint=2;menuCheck.c.achievements.add('sleep');menuCheck.c.actor.position.copy(menuCheck.home.entrance);menuCheck.home.start(menuCheck.c);});
  // A save remains usable after an in-page exit, even from a scripted attraction.
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.locator('#exit-to-menu').click();await checkMenu();
  await page.locator('#load-game').click();await page.locator('#start-game').click();await page.waitForFunction(()=>menuCheck.playing);

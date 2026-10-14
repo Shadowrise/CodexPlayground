@@ -114,7 +114,7 @@ export class MeadowChat{
     if(!oldRows.has(e.id)){
      if(e.chat){const name=document.createElement('span');name.textContent=e.name+': ';const text=document.createElement('span');text.className='chat-text';text.textContent=e.text;row.append(name,text);}
     }
-    if(!e.chat)row.textContent=e.name+' '+t(e.text);
+    if(!e.chat)row.textContent=(e.name?e.name+' ':'')+t(e.text);
     return row;
    }));
    this.list.scrollTop=this.list.scrollHeight;

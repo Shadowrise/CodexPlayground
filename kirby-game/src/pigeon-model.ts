@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {createPigeonAnimations} from './pigeon-animation';
+import {createPigeonAnimations,PIGEON_PECK_CORRECTION_PHASES} from './pigeon-animation';
 
 /** Original pigeon sculpt based on the approved character sketch. +Z is forward. */
 export function createPigeon(featherPaint?:{width:number;height:number;pixels:Uint8Array}){
@@ -94,8 +94,58 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
   const bodyGeometry=new T.BufferGeometry();bodyGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));bodyGeometry.setIndex(indices);bodyGeometry.computeVertexNormals();
   paint(bodyGeometry,featherPaint?'#ffffff':'#89919e');bodyGeometry.setAttribute('uv',new T.Float32BufferAttribute(bodyUV,2));
   bodyGeometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(boneIndices,4));bodyGeometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));
+  // Pull the belly inward while keeping the approved compact peck pose.
+  // Keep small feathered supports around the hips so tucking the abdomen
+  // cannot pull the body away from the planted legs.
+  const bellyDelta=new T.Float32BufferAttribute(new Float32Array(positions.length),3);bellyDelta.name='Belly_tuck';
+  const tuckedShape=bodyGeometry.clone(),tuckedPositions=tuckedShape.getAttribute('position');
+  for(let vertex=0;vertex<tuckedPositions.count;vertex++){
+    const x=tuckedPositions.getX(vertex),y=tuckedPositions.getY(vertex),z=tuckedPositions.getZ(vertex);
+    const hipSupport=(1-smooth(Math.abs(Math.abs(x)-.345),.07,.26))*(1-smooth(Math.abs(z-.02),.10,.34))*(1-smooth(y,.56,.95));
+    const amount=(1-smooth(y,1.10,1.75))*smooth(z,-.35,.65)*(1-hipSupport);
+    const dx=-x*.18*amount,dy=.28*amount,dz=-.38*amount;
+    bellyDelta.setXYZ(vertex,dx,dy,dz);tuckedPositions.setXYZ(vertex,x+dx,y+dy,z+dz);
+  }
+  tuckedShape.computeVertexNormals();
+  const normals=bodyGeometry.getAttribute('normal'),tuckedNormals=tuckedShape.getAttribute('normal');
+  const bellyNormals=new T.Float32BufferAttribute(new Float32Array(positions.length),3);
+  for(let vertex=0;vertex<normals.count;vertex++)bellyNormals.setXYZ(vertex,tuckedNormals.getX(vertex)-normals.getX(vertex),tuckedNormals.getY(vertex)-normals.getY(vertex),tuckedNormals.getZ(vertex)-normals.getZ(vertex));
+  bodyGeometry.morphTargetsRelative=true;bodyGeometry.morphAttributes.position=[bellyDelta];bodyGeometry.morphAttributes.normal=[bellyNormals];tuckedShape.dispose();
   const sculpt=new T.SkinnedMesh(bodyGeometry,satin);sculpt.name='Continuous pigeon body';root.add(sculpt);root.updateMatrixWorld(true);sculpt.bind(new T.Skeleton([body,neck,head]));
   sculpt.castShadow=sculpt.receiveShadow=true;
+  // Correct just the compressed inside of the neck through the existing peck
+  // motion. Smoothing in posed space avoids changing the neck's width, length
+  // or the head trajectory to hide a skinning crease.
+  const tucked=positions.map((value,i)=>value+bellyDelta.array[i]);
+  for(const peck of PIGEON_PECK_CORRECTION_PHASES){
+    body.rotation.x=.60+.20*peck;neck.position.y=1.15-.10*peck;neck.rotation.x=.85+.70*peck;
+    head.rotation.x=-.35-.30*peck;head.position.z=.04+.025*peck;root.updateMatrixWorld(true);
+    const skinMatrices=sculpt.skeleton.bones.map((bone,i)=>bone.matrixWorld.clone().multiply(sculpt.skeleton.boneInverses[i]));
+    const transforms=Array.from({length:positions.length/3},(_,vertex)=>{
+      const matrix=new T.Matrix4();matrix.elements.fill(0);
+      for(let bone=0;bone<3;bone++)for(let element=0;element<16;element++)matrix.elements[element]+=skinMatrices[bone].elements[element]*weights[vertex*4+bone];
+      return matrix;
+    });
+    let surface=transforms.map((matrix,vertex)=>new T.Vector3().fromArray(tucked,vertex*3).applyMatrix4(matrix));
+    for(let pass=0;pass<192;pass++)surface=surface.map((point,vertex)=>{
+      const y=positions[vertex*3+1],front=Math.sin(vertex%(cols+1)/cols*Math.PI*2);
+      const blend=.5*smooth(y,1.15,1.60)*(1-smooth(y,2.02,2.28))*smooth(front,-.25,.65);
+      if(!blend)return point;
+      const average=surface[vertex-cols-1].clone().add(surface[vertex+cols+1]).multiplyScalar(.5);
+      average.x=point.x;return point.clone().lerp(average,blend);
+    });
+    const correction=new T.Float32BufferAttribute(new Float32Array(positions.length),3);correction.name=`Neck_smooth_${peck*4}`;
+    const correctedShape=bodyGeometry.clone(),corrected=correctedShape.getAttribute('position');
+    for(let vertex=0;vertex<surface.length;vertex++){
+      const original=new T.Vector3().fromArray(tucked,vertex*3),delta=surface[vertex].clone().applyMatrix4(transforms[vertex].clone().invert()).sub(original);
+      correction.setXYZ(vertex,delta.x,delta.y,delta.z);corrected.setXYZ(vertex,original.x+delta.x,original.y+delta.y,original.z+delta.z);
+    }
+    correctedShape.computeVertexNormals();const correctedNormals=correctedShape.getAttribute('normal'),normalCorrection=new T.Float32BufferAttribute(new Float32Array(positions.length),3);
+    for(let vertex=0;vertex<normals.count;vertex++)normalCorrection.setXYZ(vertex,correctedNormals.getX(vertex)-normals.getX(vertex)-bellyNormals.getX(vertex),correctedNormals.getY(vertex)-normals.getY(vertex)-bellyNormals.getY(vertex),correctedNormals.getZ(vertex)-normals.getZ(vertex)-bellyNormals.getZ(vertex));
+    bodyGeometry.morphAttributes.position.push(correction);bodyGeometry.morphAttributes.normal.push(normalCorrection);correctedShape.dispose();
+  }
+  body.rotation.set(0,0,0);neck.rotation.set(0,0,0);neck.position.y=1.15;head.rotation.set(0,0,0);head.position.z=.04;
+  sculpt.updateMorphTargets();root.updateMatrixWorld(true);
 
   const eyelids:T.Group[]=[],pupils:T.Group[]=[];
   for(const side of [-1,1]){
@@ -186,7 +236,7 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
     ell(foot,'#696574',[side*.045,-.079,-.224],[.023,.022,.044],[0,0,0],true);
   }
   function legPose(leg:typeof legs[number],z:number,lift:number,pitch:number){
-    const hip=new T.Vector3(leg.side*.345,leg.hip.position.y,-.12),ankle=new T.Vector3(leg.side*.345,.14+lift,z-.12),line=ankle.clone().sub(hip),distance=line.length();
+    const hip=leg.hip.position.clone(),ankle=new T.Vector3(leg.side*.345,.14+lift,z-.12),line=ankle.clone().sub(hip),distance=line.length();
     const axis=line.clone().normalize(),along=(upperLength**2-lowerLength**2+distance**2)/(2*distance),height=Math.sqrt(Math.max(0,upperLength**2-along**2));
     const bend=new T.Vector3(0,-axis.z,axis.y).normalize();
     const knee=hip.clone().addScaledVector(axis,along).addScaledVector(bend,height);
@@ -211,7 +261,7 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
     const mesh=new T.Mesh(geometry,isWing?wingMaterial:material);mesh.name=`${parent.name}_sculpt_${material===eyeMaterial?'eyes':'paint'}`;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);geometries.forEach(g=>g.dispose());
   }
   sphere.dispose();smallSphere.dispose();root.updateMatrixWorld(true);
-  const clips=createPigeonAnimations({root,rigs,motion,body,neck,head,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose});
+  const clips=createPigeonAnimations({root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose});
   root.animations=clips;root.updateMatrixWorld(true);
   return {root,clips,paintMaterials:[satin,eyeMaterial,wingMaterial]};
 }

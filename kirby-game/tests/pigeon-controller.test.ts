@@ -26,10 +26,11 @@ test('pigeon retains native animations and selects every playable ride pose',()=
  assert.equal(c.actions.get('Swim')!.getClip().duration,PIGEON_CLIP_BY_NAME.Swim.duration,'swim is not replaced by Kirby paddle');
 });
 
-test('fruit growth on a firefly continues without replacing the seated native pose',()=>{
- const c=create();c.setActivity('FireflyRide');c.grow();
+test('admin growth and fruit speed on a firefly preserve the seated native pose',()=>{
+ const c=create();c.setActivity('FireflyRide');c.resizeTo(1.1);c.eatFruit();
  for(let i=0;i<30;i++)c.updateActivity(1/60);
  assert.equal(c.actor.scale.x,1.1);assert.equal(c.savedSize,1.1);
+ assert.equal(c.fruitBoost.multiplier,1.2);assert.equal(c.speed,3.4*1.1*1.2);
  assert.equal(c.state,'FireflyRide');assert(c.actions.get('FireflyRide')!.isRunning());
  assert(!c.actions.get('Idle')!.isRunning());
 });

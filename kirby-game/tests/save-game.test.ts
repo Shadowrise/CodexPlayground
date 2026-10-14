@@ -18,16 +18,16 @@ test('the former pigeon name migrates to Pidgie without losing saved progress',(
  const duplicate={...old,npcs:[...old.npcs.slice(0,13),actor('Пиджи')]};
  assert.throws(()=>parseSave(JSON.stringify(duplicate)),'migration must still reject duplicate character slots');
 });
-test('save round trip restores variant, positions, growth targets, fruit visibility and counters',async()=>{
+test('save round trip restores size, independent speed, fruit boosts, visibility and counters',async()=>{
  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));
  const model=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const variant=KIRBY_VARIANTS[4],player=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const npcs=createNpcs(model.scene,model.animations,variant),world=new FruitWorld();
- player.actor.position.set(12,0,33);player.yaw=.8;player.grow();player.grow();
+ player.actor.position.set(12,0,33);player.yaw=.8;player.resizeTo(2,true);player.shrink(3);player.eatFruit();player.eatFruit();player.fruitBoost.update(10);
  player.achievements.add('bench');player.achievements.add('star');player.achievements.add('firefly');npcs[3].achievements.add('balloon');
  player.skyCheckpoint=3;player.eventPoints=6;
  player.starBlessed=true;player.starRemaining=18;player.starCooldown=108;
- npcs[3].actor.position.set(-15,0,90);npcs[3].grow();
+ npcs[3].actor.position.set(-15,0,90);npcs[3].eatFruit();
  world.restore(world.fruits.map((_,i)=>i<3),1);
  const save=parseSave(JSON.stringify(captureGame(player,variant,npcs,world)));
  const lakeSave=parseSave(JSON.stringify({...save,player:{...save.player,achievements:['swim','bench']}}));assert.deepEqual(lakeSave.player.achievements,['swim','bench']);
@@ -39,8 +39,9 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  assert.equal(restored.eventPoints,6);assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,eventPoints:13}})));
  assert.equal(restored.skyCheckpoint,3);assert(restored.starBlessed);assert.equal(restored.starRemaining,18);assert.equal(restored.starCooldown,108);
  assert.equal(save.player.variant,variant[0]);assert.equal(restored.actor.position.x,12);assert.equal(restored.actor.position.z,33);
- assert.equal(restored.yaw,.8);assert(Math.abs(restored.actor.scale.x-1.2)<1e-9);assert.equal(restored.fruitsEaten,2);
- assert.equal(friends[3].actor.position.z,90);assert.equal(friends[3].actor.scale.x,1.1);assert.equal(friends[3].fruitsEaten,1);
+ assert.equal(restored.yaw,.8);assert.equal(restored.actor.scale.x,.3);assert.equal(restored.fruitsEaten,2);
+ assert.equal(restored.sizeSpeedMultiplier,2);assert.equal(restored.fruitBoost.multiplier,1.4);assert.equal(restored.fruitBoost.remaining,10);
+ assert.equal(friends[3].actor.position.z,90);assert.equal(friends[3].actor.scale.x,1);assert.equal(friends[3].fruitsEaten,1);assert.equal(friends[3].fruitBoost.multiplier,1.2);
  assert.equal(fruits.onMap,67);assert.equal(fruits.eatenByNpcs,1);assert(!fruits.fruits[0].object.visible);assert(fruits.fruits[3].object.visible);
  const ride=captureGame(player,variant,npcs,world,true);assert.equal(ride.player.x,STATION.x);assert.equal(ride.player.z,STATION.z-8);
  assert.throws(()=>parseSave(JSON.stringify({...save,fruits:[]})));
@@ -51,6 +52,10 @@ test('save round trip restores variant, positions, growth targets, fruit visibil
  restoreGame(parseSave(JSON.stringify(oldFormat)),restored,friends,fruits);assert.deepEqual([...restored.achievements],['star']);assert.equal(friends[3].achievements.size,0);assert.equal(restored.fruitsEaten,2);
  const legacy={...save};delete legacy.mazeStar;delete legacy.starRemaining;delete legacy.starCooldown;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);assert.equal(restored.starRemaining,0);assert.equal(restored.starCooldown,0);
  assert.throws(()=>parseSave(JSON.stringify({...save,starRemaining:31})));assert.throws(()=>parseSave(JSON.stringify({...save,starCooldown:-1})));
+ assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,fruitBoost:{stacks:11,remaining:20}}})));
+ assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,speed:Infinity}})));
+ const noBoost=structuredClone(save);delete noBoost.player.fruitBoost;delete noBoost.player.speed;
+ restoreGame(noBoost,restored,friends,fruits);assert.equal(restored.fruitBoost.multiplier,1);assert.equal(restored.sizeSpeedMultiplier,1);
  const smallSave=parseSave(JSON.stringify({...save,player:{...save.player,size:.1},npcs:save.npcs.map(n=>({...n,size:.2}))}));
  restoreGame(smallSave,restored,friends,fruits);
  assert.equal(restored.savedSize,.3);assert(friends.every(n=>n.savedSize===.3));

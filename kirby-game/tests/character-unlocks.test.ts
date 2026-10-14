@@ -71,13 +71,13 @@ test('Pidgie remains usable in this session when storage is denied; one failed r
 });
 
 test('Pidgie lock hint keeps the exact requested wording and localizes without replacing the Bandana hint',()=>{
- assert.equal(PIDGIE_LOCK_HINT,'Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.');
+ assert.equal(PIDGIE_LOCK_HINT,'Угости дикого Пиджи хлебушком, чтобы открыть этого персонажа.');
  assert.equal(lockedCharacterHint('Пиджи'),PIDGIE_LOCK_HINT);
  assert.equal(lockedCharacterHint('Бандана'),'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.');
  try{
   setLocale('ru');assert.equal(t(lockedCharacterHint('Пиджи')),PIDGIE_LOCK_HINT);
-  setLocale('en');assert.equal(t('Пиджи'),'Pidgie');assert.match(t(PIDGIE_LOCK_HINT),/catch Pidgie/);
-  setLocale('bg');assert.equal(t('Пиджи'),'Пиджи');assert.match(t(PIDGIE_LOCK_HINT),/хванеш Пиджи/);
+  setLocale('en');assert.equal(t('Пиджи'),'Pidgie');assert.match(t(PIDGIE_LOCK_HINT),/Give wild Pidgie/);
+  setLocale('bg');assert.equal(t('Пиджи'),'Пиджи');assert.match(t(PIDGIE_LOCK_HINT),/Почерпи дивия Пиджи/);
  }finally{setLocale('ru');}
 });
 

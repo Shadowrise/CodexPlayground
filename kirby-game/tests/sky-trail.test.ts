@@ -6,10 +6,11 @@ async function player(){const bytes=await readFile(new URL('../public/models/kir
 const pos=(i:number)=>new Vector3(S.x+P[i].x,P[i].y,S.z+P[i].z);
 
 test('online return restores growth, rewards and checkpoint without falling through its platform',async()=>{
- const c=await player();c.actor.position.copy(pos(SKY_CHECKPOINTS[1]));c.surfaceY=c.actor.position.y;c.skyCheckpoint=2;c.achievements.add('mill');c.grow();
+ const c=await player();c.actor.position.copy(pos(SKY_CHECKPOINTS[1]));c.surfaceY=c.actor.position.y;c.skyCheckpoint=2;c.achievements.add('mill');c.resizeTo(1.1);c.eatFruit();
  const state=actorState(c,'Вернулся',3);state.state='Idle';state.pose=[];
  const restored=await player(),trail=new SkyTrail();restoreNetworkPlayer(restored,state);trail.restorePosition(restored);
  assert.equal(restored.actor.scale.x,1.1);assert.equal(restored.fruitsEaten,1);assert.equal(scoreOf(restored),4);assert.equal(restored.skyCheckpoint,2);
+ assert.equal(restored.fruitBoost.multiplier,1.2);assert.equal(restored.fruitBoost.remaining,20);
  for(let i=0;i<60;i++){const previous=restored.actor.position.clone();restored.update(1/60,{forward:false,left:false,right:false});trail.apply(restored,previous,1/60);}
  assert(restored.actor.position.distanceTo(c.actor.position)<.001);assert.equal(restored.state,'Idle');
 });

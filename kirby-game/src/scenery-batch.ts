@@ -15,14 +15,23 @@ export function batchScenery(root:T.Object3D){
  if(!multiDraw)return;
  root.updateMatrixWorld(true);
  const inverse=root.matrixWorld.clone().invert(),groups=new Map<string,T.InstancedMesh[]>(),families=new Map<T.InstancedMesh,string>();
+ const materialKeys=new Map<T.Material,string>(),attributeKeys=new Map<T.BufferGeometry,string>();
+ const metadata={textures:{},images:{}};
  root.traverse(o=>{
   if(!(o instanceof T.InstancedMesh)||Array.isArray(o.material)||o.count===0||o.count>96)return;
   const m=o.material;
   if(m.transparent||!m.visible||!m.colorWrite||m.onBeforeCompile!==T.Material.prototype.onBeforeCompile||o.customDepthMaterial||o.geometry.morphAttributes.position)return;
-  const props=m.toJSON() as unknown as Record<string,unknown>;
-  for(const k of ['uuid','name','color','metadata','userData'])delete props[k];
-  const attributes=Object.keys(o.geometry.attributes).sort().map(k=>{const a=o.geometry.attributes[k];return [k,a.itemSize,a.normalized];});
-  const family=JSON.stringify([props,attributes,o.castShadow,o.receiveShadow,o.renderOrder,o.layers.mask,o.frustumCulled]),key=o.userData.spatialCell+family;
+  let properties=materialKeys.get(m);
+  if(properties===undefined){
+   // A shared serialization context keeps full texture pixels out of each
+   // material key. Map UUIDs still distinguish every surface and finish.
+   const props=m.toJSON(metadata) as unknown as Record<string,unknown>;
+   for(const k of ['uuid','name','color','metadata','userData'])delete props[k];
+   properties=JSON.stringify(props);materialKeys.set(m,properties);
+  }
+  let attributes=attributeKeys.get(o.geometry);
+  if(attributes===undefined){attributes=JSON.stringify(Object.keys(o.geometry.attributes).sort().map(k=>{const a=o.geometry.attributes[k];return [k,a.itemSize,a.normalized];}));attributeKeys.set(o.geometry,attributes);}
+  const family=JSON.stringify([properties,attributes,o.castShadow,o.receiveShadow,o.renderOrder,o.layers.mask,o.frustumCulled]),key=o.userData.spatialCell+family;
   // Only combine meshes carrying an explicit cell key. Large animated groups
   // and independent object positions must not silently become static.
   if(o.userData.spatialCell===undefined)return;
