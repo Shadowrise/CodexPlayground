@@ -309,7 +309,7 @@ export class GameRoom extends DurableObject<Env>{
    if(a.adminSize!==undefined){const final=a.actor.progress?.size??a.actor.s;a.adminSize=final;if(reportedSize===undefined||Math.abs(reportedSize-final)>=.001)this.send(socket,{type:'resize',size:final});}
   }
   if(deferContacts&&this.advanceBoss(now,a))changed=true;
-  if(!r.festival&&a.actor&&allTasks(a.actor.achievements)){
+  if(!r.festival&&a.actor&&allTasks(a.actor.achievements)&&r.flowerGame?.stage!=='celebrate'){
    this.startFestival(now,a.actor.name);changed=true;
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
   }

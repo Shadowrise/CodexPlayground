@@ -31,7 +31,7 @@ try{
    ws.onMessage(data=>{if(data==='ping'){ws.send('pong');return;}room.webSocketMessage(socket,data);});
    ws.send(JSON.stringify({type:'welcome',serverNow:Date.now(),protocolVersion:PROTOCOL,playerId:socket.data.id,room:room.room,players:sockets.map(s=>({id:s.data.id,actor:s.data.actor}))}));room.broadcast({type:'presence',count:sockets.length},socket);
   });
-  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`\nwindow.flowerGameQA={garden:musicalFlowers,view:flowerGameView,renderer,scene,camera,sounds,music,gamepad,get c(){return character},get game(){return currentFlowerGame()},get session(){return network},set solo(q){soloFlowerGame=q},set clock(v){const native=window.realFlowerNow??=Date.now,delta=v-native();Date.now=()=>native()+delta;},set offset(v){if(network)network.clockOffset=v;},set day(v){dayStart=Date.now();dayStartPhase=v}};\n`});});
+  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`\nwindow.flowerGameQA={garden:musicalFlowers,view:flowerGameView,renderer,scene,camera,sounds,music,gamepad,played:[],get c(){return character},get game(){return currentFlowerGame()},get session(){return network},set solo(q){soloFlowerGame=q},set clock(v){const native=window.realFlowerNow??=Date.now,delta=v-native();Date.now=()=>native()+delta;},set offset(v){if(network)network.clockOffset=v;},set day(v){dayStart=Date.now();dayStartPhase=v}};const playFlowerForQA=flowerGameView.play;flowerGameView.play=(index,transpose)=>{flowerGameQA.played.push({index,transpose,stage:currentFlowerGame()?.stage});playFlowerForQA(index,transpose);};\n`});});
   await page.goto(process.env.GAME_URL??'http://127.0.0.1:5174/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:180000});
   await page.locator(online?'#network-join':'#new-game').click();await page.locator('#player-name-input').fill('Игрок '+i);if(i)await page.locator('#variant-grid button').nth(i).click();await page.locator('#start-game').click();await page.waitForFunction(()=>window.flowerGameQA?.c);
   console.log('Loaded player '+i);
@@ -79,11 +79,23 @@ try{
  const celebration=await page.evaluate(()=>({visible:flowerGameQA.view.group.getObjectByName('Flower melody celebration fireworks').visible,score:document.querySelector('#player-fruits').textContent}));assert(celebration.visible);
  await page.screenshot({path:output+'flower-game-win'+(online?'-online':mobile?'-phone':'')+'.png'});
  if(mobile){for(const [width,height] of [[844,390],[390,844]]){await page.setViewportSize({width,height});const box=await page.locator('#flower-game-hud').boundingBox();assert(box.y<12&&box.x>=0&&box.x+box.width<=width&&box.y+box.height<height/2,JSON.stringify(box));}}
- q=await get();await jump(flowerDeadline(q)+20);assert.equal(await get(),undefined);
+ q=await get();const performance=flowerPlayback(q);assert(performance.length>10);
+ for(const p of pages)await p.evaluate(SITE=>{flowerGameQA.c.setActivity('Idle');flowerGameQA.c.actor.position.set(SITE.x,0,SITE.z+2);},SITE);
+ await page.keyboard.press('KeyE');assert.equal((await get()).stageAt,q.stageAt,'start button is locked during the concert');
+ for(const note of performance){
+  await jump(note.at+20);
+  for(const p of pages)assert(await p.evaluate(({index,transpose})=>[...flowerGameQA.sounds.active].some(v=>v.source.buffer===flowerGameQA.sounds.buffers.get('flower-note-'+index)&&Math.abs(v.source.playbackRate.value-2**(transpose/12))<.0001),note),'the full melody uses the bell sound and its correct pitch');
+ }
+ for(const p of pages){
+  const played=await p.evaluate(()=>flowerGameQA.played.filter(n=>n.stage==='celebrate').map(({index,transpose})=>({index,transpose})));
+  assert.deepEqual(played,performance.map(({index,transpose})=>({index,transpose})),'every full melody note plays once, in order');
+ }
+ await page.keyboard.press('KeyE');assert.equal((await get()).stage,'celebrate','still locked while the last note rings');
+ await jump(flowerDeadline(q)+20);assert.equal(await get(),undefined);
  await page.waitForFunction(()=>Math.abs(flowerGameQA.music.audio.volume-flowerGameQA.music.volume)<.001);
  await page.evaluate(SITE=>{flowerGameQA.c.setActivity('Idle');flowerGameQA.c.actor.position.set(SITE.x,0,SITE.z+2);},SITE);
  await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Начать цветочную мелодию'));
  if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('KeyE');await page.waitForFunction(()=>!!flowerGameQA.game);
  for(const p of pages)await p.evaluate(()=>{flowerGameQA.c.actor.position.set(200,0,180);});await page.waitForTimeout(350);q=await get();assert(q.emptySince!==undefined);await page.screenshot({path:output+'flower-game-countdown.png'});await jump(q.emptySince+FLOWER_EMPTY_MS+20);assert.equal(await get(),undefined);
- assert.deepEqual(errors,[]);console.log('PASS '+(online?'two real browser players + actual Worker':mobile?'touch landscape/portrait':'solo keyboard')+': ten rounds, mistake/button replay, green notes, fireworks/reward, leave countdown and reset');
+ assert.deepEqual(errors,[]);console.log('PASS '+(online?'two real browser players + actual Worker':mobile?'touch landscape/portrait':'solo keyboard')+': ten rounds, mistake/button replay, full melody/pitches, locked concert button, music fade, fireworks/reward, leave countdown and reset');
 }finally{Date.now=realNow;await browser.close();}

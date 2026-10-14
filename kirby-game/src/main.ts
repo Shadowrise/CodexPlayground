@@ -440,7 +440,7 @@ const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
 const musicalFlowers=new MusicalFlowers();scene.add(musicalFlowers.group);
 let soloFlowerGame:FlowerGame|undefined;
-const flowerGameView=new MusicalFlowerGameView(index=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
+const flowerGameView=new MusicalFlowerGameView((index,transpose)=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index,transpose);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
 const coaster=new Coaster();scene.add(coaster.group);
 await startupTask();
 const mountainLedges=new MountainLedges((scene.getObjectByName('Continuous square mountain range') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>).material);scene.add(mountainLedges.group);
@@ -850,7 +850,7 @@ function festivalTick(){
  if(!character||!playing)return;
  const now=network?.serverNow??Date.now(),id=network?.id??'solo';
  network?.finishFestivalIfDue();
- if(!network&&!character.festival&&allTasks(character.achievements))character.festival=createStarfall(now,nameInput.value);
+ if(!network&&!character.festival&&allTasks(character.achievements)&&currentFlowerGame()?.stage!=='celebrate')character.festival=createStarfall(now,nameInput.value);
  const f=network?.room.festival??character.festival;if(!f)return;
  if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements)+character.eventPoints;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
@@ -1123,7 +1123,7 @@ renderer.setAnimationLoop((time: number) => {
   const hearingFlowers=playing&&!roundFinished()&&!!flowerGame&&!!character&&Math.hypot(character.actor.position.x-MUSICAL_FLOWER_SITE.x,character.actor.position.z-MUSICAL_FLOWER_SITE.z)<MUSICAL_FLOWER_SITE.radius+10;
   music.updateDucking(hearingFlowers,dt);
   millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
-  flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
+  flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden,playing&&!roundFinished());
   if(!flowerGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
   chat.render(network?.log??localLog,!audioPanel.hidden);
   for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
@@ -1253,9 +1253,9 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if(bug)return result(fireflies!.prompt(c),()=>fireflies!.board(c),object(bug));
 }
 
-function playFlowerSound(index:number){
+function playFlowerSound(index:number,transpose=0){
  if(!character)return;const flower=MUSICAL_FLOWERS[index],p=character.actor.position;
- sounds.playFlowerNote(index,flower.x-p.x,flower.z-p.z,followCamera.azimuth);
+ sounds.playFlowerNote(index,flower.x-p.x,flower.z-p.z,followCamera.azimuth,transpose);
 }
 
 function captureWorld():WorldState{

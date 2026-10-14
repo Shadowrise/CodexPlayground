@@ -117,11 +117,11 @@ export class SoundEffects {
       });
     }catch{/* A missing musical effect must never prevent entering the meadow. */}
   }
-  playFlowerNote(index:number,dx=0,dz=0,cameraAzimuth=0){
+  playFlowerNote(index:number,dx=0,dz=0,cameraAzimuth=0,transpose=0){
     const ctx=this.context,buffer=this.buffers.get(`flower-note-${index}`),distance=Math.hypot(dx,dz);
-    if(!validFlowerIndex(index)||!ctx||!buffer||!this.enabled||document.hidden||ctx.state!=='running'||distance>=34||this.active.size>=16)return;
+    if(!validFlowerIndex(index)||!Number.isFinite(transpose)||!ctx||!buffer||!this.enabled||document.hidden||ctx.state!=='running'||distance>=34||this.active.size>=16)return;
     const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();
-    source.buffer=buffer;gain.gain.value=.9*(1-distance/34)**2;
+    source.buffer=buffer;source.playbackRate.value=2**(Math.max(-12,Math.min(12,transpose))/12);gain.gain.value=.9*(1-distance/34)**2;
     pan.pan.value=Math.max(-.7,Math.min(.7,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/16));
     source.connect(gain);gain.connect(pan);pan.connect(this.master!);
     this.begin(source,gain,()=>pan.disconnect(),undefined,true);

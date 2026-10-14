@@ -2,9 +2,9 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import ts from 'typescript';
-import {FLOWER_MELODIES,flowerDeadline,FLOWER_EMPTY_MS} from '../src/musical-flower-game';
+import {FLOWER_MELODIES,flowerDeadline,flowerPlayback,FLOWER_EMPTY_MS,type FlowerGame} from '../src/musical-flower-game';
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE as SITE} from '../src/musical-flower-site';
-import {achievementPoints} from '../src/score';
+import {achievementPoints,SCORE_ACTIONS} from '../src/score';
 
 async function worker(){
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8')).replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }').replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href).replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2');
@@ -38,6 +38,11 @@ test('authoritative shared flower game validates notes, awards both participants
   assert.equal(room.room.flowerGame.stage,'celebrate');for(const s of [a,b]){assert.equal(achievementPoints(s.data.actor.achievements),6);assert.equal(s.messages.filter(m=>m.type==='flower-complete').length,1);}
   assert.equal(a.messages.filter(m=>m.type==='room').length,beforeNormalRoom,'notes never rebroadcast the whole world');
   assert(a.messages.filter(m=>m.type==='flower-game').every(m=>JSON.stringify(m).length<1100&&!m.game?.world));
+  const concert=room.room.flowerGame as FlowerGame,last=flowerPlayback(concert).at(-1)!;
+  a.data.actor.p=[SITE.x,0,SITE.z+2];now=last.at;const beforeConcertNotes=b.messages.filter(m=>m.type==='flower-note').length;
+  frame(a,[{type:'flower-start'},{type:'flower-replay'},{type:'flower-note',index:0}]);
+  assert.deepEqual(room.room.flowerGame,concert,'the server refuses all input throughout the full concert');
+  assert.equal(b.messages.filter(m=>m.type==='flower-note').length,beforeConcertNotes,'concert needs no per-note network packets');
   // Normal client snapshots cannot erase or forge the server-owned achievement.
   const snapshot=structuredClone(a.data.actor);snapshot.achievements=[];frame(a,[],snapshot);assert(a.data.actor.achievements.includes('flowers'));
   now=flowerDeadline(room.room.flowerGame);frame(a);assert.equal(room.room.flowerGame,undefined);
@@ -47,5 +52,10 @@ test('authoritative shared flower game validates notes, awards both participants
   now+=9000;a.data.actor.p=[SITE.x,0,SITE.z];frame(a);assert.equal(room.room.flowerGame.emptySince,undefined);
   a.data.actor.p=[200,0,200];now+=100;frame(a);now+=FLOWER_EMPTY_MS;frame(a);assert.equal(room.room.flowerGame,undefined);
   const fresh=structuredClone(b.data.actor);fresh.achievements=['flowers'];b.data.actor.achievements=[];frame(b,[],fresh);assert(!b.data.actor.achievements.includes('flowers'),'unearned flower award rejected');
+  // Completing the last adventure must not hide/cut the concert with the finale.
+  room.room.flowerGame={...concert,startedAt:now,stageAt:now};a.data.actor.achievements=[...SCORE_ACTIONS];frame(a);
+  assert.equal(room.room.festival,undefined);
+  now=flowerDeadline(room.room.flowerGame)-1;frame(a);assert.equal(room.room.festival,undefined);
+  now++;frame(a);assert.equal(room.room.flowerGame,undefined);assert(room.room.festival);
  }finally{Date.now=original;Math.random=originalRandom;(globalThis as any).WebSocketRequestResponsePair=saved;}
 });

@@ -12,7 +12,7 @@ import {validPidgieState,type PidgieState} from './pidgie-state';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-12';
+export const BUILD='meadow-network-13';
 export type ActorState={p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][];pidgie?:PidgieState;mountainSteps?:number[][]};
 export type Event={type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};

@@ -1,4 +1,5 @@
 import {MUSICAL_FLOWER_SITE as SITE,canPlayFlower,validFlowerIndex} from './musical-flower-site';
+import {FLOWER_FULL_MELODIES} from './musical-flower-melodies';
 
 /** Ten-note phrases, arranged for our existing seven C5–B5 bell recordings.
  * Traditional nursery tunes and Beethoven; note/beat references:
@@ -18,6 +19,9 @@ export const FLOWER_MELODIES=[
 export const FLOWER_ROUNDS=10;
 export const FLOWER_BEAT_MS=450,FLOWER_EMPTY_MS=10000,FLOWER_CELEBRATE_MS=9600;
 export const FLOWER_SUCCESS_MS=350;
+export const FLOWER_FINAL_LEAD_MS=3200,FLOWER_FINAL_TAIL_MS=2400;
+const finalDurations=FLOWER_MELODIES.map(m=>FLOWER_FULL_MELODIES[m.name].reduce((sum,n)=>sum+n.beats,0)*FLOWER_BEAT_MS);
+export type FlowerPlaybackNote={index:number;at:number;transpose:number};
 export type FlowerActor={id:string;p:readonly number[];size:number;available?:boolean;present?:boolean};
 export type FlowerStage='listen'|'repeat'|'error'|'echo'|'celebrate';
 export type FlowerGame={startedAt:number;melody:number;round:number;cursor:number;stage:FlowerStage;stageAt:number;players:string[];winners:string[];emptySince?:number};
@@ -35,15 +39,20 @@ export function replayFlowerGame(q:FlowerGame|undefined,a:FlowerActor,now:number
  if(!q||q.stage!=='repeat'||!nearFlowerButton(a))return q;
  return {...q,stage:'listen' as const,stageAt:now,cursor:0,emptySince:undefined,players:q.players.includes(a.id)?q.players:[...q.players,a.id]};
 }
-export function flowerPlayback(q:FlowerGame){
+export function flowerPlayback(q:FlowerGame):FlowerPlaybackNote[]{
+ if(q.stage==='celebrate'){
+  let at=q.stageAt+FLOWER_FINAL_LEAD_MS;
+  return FLOWER_FULL_MELODIES[FLOWER_MELODIES[q.melody].name].map(tone=>{const note={index:tone.index,at,transpose:tone.transpose};at+=tone.beats*FLOWER_BEAT_MS;return note;});
+ }
  if(q.stage!=='listen')return [];
  const melody=FLOWER_MELODIES[q.melody];let at=q.stageAt+650;
- return melody.notes.slice(0,q.round).map((index,i)=>{const note={index,at};at+=melody.beats[i]*FLOWER_BEAT_MS;return note;});
+ return melody.notes.slice(0,q.round).map((index,i)=>{const note={index,at,transpose:0};at+=melody.beats[i]*FLOWER_BEAT_MS;return note;});
 }
+export function flowerFinalEnd(q:FlowerGame){return q.stageAt+FLOWER_FINAL_LEAD_MS+finalDurations[q.melody];}
 export function flowerPhraseEnd(q:FlowerGame){return q.stageAt+650+FLOWER_MELODIES[q.melody].beats.slice(0,q.round).reduce((sum,n)=>sum+n,0)*FLOWER_BEAT_MS;}
 export function flowerDeadline(q:FlowerGame){
  // Keep the existing wire stage name; success is a brief cue, without replaying the answered phrase.
- const stage=q.stage==='listen'?flowerPhraseEnd(q)+250:q.stage==='echo'?q.stageAt+FLOWER_SUCCESS_MS:q.stage==='error'?q.stageAt+1200:q.stage==='celebrate'?q.stageAt+FLOWER_CELEBRATE_MS:Infinity;
+ const stage=q.stage==='listen'?flowerPhraseEnd(q)+250:q.stage==='echo'?q.stageAt+FLOWER_SUCCESS_MS:q.stage==='error'?q.stageAt+1200:q.stage==='celebrate'?Math.max(q.stageAt+FLOWER_CELEBRATE_MS,flowerFinalEnd(q)+FLOWER_FINAL_TAIL_MS):Infinity;
  return Math.min(stage,q.emptySince===undefined?Infinity:q.emptySince+FLOWER_EMPTY_MS);
 }
 /** Same clock-driven rules in solo and the room; rendering/audio need no packets per note. */

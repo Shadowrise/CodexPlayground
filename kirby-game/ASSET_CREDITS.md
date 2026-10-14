@@ -11,6 +11,14 @@
 - Further provenance: `public/audio/flower-bells-CREDITS.md`.
 - Retrieved: 2026-10-13.
 
+## Musical flower finale scores
+
+- Game notation: `src/musical-flower-melodies.ts`. Original monophonic bell arrangements of the ten public-domain tunes, with one complete verse/theme and its written repeats. Jingle Bells includes its verse and complete refrain.
+- Melody and rhythm references: [PrintableGarden sheet music](https://www.printablegarden.com/sheet-music/), individual pages for Twinkle Twinkle Little Star, Mary Had a Little Lamb, Frère Jacques, London Bridge, Ode to Joy, Au Clair de la Lune, Hot Cross Buns, Row Row Row Your Boat, Yankee Doodle and Jingle Bells.
+- Jingle Bells verse reference: [Music for Music Teachers](https://www.music-for-music-teachers.com/jingle-bells.html). Only the historical melody is transcribed; the modern piano accompaniment, engraving and lyrics are not distributed.
+- Performed with the existing CC0 flower bell samples. Octave changes and F-sharp use sample playback rate; no new third-party recordings or downloads in the game.
+- References checked: 2026-10-14.
+
 ## Apple bite sound
 
 Game file: `public/audio/apple-bite.wav`
