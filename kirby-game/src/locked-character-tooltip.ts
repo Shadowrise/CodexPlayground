@@ -1,6 +1,6 @@
 import {onLocaleChange,t} from './i18n';
 
-export const PIDGIE_LOCK_HINT='Угости дикого Пиджи хлебушком, чтобы открыть этого персонажа.';
+export const PIDGIE_LOCK_HINT='Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.';
 export function lockedCharacterHint(name:string){
  return name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
 }

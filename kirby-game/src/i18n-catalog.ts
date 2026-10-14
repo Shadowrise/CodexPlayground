@@ -352,6 +352,5 @@ export const translations: Record<string, readonly [string, string]> = {
  'ЛЕСНОЙ ПРИЧАЛ':['FOREST LANDING','ГОРСКИ ПРИСТАН'], 'СОЛНЕЧНЫЙ ПРИЧАЛ':['SUNNY LANDING','СЛЪНЧЕВ ПРИСТАН'], 'ЦВЕТОЧНЫЙ ПРИЧАЛ':['FLOWER LANDING','ЦВЕТЕН ПРИСТАН'],
  'E — Бросить хлебушек':['E — Drop the bread','E — Пусни хлебчето'],
  'E — Угостить дикого Пиджи':['E — Give bread to wild Pidgie','E — Почерпи дивия Пиджи'],
- 'Угости дикого Пиджи хлебушком, чтобы открыть этого персонажа.':['Give wild Pidgie some bread to unlock this character.','Почерпи дивия Пиджи с хлебче, за да отключиш този герой.'],
  '{0} угостил дикого Пиджи хлебушком, теперь Пиджи его лучший друг.':['{0} gave wild Pidgie some bread. Pidgie is now their best friend.','{0} почерпи дивия Пиджи с хлебче. Сега Пиджи е най-добрият му приятел.'],
 };
