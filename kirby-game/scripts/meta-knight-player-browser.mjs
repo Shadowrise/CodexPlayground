@@ -10,7 +10,7 @@ await mkdir(output,{recursive:true});
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 const report={desktop:{},mobile:[],errors:[]};
 const key='kirby-meta-knight-unlocked-v1';
-const hint='Это Meta Knight. Он не играет с незнакомцами.';
+const hint='Кто сможет победить Метакнайта, тот станет новым метакнайтом.';
 async function prepare(page){
  page.on('pageerror',error=>report.errors.push(error.message));
  page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});

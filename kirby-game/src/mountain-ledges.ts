@@ -9,7 +9,7 @@ import {
   MOUNTAIN_LEDGE_SITE as SITE, MOUNTAIN_LEDGE_YAW as YAW, MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT,
   MOUNTAIN_PEAK as SEAL_NICHE,mountainCourseEnvelope,
   LEDGE_STAND_SECONDS, LEDGE_RETRACT_SECONDS, LEDGE_HIDDEN_SECONDS, LEDGE_EXTEND_SECONDS, LEDGE_RETRACT_DISTANCE,
-  mountainFace, mountainLocal, mountainWorld, type MountainLedge,
+  mountainFace, mountainLocal, mountainWorld, mountainLedgePose, type MountainLedge,
 } from './mountain-ledges-layout';
 
 type Phase = 'ready' | 'retracting' | 'hidden' | 'extending';
@@ -68,7 +68,7 @@ export class MountainLedges {
   }
 
   private slab(p: MountainLedge, thickness: number, seed: number) {
-    const w = p.width / 2, front = -p.depth / 2, back = p.depth / 2 + EMBED_DEPTH, cut = .16;
+    const w = p.width / 2, front = -p.depth / 2, back = p.depth / 2 + (p.embedDepth??EMBED_DEPTH), cut = .16;
     const outline = p.shape === 'semicircle'
       ? [...Array.from({length:33},(_,i)=>{const angle=Math.PI*i/32;return [Math.cos(angle)*w,p.depth/2-Math.sin(angle)*w];}),[-w,back],[w,back]]
       : [[-w + cut, front], [w - cut, front], [w, front + cut], [w, back], [-w, back], [-w, front + cut]];
@@ -79,7 +79,7 @@ export class MountainLedges {
       else indices.push(0,1+(i+1)%outline.length,1+i);
     }
     const lower = vertices.length / 3;
-    for (const [x, z] of outline) vertices.push(x * .84, -thickness * (.9 + .1 * Math.sin(x * 3 + seed)), z + .24);
+    for (const [x, z] of outline) vertices.push(x * .84, -thickness * (.9 + .1 * Math.sin(x * 3 + seed)), p.embedDepth===undefined?z+.24:Math.min(z+.24,back));
     for (let i = 0; i < outline.length; i++) {
       const next = (i + 1) % outline.length;
       if(p.shape==='semicircle')indices.push(1+i,lower+i,1+next,1+next,lower+i,lower+next);
@@ -102,10 +102,10 @@ export class MountainLedges {
   private surface(p: MountainLedge, index: number, tangent: number) {
     const slide = index < STEPS.length ? this.steps[index].slide : 0;
     if (index < STEPS.length && this.steps[index].phase === 'hidden') return undefined;
-    const front = p.radial - p.depth / 2 + slide;
-    let back=p.radial+p.depth/2;
+    const pose=mountainLedgePose(p,slide),front=pose.radial-p.depth/2*pose.scale;
+    let back=pose.radial+p.depth/2*pose.scale;
     if(index<STEPS.length){
-      back+=slide+EMBED_DEPTH;
+      back+=(p.embedDepth??EMBED_DEPTH)*pose.scale;
       // Near a jagged crest the slab can extend beyond the highest adjacent
       // cross-section. Its visible rock remains a real landing surface there.
       try{back=Math.min(back,mountainFace(p.y,tangent));}catch{}
@@ -117,26 +117,25 @@ export class MountainLedges {
     const p = mountainLocal(c.actor.position.x, c.actor.position.z), footprint = standingFootprint(c.actor.scale.x, c.yaw - YAW);
     return [...STEPS, SUMMIT, SEAL_NICHE].flatMap((ledge, i) => {
       if(Math.abs(p.tangent+footprint.dx-ledge.tangent)>ledge.width/2+footprint.extentX)return [];
-      const slide=i<STEPS.length?this.steps[i].slide:0;
-      if(p.radial+footprint.dz<ledge.radial-ledge.depth/2+slide-footprint.extentZ||p.radial+footprint.dz>ledge.radial+ledge.depth/2+slide+EMBED_DEPTH+footprint.extentZ)return [];
+      const slide=i<STEPS.length?this.steps[i].slide:0,pose=mountainLedgePose(ledge,slide);
+      if(pose.scale<=0||p.radial+footprint.dz<pose.radial-ledge.depth/2*pose.scale-footprint.extentZ||p.radial+footprint.dz>pose.radial+(ledge.depth/2+(ledge.embedDepth??EMBED_DEPTH))*pose.scale+footprint.extentZ)return [];
       const s = this.surface(ledge, i, p.tangent);
       if(!s)return [];
       if(ledge.shape==='semicircle'){
-        const slide=i<STEPS.length?this.steps[i].slide:0;
-        return this.onSemicircle(ledge,slide,s.radial+s.halfDepth,p.tangent,p.radial,footprint)?[s]:[];
+        return this.onSemicircle(ledge,pose,s.radial+s.halfDepth,p.tangent,p.radial,footprint)?[s]:[];
       }
       return footprintOverlapsRect(p.tangent - s.tangent, p.radial - s.radial, s.halfWidth, s.halfDepth, footprint) ? [s] : [];
     }).sort((a, b) => b.height - a.height);
   }
 
-  private onSemicircle(ledge:MountainLedge,slide:number,clippedBack:number,tangent:number,radial:number,f:ReturnType<typeof standingFootprint>){
-    const radius=ledge.width/2,back=ledge.radial+ledge.depth/2+slide,x=tangent+f.dx-ledge.tangent,z=radial+f.dz-back;
-    if(radial+f.dz<=clippedBack&&Math.abs(x)<=radius&&(z>=0||x*x+z*z<=radius*radius))return true;
+  private onSemicircle(ledge:MountainLedge,pose:{radial:number;scale:number},clippedBack:number,tangent:number,radial:number,f:ReturnType<typeof standingFootprint>){
+    const radius=ledge.width/2,depth=ledge.depth*pose.scale,embed=(ledge.embedDepth??EMBED_DEPTH)*pose.scale,back=pose.radial+depth/2,x=tangent+f.dx-ledge.tangent,z=radial+f.dz-back;
+    if(radial+f.dz<=clippedBack&&Math.abs(x)<=radius&&(z>=0||(x/radius)**2+(z/depth)**2<=1))return true;
     if(f.rx<=0||f.rz<=0)return false;
-    let outline=[...Array.from({length:33},(_,i)=>{const a=Math.PI*i/32;return [ledge.tangent+Math.cos(a)*radius,back-Math.sin(a)*radius];}),[ledge.tangent-radius,back+EMBED_DEPTH],[ledge.tangent+radius,back+EMBED_DEPTH]];
+    let outline=[...Array.from({length:33},(_,i)=>{const a=Math.PI*i/32;return [ledge.tangent+Math.cos(a)*radius,back-Math.sin(a)*depth];}),[ledge.tangent-radius,back+embed],[ledge.tangent+radius,back+embed]];
     // Include the slab's exposed connection to the uneven slope, then clip at
     // the mountain face beside the player rather than at the step's centre.
-    if(clippedBack<back+EMBED_DEPTH){
+    if(clippedBack<back+embed){
       const clipped:number[][]=[];let previous=outline.at(-1)!;
       for(const point of outline){
         if((previous[1]<=clippedBack)!==(point[1]<=clippedBack)){
@@ -185,9 +184,10 @@ export class MountainLedges {
   private pose(step: Step, i: number) {
     const ease = (t: number) => t * t * (3 - 2 * t);
     step.slide = LEDGE_RETRACT_DISTANCE * (step.phase === 'retracting' ? ease(step.elapsed / LEDGE_RETRACT_SECONDS) : step.phase === 'hidden' ? 1 : step.phase === 'extending' ? 1 - ease(step.elapsed / LEDGE_EXTEND_SECONDS) : 0);
-    step.mesh.position.z = STEPS[i].radial + step.slide;
+    const pose=mountainLedgePose(STEPS[i],step.slide);
+    step.mesh.position.z = pose.radial;step.mesh.scale.z=pose.scale;
     step.mesh.position.x = STEPS[i].tangent + (step.phase === 'ready' && step.standing > 2.4 ? Math.sin(this.time * 35) * .025 : 0);
-    step.mesh.visible = step.phase !== 'hidden';
+    step.mesh.visible = step.phase !== 'hidden'&&pose.scale>0;
   }
   networkState() { return this.steps.map(s => [PHASES.indexOf(s.phase), s.elapsed, s.standing]); }
   networkApply(rows: number[][]) {

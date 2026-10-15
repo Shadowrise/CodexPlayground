@@ -22,7 +22,7 @@ window.commandCheck={get c(){return character},chat,places:destinations,coaster,
  const open=()=>page.evaluate(()=>window.commandCheck.chat.show());
  const command=async text=>{await open();await page.locator('#chat-input').fill(text);await page.keyboard.press('Enter');assert(await page.locator('#chat-composer').isHidden(),text);};
  await open();await page.locator('#chat-input').fill('/');
- assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['/size','/tele','/unlock','/time']);
+ assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['/size','/tele','/unlock','/time','/portal']);
  await page.keyboard.press('ArrowDown');await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
  assert.equal(await page.locator('#chat-input').inputValue(),'/tele ');
  assert.equal(await page.locator('#chat-command-list button').count(),13);

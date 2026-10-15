@@ -1,4 +1,4 @@
-import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE,LEDGE_RETRACT_DISTANCE,LEDGE_RETRACT_SECONDS,LEDGE_EXTEND_SECONDS,mountainLocal,mountainWorld} from './mountain-ledges-layout';
+import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE,LEDGE_RETRACT_DISTANCE,LEDGE_RETRACT_SECONDS,LEDGE_EXTEND_SECONDS,mountainLocal,mountainWorld,mountainLedgePose} from './mountain-ledges-layout';
 import {mountainSurfaceHeight} from './mountain-surface';
 
 type Point=[number,number,number];
@@ -35,8 +35,11 @@ export function breadFloor(x:number,z:number,ceiling:number,steps?:number[][]){
   const state=steps?.[i];if(state?.[0]===2)continue;
   const ease=(t:number)=>t*t*(3-2*t);
   const slide=state?.[0]===1?LEDGE_RETRACT_DISTANCE*ease(state[1]/LEDGE_RETRACT_SECONDS):state?.[0]===3?LEDGE_RETRACT_DISTANCE*(1-ease(state[1]/LEDGE_EXTEND_SECONDS)):0;
-  const back=p.radial+p.depth/2+slide,dx=local.tangent-p.tangent,dz=local.radial-back;
-  if(dz<=0&&dx*dx+dz*dz<=(p.width/2)**2&&(!state||local.radial<=p.radial+p.depth/2))floor=Math.max(floor,p.y);
+  const pose=mountainLedgePose(p,slide);if(pose.scale<=0)continue;
+  const depth=p.depth*pose.scale,back=pose.radial+depth/2,dx=local.tangent-p.tangent,dz=local.radial-back;
+  const onArc=dz<=0&&(dx/(p.width/2))**2+(dz/depth)**2<=1;
+  const onSeam=p.embedDepth!==undefined&&dz>=0&&dz<=p.embedDepth*pose.scale&&Math.abs(dx)<=p.width/2;
+  if((onArc||onSeam)&&(p.embedDepth!==undefined||!state||local.radial<=p.radial+p.depth/2))floor=Math.max(floor,p.y);
  }
  return floor;
 }

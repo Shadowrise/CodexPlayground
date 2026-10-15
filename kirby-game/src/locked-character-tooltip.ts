@@ -1,7 +1,7 @@
 import {onLocaleChange,t} from './i18n';
 
 export const PIDGIE_LOCK_HINT='Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.';
-export const META_KNIGHT_LOCK_HINT='Это Meta Knight. Он не играет с незнакомцами.';
+export const META_KNIGHT_LOCK_HINT='Кто сможет победить Метакнайта, тот станет новым метакнайтом.';
 export function lockedCharacterHint(name:string){
  return name==='Meta Knight'?META_KNIGHT_LOCK_HINT:name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
 }

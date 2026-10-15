@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number}|{kind:'portal';open:boolean};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -21,6 +21,7 @@ const commands=[
  {name:'tele',description:'Телепортироваться к приключению'},
  {name:'unlock',description:'Разблокировать персонажа'},
  {name:'time',description:'Установить час в игре: 0–23'},
+ {name:'portal',description:'Портал Метакнайта: 1 — открыть, 0 — закрыть'},
 ];
 const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'}] as const;
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
@@ -30,6 +31,10 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  if(!enabled)return {error:'Команды доступны только в одиночной игре.'};
  const match=parts(text.trim());
  const name=match?.[1].toLowerCase(),argument=match?.[2]?.trim()??'';
+ if(name==='portal'){
+  if(argument!=='0'&&argument!=='1')return {error:'Введи /portal 1, чтобы открыть портал, или /portal 0, чтобы закрыть.'};
+  return {command:{kind:'portal',open:argument==='1'}};
+ }
  if(name==='size'){
   // Reject partial numbers, NaN and out-of-range values rather than silently clamping.
   const percent=/^\d+(?:[.,]\d+)?$/.test(argument)?Number(argument.replace(',','.')):NaN;
@@ -49,13 +54,14 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
   return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie или /unlock meta-knight, чтобы открыть персонажа.'};
  }
- return {error:'Доступные команды: /size, /tele, /unlock и /time.'};
+ return {error:'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }
 
 export function commandSuggestions(text:string,enabled:boolean,destinations:readonly Destination[]):CommandSuggestion[]{
  if(!enabled)return [];
  const match=parts(text);if(!match)return [];
  const name=match[1].toLowerCase(),argument=match[2]?.trim().toLowerCase()??'';
+ if(name==='portal')return [{value:'1',description:'Открыть портал'},{value:'0',description:'Закрыть портал'}].filter(option=>option.value.startsWith(argument)).map(option=>({value:`/portal ${option.value}`,label:option.value,description:t(option.description),complete:true}));
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,
  }));

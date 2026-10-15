@@ -142,7 +142,7 @@ test('steps attach to the unchanged slope and the enlarged semicircular summit c
   assert(STEPS.slice(1,MAIN_COUNT).every((p, i) => Math.hypot(p.tangent-STEPS[i].tangent,p.radial-STEPS[i].radial)>=8.4));
   assert.equal(SUMMIT.y,30.72);assert(STEPS.slice(0,MAIN_COUNT).every((p,i)=>Math.abs(p.y-(i+1)*2.56)<1e-8));
   const mountains=createMountains();mountains.updateMatrixWorld(true);const ray=new Raycaster();
-  for(const p of STEPS){const back=mountainWorld(p.tangent,p.radial+p.depth/2);ray.set(new Vector3(back.x,150,back.z),new Vector3(0,-1,0));const contact=ray.intersectObject(mountains)[0];assert(contact);assert(Math.abs(contact.point.y-p.y)<.001);assert(Math.abs(mountainSurfaceHeight(back.x,back.z)-p.y)<.001);}
+  for(const p of STEPS.filter(p=>p.embedDepth===undefined)){const back=mountainWorld(p.tangent,p.radial+p.depth/2);ray.set(new Vector3(back.x,150,back.z),new Vector3(0,-1,0));const contact=ray.intersectObject(mountains)[0];assert(contact);assert(Math.abs(contact.point.y-p.y)<.001);assert(Math.abs(mountainSurfaceHeight(back.x,back.z)-p.y)<.001);}
   const c=await player(),back=SUMMIT.radial+SUMMIT.depth/2;
   const corner=mountainWorld(SUMMIT.tangent+SUMMIT.width/2-.1,back-SUMMIT.depth+.1);c.actor.position.set(corner.x,SUMMIT.y,corner.z);c.actor.scale.setScalar(.1);
   assert(!world.surfaces(c).some(s=>s.index===STEPS.length),'empty corners of the half-circle are not invisible rectangular ground');

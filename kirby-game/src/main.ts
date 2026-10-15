@@ -474,7 +474,8 @@ const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
  scene.add(seal.group);return seal;
 });
 let sealProgress:SealProgress=newSealProgress(),lastSealRequest=0,seenSealCount=0;
-function metaKnightPortalReady(){return playing&&allSealsCollected(network?.room.sealProgress??sealProgress);}
+let soloPortalOverride:boolean|undefined;
+function metaKnightPortalReady(){return playing&&(network?allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
@@ -521,6 +522,7 @@ chat.configureCommands({
   if(!character||network||networkIntent)return;
   if(command.kind==='size'){character.resizeTo(command.size,true);return;}
   if(command.kind==='time'){dayStart=Date.now();dayStartPhase=phaseAtHour(command.hour);return;}
+  if(command.kind==='portal'){soloPortalOverride=command.open;meadowPortal.setWorking(metaKnightPortalReady());return;}
   if(command.kind==='unlock'){
    const name=command.character==='meta-knight'?'Meta Knight':command.character==='pidgie'?'Пиджи':'Бандана';
    const unlocked=command.character==='meta-knight'?characterUnlocks.unlockMetaKnight():command.character==='pidgie'?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana();
@@ -812,6 +814,7 @@ startButton.addEventListener('click', async () => {
   dayStart=Date.now();dayStartPhase=Math.random();
   const savedPidgie=pendingSave?.pidgie;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
+  soloPortalOverride=undefined;
   lastSealRequest=0;seenSealCount=Object.keys(sealProgress.collected).length;clearSealNotice();
   bread.reset(pendingSave?.bread);lastBreadRequest=0;
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
@@ -899,6 +902,7 @@ function returnToMenu(){
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
   fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());bread.reset();lastBreadRequest=0;balloonSeed=6173;
   sealProgress=newSealProgress();lastSealRequest=0;seenSealCount=0;clearSealNotice();
+  soloPortalOverride=undefined;
   soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
   interactionOutline.update(undefined);rideHint.textContent='';touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;

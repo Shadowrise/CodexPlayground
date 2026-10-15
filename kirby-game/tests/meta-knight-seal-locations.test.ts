@@ -8,6 +8,7 @@ import {MountainLedges} from '../src/mountain-ledges';
 import {MOUNTAIN_STEPS as STEPS,MOUNTAIN_MAIN_STEP_COUNT as MAIN_COUNT,MOUNTAIN_UPPER_STEPS as UPPER,MOUNTAIN_PEAK as PEAK,MOUNTAIN_PEAK_VERTEX,MOUNTAIN_SUMMIT as SUMMIT,mountainWorld,mountainLocal,mountainCourseEnvelope,isInsideMountainPeak,type MountainLedge} from '../src/mountain-ledges-layout';
 import {MEADOW_HALF_SIZE,MOUNTAIN_WIDTH,insideMeadow} from '../src/world-bounds';
 import {mountainElevation,mountainSurfaceHeight} from '../src/mountain-surface';
+import {breadFloor} from '../src/bread-state';
 
 const idle:Input={forward:false,left:false,right:false};
 async function player(){
@@ -60,6 +61,33 @@ test('peak cap touches the actual highest rendered vertex of this corner and has
  const ray=new Raycaster(p.clone().add(new Vector3(0,2,0)),new Vector3(0,-1,0));assert(Math.abs(ray.intersectObject(world.peak)[0].point.y-PEAK.y)<.001);
  c.actor.position.copy(p);c.surfaceY=PEAK.y;world.restorePosition(c);assert(world.surfaces(c).some(surface=>surface.index===STEPS.length+1));
  assert(isInsideMountainPeak(p.x,p.z));const back=mountainWorld(PEAK.tangent,PEAK.radial+PEAK.depth/2+.1);assert(!isInsideMountainPeak(back.x,back.z,10),'size never extends pickup behind the crest');
+});
+
+test('upper landing arcs are clear of mountain spikes and trimmed backs stay fixed while retracting',async()=>{
+ const world=new MountainLedges(),c=await player(),ray=new Raycaster(),trimmed=STEPS.map((p,i)=>({p,i})).filter(({p})=>p.embedDepth!==undefined);
+ assert.equal(trimmed.length,7);
+ for(const {p,i} of trimmed){
+  for(let x=-p.width/2;x<=p.width/2;x+=.12)for(let z=-p.depth/2;z<=p.depth/2;z+=.12){
+   if((x/(p.width/2))**2+((z-p.depth/2)/p.depth)**2>1)continue;
+   const point=mountainWorld(p.tangent+x,p.radial+z);assert(mountainSurfaceHeight(point.x,point.z)<p.y-.01,`no terrain on step ${i+1}`);
+  }
+  const back=p.radial+p.depth/2+p.embedDepth!;
+  for(const elapsed of [0,.1,.2,.3,.4,.55,.69]){
+   world.networkApply(STEPS.map((_,index)=>index===i?[1,elapsed,0]:[0,0,0]));world.group.updateMatrixWorld(true);
+   const mesh=world.steps[i].mesh,vertices=mesh.geometry.getAttribute('position');
+   for(let vertex=0;vertex<vertices.count;vertex++)assert(vertices.getZ(vertex)*mesh.scale.z+mesh.position.z<=back+.00001,'neither top nor underside sticks out behind the fixed seam');
+   c.setActivity('Idle');c.actor.scale.setScalar(.1);c.yaw=Math.PI/4;
+   for(let z=p.radial-p.depth/2-.1;z<=back+.1;z+=.1){
+    const xy=mountainWorld(p.tangent,z);c.actor.position.set(xy.x,p.y,xy.z);ray.set(c.actor.position.clone().add(new Vector3(0,.5,0)),new Vector3(0,-1,0));
+    if(mesh.visible&&ray.intersectObject(mesh).some(hit=>Math.abs(hit.point.y-p.y)<.001)){
+     assert(world.surfaces(c).some(surface=>surface.index===i),'visible retracting rock supports feet');
+     assert.equal(breadFloor(xy.x,xy.z,p.y,world.networkState()),p.y,'the authoritative bread floor matches the visible retracting rock');
+    }
+   }
+  }
+ }
+ assert(Math.PI*PEAK.width/2*PEAK.depth/2>2*Math.PI*3.8**2/2,'peak landing area more than doubles');
+ const vertices=world.peak.geometry.getAttribute('position');for(let vertex=0;vertex<vertices.count;vertex++)assert(vertices.getZ(vertex)<=PEAK.depth/2+.00001,'peak cap ends at the crest');
 });
 
 test('old IDs remain fixed and eleven/thirteen-row snapshots restore omitted new traps ready',()=>{

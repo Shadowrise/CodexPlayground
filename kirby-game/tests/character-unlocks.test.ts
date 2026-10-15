@@ -117,11 +117,11 @@ test('Meta Knight unlock tolerates denied storage and reads its own key independ
 });
 
 test('Meta Knight lock hint preserves the requested Russian text and localizes in other languages',()=>{
- assert.equal(META_KNIGHT_LOCK_HINT,'Это Meta Knight. Он не играет с незнакомцами.');
+ assert.equal(META_KNIGHT_LOCK_HINT,'Кто сможет победить Метакнайта, тот станет новым метакнайтом.');
  assert.equal(lockedCharacterHint('Meta Knight'),META_KNIGHT_LOCK_HINT);
  try{
   setLocale('ru');assert.equal(t(lockedCharacterHint('Meta Knight')),META_KNIGHT_LOCK_HINT);
-  setLocale('en');assert.equal(t(META_KNIGHT_LOCK_HINT),'This is Meta Knight. He does not play with strangers.');
-  setLocale('bg');assert.equal(t(META_KNIGHT_LOCK_HINT),'Това е Meta Knight. Той не играе с непознати.');
+  setLocale('en');assert.equal(t(META_KNIGHT_LOCK_HINT),'Whoever defeats Meta Knight will become the new Meta Knight.');
+  setLocale('bg');assert.equal(t(META_KNIGHT_LOCK_HINT),'Който победи Meta Knight, ще стане новият Meta Knight.');
  }finally{setLocale('ru');}
 });

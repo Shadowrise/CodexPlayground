@@ -19,7 +19,7 @@ test('size parses full numbers within 30–1000%, never partial or non-finite va
 });
 test('single-player gating covers every command and ordinary chat is preserved',()=>{
  assert.equal(parseChatCommand('Hello /size 1000',false,places),undefined);
- for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/unlock meta-knight','/time 12','/']){
+ for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/unlock meta-knight','/time 12','/portal 1','/portal 0','/']){
   assert(parseChatCommand(input,false,places)?.error);assert.deepEqual(commandSuggestions(input,false,places),[]);
  }
  assert(parseChatCommand('/other',true,places)?.error);
@@ -33,7 +33,7 @@ test('every destination has a unique Latin alias and teleports use original coor
  assert(parseChatCommand('/tele mz',true,[])?.error);
 });
 test('suggestions complete command names, filter tele prefixes and localize without altering aliases',()=>{
- setLocale('ru');assert.deepEqual(commandSuggestions('/',true,places).map(s=>s.value),['/size ','/tele ','/unlock ','/time ']);
+ setLocale('ru');assert.deepEqual(commandSuggestions('/',true,places).map(s=>s.value),['/size ','/tele ','/unlock ','/time ','/portal ']);
  assert.deepEqual(commandSuggestions('/si',true,places).map(s=>s.value),['/size ']);
  assert.deepEqual(commandSuggestions('/size 100',true,places),[]);
  assert.equal(commandSuggestions('/tele',true,places).length,places.length);
@@ -44,6 +44,23 @@ test('suggestions complete command names, filter tele prefixes and localize with
   if(locale==='ru')assert.equal(option.description,'Радужный лабиринт');else assert.notEqual(option.description,'Радужный лабиринт');
  }
  setLocale('ru');
+});
+
+test('portal accepts only English 0/1 commands and localizes complete suggestions',()=>{
+ assert.deepEqual(parseChatCommand('/portal 1',true,places),{command:{kind:'portal',open:true}});
+ assert.deepEqual(parseChatCommand(' /PORTAL   0 ',true,places),{command:{kind:'portal',open:false}});
+ for(const argument of ['','open','close','2','-1','01','1.0','true','0 extra'])assert(parseChatCommand('/portal '+argument,true,places)?.error,argument);
+ assert(parseChatCommand('/портал 1',true,places)?.error);
+ try{
+  for(const locale of ['ru','en','bg'] as const){
+   setLocale(locale);
+   assert.deepEqual(commandSuggestions('/por',true,places).map(s=>s.value),['/portal ']);
+   assert.deepEqual(commandSuggestions('/portal ',true,places).map(s=>s.value),['/portal 1','/portal 0']);
+   const [option]=commandSuggestions('/portal 0',true,places);assert.equal(option.value,'/portal 0');assert(option.complete);
+   if(locale!=='ru')assert.notEqual(option.description,'Закрыть портал');
+   assert.match(t(parseChatCommand('/portal 2',true,places)!.error!),/\/portal 1/);
+  }
+ }finally{setLocale('ru');}
 });
 
 test('time accepts every whole hour from 0 through 23 and rejects malformed or out-of-range arguments',()=>{
