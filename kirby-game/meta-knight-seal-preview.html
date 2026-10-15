@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#121321">
+  <link rel="icon" href="/kirby-icon.svg">
+  <title>Печать Meta Knight · 3D</title>
+</head>
+<body>
+  <aside class="seal-panel">
+    <a class="seal-back" href="/">← На полянку</a>
+    <div class="seal-eyebrow"><i aria-hidden="true"></i> МАЛЕНЬКАЯ РЕЛИКВИЯ</div>
+    <h1>Печать<br> <span>Meta Knight</span></h1>
+    <p class="seal-intro">Лунное серебро, золотые звёзды<br>и тихая фиолетовая дымка.</p>
+    <div class="seal-palette" aria-hidden="true"><i></i><i></i><i></i><span>СЕРЕБРО · ИНДИГО · ЗОЛОТО</span></div>
+    <div class="seal-settings">
+      <fieldset><legend>Сколько печатей</legend><div class="seal-segment" role="group" aria-label="Количество печатей"><button data-count="1" aria-pressed="true">Одна</button><button data-count="3" aria-pressed="false">Три</button></div></fieldset>
+      <fieldset><legend>Рассмотреть детали</legend>
+        <label class="seal-switch"><span>Сама печать</span><input id="seal-model" type="checkbox" checked><i aria-hidden="true"></i></label>
+        <label class="seal-switch"><span>Дымка</span><input id="seal-mist" type="checkbox" checked><i aria-hidden="true"></i></label>
+      </fieldset>
+    </div>
+    <p class="seal-note">Поверни печать: рассмотри рельеф,<br>тонкий ободок и обратную сторону.</p>
+    <div class="seal-download"><a href="/models/meta-knight-seal.glb" download="meta-knight-seal.glb"><span aria-hidden="true">↓</span> Скачать 3D-модель <small>GLB</small></a></div>
+    <div class="seal-stats" aria-label="Статистика текущего кадра"><span>В кадре</span><dl><div><dt>Вызовы отрисовки</dt><dd id="seal-calls">—</dd></div><div><dt>Треугольники</dt><dd id="seal-triangles">—</dd></div></dl></div>
+  </aside>
+  <main id="seal-stage" aria-label="3D-просмотр печати Meta Knight">
+    <div class="seal-stage-label"><span>ПЕЧАТЬ META KNIGHT</span><p>Знак будущей дружбы.</p></div>
+    <div class="seal-views" role="group" aria-label="Ракурс печати"><button data-view="three" aria-pressed="true">¾</button><button data-view="front" aria-pressed="false">Спереди</button><button data-view="side" aria-pressed="false">Сбоку</button><button data-view="back" aria-pressed="false">Сзади</button></div>
+    <div class="seal-playback"><button id="seal-pause" aria-pressed="false"><span aria-hidden="true">Ⅱ</span> Пауза</button><button id="seal-spin" aria-pressed="false"><span aria-hidden="true">↻</span> Вращение</button><span class="seal-orbit-hint">Потяни, чтобы повернуть · колесо — масштаб</span></div>
+    <div id="seal-loading" role="status">Печать выходит из дымки…</div>
+  </main>
+  <script type="module" src="/src/meta-knight-seal-preview.ts"></script>
+</body>
+</html>

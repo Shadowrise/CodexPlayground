@@ -6,6 +6,7 @@ import { Vector3, InstancedMesh } from 'three';
 import { CharacterController } from '../src/controller';
 import { Treehouse, TREEHOUSE_SITE, type TreehouseSound } from '../src/treehouse';
 import { sceneryClearance } from '../src/landmarks';
+import {META_KNIGHT_SEAL_SITES,isInsideSealPickup} from '../src/meta-knight-seal-sites';
 async function character(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');return new CharacterController(gltf.scene,gltf.animations);}
 const idle={forward:false,left:false,right:false};
 test('climb, explore, leap into leaves and recover normal controls without losing size',async()=>{
@@ -30,6 +31,19 @@ test('swing mounts smoothly, moves with the ropes and can be left using interact
   assert(c.actor.position.y<.05);for(let i=0;i<120;i++)house.update(1/60);
   assert.equal(c.state,'Swing');const position=c.actor.position.clone();house.update(.2);assert(position.distanceTo(c.actor.position)>.01);
   assert(sounds.includes('creak'));house.interact(c);assert(!house.active);assert.equal(c.actor.position.y,0);assert.equal(c.actor.rotation.x,0);
+});
+
+test('the seal is on the actual balcony and ordinary deck movement reaches it before the leaf jump',async()=>{
+ const house=new Treehouse(),c=await character(),site=META_KNIGHT_SEAL_SITES.find(s=>s.id==='treehouse')!;
+ c.actor.position.copy(TREEHOUSE_SITE).add(new Vector3(-4,0,11));house.interact(c);
+ for(let i=0;i<320;i++)house.update(1/60);
+ assert(house.onBalcony(c));assert.equal(c.actor.position.y,site.surfaceY);
+ c.yaw=Math.PI/2;c.actor.rotation.y=c.yaw;
+ for(let i=0;i<150;i++)house.update(1/60,{...idle,forward:true});
+ assert(isInsideSealPickup(site,c.actor.position,1),'six metres across the real balcony reaches the floating seal');
+ house.update(1/60,idle,true);assert(!house.onBalcony(c));assert.equal(c.state,'LeafDive');
+ for(let i=0;i<180;i++)house.update(1/60);
+ assert(!house.active);assert.equal(c.actor.position.y,0);
 });
 test('treehouse clearing and trunk collision keep scenery clear; detail is batched',()=>{
   const house=new Treehouse(),trunk=TREEHOUSE_SITE.clone().add(new Vector3(0,0,-6)),p=trunk.clone();house.constrain(p,1);

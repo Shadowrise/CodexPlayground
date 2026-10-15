@@ -2,6 +2,7 @@ import { depotFloorHeight } from './depot-floor';
 import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,fountainDistance,inFountain} from './fountain-site';
 import { POND_SCALE } from './landmark-sites';
 import * as T from 'three';
+import {metaKnightPortalFloor} from './meta-knight-arena-site';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {BankSupport} from './bank-support';
 import {createWaterSurface} from './water-surface';
@@ -82,7 +83,7 @@ export class Ponds {
     p.x=previous.x;p.z=previous.z;
    }
   }
-  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):depotFloorHeight(p.x,p.z)||this.bankSupport.height(p.x,p.z);}
+  if(!bridge){wet=inWater(p.x,p.z);height=wet?WATER_Y-.63*size+.045*Math.sin(this.time*2.6):metaKnightPortalFloor(p.x,p.z)||depotFloorHeight(p.x,p.z)||this.bankSupport.height(p.x,p.z);}
   if(fountainDistance(p.x,p.z)<11.8){height=fountain?FOUNTAIN_WATER_Y-.63*size+.045*Math.sin(this.time*2.6):.12*T.MathUtils.smoothstep(11.8-fountainDistance(p.x,p.z),0,.8);wet=fountain;}
   support.onBridge=bridge;
   c.swimming=wet&&!c.flight.active&&!c.roll.active;

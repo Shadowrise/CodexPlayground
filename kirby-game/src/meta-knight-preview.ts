@@ -3,14 +3,11 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {META_KNIGHT_CLIPS,META_KNIGHT_CLIP_BY_NAME,META_KNIGHT_CLIP_GROUPS,type MetaKnightClipName} from './meta-knight-clips';
 
-type PreviewClip = 'Idle' | 'Walk' | 'Sitting';
+type PreviewClip = MetaKnightClipName;
 type PreviewView = 'three' | 'front' | 'side' | 'back';
-const CLIPS: Record<PreviewClip, {label: string; description: string}> = {
-  Idle: {label: 'Стоит', description: 'Спокойная стойка: тихое дыхание и лёгкое движение крыльев.'},
-  Walk: {label: 'Идёт', description: 'Уверенные шаги. Крылья и меч мягко следуют за движением.'},
-  Sitting: {label: 'Сидит', description: 'Минута отдыха. Рыцарь удобно устроился и спокойно дышит.'},
-};
+const CLIPS = META_KNIGHT_CLIP_BY_NAME;
 const stage = document.querySelector<HTMLElement>('#stage')!;
 const loading = document.querySelector<HTMLElement>('#loading')!;
 const status = document.querySelector<HTMLElement>('#status')!;
@@ -20,6 +17,14 @@ const restartButton = document.querySelector<HTMLButtonElement>('#restart')!;
 const speedInput = document.querySelector<HTMLInputElement>('#speed')!;
 const speedValue = document.querySelector<HTMLOutputElement>('#speed-value')!;
 const clipButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-clip]')];
+const clipSelect = document.querySelector<HTMLSelectElement>('#all-clips')!;
+for(const [group,label] of Object.entries(META_KNIGHT_CLIP_GROUPS)) {
+  const choices=document.createElement('optgroup');choices.label=label;
+  for(const clip of META_KNIGHT_CLIPS.filter(clip=>clip.group===group)) {
+    const option=document.createElement('option');option.value=clip.name;option.textContent=clip.label;choices.append(option);
+  }
+  clipSelect.append(choices);
+}
 const viewButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-view]')];
 let model: THREE.Object3D | undefined;
 let mixer: THREE.AnimationMixer | undefined;
@@ -107,8 +112,9 @@ function refreshPlayback() {
     button.classList.toggle('selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   }
-  status.textContent = `${CLIPS[currentClip].label} / ${paused ? 'пауза' : 'зациклено'}`;
-  description.textContent = CLIPS[currentClip].description;
+  clipSelect.value=currentClip;
+  status.textContent = `${CLIPS[currentClip].label} / ${paused ? 'пауза' : CLIPS[currentClip].loop ? 'зациклено' : 'действие'}`;
+  description.textContent = `${META_KNIGHT_CLIP_GROUPS[CLIPS[currentClip].group]} · ${CLIPS[currentClip].label}. ${CLIPS[currentClip].loop?'Плавный цикл.':'Разовое действие; повтори кнопкой ↺.'}`;
   speedValue.value = `${Number(speedInput.value).toLocaleString('ru-RU')}×`;
 }
 
@@ -118,7 +124,9 @@ function play(name: PreviewClip, keepPause = false) {
   mixer.stopAllAction();
   currentAction = action;
   currentClip = name;
-  action.reset().setLoop(THREE.LoopRepeat, Infinity).setEffectiveTimeScale(1).setEffectiveWeight(1).play();
+  const loop=CLIPS[name].loop;
+  action.reset().setLoop(loop?THREE.LoopRepeat:THREE.LoopOnce,loop?Infinity:1).setEffectiveTimeScale(1).setEffectiveWeight(1).play();
+  action.clampWhenFinished=!loop;
   mixer.update(0);
   if (!keepPause) paused = false;
   refreshPlayback();
@@ -157,7 +165,7 @@ function selectView(view: PreviewView) {
 function sample(name: PreviewClip, time: number) {
   if (!play(name) || !mixer || !currentAction) return false;
   const duration = currentAction.getClip().duration;
-  currentAction.time = ((time % duration) + duration) % duration;
+  currentAction.time = CLIPS[name].loop?((time % duration) + duration) % duration:THREE.MathUtils.clamp(time,0,duration);
   mixer.update(0);
   paused = true;
   refreshPlayback();
@@ -166,6 +174,7 @@ function sample(name: PreviewClip, time: number) {
 }
 
 for (const button of clipButtons) button.addEventListener('click', () => play(button.dataset.clip as PreviewClip));
+clipSelect.addEventListener('change',()=>play(clipSelect.value as PreviewClip));
 for (const button of viewButtons) button.addEventListener('click', () => selectView(button.dataset.view as PreviewView));
 pauseButton.addEventListener('click', () => {paused = !paused; refreshPlayback();});
 restartButton.addEventListener('click', () => play(currentClip));
@@ -192,7 +201,7 @@ function fail(message: string) {
   status.textContent = 'Модель пока недоступна';
 }
 
-new GLTFLoader().load('/models/meta-knight-animated.glb?v=5', gltf => {
+new GLTFLoader().load('/models/meta-knight-animated.glb?v=7', gltf => {
   model = gltf.scene;
   model.animations = gltf.animations;
   model.traverse(object => {
@@ -221,6 +230,7 @@ new GLTFLoader().load('/models/meta-knight-animated.glb?v=5', gltf => {
   }
   mixer.stopAllAction();
   for (const button of clipButtons) button.disabled = false;
+  clipSelect.disabled=false;
   pauseButton.disabled = restartButton.disabled = speedInput.disabled = false;
   const parameters = new URLSearchParams(location.search);
   const requestedClip = parameters.get('clip');

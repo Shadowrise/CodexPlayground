@@ -19,7 +19,7 @@ test('size parses full numbers within 30–1000%, never partial or non-finite va
 });
 test('single-player gating covers every command and ordinary chat is preserved',()=>{
  assert.equal(parseChatCommand('Hello /size 1000',false,places),undefined);
- for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/time 12','/']){
+ for(const input of ['/size 1000','/tele mz','/unlock bandana','/unlock pidgie','/unlock meta-knight','/time 12','/']){
   assert(parseChatCommand(input,false,places)?.error);assert.deepEqual(commandSuggestions(input,false,places),[]);
  }
  assert(parseChatCommand('/other',true,places)?.error);
@@ -37,7 +37,7 @@ test('suggestions complete command names, filter tele prefixes and localize with
  assert.deepEqual(commandSuggestions('/si',true,places).map(s=>s.value),['/size ']);
  assert.deepEqual(commandSuggestions('/size 100',true,places),[]);
  assert.equal(commandSuggestions('/tele',true,places).length,places.length);
- assert.deepEqual(commandSuggestions('/tele M',true,places).map(s=>s.label),['mz','ml']);
+ assert.deepEqual(commandSuggestions('/tele M',true,places).map(s=>s.label),['mz','mk','ml']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);const option=commandSuggestions('/tele mz',true,places)[0];
   assert.equal(option.value,'/tele mz');assert.equal(option.label,'mz');assert(option.complete);
@@ -91,7 +91,7 @@ test('Pidgie unlock requires its complete Latin name; partial names remain sugge
   const result=parseChatCommand(text,true,places);assert(result?.error,text);
   assert.match(result.error,/\/unlock bandana/);assert.match(result.error,/\/unlock pidgie/);
  }
- assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie']);
+ assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);
   for(const prefix of ['p','PI','pidg','pidgie']){
@@ -103,4 +103,22 @@ test('Pidgie unlock requires its complete Latin name; partial names remain sugge
   assert.match(t(error),/\/unlock bandana/);assert.match(t(error),/\/unlock pidgie/);
  }
  setLocale('ru');
+});
+
+test('Meta Knight unlock requires its complete alias and offers localized menu suggestions',()=>{
+ for(const text of ['/unlock meta-knight',' /UNLOCK   META-KNIGHT '])assert.deepEqual(parseChatCommand(text,true,places),{command:{kind:'unlock',character:'meta-knight'}});
+ for(const text of ['/unlock meta','/unlock meta knight','/unlock мета-найт','/unlock meta-knight extra']){
+  const result=parseChatCommand(text,true,places);assert(result?.error,text);assert.match(result.error,/\/unlock meta-knight/);
+ }
+ try{
+  for(const locale of ['ru','en','bg'] as const){
+   setLocale(locale);
+   for(const prefix of ['m','META','meta-','meta-knight'])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{
+    value:'/unlock meta-knight',label:'meta-knight',description:'Meta Knight',complete:true,
+   }]);
+   const error=parseChatCommand('/unlock',true,places)!.error!;
+   assert.match(t(error),/\/unlock meta-knight/);
+   if(locale!=='ru')assert.notEqual(t(error),error);
+  }
+ }finally{setLocale('ru');}
 });

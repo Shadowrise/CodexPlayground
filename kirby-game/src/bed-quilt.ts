@@ -4,11 +4,15 @@ export const BED_REST={y:1.58,z:.4,pitch:-Math.PI*.38};
 export const BED_MATTRESS_Y=1.1;
 /** Native Sleep already turns the bird onto its flank; the bed supplies heading. */
 export const BED_PIGEON_REST={y:1.03,z:-.65,pitch:0,yaw:Math.PI};
+/** Sleep reclines around the knight's own torso pivot; its support plane is Y=.33. */
+export const BED_META_KNIGHT_REST={y:BED_MATTRESS_Y-.33,z:-.65,pitch:0};
 // Beyond the bottom lip, so even the breathing pose keeps the mouth uncovered.
 export const BED_COVER_FOLD=(1.15+.065)/2.05;
 // The exposed pillow end leaves the folded head, eyes and beak visible.
 export const BED_PIGEON_COVER_FOLD=(1.15-.75)/2.05;
-export type BedQuiltProfile='kirby'|'pigeon';
+// Keep his visor, gauntlets and held sword beyond the edge of the blanket.
+export const BED_META_KNIGHT_COVER_FOLD=BED_COVER_FOLD;
+export type BedQuiltProfile='kirby'|'pigeon'|'meta-knight';
 const PROFILE_ROWS=64,PROFILE_STEP=2.65/PROFILE_ROWS;
 
 /** Upper surface of a reclining ellipsoid in bed coordinates. */
@@ -32,6 +36,7 @@ function pigeonHeight(x:number,z:number,cx:number,cy:number,cz:number,rx:number,
 export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
   private readonly resting=new Float32Array(25*(PROFILE_ROWS+1));
   private readonly pigeonResting=new Float32Array(25*(PROFILE_ROWS+1));
+  private readonly metaKnightResting=new Float32Array(25*(PROFILE_ROWS+1));
   private lift=-1;
   private fold=-1;
   private profile:BedQuiltProfile='kirby';
@@ -69,11 +74,17 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
       this.pigeonResting[row*25+col]=Math.max(1.16,
         pigeonHeight(x,z,-.16,1.87,-.38,1.35,.99,1.01)+.095,
         pigeonHeight(x,z,-.24,1.73,.46,.46,.43,.61)+.045);
+      // Native supine torso and upturned boots, with the visor above the fold.
+      this.metaKnightResting[row*25+col]=Math.max(1.16,
+        pigeonHeight(x,z,0,1.89,-.70,.93,.81,.93)+.045,
+        pigeonHeight(x,z,-.48,2.10,.225,.50,.64,.36)+.045,
+        pigeonHeight(x,z,.48,2.10,.225,.50,.64,.36)+.045,
+        pigeonHeight(x,z,0,1.30,.30,.85,.15,1.10)+.045);
     }
     // Steep, continuous skirts bridge the silhouette to the mattress instead of
     // leaving a tent-shaped air gap. This is initialization work, not cloth physics.
     const dx=3.9/24,slope=2.8,diagonal=Math.hypot(dx,PROFILE_STEP)*slope;
-    for(const profile of [this.resting,this.pigeonResting])for(const reverse of [false,true])for(let j=0;j<profile.length;j++){
+    for(const profile of [this.resting,this.pigeonResting,this.metaKnightResting])for(const reverse of [false,true])for(let j=0;j<profile.length;j++){
       const index=reverse?profile.length-1-j:j,row=Math.floor(index/25),col=index%25,sign=reverse?1:-1;
       let height=profile[index];
       if(col+sign>=0&&col+sign<25)height=Math.max(height,profile[index+sign]-dx*slope);
@@ -89,8 +100,8 @@ export class BedQuilt extends T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>{
   setPose(lift:number,fold:number,profile:BedQuiltProfile='kirby',size=1){
     if(this.lift===lift&&this.fold===fold&&this.profile===profile&&this.size===size)return;
     this.lift=lift;this.fold=fold;this.profile=profile;this.size=size;
-    const envelope=profile==='pigeon'?this.pigeonResting:this.resting;
-    const rest=profile==='pigeon'?BED_PIGEON_REST:BED_REST,scale=T.MathUtils.lerp(1,size,lift);
+    const envelope=profile==='meta-knight'?this.metaKnightResting:profile==='pigeon'?this.pigeonResting:this.resting;
+    const rest=profile==='meta-knight'?BED_META_KNIGHT_REST:profile==='pigeon'?BED_PIGEON_REST:BED_REST,scale=T.MathUtils.lerp(1,size,lift);
     const positions=this.geometry.getAttribute('position'),uv=this.geometry.getAttribute('uv');
     const top=T.MathUtils.lerp(-1.15,.9,fold);
     for(let i=0;i<positions.count;i++){

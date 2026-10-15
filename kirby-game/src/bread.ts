@@ -43,11 +43,14 @@ export class BreadWorld{
   const held=!!b.owner,scale=owner?breadCarryScale(owner.scale.x):b.scale;
   this.loaf.visible=!held||!!owner;this.aura.visible=this.loaf.visible&&!b.offering;this.loaf.scale.setScalar(scale);
   if(owner){
-   const shoulder=owner.getObjectByName('Right_shoulder'),wing=owner.getObjectByName('Right_wing');
+   // The sword stays in the right fist; the free gauntlet carries the loaf.
+   const knightHand=owner.getObjectByName('Left_hand_attachment');
+   const shoulder=owner.getObjectByName(knightHand?'Left_shoulder':'Right_shoulder'),wing=owner.getObjectByName('Right_wing');
    if(shoulder)shoulder.rotation.set(-.38,-.3,.24);else if(wing)wing.rotation.set(-.9,-.25,.85);
    owner.updateWorldMatrix(true,true);
    const arm=owner.getObjectByName('Right_arm') as T.Mesh|undefined;
-   if(arm?.geometry){
+   if(knightHand){knightHand.getWorldPosition(this.scratch);}
+   else if(arm?.geometry){
     if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;arm.localToWorld(this.scratch);
    }else if(wing){
     const vane=owner.getObjectByName('Right_wing_vane');let feather:T.Mesh|undefined;vane?.traverse(o=>{if(!feather&&o instanceof T.Mesh)feather=o;});

@@ -2,6 +2,7 @@ import * as T from 'three';
 import polygonClipping from 'polygon-clipping';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createKnightFist,createGalaxia} from './meta-knight-equipment';
+import {META_KNIGHT_CLIPS,type MetaKnightClipName} from './meta-knight-clips';
 
 /** Clip a regular grid to a silhouette before curving it. Long earcut slivers
  * can fold across their neighbours when projected onto a nonlinear surface. */
@@ -84,7 +85,10 @@ export function createMetaKnight() {
     geo.computeVertexNormals();add(parent,geo,silver);geo.dispose();
   }
 
-  const body=group(root,'Body_motion',[0,1.17,0]);
+  // Keep gameplay heading on the outer root. This inner pivot supplies native
+  // reclining and tumbling without the controller stripping their rotation.
+  const motion=group(root,'MetaKnight_motion');
+  const body=group(motion,'Body_motion',[0,1.17,0]);
   ell(body,purple,[0,0,0],[.91,.91,.79]);
   const mask=group(body,'Mask_shell');
   // A thin half-round shell follows the body's own face surface. It has no
@@ -182,12 +186,13 @@ export function createMetaKnight() {
     horn(armour,[[side*.12,.21,.06],[side*.28,.32,.05],[side*.30,.51,.0],[side*.22,.68,-.02]],.15);
     ell(shoulder,purple,[side*.16,-.185,.075],[.20,.27,.22]);
     const hand=group(shoulder,`${label}_gauntlet`,[side*.29,-.34,.29]);
+    if(side<0)group(hand,'Left_hand_attachment',[0,-.10,.18]);
     ell(hand,silver,[0,.10,-.005],[.215,.095,.195]);
     if(side<0) {
       const fist=createKnightFist(false);fist.name='Left_fist';hand.add(fist);
     }
 
-    const foot=group(root,`${label}_foot_pivot`,[side*.48,.245,.11]);feet.push(foot);
+    const foot=group(motion,`${label}_foot_pivot`,[side*.48,.245,.11]);feet.push(foot);
     ell(foot,sole,[0,-.114,.075],[.432,.13,.585]);
     ell(foot,boot,[0,-.015,.10],[.435,.23,.585]);
     ell(foot,boot,[0,.045,-.17],[.285,.27,.31]);
@@ -225,6 +230,11 @@ export function createMetaKnight() {
   gripRig.rotation.set(.16,.10,-.42);
   const sword=createGalaxia();sword.name='Galaxia';gripRig.add(sword);
   const fingers=createKnightFist(true);fingers.name='Right_grip_fingers';gripRig.add(fingers);
+  const waveWrist=shoulders[0].getObjectByName('Left_gauntlet')!;
+  // The blade's authored length runs along local +Y. At the lunge it points
+  // along gameplay +Z, with its broad faces remaining vertical.
+  const lungeOrientation=new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(
+    new T.Vector3(0,1,0),new T.Vector3(0,0,1),new T.Vector3(1,0,0)));
 
   // Merge by material within each articulated part to keep draw calls bounded.
   let meshIndex=0;
@@ -237,8 +247,32 @@ export function createMetaKnight() {
   sphere.dispose();
   // Capture the sword's authored diagonal before every animation sample.
   for(const rig of rigs){rig.p.copy(rig.node.position);rig.q.copy(rig.node.quaternion);rig.s.copy(rig.node.scale);}
-  function pose(name:string,t:number,duration:number) {
+  const smooth=T.MathUtils.smoothstep;
+  const pulse=(u:number,center:number,width:number)=>Math.max(0,1-Math.abs(u-center)/width)**2;
+  const active=(u:number)=>smooth(u,0,.12)*(1-smooth(u,.82,1));
+  function spreadWings(spread:number,flap=0) {
+    wings.forEach((wing,i)=>{const side=i===0?-1:1;wing.rotation.y=side*spread;wing.rotation.z=side*flap;});
+  }
+  function tuckFeet(amount:number) {
+    feet.forEach((foot,i)=>{foot.position.y+=.25*amount;foot.position.z-=.15*amount;foot.rotation.x=-.6*amount;foot.rotation.z=(i===0?-1:1)*.06*amount;});
+  }
+  function recline(amount:number,breath:number) {
+    const pivot=new T.Vector3(0,1.12,0);
+    motion.rotation.x=-Math.PI/2*amount;
+    motion.position.copy(pivot).sub(pivot.clone().applyQuaternion(motion.quaternion));
+    body.position.y+=.007*breath*amount;
+    // Fold across the back in its own plane. Sweeping wings backwards here
+    // would send them through the mattress when the whole body reclines.
+    spreadWings(.47*(1-amount),.025*(1-amount)-2.6*amount);
+    shoulders[0].rotation.set(-.22*amount,0,-.045-.055*amount);
+    shoulders[1].rotation.set(-.12*amount,0,.045-.225*amount);
+    eyeRig.scale.y=1-.94*amount;
+    cape.rotation.x=-.06*amount;
+    cape.scale.z=1-.45*amount;cape.position.z+=.10*amount;
+  }
+  function pose(name:MetaKnightClipName,t:number,duration:number) {
     for(const rig of rigs){rig.node.position.copy(rig.p);rig.node.quaternion.copy(rig.q);rig.node.scale.copy(rig.s);}
+    root.quaternion.identity();
     const u=t/duration,phase=u*Math.PI*2,breathe=Math.sin(phase);
     wings.forEach((wing,i)=>{const side=i===0?-1:1;wing.rotation.y=side*.47;wing.rotation.z=side*(.025+.020*breathe);});
     shoulders.forEach((arm,i)=>{const side=i===0?-1:1;arm.rotation.z=side*.045;});
@@ -266,28 +300,171 @@ export function createMetaKnight() {
       wings.forEach((wing,i)=>{const side=i===0?-1:1;wing.rotation.y=side*(.91+.02*breathe);wing.rotation.z=side*.07;});
       // Keep the blade upright and clear of the ground while resting.
       gripRig.rotation.z=-.29;gripRig.rotation.x=.28;
+    } else if(name==='Run'||name==='WalkBackward'||name==='RotateLeft'||name==='RotateRight') {
+      const running=name==='Run',backward=name==='WalkBackward';
+      const stepPhase=(name.startsWith('Rotate')?u*2:u)*Math.PI*2,wave=Math.sin(stepPhase);
+      const stride=running?.36:backward?.18:.11,lift=running?.24:.13,direction=backward?-1:1;
+      body.position.y+=(running?.07:.025)*Math.sin(stepPhase)**2;
+      body.rotation.set(running?.13:backward?-.045:.025,.025*wave,(running?.055:.025)*wave);
+      feet.forEach((foot,i)=>{
+        const step=(i===0?1:-1)*wave;
+        foot.position.z+=direction*stride*step;foot.position.y+=lift*Math.max(0,step);
+        foot.rotation.x=-direction*.24*step;
+      });
+      shoulders[0].rotation.x=-.32*wave;
+      // The sword remains outside the pauldron and never crosses the visor.
+      shoulders[1].rotation.x=.055*wave;shoulders[1].rotation.z=-.045;
+      spreadWings(running?.76:.59,.025+.025*wave);
+      cape.rotation.set(running?-.11:-.025,0,.035*wave);
+      if(name==='RotateLeft'||name==='RotateRight')root.rotation.y=(name==='RotateLeft'?1:-1)*Math.PI/2*smooth(u,.06,.94);
+    } else if(name==='Jump') {
+      const crouch=pulse(u,.10,.12)+pulse(u,.90,.10),air=smooth(u,.13,.32)*(1-smooth(u,.72,.92));
+      body.position.y-=.11*crouch;body.rotation.x=.06*air;
+      tuckFeet(air);spreadWings(.48-.32*air,.32*Math.sin(Math.PI*u)*air);
+      shoulders[0].rotation.z=-.24*air;shoulders[1].rotation.z=-.09*air;
+      cape.rotation.x=-.13*air;
+    } else if(name==='Fly') {
+      body.position.y+=.025*Math.sin(phase*2);body.rotation.x=.055;
+      tuckFeet(1);spreadWings(.12+.065*Math.cos(phase),.58*Math.sin(phase));
+      shoulders[0].rotation.set(-.15,0,-.20);shoulders[1].rotation.set(-.08,0,-.13);
+      cape.rotation.x=-.19+.035*Math.sin(phase);
+    } else if(name==='Swim') {
+      body.position.y-=.18-.015*breathe;body.rotation.x=.10;body.rotation.z=.025*breathe;
+      feet.forEach((foot,i)=>{const step=Math.sin(phase+(i===0?0:Math.PI));foot.position.z+=.12*step;foot.position.y+=.07;foot.rotation.x=.36*step;});
+      shoulders[0].rotation.set(-.22+.22*breathe,.15*breathe,-.15);
+      shoulders[1].rotation.set(-.08,0,-.12);spreadWings(.9,.04);
+      cape.rotation.x=-.14;
+    } else if(name==='Push') {
+      // Settle into the front foot, drive Galaxia forwards at the gameplay
+      // contact time (.23 s), then recover the original guarded stance.
+      const wind=pulse(u,.10,.10),strike=smooth(u,.08,.34)*(1-smooth(u,.49,1));
+      body.position.y-=.055*strike+.025*wind;body.position.z+=.18*strike-.045*wind;
+      body.rotation.set(.105*strike,-.065*strike,0);
+      feet[1].position.z+=.31*strike;feet[1].position.y+=.075*pulse(u,.19,.17);
+      feet[1].rotation.x=-.08*strike;feet[0].position.z-=.13*strike;
+      shoulders[0].rotation.set(.20*strike,0,-.045-.16*strike);
+      shoulders[1].rotation.set(-1.05*strike,-.08*strike,.045-.08*strike);
+      const swordParent=body.quaternion.clone().multiply(shoulders[1].quaternion);
+      gripRig.quaternion.slerp(swordParent.invert().multiply(lungeOrientation),strike);
+      spreadWings(.47+.19*strike,.025+.025*strike);cape.rotation.x=-.15*strike;
+      eyeRig.scale.y=1-.15*strike;
+    } else if(name==='Attack') {
+      const wind=pulse(u,.19,.19),strike=smooth(u,.25,.43)*(1-smooth(u,.55,.95));
+      body.position.y-=.055*wind+.045*strike;body.position.z+=.14*strike-.04*wind;
+      body.rotation.x=.09*strike;body.rotation.y=(name==='Attack'?-.14:.04)*strike;
+      shoulders[0].position.z+=.33*strike;shoulders[0].rotation.set(-.18*strike,.10*strike,-.48*strike);
+      shoulders[1].rotation.set(-.06*strike,0,-.045-.08*strike);
+      if(name==='Attack'){gripRig.rotation.z-=.75*strike;gripRig.rotation.y-=.20*strike;}
+      spreadWings(.55+.12*strike,.025);cape.rotation.x=-.08*strike;
+    } else if(name==='Eat') {
+      const reach=smooth(u,.06,.20)*(1-smooth(u,.70,.96)),bite=pulse(u,.63,.13);
+      shoulders[0].rotation.set(-1.03*reach,-.13*reach,-.33*reach);
+      shoulders[0].position.z+=.11*reach;
+      body.rotation.x=-.06*bite;body.position.y+=.024*bite;
+      eyeRig.scale.y=1-.35*bite;cape.rotation.x=.015*breathe;
+    } else if(name==='Boat'||name==='Cart'||name==='FireflyRide'||name==='Swing') {
+      body.position.y=.94+.009*breathe;body.position.z=-.10;body.rotation.x=-.045;
+      feet.forEach((foot,i)=>{foot.position.set((i===0?-1:1)*.46,.22,.48);foot.rotation.x=-.16;foot.rotation.z=(i===0?-1:1)*.06;});
+      shoulders.forEach((arm,i)=>{const side=i===0?-1:1;arm.rotation.x=-.14;arm.rotation.z=side*.21;});
+      spreadWings(.91+.02*breathe,.07);gripRig.rotation.z=-.29;gripRig.rotation.x=.28;
+      if(name==='Swing'){shoulders[0].rotation.set(-.65,0,-.55);feet.forEach(foot=>foot.rotation.x-=.18*breathe);}
+      if(name==='FireflyRide'){body.rotation.x=.10;shoulders[0].rotation.x=-.55;feet.forEach(foot=>foot.position.z-=.10);}
+      if(name==='Cart'){shoulders[0].rotation.x=-.36;body.rotation.z=.012*breathe;}
+    } else if(name==='Balloon'||name==='Lookout') {
+      body.position.y+=.009*breathe;body.rotation.y=.09*Math.sin(phase);
+      shoulders[0].rotation.set(-.22,0,-.21);shoulders[1].rotation.set(-.09,0,-.10);
+      spreadWings(.77,.02);cape.rotation.z=.018*breathe;
+    } else if(name==='Sleep'||name==='Wake') {
+      recline(name==='Sleep'?1:1-smooth(u,.12,.93),breathe);
+      if(name==='Wake'){const stretch=Math.sin(Math.PI*u);shoulders[0].rotation.z-=.42*stretch;eyeRig.scale.y=Math.max(.06,smooth(u,.10,.75));}
+    } else if(name==='Climb') {
+      body.rotation.x=.13;body.position.y+=.026*Math.sin(phase*2);
+      shoulders[0].rotation.x=-.72-.45*breathe;shoulders[0].rotation.z=-.14;
+      shoulders[1].rotation.x=-.13;shoulders[1].rotation.z=-.22;
+      feet.forEach((foot,i)=>{const step=(i===0?1:-1)*breathe;foot.position.y+=.11+.10*step;foot.position.z-=.09*step;foot.rotation.x=.20*step;});
+      spreadWings(.97,.03);cape.rotation.x=-.12;
+    } else if(name==='LeafDive'||name==='Trampoline') {
+      const launch=.5+.5*Math.sin(phase),squash=Math.max(0,-breathe);
+      body.position.y-=.07*squash;body.scale.set(1+.035*squash,1-.05*squash,1+.035*squash);
+      tuckFeet(.35+.55*launch);spreadWings(.38,.16+.16*launch);
+      shoulders[0].rotation.z=-.52*launch;shoulders[1].rotation.z=-.16;
+      cape.rotation.x=-.16*launch;
+    } else if(name==='Roll'||name==='Death') {
+      const fall=name==='Death'?smooth(u,.08,.82):1;
+      tuckFeet(.75*fall);spreadWings(0,-2.6);
+      shoulders[0].rotation.set(-.15,0,-.12);shoulders[1].rotation.set(-.13,0,-.23);
+      // Tuck the blade along the roll axis beside the body, retaining the
+      // common wrist/finger grip instead of sweeping its tip into the floor.
+      gripRig.rotation.x=-1.35;
+      // Rotate around the centre of the body, retaining the sword in its grip.
+      const pivot=new T.Vector3(0,1.12,0),angle=name==='Roll'?phase:Math.PI/2*fall;
+      motion.rotation.z=angle;motion.position.copy(pivot).sub(pivot.clone().applyQuaternion(motion.quaternion));
+      if(name==='Death')eyeRig.scale.y=1-.88*fall;
+      cape.rotation.x=-.09*fall;
+    } else {
+      const e=active(u);
+      // His mask stays solid: luminous eyes, posture, cloak and wings convey
+      // the five emotions without replacing the face with Kirby's mouth.
+      if(name==='Hello') {
+        // Hold the free fist above the visor beside the forehead. Most of the
+        // greeting oscillation belongs to the raised wrist, not a low arm swing.
+        const wave=Math.sin((t-.32)*Math.PI*2*2.2);
+        shoulders[0].rotation.set(-.12*e,0,(-2.25+.10*wave)*e);
+        waveWrist.rotation.set(-.16*e,.10*wave*e,.48*wave*e);
+        body.position.y+=.025*(.5+.5*Math.sin(t*7))*e;
+        body.rotation.z=(.022+.012*Math.sin(t*5))*e;
+        eyeRig.scale.set(1+.08*e,1-.42*e,1);eyeRig.position.y+=.024*e;
+        spreadWings(.47-.09*e,.025+.045*e);
+      } else if(name==='Joy') {
+        motion.position.y+=Math.abs(Math.sin(t*Math.PI*2.2))*.25*e;
+        shoulders[0].rotation.z=-.95*e;shoulders[1].rotation.z=-.17*e;
+        body.rotation.z=.055*Math.sin(t*8)*e;spreadWings(.47-.25*e,.20*e);
+        eyeRig.scale.set(1+.10*e,1-.62*e,1);eyeRig.position.y+=.022*e;
+      } else if(name==='Fear') {
+        body.rotation.set(-.10*e,0,.024*Math.sin(t*35)*e);body.position.z-=.07*e;
+        shoulders[0].rotation.set(-.48*e,0,-.42*e);shoulders[1].rotation.z=-.16*e;
+        spreadWings(.47-.28*e,.19*e);eyeRig.scale.set(1+.12*e,1+.18*e,1);
+      } else if(name==='Anger') {
+        body.rotation.x=.10*e;body.position.y+=.018*Math.abs(Math.sin(t*12))*e;
+        shoulders[0].rotation.set(-.14*e,0,-.38*e);shoulders[1].rotation.z=-.20*e;
+        feet.forEach((foot,i)=>foot.position.y+=Math.max(0,(i===0?1:-1)*Math.sin(t*12))*.13*e);
+        eyeRig.scale.set(1+.08*e,1-.40*e,1);eyeRig.position.y-=.018*e;
+        spreadWings(.47-.12*e,.07*e);
+      } else if(name==='Sad') {
+        body.rotation.x=.18*e;body.position.y-=.07*e;body.rotation.z=-.04*e;
+        shoulders[0].rotation.z=.10*e;shoulders[1].rotation.z=-.04*e;
+        eyeRig.scale.set(1-.06*e,1-.30*e,1);eyeRig.position.y-=.035*e;
+        spreadWings(.47+.40*e,-.08*e);cape.rotation.x=.055*e;
+      }
     }
     root.updateMatrixWorld(true);
     // Correct only sole contact, preserving foot-lift and the body's seated height.
-    for(const foot of feet) {
+    for(const foot of ['Sleep','Wake','Roll','Death'].includes(name)?[]:feet) {
       const box=new T.Box3().setFromObject(foot,true);
       if(box.min.y<0)foot.position.y-=box.min.y;
     }
     root.updateMatrixWorld(true);
+    if(['Wake','Roll','Death'].includes(name)) {
+      const bottom=new T.Box3().setFromObject(root,true).min.y;
+      if(bottom<0)motion.position.y-=bottom;
+      root.updateMatrixWorld(true);
+    }
   }
   const clips:T.AnimationClip[]=[];
-  for(const [name,duration] of [['Idle',2.8],['Walk',1.04],['Sitting',3.2]] as const) {
+  for(const {name,duration,loop} of META_KNIGHT_CLIPS) {
     const count=Math.ceil(duration*30),times=Array.from({length:count+1},(_,i)=>i/count*duration);
     const samples=rigs.map(()=>({p:[] as number[],q:[] as number[],s:[] as number[]}));
-    times.forEach(t=>{pose(name,t===duration?0:t,duration);rigs.forEach(({node},i)=>{
+    const rootRotations:number[]=[];
+    times.forEach(t=>{pose(name,loop&&t===duration?0:t,duration);rigs.forEach(({node},i)=>{
       samples[i].p.push(...node.position.toArray());samples[i].q.push(...node.quaternion.toArray());samples[i].s.push(...node.scale.toArray());
-    });});
+    });if(name==='RotateLeft'||name==='RotateRight')rootRotations.push(...root.quaternion.toArray());});
     const tracks:T.KeyframeTrack[]=[];
     rigs.forEach(({node},i)=>{
       tracks.push(new T.VectorKeyframeTrack(`${node.name}.position`,times,samples[i].p));
       tracks.push(new T.QuaternionKeyframeTrack(`${node.name}.quaternion`,times,samples[i].q));
       tracks.push(new T.VectorKeyframeTrack(`${node.name}.scale`,times,samples[i].s));
     });
+    if(rootRotations.length)tracks.push(new T.QuaternionKeyframeTrack(`${root.name}.quaternion`,times,rootRotations));
     const clip=new T.AnimationClip(name,duration,tracks);clip.optimize();clips.push(clip);
   }
   pose('Idle',0,2.8);

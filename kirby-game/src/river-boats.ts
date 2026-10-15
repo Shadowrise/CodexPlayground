@@ -56,8 +56,9 @@ export class RiverBoats {
  }
  private fit(player:CharacterController){
   // Keep large Kirby's saved/gameplay size; only fit the visual model under the canopy.
-  const model=player.animationRoot.parent!;model.scale.setScalar(Math.min(1,.9/player.actor.scale.x));this.fitted.set(player,model);
+  const model=player.animationRoot.parent!;model.scale.setScalar(this.fitScale(player));this.fitted.set(player,model);
  }
+ private fitScale(player:CharacterController){return Math.min(1,(player.isMetaKnight?.62:.9)/player.actor.scale.x);}
  private unfit(player:CharacterController){this.fitted.get(player)?.scale.setScalar(1);this.fitted.delete(player);}
  private nearby(player:CharacterController){
   if(player.flight.active||player.roll.active||player.actor.position.y>1.3)return -1;
@@ -98,16 +99,16 @@ export class RiverBoats {
  }
  cancel(){if(this.ride){this.unfit(this.ride.player);this.ride.player.setActivity('Idle');this.ride=undefined;}}
  private poseRider(index:number,player:CharacterController){
-  const b=this.boats[index];this.fit(player);this.seatPosition.copy(seat).applyQuaternion(b.quaternion).add(b.position);
+  const b=this.boats[index];this.fit(player);this.seatPosition.copy(seat);if(player.isMetaKnight)this.seatPosition.y=.57;this.seatPosition.applyQuaternion(b.quaternion).add(b.position);
   player.actor.position.copy(this.seatPosition);player.actor.quaternion.copy(b.quaternion);player.yaw=b.rotation.y;
-  this.sittingPose(player.actor);
+  if(!player.hasNativeAnimations)this.sittingPose(player.actor);
  }
  syncRemoteRiders(riders:Map<number,CharacterController>,phases?:ReadonlyMap<number,number>){
   for(const player of this.fitted.keys())if(player!==this.ride?.player&&![...riders.values()].includes(player))this.unfit(player);
   for(const [index,player] of riders)if(this.boats[index]){
    const phase=phases?.get(index)??1;
    if(phase>=1)this.poseRider(index,player);
-   else {this.fit(player);if(phase<0)this.fitted.get(player)?.scale.setScalar(T.MathUtils.lerp(Math.min(1,.9/player.actor.scale.x),1,-phase));}
+   else {this.fit(player);if(phase<0)this.fitted.get(player)?.scale.setScalar(T.MathUtils.lerp(this.fitScale(player),1,-phase));}
   }
  }
  update(dt:number,seconds:number,camera?:T.Vector3){
@@ -124,7 +125,7 @@ export class RiverBoats {
   r.elapsed+=dt;r.player.mixer.update(dt);
   if(r.leaving){
    const t=smooth(r.elapsed/.7);r.player.actor.position.lerpVectors(r.from,r.leaving,t);r.player.actor.position.y+=Math.sin(Math.PI*t)*1.3;
-   this.fitted.get(r.player)?.scale.setScalar(T.MathUtils.lerp(Math.min(1,.9/r.player.actor.scale.x),1,t));
+   this.fitted.get(r.player)?.scale.setScalar(T.MathUtils.lerp(this.fitScale(r.player),1,t));
    if(t===1){this.unfit(r.player);r.player.surfaceY=0;r.player.actor.rotation.set(0,r.player.yaw,0);r.player.setActivity('Idle');this.ride=undefined;}return;
   }
   this.poseRider(r.index,r.player);

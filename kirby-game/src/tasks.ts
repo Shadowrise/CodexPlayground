@@ -3,6 +3,7 @@ import {getLocale,t} from './i18n';
 import type {Destination} from './navigation';
 export const TASK_ROUTE_ICON='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 3 14 21 10 14 3 10 21 3Z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 export const TASK_NAMES:Record<ActiveScoreAction,string>={
+ numbers:'Разгадать звонкие циферки',
  flowers:'Сыграть цветочную мелодию',
  centipede:'Подружиться с Топотушкой',
  boat:'Поплавать на лодочке',
@@ -10,6 +11,7 @@ export const TASK_NAMES:Record<ActiveScoreAction,string>={
  skyStar:'Добыть звёздочку Небесной тропы',millQuest:'Запустить радужную мельницу',sleep:'Поспать в домике Кирби',coaster:'Проехать круг на горках',bench:'Посидеть на лавочке',balloon:'Полетать на воздушном шаре',treehouse:'Подняться в домик на дереве',swing:'Покачаться на качелях',leaves:'Прыгнуть с дерева в листья',star:'Найти звёздочку в лабиринте',firefly:'Покататься на светлячке',
 };
 export const TASK_DESTINATIONS:Readonly<Partial<Record<ActiveScoreAction,string>>>={
+ numbers:'number-garden',
  flowers:'musical-flowers',
  skyStar:'sky-trail',millQuest:'mill',star:'maze',treehouse:'treehouse',centipede:'boss-arena',
  swing:'swing',fountain:'fountain',balloon:'balloon',sleep:'home',coaster:'depot',leaves:'treehouse',

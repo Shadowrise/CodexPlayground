@@ -7,12 +7,13 @@ import {batchRigidMeshes} from './rigid-batch';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
+import {TREEHOUSE_LOCATION,TREEHOUSE_DECK_HEIGHT,TREEHOUSE_BALCONY} from './treehouse-site';
 
-export const TREEHOUSE_SITE=new T.Vector3(135,0,45);
+export const TREEHOUSE_SITE=new T.Vector3(TREEHOUSE_LOCATION.x,0,TREEHOUSE_LOCATION.z);
 export type TreehouseSound='ladder'|'creak'|'leaves'|'cheer';
 type Activity='climb'|'deck'|'dive'|'land'|'swing';
 export const TREEHOUSE_HEIGHT_SCALE=2;
-const DECK=9;
+const DECK=TREEHOUSE_DECK_HEIGHT/TREEHOUSE_HEIGHT_SCALE;
 const idle={forward:false,left:false,right:false};
 
 /** A hand-built oak lookout; static repeated details share instanced geometry. */
@@ -29,6 +30,7 @@ export class Treehouse {
   private swingAngle=0;
   get active(){return !!this.rider;}
   get canSit(){return !!this.rider && this.activity==='deck';}
+  onBalcony(character:CharacterController){return this.rider===character&&this.activity==='deck';}
   constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
     const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
     const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,16,10),pole:new T.CylinderGeometry(1,1,1,12),leaf:new T.SphereGeometry(1,6,4)};
@@ -172,8 +174,8 @@ export class Treehouse {
     this.swingAngle=T.MathUtils.damp(this.swingAngle,Math.sin(this.clock*1.65)*(swinging?.55:.07),4,dt);this.swing.rotation.x=this.swingAngle;
     const c=this.rider;if(!c)return;
     c.mixer.update(dt);const size=c.actor.scale.x;
-    const armL=c.actor.getObjectByName('Left_shoulder'),armR=c.actor.getObjectByName('Right_shoulder');
-    const footL=c.actor.getObjectByName('Left_foot_pivot'),footR=c.actor.getObjectByName('Right_foot_pivot');
+    const armL=c.hasNativeAnimations?undefined:c.actor.getObjectByName('Left_shoulder'),armR=c.hasNativeAnimations?undefined:c.actor.getObjectByName('Right_shoulder');
+    const footL=c.hasNativeAnimations?undefined:c.actor.getObjectByName('Left_foot_pivot'),footR=c.hasNativeAnimations?undefined:c.actor.getObjectByName('Right_foot_pivot');
     if(this.activity==='climb'){
       const u=Math.min(1,this.elapsed/5.2),s=u*u*(3-2*u);
       const base=TREEHOUSE_SITE.clone().add(new T.Vector3(-4,0,11));
@@ -189,16 +191,16 @@ export class Treehouse {
       if(jump){this.dive();return;}
       c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*1.8*dt;c.actor.rotation.y=c.yaw;
       const movement=(Number(input.forward)-Number(!!input.backward))*2.4*dt;
-      if(c.isPigeon && c.state!=='Sitting')c.setActivity(movement?(movement>0?'Walk':'WalkBackward'):'Lookout');
-      c.actor.position.x=T.MathUtils.clamp(c.actor.position.x+Math.sin(c.yaw)*movement,TREEHOUSE_SITE.x-4.8,TREEHOUSE_SITE.x+4.8);
-      c.actor.position.z=T.MathUtils.clamp(c.actor.position.z+Math.cos(c.yaw)*movement,TREEHOUSE_SITE.z+2.5,TREEHOUSE_SITE.z+7);
+      if(c.hasNativeAnimations && c.state!=='Sitting')c.setActivity(movement?(movement>0?'Walk':'WalkBackward'):'Lookout');
+      c.actor.position.x=T.MathUtils.clamp(c.actor.position.x+Math.sin(c.yaw)*movement,TREEHOUSE_BALCONY.minX,TREEHOUSE_BALCONY.maxX);
+      c.actor.position.z=T.MathUtils.clamp(c.actor.position.z+Math.cos(c.yaw)*movement,TREEHOUSE_BALCONY.minZ,TREEHOUSE_BALCONY.maxZ);
       if(footL)footL.rotation.x=movement?Math.sin(this.clock*10)*.3:0;if(footR)footR.rotation.x=movement?-Math.sin(this.clock*10)*.3:0;
     }else if(this.activity==='dive'){
       const u=Math.min(1,this.elapsed/2.0),target=TREEHOUSE_SITE.clone().add(new T.Vector3(8,.35,13));
       c.actor.position.lerpVectors(this.from,target,u);c.actor.position.y=this.from.y+(target.y-this.from.y)*u*u+5*Math.sin(Math.PI*u);
       c.yaw=Math.atan2(target.x-this.from.x,target.z-this.from.z);c.actor.rotation.y=c.yaw;
       if(armL)armL.rotation.z=-1.1;if(armR)armR.rotation.z=1.1;
-      c.animationRoot.rotation.x=-.3*Math.sin(Math.PI*u);
+      if(!c.hasNativeAnimations)c.animationRoot.rotation.x=-.3*Math.sin(Math.PI*u);
       if(u===1){awardFirst(c,'leaves');this.activity='land';this.elapsed=0;this.leafPile.burst();this.sound('leaves');}
     }else if(this.activity==='land'){
       const u=Math.min(1,this.elapsed/.7),squash=Math.sin(u*Math.PI)*.28;

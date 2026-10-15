@@ -51,7 +51,8 @@ test('open ground has no large grass gaps, with shrubs under crowns and along ev
  const bushes=sites.filter((s:any)=>s.kind==='bush');
  // Young, narrow spruces have shrubs at the drip line; include the shrub's
  // footprint rather than requiring its centre underneath a sub-metre crown.
- assert(trees.filter((t:any)=>bushes.some((s:any)=>Math.hypot(t.x-s.x,t.z-s.z)<t.crownRadius+s.radius*.65)).length>trees.length*.8);
+ const covered=trees.filter((t:any)=>bushes.some((s:any)=>Math.hypot(t.x-s.x,t.z-s.z)<t.crownRadius+s.radius*.65)).length;
+ assert(covered>trees.length*.8,`shrubs cover ${covered}/${trees.length} trees`);
  const mature=trees.filter((t:any)=>t.crownRadius>2.5);
  assert(mature.filter((t:any)=>bushes.some((s:any)=>Math.hypot(t.x-s.x,t.z-s.z)<t.crownRadius)).length>mature.length*.8);
  assert(root.userData.trailBushes>100,'shrubs frame the paths as well as the groves');

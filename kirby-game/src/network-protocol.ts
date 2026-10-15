@@ -3,6 +3,9 @@ import type {ChaseSnapshot} from './centipede-chasers';
 import type {MillQuest,MillAction} from './mill-quest';
 import type {BreadState,BreadAction} from './bread-state';
 import type {FlowerGame} from './musical-flower-game';
+import type {NumberGame} from './number-garden-game';
+import type {SealId,SealProgress} from './meta-knight-seal-state';
+import {MOUNTAIN_STEPS} from './mountain-ledges-layout';
 import {KIRBY_VARIANTS} from './variant-palette';
 import type {StarfallState} from './starfall';
 import type {Prank} from './pranks';
@@ -12,18 +15,19 @@ import {validPidgieState,type PidgieState} from './pidgie-state';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-14';
-export type ActorState={p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
+export const BUILD='meadow-network-17';
+export type ActorState={location?:'meta-knight-arena';p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][];pidgie?:PidgieState;mountainSteps?:number[][]};
-export type Event={type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
-export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;millQuest?:MillQuest;bread?:BreadState;flowerGame?:FlowerGame;centipede?:CentipedeEvent;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
+export type Event={type:'seal';id:SealId}|{type:'number-start'}|{type:'number-step'}|{type:'number-note';digit:number}|{type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
+export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;millQuest?:MillQuest;bread?:BreadState;sealProgress?:SealProgress;flowerGame?:FlowerGame;numberGame?:NumberGame;centipede?:CentipedeEvent;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
 export type Welcome={type:'welcome';serverNow?:number;protocolVersion:number;playerId:string;resume?:ActorState;room:RoomState;players:{id:string;actor?:ActorState}[]};
-export type ServerMessage=Welcome|{type:'flower-game';game?:FlowerGame}|{type:'flower-complete'}|{type:'flower-note';index:number;id:string}|{type:'centipede-progress';points:number;completed:boolean}|{type:'centipede-bump';direction:Point}|{type:'emote';emote:string;id:string}|{type:'log';entry:LogEntry}|{type:'presence';count:number}|{type:'frame';id:string;actor?:ActorState;world?:WorldState;chasers?:ChaseSnapshot}|{type:'room';room:RoomState}|{type:'left';id:string}|{type:'hit';id:string;actor:ActorState;target:string}|{type:'lock';key:string;ok:boolean}|{type:'star'}|{type:'resize';size:number}|{type:'error';message:string};
+export type ServerMessage=Welcome|{type:'number-game';game?:NumberGame}|{type:'number-complete'}|{type:'number-note';digit:number;id:string}|{type:'flower-game';game?:FlowerGame}|{type:'flower-complete'}|{type:'flower-note';index:number;id:string}|{type:'centipede-progress';points:number;completed:boolean}|{type:'centipede-bump';direction:Point}|{type:'emote';emote:string;id:string}|{type:'log';entry:LogEntry}|{type:'presence';count:number}|{type:'frame';id:string;actor?:ActorState;world?:WorldState;chasers?:ChaseSnapshot}|{type:'room';room:RoomState}|{type:'left';id:string}|{type:'hit';id:string;actor:ActorState;target:string}|{type:'lock';key:string;ok:boolean}|{type:'star'}|{type:'resize';size:number}|{type:'error';message:string};
 export function validResourceKey(key:unknown):key is string {if(typeof key!=='string')return false;const match=/^(cart|balloon|bug|bench|home|tree|trampoline|boat):(\d{1,2})$/.exec(key);return !!match&&(match[1]!=='boat'||Number(match[2])%2===0)&&Number(match[2])<({boat:8,cart:12,balloon:3,bug:40,bench:32,home:1,tree:1,trampoline:1} as Record<string,number>)[match[1]];}
 const numbers=(v:unknown,n:number)=>Array.isArray(v)&&v.length===n&&v.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<100000);
 export function validActor(v:unknown):v is ActorState{
  const a=v as ActorState;
  const progress=a?.progress;
+ if(a?.location!==undefined&&a.location!=='meta-knight-arena')return false;
  if(a?.fruitBoost!==undefined&&!validFruitBoost(a.fruitBoost))return false;
  if(progress?.speed!==undefined&&(!Number.isFinite(progress.speed)||progress.speed<.1||progress.speed>20))return false;
  if(a?.eventPoints!==undefined&&(!Number.isInteger(a.eventPoints)||a.eventPoints<0||a.eventPoints>12))return false;
@@ -40,6 +44,6 @@ export function validWorld(v:unknown):v is WorldState{
  const w=v as WorldState;
  const rows=(a:unknown,count:number,length:number)=>Array.isArray(a)&&a.length===count&&a.every(r=>Array.isArray(r)&&r.length===length&&r.every(x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e10));
  const balloons=Array.isArray(w?.balloons)&&w.balloons.length===3&&w.balloons.every(r=>Array.isArray(r)&&r.length===16&&['parked','boarding','flying','exiting'].includes(r[1] as string)&&r.every((x,i)=>i===1||typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)<1e7));
- const mountainSteps=w?.mountainSteps===undefined||rows(w.mountainSteps,11,3)&&w.mountainSteps.every(r=>Number.isInteger(r[0])&&r[0]>=0&&r[0]<=3&&r[1]>=0&&r[1]<=[0,.7,4,.9][r[0]]&&r[2]>=0&&r[2]<=3);
+ const mountainSteps=w?.mountainSteps===undefined||[MOUNTAIN_STEPS.length,11,13].some(count=>rows(w.mountainSteps,count,3))&&w.mountainSteps.every(r=>Number.isInteger(r[0])&&r[0]>=0&&r[0]<=3&&r[1]>=0&&r[1]<=[0,.7,4,.9][r[0]]&&r[2]>=0&&r[2]<=3);
  return !!w&&Array.isArray(w.npcs)&&w.npcs.length===14&&w.npcs.every(validActor)&&rows(w.npcLife,14,15)&&(rows(w.carts,12,4)||rows(w.carts,13,4))&&balloons&&rows(w.bugs,40,10)&&(w.pidgie===undefined||validPidgieState(w.pidgie))&&mountainSteps&&JSON.stringify(w).length<12500;
 }

@@ -15,6 +15,7 @@ export function styleVariant(element:HTMLElement,variant:KirbyVariant){
   element.classList.toggle('rainbow-kirby',variant[0]==='Радуга');
   element.classList.toggle('bandana-kirby',variant[0]==='Бандана');
   element.classList.toggle('pigeon-character',variant[0]==='Пиджи');
+  element.classList.toggle('meta-knight-character',variant[0]==='Meta Knight');
 }
 
 function matteSurface(source: MeshStandardMaterial) {

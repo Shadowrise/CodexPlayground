@@ -4,11 +4,11 @@ import {t} from './i18n';
 
 /** Stable Latin aliases: display names may change with the selected language. */
 export const TELE_ALIASES:Readonly<Record<string,string>>={
- 'boss-arena':'ar',fountain:'fn','sky-trail':'sky',home:'hm',treehouse:'th',
+ 'meta-knight-portal':'mk','boss-arena':'ar',fountain:'fn','sky-trail':'sky',home:'hm',treehouse:'th',
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'}|{kind:'time';hour:number};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -22,7 +22,7 @@ const commands=[
  {name:'unlock',description:'Разблокировать персонажа'},
  {name:'time',description:'Установить час в игре: 0–23'},
 ];
-const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'}] as const;
+const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'}] as const;
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
 export function parseChatCommand(text:string,enabled:boolean,destinations:readonly Destination[]):CommandResult|undefined{
@@ -47,7 +47,7 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  }
  if(name==='unlock'){
   const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
-  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, чтобы открыть Бандану, или /unlock pidgie, чтобы открыть Пиджи.'};
+  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie или /unlock meta-knight, чтобы открыть персонажа.'};
  }
  return {error:'Доступные команды: /size, /tele, /unlock и /time.'};
 }

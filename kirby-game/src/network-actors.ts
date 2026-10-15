@@ -1,4 +1,5 @@
 import {riderFit,restoreRider} from './rider-size';
+import {META_KNIGHT_PORTAL} from './meta-knight-arena-site';
 import {disposeActor} from './actor-lifecycle';
 import type {PlayerSnapshots} from './player-snapshots';
 import {makeSwimRing,showSwimRing} from './ponds';
@@ -30,8 +31,10 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
  c.fruitsEaten=a.fruits;c.achievements.clear();for(const action of a.achievements)c.achievements.add(action as import('./score').ScoreAction);
  c.eventPoints=a.eventPoints??0;
  c.skyCheckpoint=a.progress?.checkpoint??0;c.starRemaining=a.star;c.starBlessed=c.achievements.has('star');
+ if(a.location==='meta-knight-arena'){c.actor.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset);c.surfaceY=0;}
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
+ c.actor.userData.location=a.location;
  c.roll.clearPose();c.roll.state=a.roll?[...a.roll]:undefined;
  const previousX=c.actor.position.x,previousZ=c.actor.position.z;
  const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion).y;
@@ -58,7 +61,7 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
 export class RemotePlayers{
  readonly players=new Map<string,CharacterController>();
  readonly renderedStates=new Map<string,ActorState>();
- constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF){}
+ constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF,private metaKnight?:GLTF,private onMetaKnight?:(model:T.Object3D)=>void){}
  clear(){for(const c of this.players.values()){c.setActivity('Idle');disposeActor(c);}this.players.clear();this.renderedStates.clear();}
  update(actors:Map<string,ActorState>,dt:number,snapshots?:Map<string,PlayerSnapshots>){
   const now=performance.now();
@@ -68,7 +71,8 @@ export class RemotePlayers{
    const variant=KIRBY_VARIANTS[a.variant]??KIRBY_VARIANTS[0];
    // An optional model may still be loading; keep the state for a later frame.
    if(variant[0]==='Пиджи'&&!this.pigeon)continue;
-   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
+   if(variant[0]==='Meta Knight'&&!this.metaKnight)continue;
+   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 
   }applyActor(c,a,dt,!!snapshots||fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}
  }

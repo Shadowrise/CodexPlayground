@@ -92,7 +92,7 @@ export class SkyTrail{
   fabric.position.y=.52;
   if(!t.launched){t.launched=true;this.sound('bounce');}
   const flightTime=t.elapsed-.73,u=Math.min(1,flightTime/t.duration),blend=u*u*(3-2*u);rider.actor.position.lerpVectors(t.pad,t.to,blend);rider.actor.position.y+=Math.sin(u*Math.PI)*(t.leaves?9:Math.max(3,(t.to.y-t.pad.y)*.35));
-  for(const side of ['Left','Right']){const arm=rider.actor.getObjectByName(`${side}_shoulder`);if(arm)arm.rotation.z=(side==='Left'?-1:1)*(1+.15*Math.sin(u*18));}
+  if(!rider.hasNativeAnimations)for(const side of ['Left','Right']){const arm=rider.actor.getObjectByName(`${side}_shoulder`);if(arm)arm.rotation.z=(side==='Left'?-1:1)*(1+.15*Math.sin(u*18));}
   if(u===1){if(!t.landed){t.landed=true;if(t.leaves){this.leaves.burst();this.sound('leaves');}else this.sound('checkpoint');}rider.actor.position.copy(t.to);if(!t.leaves||flightTime>t.duration+.65){rider.setActivity('Idle');rider.surfaceY=this.base=t.to.y;this.inCourse=this.contains(t.to);this.rider=undefined;this.travel=undefined;}}
  }
  /** Swept foot-height tests land on tops only; stepping off an edge starts real gravity. */

@@ -5,11 +5,13 @@ import {HOME_SITE} from './home-site';
 import {MAZE_SITE,MAZE_HALF,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from './maze-layout';
 import {roundMeadowPath} from './meadow-path';
 import {BOSS_ARENA} from './boss-arena-site';
+import {META_KNIGHT_PORTAL,META_KNIGHT_PORTAL_APPROACH} from './meta-knight-arena-site';
 import {FOUNTAIN_SITE} from './fountain-site';
 import {SKY_TRAIL_SITE,SKY_PLATFORMS} from './sky-trail-layout';
 import {MEADOW_HALF_SIZE} from './world-bounds';
 import {MILL_BAGS} from './mill-quest';
 import {outsideMusicalFlowerClearing} from './musical-flower-site';
+import {outsideNumberGarden} from './number-garden-site';
 
 export type MeadowTree={x:number;z:number;crownRadius:number};
 export type MeadowPoint={x:number;z:number};
@@ -56,6 +58,7 @@ export class MeadowLayout {
   const treeCells=new Map<string,MeadowTree[]>();
   for(const t of trees){const key=`${Math.floor(t.x/8)},${Math.floor(t.z/8)}`;if(!treeCells.has(key))treeCells.set(key,[]);treeCells.get(key)!.push(t);}
   const blocked=(x:number,z:number)=>{
+   if(!outsideNumberGarden(x,z,.3))return true;
    if(!outsideMusicalFlowerClearing(x,z,2.7))return true;
    // Entrances lead to the actual door/ladder, not the centres of solid buildings.
    if(Math.abs(x-HOME_SITE.x)<7.5&&z>HOME_SITE.z-6.8&&z<HOME_SITE.z+5.2)return true;
@@ -94,6 +97,7 @@ export class MeadowLayout {
    return chosen;
   };
   const branch=(p:MeadowPoint,width:number,rx=3,rz=3)=>{this.entrances.push(p);this.patches.push({...p,rx,rz});return {p,width};};
+  this.patches.push({x:META_KNIGHT_PORTAL.x,z:META_KNIGHT_PORTAL.z+1,rx:7.2,rz:8});
   const first=SKY_PLATFORMS[0];
   const targets=[
    branch({x:HOME_SITE.x,z:HOME_SITE.z+6},3.4,3.8,2.8),
@@ -107,6 +111,7 @@ export class MeadowLayout {
    ...BALLOON_SITES.map(p=>branch({x:p.x,z:p.z+10},3.5,4.5,3)),
    ...LANDMARKS.filter(p=>p.kind===4).map(p=>branch({x:p.x,z:p.z+7},2.8,5,2.8)),
    ...BRIDGES.flatMap(p=>[-1,1].map(side=>branch({x:p.x+side*9.8*Math.cos(p.yaw),z:p.z-side*9.8*Math.sin(p.yaw)},3.2,2.6,2.6))),
+   branch(META_KNIGHT_PORTAL_APPROACH,3.4,4.4,2.5),
   ];
   for(const p of LANDMARKS.filter(p=>p.kind===4)){
    this.flowerBeds.push({x:p.x+4.7,z:p.z+4.5,rx:1.6,rz:2.4},{x:p.x-8,z:p.z-2,rx:1.5,rz:2});

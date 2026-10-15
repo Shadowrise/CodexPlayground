@@ -1,5 +1,6 @@
 import {validStarfall,type StarfallState} from './starfall';
 import {validBread,type BreadState} from './bread-state';
+import {normalizeSealProgress,type SealProgress} from './meta-knight-seal-state';
 import {validPidgieState,type PidgieState} from './pidgie-state';
 import {MIN_BODY_SIZE} from './body-size';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
@@ -12,16 +13,17 @@ import { STATION } from './coaster';
 import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
 type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;speed?:number;fruitBoost?:FruitBoostState;fruitsEaten:number;achievements?:ScoreAction[];eventPoints?:number};
-export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number;bread?:BreadState;pidgie?:PidgieState};
-export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number,bread?:BreadState,pidgie?:PidgieState):GameSave {
+export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number;bread?:BreadState;pidgie?:PidgieState;seals?:SealProgress};
+export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number,bread?:BreadState,pidgie?:PidgieState,seals?:SealProgress):GameSave {
   const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitBoost:c.fruitBoost.snapshot(),fruitsEaten:c.fruitsEaten,achievements:[...c.achievements],...('eventPoints' in c?{eventPoints:c.eventPoints,speed:c.savedSpeedSize}:{})};};
   const savedPlayer=actor(player,variant[0]);
   if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
-  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,dayPhase,festival:player.festival,skyCheckpoint:player.skyCheckpoint,...(bread?{bread:structuredClone(bread)}:{}),...(pidgie?{pidgie:structuredClone(pidgie)}:{})};
+  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,dayPhase,festival:player.festival,skyCheckpoint:player.skyCheckpoint,...(bread?{bread:structuredClone(bread)}:{}),...(pidgie?{pidgie:structuredClone(pidgie)}:{}),...(seals?{seals:structuredClone(seals)}:{})};
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
   if(data?.bread!==undefined&&!validBread(data.bread))throw Error('Сохранение повреждено или несовместимо.');
+  if(data?.seals!==undefined){const seals=normalizeSealProgress(data.seals);if(!seals)throw Error('Сохранение повреждено или несовместимо.');data.seals=seals;}
   if(data?.pidgie!==undefined&&!validPidgieState(data.pidgie))throw Error('Сохранение повреждено или несовместимо.');
   // Keep saves made before the bird received its name compatible.
   if(data?.player?.variant==='Голубь')data.player.variant='Пиджи';

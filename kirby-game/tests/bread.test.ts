@@ -13,7 +13,7 @@ import {canFeedPidgie} from '../src/bread-state';
 import {pidgieFixture} from './pidgie-fixture';
 import {achievementPoints} from '../src/score';
 import {applyBread,advanceBread,breadFloor,breadPosition,canPickBread,newBread,validBread,BREAD_SPAWN,type BreadActor} from '../src/bread-state';
-import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,mountainWorld} from '../src/mountain-ledges-layout';
+import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE,mountainWorld} from '../src/mountain-ledges-layout';
 const actor=(id='solo',p:readonly number[]=BREAD_SPAWN):BreadActor=>({id,p:[...p],yaw:0,size:1,available:true});
 
 test('feeding requires carried bread, a nearby grounded bird and a facing player; the throw lands midway and cannot be reclaimed',()=>{
@@ -47,6 +47,13 @@ test('one textured loaf starts on the summit and only a nearby available charact
  const held=applyBread(b,{kind:'pick'},a,1000);assert.equal(held.owner,'solo');
  assert.equal(applyBread(held,{kind:'pick'},actor('pigeon'),1000),held,'another character cannot duplicate the loaf');
  assert.equal(applyBread(held,{kind:'drop'},actor('pigeon'),1100),held,'only the carrier can drop it');
+});
+
+test('a loaf released on the permanent seal niche keeps its visible supporting floor',()=>{
+ const niche=MOUNTAIN_SEAL_NICHE,p=mountainWorld(niche.tangent,niche.radial-.35);
+ assert.equal(breadFloor(p.x,p.z,niche.y),niche.y);
+ const loaf={...newBread(),p:[p.x,niche.y,p.z] as [number,number,number]};
+ assert.equal(advanceBread(loaf,10000),loaf,'the new niche is a real floor for shared loose items');
 });
 
 test('a drop falls forward, rests on the ground, and can be picked up again without snapping back',()=>{

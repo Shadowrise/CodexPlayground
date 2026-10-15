@@ -1,4 +1,5 @@
 import {t} from './i18n';
+import {numberSound,type NumberSound} from './number-garden-sounds';
 import {centipedeSound} from './centipede-sounds';
 import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
@@ -116,6 +117,14 @@ export class SoundEffects {
         this.buffers.set(`flower-note-${i}`,note);
       });
     }catch{/* A missing musical effect must never prevent entering the meadow. */}
+  }
+  playNumber(kind:NumberSound,dx=0,dz=0,cameraAzimuth=0){
+    const ctx=this.context,distance=Math.hypot(dx,dz);
+    if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||distance>=38||this.active.size>=16)return;
+    const key=`number-${kind}`;
+    if(!this.buffers.has(key)){const samples=numberSound(kind),buffer=ctx.createBuffer(1,samples.length,22050);buffer.getChannelData(0).set(samples);this.buffers.set(key,buffer);}
+    const source=ctx.createBufferSource(),gain=ctx.createGain(),pan=ctx.createStereoPanner();source.buffer=this.buffers.get(key)!;gain.gain.value=.75*(1-distance/38)**2;
+    pan.pan.value=Math.max(-.7,Math.min(.7,(-Math.cos(cameraAzimuth)*dx+Math.sin(cameraAzimuth)*dz)/16));source.connect(gain);gain.connect(pan);pan.connect(this.master!);this.begin(source,gain,()=>pan.disconnect(),undefined,true);
   }
   playFlowerNote(index:number,dx=0,dz=0,cameraAzimuth=0,transpose=0){
     const ctx=this.context,buffer=this.buffers.get(`flower-note-${index}`),distance=Math.hypot(dx,dz);

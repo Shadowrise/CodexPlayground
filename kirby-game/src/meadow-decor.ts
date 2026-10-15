@@ -9,10 +9,12 @@ import {MEADOW_HALF_SIZE} from './world-bounds';
 import {spatialInstances} from './spatial-instances';
 import {BIOME_STYLE as PALETTES} from './biome-style';
 import {createShrubGeometry,createShrubMaterial} from './shrub-model';
+import {META_KNIGHT_PORTAL_APPROACH} from './meta-knight-arena-site';
 import {instancedLod,type InstanceLodPart} from './instanced-lod';
 import {createGrassGeometry,createGrassMaterial} from './grass-model';
 import {createReedGeometry,createWaterPlantMaterial} from './water-plants';
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE,outsideMusicalFlowers,outsideMusicalFlowerClearing} from './musical-flower-site';
+import {outsideNumberGarden} from './number-garden-site';
 
 type Kind='flowers'|'mushrooms'|'stump'|'bush'|'fern'|'reeds';
 export type DecorSite={x:number;z:number;radius:number;kind:Kind;biome:Biome};
@@ -100,7 +102,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  const fruitIndex=new MeadowIndex(16,layout.fruitClearings);
  const nearTrunk=(x:number,z:number,r:number)=>treeIndex.some(x,z,r+.6,t=>(t.x-x)**2+(t.z-z)**2<(r+.6)**2);
  const tuft=(x:number,z:number,scale:number)=>{
-  if(blades>=48000||!outsideMusicalFlowers(x,z,-.4)||nearTrunk(x,z,.2)||!layout.clearOfTrails(x,z,.35))return;
+  if(blades>=48000||!outsideNumberGarden(x,z,.5)||!outsideMusicalFlowers(x,z,-.4)||nearTrunk(x,z,.2)||!layout.clearOfTrails(x,z,.35))return;
   dummy.position.set(x,0,z);dummy.rotation.set(0,random()*Math.PI*2,0);dummy.scale.setScalar(scale);dummy.updateMatrix();grass.setMatrixAt(blades,dummy.matrix);
   color.set(PALETTES[biomeAt(x,z)].grass[Math.floor(random()*3)]);grass.setColorAt(blades++,color);
  };
@@ -141,6 +143,9 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
  // across junctions or the worn entrance pads. Reuse the merged plant budget.
  let trailBushes=0;
  for(const path of layout.paths){
+  // The new remote approach already runs through the spruce understorey.
+  // Keep its addition from consuming the shared seed/budget for all old groves.
+  if(Math.hypot(path.points[0].x-META_KNIGHT_PORTAL_APPROACH.x,path.points[0].z-META_KNIGHT_PORTAL_APPROACH.z)<1)continue;
   let distance=0,next=6;
   for(let i=1;i<path.points.length;i++){
    const a=path.points[i-1],b=path.points[i],len=Math.hypot(b.x-a.x,b.z-a.z);distance+=len;if(distance<next||len<.001)continue;next=distance+7+random()*5;

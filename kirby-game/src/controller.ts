@@ -9,6 +9,7 @@ import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
 import { FruitSpeedBoost } from './fruit-speed';
 import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 import {PIGEON_CLIP_BY_NAME, type PigeonClipName} from './pigeon-clips';
+import {META_KNIGHT_CLIP_BY_NAME, type MetaKnightClipName} from './meta-knight-clips';
 import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
@@ -19,6 +20,9 @@ export class CharacterController {
   readonly mixer: AnimationMixer;
   readonly actions = new Map<string, AnimationAction>();
   readonly isPigeon: boolean;
+  readonly isMetaKnight: boolean;
+  /** Native rigs supply their own poses instead of the original Kirby overlays. */
+  readonly hasNativeAnimations: boolean;
   state = 'Idle';
   swimming = false;
   surfaceY = 0;
@@ -33,7 +37,8 @@ export class CharacterController {
   startEmote(kind:Emote){
     if(this.emotion || this.flight.active || this.swimming || !['Idle','Run','WalkBackward','RotateLeft','RotateRight'].includes(this.state))return false;
     this.setActivity(kind);
-    this.emotion=this.isPigeon?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=PIGEON_CLIP_BY_NAME[kind].duration;}}:new EmotePose(kind,this.animationRoot);
+    const duration=this.actions.get(kind)?.getClip().duration;
+    this.emotion=this.hasNativeAnimations?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=(duration??2.4);}}:new EmotePose(kind,this.animationRoot);
     return true;
   }
   private turn?: Turn;
@@ -100,9 +105,11 @@ export class CharacterController {
   readonly turnDuration = .1;
 
   constructor(model: Object3D, clips: AnimationClip[]) {
-    let pigeon=false;
-    model.traverse(node=>{if(node.userData.character==='pigeon')pigeon=true;});
+    let pigeon=false,metaKnight=false;
+    model.traverse(node=>{if(node.userData.character==='pigeon')pigeon=true;if(node.userData.character==='meta-knight')metaKnight=true;});
     this.isPigeon=pigeon;
+    this.isMetaKnight=metaKnight;
+    this.hasNativeAnimations=pigeon||metaKnight;
     this.actor.add(model);
     this.actor.add(this.cloud);
     this.mixer = new AnimationMixer(model);
@@ -118,8 +125,8 @@ export class CharacterController {
     if (!(root instanceof Object3D)) throw new Error('Некорректный корень персонажа');
     this.animationRoot = root;
     for (const source of clips) {
-      if(source.name==='Attack')continue;
-      const clip = source.name==='Jump' && !this.isPigeon ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
+      if(source.name==='Attack'&&!this.isMetaKnight)continue;
+      const clip = source.name==='Jump' && !this.hasNativeAnimations ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
       // Heading belongs to the game actor. Strip the GLB root yaw from ALL clips
       // so returning to Run/Idle never undoes a completed 90-degree turn.
       clip.tracks = clip.tracks.filter(track => {
@@ -129,7 +136,7 @@ export class CharacterController {
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
     const idleClip=clips.find(c=>c.name==='Idle')!;
-    if(!this.isPigeon)this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
+    if(!this.hasNativeAnimations)this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
     for(const [label,side] of [['Left',-1],['Right',1]] as const){
       const arm=model.getObjectByName(`${label}_shoulder`);if(!arm)continue;
       const rotation=idleClip.tracks.find(track=>track.name===arm.name+'.quaternion');
@@ -139,7 +146,7 @@ export class CharacterController {
     for (const name of ['Idle', 'Run', 'RotateLeft', 'RotateRight', 'WalkBackward', 'Jump', 'Push', 'Eat']) {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
-    if(!this.isPigeon)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
+    if(!this.hasNativeAnimations)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
     this.play('Idle');
   }
 
@@ -147,7 +154,8 @@ export class CharacterController {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
     next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
-    const turning = this.isPigeon ? !(PIGEON_CLIP_BY_NAME[name as PigeonClipName]?.loop??true) : name === 'Push' || name === 'Eat';
+    const nativeClip=this.isPigeon?PIGEON_CLIP_BY_NAME[name as PigeonClipName]:this.isMetaKnight?META_KNIGHT_CLIP_BY_NAME[name as MetaKnightClipName]:undefined;
+    const turning = this.hasNativeAnimations ? !(nativeClip?.loop??true) : name === 'Push' || name === 'Eat';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
@@ -166,11 +174,12 @@ export class CharacterController {
     this.state = 'Push';
   }
   private beginPush(input: Input) {
-    this.attackHit = true;
-    this.pushArmed = false;
+    // Galaxia reaches the target after the lunge's windup, at PUSH_HIT.
+    this.attackHit = !this.isMetaKnight;
+    this.pushArmed = this.isMetaKnight;
     this.pushReady = PUSH_COOLDOWN_MS / 1000;
     this.attackElapsed = 0;
-    if (!this.isPigeon && (input.forward || input.backward)) this.state = 'Push';
+    if (!this.hasNativeAnimations && (input.forward || input.backward)) this.state = 'Push';
     else this.replayPush();
   }
 
@@ -186,7 +195,7 @@ export class CharacterController {
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.flightElapsed=0;this.cloud.visible=false;this.turn=undefined;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
-    this.play(this.isPigeon && this.actions.has(name)?name:'Idle');this.state=name;
+    this.play(this.hasNativeAnimations && this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
   }
 
@@ -198,9 +207,9 @@ export class CharacterController {
     this.actor.position.z += Math.cos(this.yaw) * speed * direction * dt * factor;
   }
 
-  /** A pigeon flies with its wings; Kirby keeps his original flight puffs. */
+  /** Winged native characters fly with their wings; Kirby keeps his flight puffs. */
   updateFlightVisual(){
-    if(this.isPigeon)this.cloud.visible=false;
+    if(this.hasNativeAnimations)this.cloud.visible=false;
     else updateFlightCloud(this.cloud,this.flight);
   }
 
@@ -265,7 +274,7 @@ export class CharacterController {
     this.attackHit = false;
     this.eatBite = false;
     this.eatPull = false;
-    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.isPigeon)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');this.constrainPosition();return;}
+    if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.hasNativeAnimations)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');this.constrainPosition();return;}
     if(this.emotion){
       this.emotion.clear();
       if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
@@ -285,7 +294,7 @@ export class CharacterController {
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if(jumpPressed && this.flight.active)this.flight.press();
-    if(input.allowAirPush&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=true;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
+    if(input.allowAirPush&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=!this.isMetaKnight;this.pushArmed=this.isMetaKnight;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
     if (!this.turn && !this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
     if (!this.turn && !this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
@@ -322,9 +331,9 @@ export class CharacterController {
       if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
       const moving=!!(input.forward||input.backward);
-      if(!this.isPigeon && moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
+      if(!this.hasNativeAnimations && moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
       this.mixer.update(dt);
-      if(moving && !this.isPigeon)applyPushArms(this.pushArms,this.attackElapsed);
+      if(moving && !this.hasNativeAnimations)applyPushArms(this.pushArms,this.attackElapsed);
       if (this.attackElapsed >= this.actions.get('Push')!.getClip().duration - 1e-6) {
         this.attackElapsed = undefined;
         const next=this.locomotion(input);
@@ -332,21 +341,25 @@ export class CharacterController {
       }
     } else if (this.flight.active) {
       this.flightElapsed+=dt;
-      if(this.isPigeon && this.flightElapsed>.18)this.play(this.airPush!==undefined?'Push':'Fly');
+      if(this.hasNativeAnimations && (this.flightElapsed>.18||this.isMetaKnight&&this.airPush!==undefined))this.play(this.airPush!==undefined?'Push':'Fly');
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x*this.flightBoost;
       this.updateFlightVisual();
       this.mixer.update(dt);
-      if(this.airPush!==undefined){this.airPush+=dt;this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
-      if(!this.flight.active){this.cloud.visible=false;this.play(this.locomotion(input));}
+      if(this.airPush!==undefined){const previous=this.airPush;this.airPush+=dt;if(this.pushArmed&&previous<PUSH_HIT&&this.airPush>=PUSH_HIT){this.attackHit=true;this.pushArmed=false;}if(!this.hasNativeAnimations){this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);}if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
+      if(!this.flight.active){this.cloud.visible=false;this.airPush=undefined;this.pushArmed=false;this.play(this.locomotion(input));}
     } else if (this.turn) {
       const t = this.turn;
       const locomotion=this.locomotion(input);
       const name=locomotion==='Idle' ? (t.direction>0?'RotateLeft':'RotateRight') : locomotion;
       this.play(name);
-      this.actions.get(name)!.setEffectiveTimeScale(name.startsWith('Rotate') ? this.actions.get(name)!.getClip().duration/.4 : name==='Run' && input.sprint ? 2 : 1);
+      const action=this.actions.get(name)!;
+      // A held key repeats heading steps, so native one-shot preview turns must
+      // keep their footwork cycling throughout the complete keyboard turn.
+      if(name.startsWith('Rotate'))action.setLoop(LoopRepeat,Infinity);
+      action.setEffectiveTimeScale(name.startsWith('Rotate') ? action.getClip().duration/.4 : name==='Run' && input.sprint ? 2 : 1);
       t.elapsed = Math.min(t.duration, t.elapsed + dt);
       // GLB time keys are float32: 1.2 may decode as 1.2000000477.
       if (t.duration - t.elapsed < 1e-6) t.elapsed = t.duration;

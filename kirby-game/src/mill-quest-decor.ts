@@ -83,10 +83,11 @@ export class MillQuestDecor {
  }
  update(q:MillQuest,now:number,owner?:T.Object3D){
   const seconds=now/1000;
-  // Attach the sack handle to the right palm, following animation and growth.
+  // Meta Knight uses his free left fist; the sword grip stays authored.
+  const knightHand=owner?.getObjectByName('Left_hand_attachment');
   const arm=owner?.getObjectByName('Right_arm') as T.Mesh|undefined;
   if(q.carried>=0&&owner&&q.stage==='bags'){
-   const shoulder=owner.getObjectByName('Right_shoulder');if(shoulder)shoulder.rotation.set(-.38,-.3,.24);
+   const shoulder=owner.getObjectByName(knightHand?'Left_shoulder':'Right_shoulder');if(shoulder)shoulder.rotation.set(-.38,-.3,.24);
    owner.updateWorldMatrix(true,true);
   }
   this.branches.forEach((b,i)=>{const age=q.branches[i]?(now-q.branches[i])/1000:0;b.visible=q.stage!=='idle'&&(!q.branches[i]?q.stage==='clear':age<1.3);b.position.set(MILL_BRANCHES[i][0]+Math.sin(age*8)*age*.15,MILL_BRANCHES[i][1]-Math.min(.35,age*.3),MILL_BRANCHES[i][2]+age*1.6);b.rotation.set(age*.4,age*.9,0);b.scale.setScalar(q.branches[i]?Math.max(0,1-age/1.3):1);});
@@ -96,7 +97,9 @@ export class MillQuestDecor {
    if(q.carried===i&&owner){
     const size=Math.max(1,owner.scale.x),bagSize=Math.max(.65,size*.55);
     b.scale.setScalar(bagSize);b.quaternion.copy(owner.quaternion);
-    if(arm?.geometry){
+    if(knightHand){
+     knightHand.getWorldPosition(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
+    }else if(arm?.geometry){
      if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();
      const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;
      arm.localToWorld(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;

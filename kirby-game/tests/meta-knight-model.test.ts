@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {AnimationMixer, Box3, DoubleSide, LoopOnce, Mesh, Object3D, PropertyBinding, Quaternion, Raycaster, Triangle, Vector3, type AnimationClip, type BufferGeometry} from 'three';
 import {GLTFLoader, type GLTF} from 'three/addons/loaders/GLTFLoader.js';
+import {META_KNIGHT_CLIPS,META_KNIGHT_CLIP_BY_NAME,type MetaKnightClipName} from '../src/meta-knight-clips';
 
 async function exportedModel() {
   const bytes = await readFile(new URL('../public/models/meta-knight-animated.glb', import.meta.url));
@@ -170,7 +171,7 @@ function fistVolumes(root: Object3D) {
 
 test('Meta Knight GLB retains valid geometry, animation bindings and seamless loops', async () => {
   const gltf = await exportedModel();
-  assert.deepEqual(gltf.animations.map(clip => clip.name).sort(), ['Idle', 'Sitting', 'Walk']);
+  assert.deepEqual(gltf.animations.map(clip => clip.name).sort(), META_KNIGHT_CLIPS.map(clip=>clip.name).sort());
   for (const name of ['MetaKnight_root', 'Body_motion', 'Left_shoulder', 'Right_shoulder', 'Left_foot_pivot', 'Right_foot_pivot', 'Left_wing_pivot', 'Right_wing_pivot', 'Eyes_glow']) rig(gltf.scene, name);
 
   let meshes = 0;
@@ -197,7 +198,7 @@ test('Meta Knight GLB retains valid geometry, animation bindings and seamless lo
       assert(PropertyBinding.findNode(gltf.scene, binding.nodeName), `${clip.name}: missing target for ${track.name}`);
       for (const value of [...track.times, ...track.values]) assert(Number.isFinite(value), `${clip.name}: invalid animation sample`);
       const stride = track.getValueSize();
-      assert.deepEqual(Array.from(track.values.slice(0, stride)), Array.from(track.values.slice(-stride)), `${clip.name}: ${track.name} must close its loop exactly`);
+      if(META_KNIGHT_CLIP_BY_NAME[clip.name as MetaKnightClipName].loop)assert.deepEqual(Array.from(track.values.slice(0, stride)), Array.from(track.values.slice(-stride)), `${clip.name}: ${track.name} must close its loop exactly`);
       if (binding.propertyName === 'quaternion') {
         for (let offset = 0; offset < track.values.length; offset += 4) {
           const quaternion = new Quaternion().fromArray(track.values, offset);
@@ -304,7 +305,7 @@ test('Meta Knight keeps the sword locked in the fingers as the wrist changes pos
   sample('Idle', 0);
   const standingGrip = gripInWrist();
   const heldPosition = sword.matrixWorld.clone().invert().multiply(fingers.matrixWorld);
-  for (const clip of ['Idle', 'Walk', 'Sitting']) {
+  for (const {name:clip} of META_KNIGHT_CLIPS) {
     for (let frame = 0; frame <= 12; frame++) {
       sample(clip, frame / 12);
       const relative = sword.matrixWorld.clone().invert().multiply(fingers.matrixWorld);
@@ -329,7 +330,7 @@ test('Meta Knight sword clears the shoulder armour, mask and body throughout eve
     assert(armour, `${side} shoulder needs its own collision geometry, excluding the glove and sword`);
     obstacles.push(collider(armour));
   }
-  for (const clip of ['Idle', 'Walk', 'Sitting']) {
+  for (const {name:clip} of META_KNIGHT_CLIPS) {
     for (let frame = 0; frame <= 48; frame++) {
       sample(clip, frame / 48);
       for (const obstacle of obstacles) {

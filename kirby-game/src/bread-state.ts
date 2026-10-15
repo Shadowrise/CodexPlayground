@@ -1,4 +1,4 @@
-import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,LEDGE_RETRACT_DISTANCE,LEDGE_RETRACT_SECONDS,LEDGE_EXTEND_SECONDS,mountainLocal,mountainWorld} from './mountain-ledges-layout';
+import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE,LEDGE_RETRACT_DISTANCE,LEDGE_RETRACT_SECONDS,LEDGE_EXTEND_SECONDS,mountainLocal,mountainWorld} from './mountain-ledges-layout';
 import {mountainSurfaceHeight} from './mountain-surface';
 
 type Point=[number,number,number];
@@ -30,7 +30,7 @@ export function canPickBread(b:BreadState,a:BreadActor,now:number){
 export function breadFloor(x:number,z:number,ceiling:number,steps?:number[][]){
  let floor=Math.max(0,mountainSurfaceHeight(x,z));
  const local=mountainLocal(x,z);
- for(const [i,p] of [...MOUNTAIN_STEPS,MOUNTAIN_SUMMIT].entries()){
+ for(const [i,p] of [...MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE].entries()){
   if(p.y>ceiling+.01)continue;
   const state=steps?.[i];if(state?.[0]===2)continue;
   const ease=(t:number)=>t*t*(3-2*t);

@@ -5,7 +5,7 @@ import { Vector3, MeshStandardMaterial, Raycaster } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { CharacterController, type Input } from '../src/controller';
 import { MountainLedges } from '../src/mountain-ledges';
-import { MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT, MOUNTAIN_LEDGE_YAW as YAW, mountainWorld, mountainFace } from '../src/mountain-ledges-layout';
+import { MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT, MOUNTAIN_MAIN_STEP_COUNT as MAIN_COUNT, MOUNTAIN_LEDGE_YAW as YAW, mountainWorld, mountainFace } from '../src/mountain-ledges-layout';
 import { createCoasterCurve } from '../src/coaster';
 import { insideMeadow } from '../src/world-bounds';
 import { createMountainTexture } from '../src/mountain-texture';
@@ -25,7 +25,7 @@ function tick(world: MountainLedges, c: CharacterController, dt: number, input =
 
 test('100% Kirby can fly between distant slope ledges using two real jump presses and ordinary forward speed', async () => {
   const c = await player(), world = new MountainLedges(); c.actor.position.copy(world.entry);
-  for (const [i, p] of [...STEPS, SUMMIT].entries()) {
+  for (const [i, p] of [...STEPS.slice(0, MAIN_COUNT), SUMMIT].entries()) {
     const target = position(p), from = c.actor.position.clone();
     c.yaw = Math.atan2(target.x - from.x, target.z - from.z); c.actor.rotation.y = c.yaw;
     // Correct the heading with normal steering when the uneven slope deflects it.
@@ -106,7 +106,11 @@ test('the visible rock next to the uneven mountain supports feet while standing 
   const c=await player(),world=new MountainLedges(),ray=new Raycaster();let checked=0;
   world.group.updateMatrixWorld(true);
   for(const [i,p] of STEPS.entries())for(const size of [.3,1,2])for(const fraction of [-.75,-.5,-.25,0,.25,.5,.75]){
-    const tangent=p.tangent+fraction*p.width/2,radial=mountainFace(p.y,tangent)-.35*size,xy=mountainWorld(tangent,radial);
+    const tangent=p.tangent+fraction*p.width/2;
+    // Near the real summit some exposed slab edges have no cliff behind them;
+    // this regression samples wall contacts, not those unsupported cross-sections.
+    let face:number;try{face=mountainFace(p.y,tangent);}catch{continue;}
+    const radial=face-.35*size,xy=mountainWorld(tangent,radial);
     const start=new Vector3(xy.x,p.y,xy.z);
     ray.set(start.clone().add(new Vector3(0,1,0)),new Vector3(0,-1,0));
     if(!ray.intersectObject(world.steps[i].mesh).some(hit=>Math.abs(hit.point.y-p.y)<.001))continue;
@@ -128,22 +132,22 @@ test('steps attach to the unchanged slope and the enlarged semicircular summit c
   assert(STEPS.every(p => p.width < SUMMIT.width && p.depth < SUMMIT.depth));
   assert(STEPS.every(p=>p.shape==='semicircle'&&Math.abs(p.width/2-p.depth)<1e-8));
   assert(!world.group.getObjectByName('Mountain corner rock buttress'));
-  assert.equal(world.group.children.length,STEPS.length+1);
+  assert.equal(world.group.children.length,STEPS.length+2);
   assert(Math.abs(Math.PI*(SUMMIT.width/2)**2/2-36.96*3)<1e-8);assert.equal(SUMMIT.shape,'semicircle');
   const left=mountainWorld(SUMMIT.tangent-SUMMIT.width/2,SUMMIT.radial+SUMMIT.depth/2);
   assert(mountainSurfaceHeight(left.x,left.z)>=SUMMIT.y-.001,'the left end meets the existing rock without an air gap');
   const curve = createCoasterCurve(), top = position(SUMMIT); let nearest = new Vector3(), distance = Infinity;
   for (let i = 0; i < 6000; i++) { const p = curve.getPointAt(i / 6000), d = p.distanceTo(top); if (d < distance) { distance = d; nearest = p; } }
   assert(distance < 80, `visible rail distance: ${distance}`);
-  assert(STEPS.slice(1).every((p, i) => Math.hypot(p.tangent-STEPS[i].tangent,p.radial-STEPS[i].radial)>=8.4));
-  assert.equal(SUMMIT.y,30.72);assert(STEPS.every((p,i)=>Math.abs(p.y-(i+1)*2.56)<1e-8));
+  assert(STEPS.slice(1,MAIN_COUNT).every((p, i) => Math.hypot(p.tangent-STEPS[i].tangent,p.radial-STEPS[i].radial)>=8.4));
+  assert.equal(SUMMIT.y,30.72);assert(STEPS.slice(0,MAIN_COUNT).every((p,i)=>Math.abs(p.y-(i+1)*2.56)<1e-8));
   const mountains=createMountains();mountains.updateMatrixWorld(true);const ray=new Raycaster();
   for(const p of STEPS){const back=mountainWorld(p.tangent,p.radial+p.depth/2);ray.set(new Vector3(back.x,150,back.z),new Vector3(0,-1,0));const contact=ray.intersectObject(mountains)[0];assert(contact);assert(Math.abs(contact.point.y-p.y)<.001);assert(Math.abs(mountainSurfaceHeight(back.x,back.z)-p.y)<.001);}
   const c=await player(),back=SUMMIT.radial+SUMMIT.depth/2;
   const corner=mountainWorld(SUMMIT.tangent+SUMMIT.width/2-.1,back-SUMMIT.depth+.1);c.actor.position.set(corner.x,SUMMIT.y,corner.z);c.actor.scale.setScalar(.1);
   assert(!world.surfaces(c).some(s=>s.index===STEPS.length),'empty corners of the half-circle are not invisible rectangular ground');
   c.actor.scale.setScalar(1);
-  for(const [i,p] of STEPS.entries()){
+  for(const [i,p] of STEPS.slice(0,MAIN_COUNT).entries()){
     c.actor.position.copy(position(p));
     assert(!world.surfaces(c).some(s=>s.index===STEPS.length),`ledge ${i+1} stays outside the summit overhang, so the approach goes around its edge`);
   }

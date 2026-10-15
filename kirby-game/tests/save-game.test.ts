@@ -30,6 +30,14 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
  npcs[3].actor.position.set(-15,0,90);npcs[3].eatFruit();
  world.restore(world.fruits.map((_,i)=>i<3),1);
  const save=parseSave(JSON.stringify(captureGame(player,variant,npcs,world)));
+ const seals={collected:{maze:{by:'solo',at:123},treehouse:{by:'solo',at:456}}};
+ const sealed=captureGame(player,variant,npcs,world,false,undefined,false,undefined,undefined,undefined,seals);
+ assert.deepEqual(parseSave(JSON.stringify(sealed)).seals,seals,'collected seals survive saving and loading');
+ seals.collected.maze.at=999;assert.equal(sealed.seals!.collected.maze!.at,123,'saving does not retain mutable quest state');
+ assert.equal(parseSave(JSON.stringify(save)).seals,undefined,'old saves start with no collected seals');
+ assert.deepEqual(parseSave(JSON.stringify({...save,seals:{collected:{grotto:{by:'solo',at:456}}}})).seals,{collected:{treehouse:{by:'solo',at:456}}},'moving the third seal preserves earlier saved collection');
+ assert.throws(()=>parseSave(JSON.stringify({...save,seals:{collected:{unknown:{by:'solo',at:1}}}})));
+ assert.throws(()=>parseSave(JSON.stringify({...save,seals:{collected:{maze:{by:'solo',at:-1}}}})));
  const lakeSave=parseSave(JSON.stringify({...save,player:{...save.player,achievements:['swim','bench']}}));assert.deepEqual(lakeSave.player.achievements,['swim','bench']);
  const restored=new CharacterController(cloneVariant(model.scene,variant,false),model.animations);
  const friends=createNpcs(model.scene,model.animations,variant),fruits=new FruitWorld();

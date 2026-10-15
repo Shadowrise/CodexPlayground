@@ -44,7 +44,7 @@ export class MazeTrampoline {
       const u=(t-.8)/3.2,h=T.MathUtils.clamp((u-.18)/.6,0,1),blend=h*h*(3-2*h);
       c.actor.position.lerpVectors(this.position,this.landing,blend);c.actor.position.y=.6*(1-u)+(18+c.actor.scale.x*2)*Math.sin(Math.PI*u);
       c.yaw=Math.atan2(this.landing.x-this.position.x,this.landing.z-this.position.z);c.actor.rotation.y=c.yaw;
-      for(const side of ['Left','Right']){const arm=c.actor.getObjectByName(`${side}_shoulder`);if(arm)arm.rotation.z=(side==='Left'?-1:1)*(1+.12*Math.sin(t*12));const foot=c.actor.getObjectByName(`${side}_foot_pivot`);if(foot)foot.rotation.x=.35*Math.sin(u*Math.PI);}
+      if(!c.hasNativeAnimations)for(const side of ['Left','Right']){const arm=c.actor.getObjectByName(`${side}_shoulder`);if(arm)arm.rotation.z=(side==='Left'?-1:1)*(1+.12*Math.sin(t*12));const foot=c.actor.getObjectByName(`${side}_foot_pivot`);if(foot)foot.rotation.x=.35*Math.sin(u*Math.PI);}
     }else{
       if(previous<4){this.sound('leaves');this.leafPile.burst();}
       c.actor.position.copy(this.landing);const u=Math.min(1,(t-4)/.65),s=Math.sin(u*Math.PI)*.26;c.animationRoot.scale.set(1+s,1-s,1+s);

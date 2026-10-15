@@ -48,7 +48,7 @@ export class Benches {
     c.mixer.update(dt);c.actor.position.lerpVectors(this.from,this.target,this.blend);
     const delta=Math.atan2(Math.sin(this.seat!.yaw-this.yaw),Math.cos(this.seat!.yaw-this.yaw));
     c.yaw=this.yaw+delta*this.blend;c.actor.rotation.set(0,c.yaw,0);
-    for(const side of ['Left','Right']){
+    if(!c.hasNativeAnimations)for(const side of ['Left','Right']){
       const foot=c.actor.getObjectByName(`${side}_foot_pivot`),arm=c.actor.getObjectByName(`${side}_shoulder`);
       if(foot)foot.rotation.x=MathUtils.lerp(foot.rotation.x,-.9,this.blend);
       if(arm){arm.rotation.x=MathUtils.lerp(arm.rotation.x,-.3,this.blend);arm.rotation.z=MathUtils.lerp(arm.rotation.z,(side==='Left'?-1:1)*.3,this.blend);}

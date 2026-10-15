@@ -1,0 +1,33 @@
+{
+  "mobile": false,
+  "failureRecovery": true,
+  "initial": {
+    "geometries": 646,
+    "textures": 461,
+    "programs": 137,
+    "position": [
+      2000,
+      0,
+      14
+    ]
+  },
+  "released": {
+    "geometries": 542,
+    "textures": 439
+  },
+  "cycles": [
+    {
+      "g": 570,
+      "t": 478
+    },
+    {
+      "g": 570,
+      "t": 478
+    },
+    {
+      "g": 570,
+      "t": 478
+    }
+  ],
+  "errors": []
+}

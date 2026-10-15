@@ -17,21 +17,29 @@ function skyTexture(){
 
 export class MetaKnightReflections{
  private readonly materials=new Map<T.MeshStandardMaterial,number>();
+ private strength=1;
  constructor(root:T.Object3D,private readonly environment:T.WebGLRenderTarget){
+  this.add(root);
+ }
+ /** Player clones keep independent materials and the passengers' shared sky. */
+ add(root:T.Object3D){
   root.traverse(object=>{
    if(!(object instanceof T.Mesh))return;
    for(const material of Array.isArray(object.material)?object.material:[object.material]){
     if(!(material instanceof T.MeshStandardMaterial)||material.metalness<.5||this.materials.has(material))continue;
-    this.materials.set(material,material.envMapIntensity);
-    material.envMap=environment.texture;material.needsUpdate=true;
+    const intensity=material.userData.metaKnightReflectionIntensity??material.envMapIntensity;
+    material.userData.metaKnightReflectionIntensity=intensity;
+    this.materials.set(material,intensity);
+    material.envMap=this.environment.texture;material.envMapIntensity=intensity*this.strength;material.needsUpdate=true;
+    material.addEventListener('dispose',()=>this.materials.delete(material));
    }
   });
  }
  update(time:Pick<Daylight,'day'>){
-  const strength=.12+.88*time.day;
-  for(const [material,intensity] of this.materials)material.envMapIntensity=intensity*strength;
+  this.strength=.12+.88*time.day;
+  for(const [material,intensity] of this.materials)material.envMapIntensity=intensity*this.strength;
  }
- dispose(){this.environment.dispose();}
+ dispose(){this.materials.clear();this.environment.dispose();}
 }
 
 export function createMetaKnightReflections(renderer:T.WebGLRenderer,root:T.Object3D){

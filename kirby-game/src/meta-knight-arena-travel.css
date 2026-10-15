@@ -1,0 +1,12 @@
+#arena-loader{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;background:radial-gradient(ellipse at 25% 20%,#39255e 0%,#15182f 42%,#080d1c 100%);color:#f1edff;text-align:center;padding:24px}
+#arena-loader[hidden]{display:none}
+#arena-loader h2{font:600 clamp(21px,4vw,30px)/1.3 'Segoe UI',sans-serif;margin:24px 0 10px}
+#arena-loader p{color:#c5c1df;font:16px/1.5 'Segoe UI',sans-serif;max-width:35ch;margin:0 auto 22px}
+#arena-loader button{margin:8px;border:1px solid #a69acb;border-radius:20px;background:#39315b;color:white;padding:12px 22px;cursor:pointer;font:600 16px 'Segoe UI',sans-serif}
+.arena-loading-orbit{width:64px;height:64px;margin:auto;border:2px solid #70618a;border-top:3px solid #d6c6ff;border-right:3px solid #8bcffe;border-radius:50%;animation:arena-orbit 1.5s linear infinite;box-shadow:0 0 35px #ad75ee45}
+.arena-loading-orbit[hidden]{display:none}
+@keyframes arena-orbit{to{transform:rotate(360deg)}}
+#cosmic-arena-caption{position:fixed;top:25px;left:50%;transform:translateX(-50%);color:#d6cee9;font:600 13px/1.5 'Segoe UI',sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:8px 20px;border:1px solid #8279aa55;border-radius:24px;background:#10132a80;pointer-events:none}
+#cosmic-arena-caption[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){.arena-loading-orbit{animation:none}}
+body.in-meta-knight-arena .right-hud,body.in-meta-knight-arena .route-panel,body.in-meta-knight-arena #time-dial,body.in-meta-knight-arena #combat-message{display:none}

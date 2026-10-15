@@ -1,8 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {CharacterUnlocks,BANDANA_UNLOCK_KEY,PIDGIE_UNLOCK_KEY} from '../src/character-unlocks';
+import {CharacterUnlocks,BANDANA_UNLOCK_KEY,PIDGIE_UNLOCK_KEY,META_KNIGHT_UNLOCK_KEY} from '../src/character-unlocks';
 import {SCORE_ACTIONS} from '../src/score';
-import {PIDGIE_LOCK_HINT,lockedCharacterHint} from '../src/locked-character-tooltip';
+import {PIDGIE_LOCK_HINT,META_KNIGHT_LOCK_HINT,lockedCharacterHint} from '../src/locked-character-tooltip';
 import {setLocale,t} from '../src/i18n';
 
 function storage(){const values=new Map<string,string>();return {values,getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value);}};}
@@ -88,4 +88,40 @@ test('denied or missing local storage does not prevent earning an unlock or caus
   assert(progress.complete(SCORE_ACTIONS));assert(!progress.isLocked('Бандана'));assert(!progress.complete(SCORE_ACTIONS));
  }
  const malformed=new CharacterUnlocks({getItem:()=> 'true',setItem:()=>{}});assert(malformed.isLocked('Бандана'));
+});
+
+test('Meta Knight starts locked, unlocks independently once and persists across sessions',()=>{
+ const saved=storage(),progress=new CharacterUnlocks(saved);
+ assert(progress.isLocked('Meta Knight'));assert(!progress.metaKnightUnlocked);
+ assert(progress.complete(SCORE_ACTIONS));assert(progress.isLocked('Meta Knight'));
+ assert(progress.unlockPidgie());assert(progress.isLocked('Meta Knight'));
+ assert(!saved.values.has(META_KNIGHT_UNLOCK_KEY));
+ assert(progress.unlockMetaKnight());assert(progress.metaKnightUnlocked);assert(!progress.isLocked('Meta Knight'));
+ assert(!progress.unlockMetaKnight(),'repeat commands do not repeat the celebration');
+ assert.equal(saved.values.get(META_KNIGHT_UNLOCK_KEY),'1');
+ assert(!new CharacterUnlocks(saved).isLocked('Meta Knight'));
+ const metaOnlySaved=storage(),metaOnly=new CharacterUnlocks(metaOnlySaved);
+ assert(metaOnly.unlockMetaKnight());assert(metaOnly.isLocked('Бандана'));assert(metaOnly.isLocked('Пиджи'));
+ assert.deepEqual([...metaOnlySaved.values],[[META_KNIGHT_UNLOCK_KEY,'1']]);
+});
+
+test('Meta Knight unlock tolerates denied storage and reads its own key independently',()=>{
+ const denied={getItem:()=>{throw Error('denied');},setItem:()=>{throw Error('denied');}};
+ for(const saved of [undefined,denied]){
+  const progress=new CharacterUnlocks(saved);assert(progress.isLocked('Meta Knight'));
+  assert(progress.unlockMetaKnight());assert(!progress.isLocked('Meta Knight'));assert(!progress.unlockMetaKnight());
+ }
+ const restored=new CharacterUnlocks({getItem:key=>{if(key!==META_KNIGHT_UNLOCK_KEY)throw Error('denied');return '1';},setItem:()=>{}});
+ assert(!restored.isLocked('Meta Knight'));assert(restored.isLocked('Бандана'));assert(restored.isLocked('Пиджи'));
+ assert(new CharacterUnlocks({getItem:()=> 'true',setItem:()=>{}}).isLocked('Meta Knight'));
+});
+
+test('Meta Knight lock hint preserves the requested Russian text and localizes in other languages',()=>{
+ assert.equal(META_KNIGHT_LOCK_HINT,'Это Meta Knight. Он не играет с незнакомцами.');
+ assert.equal(lockedCharacterHint('Meta Knight'),META_KNIGHT_LOCK_HINT);
+ try{
+  setLocale('ru');assert.equal(t(lockedCharacterHint('Meta Knight')),META_KNIGHT_LOCK_HINT);
+  setLocale('en');assert.equal(t(META_KNIGHT_LOCK_HINT),'This is Meta Knight. He does not play with strangers.');
+  setLocale('bg');assert.equal(t(META_KNIGHT_LOCK_HINT),'Това е Meta Knight. Той не играе с непознати.');
+ }finally{setLocale('ru');}
 });

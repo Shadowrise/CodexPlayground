@@ -268,7 +268,7 @@ export class Coaster {
         this.rideMotion.turn=this.curve.getTangentAt(cart.distance/this.length).angleTo(this.curve.getTangentAt(((cart.distance+3)%this.length)/this.length))/3;
         this.rideMotion.inverted=new T.Vector3(0,1,0).applyQuaternion(pose.q).y<0;
         const player=this.rider;fitRider(player,.9);
-        player.actor.position.copy(new T.Vector3(0,1.3,0).multiplyScalar(cart.group.scale.x).applyQuaternion(pose.q).add(pose.p));
+        player.actor.position.copy(new T.Vector3(0,1.3,player.isMetaKnight?-.55:0).multiplyScalar(cart.group.scale.x).applyQuaternion(pose.q).add(pose.p));
         player.actor.quaternion.copy(pose.q);player.yaw=Math.atan2(this.curve.getTangentAt(cart.distance/this.length).x,this.curve.getTangentAt(cart.distance/this.length).z);
         player.mixer.update(dt);
       }

@@ -2,7 +2,10 @@ import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCen
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
 import {newBread,applyBread,advanceBread,type BreadAction} from '../../kirby-game/src/bread-state';
+import {newSealProgress,normalizeSealProgress,collectSeal,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
+import {canPressNumber,NUMBER_PRESS_MS} from '../../kirby-game/src/number-garden-site';
+import {startNumberGame,advanceNumberGame,pressNumberGame,validNumberGame,NUMBER_EMPTY_MS,type NumberGame} from '../../kirby-game/src/number-garden-game';
 import {canPlayFlower,FLOWER_NOTE_COOLDOWN_MS} from '../../kirby-game/src/musical-flower-site';
 import {startFlowerGame,replayFlowerGame,advanceFlowerGame,playFlowerGame,validFlowerGame,FLOWER_EMPTY_MS,type FlowerGame,type FlowerActor} from '../../kirby-game/src/musical-flower-game';
 import {pushTarget,PUSH_COOLDOWN_MS} from '../../kirby-game/src/push-target';
@@ -23,7 +26,7 @@ import {stepBodySize} from '../../kirby-game/src/body-size';
 import {FruitSpeedBoost} from '../../kirby-game/src/fruit-speed';
 const MAX_PLAYERS=14,ROOM_NAME='main';
 type OnlineVisit={id:string;startedAt:number;activeMs:number;tick:number;lastWrite:number;startScore:number;seq:number;device:DeviceInfo;finished?:boolean};
-type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;adminSize?:number;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;lastFlower?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
+type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;adminSize?:number;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;lastFlower?:number;lastNumber?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
 type DepartedPlayer={id:string;actor:ActorState;savedAt:number};
 /** Permanent archive: deliberately separate from the disposable game room. */
 export class HistoryStore extends DurableObject<Env>{
@@ -32,11 +35,12 @@ export class HistoryStore extends DurableObject<Env>{
  list(filter:HistoryFilter){return historyPage(this.ctx.storage.sql,filter);}
 }
 export class GameRoom extends DurableObject<Env>{
- private room?:RoomState;private bossSaved='';private flowerSaved='null';private chaseSentAt=0;private chatRoom?:string;
- constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}ctx.blockConcurrencyWhile(async()=>{const [event,flowers]=await Promise.all([ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game')]);if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}});}
+ private room?:RoomState;private bossSaved='';private flowerSaved='null';private numberSaved='null';private chaseSentAt=0;private chatRoom?:string;
+ constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}this.restoreSeals();ctx.blockConcurrencyWhile(async()=>{const [event,flowers,numbers]=await Promise.all([ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game'),ctx.storage.get<NumberGame>('number-game')]);if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}if(this.room&&validNumberGame(numbers)){this.room.numberGame=numbers;this.numberSaved=JSON.stringify(numbers);}});}
+ private restoreSeals(){if(this.room)this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
- private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),locks:{}};}
+ private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
  private chatStorage(){
   if(this.room&&this.chatRoom!==this.room.id){initRoomChat(this.ctx.storage.sql,this.room.log);this.chatRoom=this.room.id;}
   return this.ctx.storage.sql;
@@ -110,6 +114,14 @@ export class GameRoom extends DurableObject<Env>{
   const c=a.actor;if(!c)return;const q=c.q;
   return {id:a.id,p:c.p,yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),size:c.s,available:this.room?.bread?.owner!==a.id&&!c.ride&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};
  }
+ private sealActor(a:Attachment,id:unknown):SealActor|undefined{
+  const c=a.actor,r=this.room;if(!c||!r)return;
+  const carryingBag=r.millQuest?.owner===a.id&&(r.millQuest.carried??-1)>=0;
+  const activity=id==='treehouse'
+   ?r.locks['tree:0']===a.id&&c.ride?.key==='tree:0'&&!Object.entries(r.locks).some(([key,owner])=>owner===a.id&&key!=='tree:0')&&['Lookout','Walk','WalkBackward'].includes(c.state)
+   :!c.ride&&!Object.values(r.locks).includes(a.id)&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight'].includes(c.state);
+  return {id:a.id,p:c.p,size:c.s,available:a.visible===true&&!c.roll&&r.bread?.owner!==a.id&&!carryingBag&&activity};
+ }
  private advanceMill(now:number){
   const r=this.room;if(!r)return false;const old=r.millQuest??newMillQuest();
   const next=advanceMill(old,now,old.stage==='idle'||old.stage==='running'||this.players().some(s=>(s.deserializeAttachment() as Attachment).id===old.owner));
@@ -145,6 +157,18 @@ export class GameRoom extends DurableObject<Env>{
  private flowerActor(a:Attachment):FlowerActor|undefined{
   const actor=this.millActor(a);return actor?{id:a.id,p:actor.p,size:actor.size,available:actor.available,present:a.visible}:undefined;
  }
+ private numberEmptyDeadline(){const since=this.room?.numberGame?.emptySince;return since===undefined?Infinity:since+NUMBER_EMPTY_MS;}
+ private rewardNumbers(current?:Attachment){
+  const game=this.room?.numberGame;if(game?.stage!=='celebrate')return;
+  for(const {socket,a} of this.flowerPlayers(current))if(game.winners.includes(a.id)&&a.actor&&!a.actor.achievements.includes('numbers')){
+   a.actor.achievements.push('numbers');socket.serializeAttachment(a);this.send(socket,{type:'number-complete'});this.broadcast({type:'frame',id:a.id,actor:a.actor},socket);
+  }
+ }
+ private advanceNumbers(now:number,current?:Attachment){
+  const r=this.room;if(!r?.numberGame)return false;const old=r.numberGame,next=advanceNumberGame(old,now,this.flowerActors(current));r.numberGame=next;
+  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
+  this.rewardNumbers(current);return next!==old;
+ }
  private flowerPlayers(current?:Attachment){return this.players().map(socket=>({socket,a:current&&(socket.deserializeAttachment() as Attachment).id===current.id?current:socket.deserializeAttachment() as Attachment}));}
  private flowerActors(current?:Attachment){return this.flowerPlayers(current).map(p=>this.flowerActor(p.a)).filter((a):a is FlowerActor=>!!a);}
  private rewardFlowers(current?:Attachment){
@@ -155,7 +179,7 @@ export class GameRoom extends DurableObject<Env>{
  }
  private advanceFlowers(now:number,current?:Attachment){
   const r=this.room;if(!r?.flowerGame)return false;const old=r.flowerGame,next=advanceFlowerGame(old,now,this.flowerActors(current));r.flowerGame=next;
-  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(next.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
+  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),next.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
   this.rewardFlowers(current);return next!==old;
  }
  private advanceBoss(now:number,current?:Attachment,contacts=true){
@@ -164,7 +188,7 @@ export class GameRoom extends DurableObject<Env>{
   const actors=players.map(p=>this.bossActor(p.a)).filter((a):a is CentipedeActor=>!!a);
   const emptySince=r.centipede.emptySince,result=advanceCentipede(r.centipede,now,actors);r.centipede=result.event;let changed=result.changed;
   advanceChasers(r.centipede,actors,now);
-  if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
+  if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
   for(const {socket,a} of players){const c=a.actor,actor=this.bossActor(a);if(!c||!actor)continue;
    const direction=contacts?(bumpChaser(r.centipede,actor,now)??bumpCentipede(r.centipede,actor,now)):undefined;if(direction){this.send(socket,{type:'centipede-bump',direction});changed=true;}
    const p=r.centipede?.players[a.id],complete=completedCentipede(r.centipede,a.id)&&!c.achievements.includes('centipede');
@@ -200,7 +224,8 @@ export class GameRoom extends DurableObject<Env>{
   const boss=JSON.stringify(this.room.centipede?{...this.room.centipede,chasers:undefined}:null);
   if(boss!==this.bossSaved){this.bossSaved=boss;this.ctx.waitUntil(this.room.centipede?this.ctx.storage.put('centipede-event',this.room.centipede):this.ctx.storage.delete('centipede-event'));}
   const flowers=JSON.stringify(this.room.flowerGame??null);if(flowers!==this.flowerSaved){this.flowerSaved=flowers;this.ctx.waitUntil(this.room.flowerGame?this.ctx.storage.put('flower-game',this.room.flowerGame):this.ctx.storage.delete('flower-game'));}
-  for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.id===this.room.host){a.room={...this.room,centipede:undefined,flowerGame:undefined};s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}
+  const numbers=JSON.stringify(this.room.numberGame??null);if(numbers!==this.numberSaved){this.numberSaved=numbers;this.ctx.waitUntil(this.room.numberGame?this.ctx.storage.put('number-game',this.room.numberGame):this.ctx.storage.delete('number-game'));}
+  for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.id===this.room.host){a.room={...this.room,centipede:undefined,flowerGame:undefined,numberGame:undefined};s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}
  }
  private logEntry(entry:LogEntry){if(!this.room)return;writeRoomChat(this.chatStorage(),entry);this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
  private log(a:Attachment,text:string,chat=false){if(!a.actor)return;this.logEntry({id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat});}
@@ -231,7 +256,7 @@ export class GameRoom extends DurableObject<Env>{
   if(saved&&!occupied.has(saved.actor.variant))variant=saved.actor.variant;
   if(occupied.has(variant))return this.reject('Этот цвет уже занят. Выбери другого Кирби.');
   const id=saved?.id??crypto.randomUUID();
-  if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.room.host=id;}
+  if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.restoreSeals();this.room.host=id;}
   const resume=saved?{...saved.actor,name,variant,star:Math.max(0,saved.actor.star-(Date.now()-saved.savedAt)/1000)}:undefined;
   if(resume){const boost=new FruitSpeedBoost();boost.restore(resume.fruitBoost);boost.update(Math.max(0,(Date.now()-saved!.savedAt)/1000));resume.fruitBoost=boost.snapshot();}
   let device=deviceInfo(request.headers.get('User-Agent')??'');try{const raw=url.searchParams.get('device');if(raw&&raw.length<1024)device=sanitizeDevice(JSON.parse(raw));}catch{}
@@ -251,7 +276,7 @@ export class GameRoom extends DurableObject<Env>{
   this.accountHistory(a,now);
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
-  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','pidgieFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','pidgieFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
+  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    if(r.bread?.offering&&next.pidgie)next.pidgie=beginPidgieFeeding(next.pidgie,r.bread.offering);
 
@@ -264,10 +289,14 @@ export class GameRoom extends DurableObject<Env>{
   const deferContacts=hasChasers(r.centipede)&&!!a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS&&events.some(e=>e?.type==='hit');
   let changed=this.advanceMill(now);if(this.advanceBoss(now,a,!deferContacts))changed=true;
   const oldBread=r.bread??newBread(),nextBread=advanceBread(oldBread,now,r.world?.mountainSteps);if(nextBread!==oldBread){r.bread=nextBread;changed=true;}
-  let flowersChanged=this.advanceFlowers(now,a);
+  let flowersChanged=this.advanceFlowers(now,a),numbersChanged=this.advanceNumbers(now,a);
   for(const e of events){
    if(!e||typeof e!=='object')continue;
-   if(e.type==='centipede-start'&&r.bread?.owner!==a.id){
+   if(e.type==='seal'){
+    const actor=this.sealActor(a,e.id),old=r.sealProgress??newSealProgress();
+    if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){r.sealProgress=next;changed=true;}}
+   }
+   else if(e.type==='centipede-start'&&r.bread?.owner!==a.id){
     // A simultaneous/stale request never replaces the running event. Return the
     // current state so the caller also removes an outdated interaction prompt.
     if(!r.centipede&&!r.festival){const boss=this.bossActor(a);if(boss){const q=startCentipede(e.trail,boss,now);if(q){r.centipede=q;this.log(a,'позвал Топотушку поиграть в догонялки и подружиться!');changed=true;}}}
@@ -282,6 +311,14 @@ export class GameRoom extends DurableObject<Env>{
     }
    }
    else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);this.broadcast({type:'emote',emote:e.emote,id:a.id},socket);}}
+   else if(e.type==='number-start'){
+    const actor=this.flowerActor(a),old=r.numberGame;if(actor&&!r.festival&&r.bread?.owner!==a.id)r.numberGame=startNumberGame(old,actor,now);if(r.numberGame!==old)numbersChanged=true;this.send(socket,{type:'number-game',game:r.numberGame});
+   }
+   else if(e.type==='number-note'&&a.actor&&a.visible&&r.bread?.owner!==a.id&&now-(a.lastNumber??0)>=NUMBER_PRESS_MS&&canPressNumber(e.digit,{x:a.actor.p[0],y:a.actor.p[1],z:a.actor.p[2]},a.actor.s)){
+    if(r.numberGame&&r.numberGame.stage!=='answer')continue;const actor=this.flowerActor(a);if(!actor?.available)continue;
+    a.lastNumber=now;this.broadcast({type:'number-note',digit:e.digit,id:a.id},socket);
+    const old=r.numberGame;r.numberGame=pressNumberGame(old,e.digit,actor,now,this.flowerActors(a));if(r.numberGame!==old){numbersChanged=true;this.rewardNumbers(a);}
+   }
    else if(e.type==='flower-start'||e.type==='flower-replay'){
     const flowerActor=this.flowerActor(a),old=r.flowerGame;if(flowerActor&&!r.festival)r.flowerGame=e.type==='flower-start'?startFlowerGame(old,flowerActor,now):replayFlowerGame(old,flowerActor,now);if(r.flowerGame!==old)flowersChanged=true;
     this.send(socket,{type:'flower-game',game:r.flowerGame});
@@ -317,6 +354,7 @@ export class GameRoom extends DurableObject<Env>{
    else if(e.type==='visible'){a.visible=e.value===true;socket.serializeAttachment(a);if(a.id===r.host&&!a.visible){const next=this.players().find(s=>(s.deserializeAttachment() as Attachment).visible);if(next){r.host=(next.deserializeAttachment() as Attachment).id;changed=true;}}}
   }
   if(this.advanceFlowers(now,a))flowersChanged=true;
+  if(this.advanceNumbers(now,a))numbersChanged=true;
   if(a.actor){
    const count=r.fruits.filter(owner=>owner===a.id).length,extra=Math.max(0,count-a.actor.fruits);
    if(extra){const boost=new FruitSpeedBoost();boost.restore(a.actor.fruitBoost);boost.eat(extra);a.actor.fruitBoost=boost.snapshot();}
@@ -324,15 +362,16 @@ export class GameRoom extends DurableObject<Env>{
    if(a.adminSize!==undefined){const final=a.actor.progress?.size??a.actor.s;a.adminSize=final;if(reportedSize===undefined||Math.abs(reportedSize-final)>=.001)this.send(socket,{type:'resize',size:final});}
   }
   if(deferContacts&&this.advanceBoss(now,a))changed=true;
-  if(!r.festival&&a.actor&&allTasks(a.actor.achievements)&&r.flowerGame?.stage!=='celebrate'){
+  if(!r.festival&&a.actor&&allTasks(a.actor.achievements)&&r.flowerGame?.stage!=='celebrate'&&r.numberGame?.stage!=='celebrate'){
    this.startFestival(now,a.actor.name);changed=true;
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
   }
   if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
-  a.room=a.id===r.host?{...r,centipede:undefined,flowerGame:undefined}:undefined;socket.serializeAttachment(a);
-  if(changed)this.changed();else if(world||r.festival||flowersChanged)this.persist();
+  a.room=a.id===r.host?{...r,centipede:undefined,flowerGame:undefined,numberGame:undefined}:undefined;socket.serializeAttachment(a);
+  if(changed)this.changed();else if(world||r.festival||flowersChanged||numbersChanged)this.persist();
   if(flowersChanged)this.broadcast({type:'flower-game',game:r.flowerGame});
+  if(numbersChanged)this.broadcast({type:'number-game',game:r.numberGame});
   const chasers=r.centipede&&now-this.chaseSentAt>=CHASERS.snapshotMs?chaseSnapshot(r.centipede):undefined;
   if(chasers)this.chaseSentAt=now;
   // Include the sender only when a compact chase update is due. No new timer,
@@ -360,13 +399,13 @@ export class GameRoom extends DurableObject<Env>{
   if(r.millQuest?.owner===a.id&&r.millQuest.stage!=='running'){r.millQuest=newMillQuest();r.mill=false;}
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
   this.advanceBoss(Date.now());
-  this.advanceFlowers(Date.now());
+  this.advanceFlowers(Date.now());this.advanceNumbers(Date.now());
   this.broadcast({type:'left',id:a.id},socket);this.broadcast({type:'presence',count:remaining.length},socket);this.changed();
  }
  async webSocketClose(socket:WebSocket,code=1000){try{socket.close(1000,'Disconnected');}catch{}await this.remove(socket,code===1000?'left':'lost');}
  async webSocketError(socket:WebSocket){await this.remove(socket,'lost');}
  async alarm(){
-  const millChanged=this.advanceMill(Date.now()),bossChanged=this.advanceBoss(Date.now()),flowersChanged=this.advanceFlowers(Date.now());if(millChanged||bossChanged)this.changed();else if(flowersChanged){this.persist();this.broadcast({type:'flower-game',game:this.room?.flowerGame});}
+  const millChanged=this.advanceMill(Date.now()),bossChanged=this.advanceBoss(Date.now()),flowersChanged=this.advanceFlowers(Date.now()),numbersChanged=this.advanceNumbers(Date.now());if(millChanged||bossChanged)this.changed();else if(flowersChanged){this.persist();this.broadcast({type:'flower-game',game:this.room?.flowerGame});}if(numbersChanged){this.persist();this.broadcast({type:'number-game',game:this.room?.numberGame});}
   this.finishFestival();
   const visits:(Visit|undefined)[]=[];
   for(const s of this.players()){
@@ -379,7 +418,7 @@ export class GameRoom extends DurableObject<Env>{
   if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+RESULTS_MS){
    for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;a.left=true;s.serializeAttachment(a);s.close(1000,'Festival finished');}this.room=undefined;await this.ctx.storage.deleteAll();await this.ctx.storage.deleteAlarm();return;
   }
-for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity,this.room?.centipede?.emptySince===undefined?Infinity:this.room.centipede.emptySince+CENTIPEDE_EMPTY_MS,this.room?.flowerGame?.emptySince===undefined?Infinity:this.room.flowerGame.emptySince+FLOWER_EMPTY_MS));}
+for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity,this.room?.centipede?.emptySince===undefined?Infinity:this.room.centipede.emptySince+CENTIPEDE_EMPTY_MS,this.room?.flowerGame?.emptySince===undefined?Infinity:this.room.flowerGame.emptySince+FLOWER_EMPTY_MS));}
 }
 export default {async fetch(request,env):Promise<Response>{
  const history=await historyRoutes(request,env);if(history)return history;

@@ -1,0 +1,48 @@
+{
+  "mobile": false,
+  "failureRecovery": false,
+  "badgeGate": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "saveRestore": [
+    2,
+    3
+  ],
+  "occlusion": {
+    "inside": 1458,
+    "insideChanged": 0,
+    "outsideChanged": 214
+  },
+  "initial": {
+    "geometries": 541,
+    "textures": 406,
+    "programs": 156,
+    "position": [
+      2000,
+      0,
+      14
+    ]
+  },
+  "released": {
+    "geometries": 470,
+    "textures": 340
+  },
+  "cycles": [
+    {
+      "g": 514,
+      "t": 388
+    },
+    {
+      "g": 514,
+      "t": 388
+    },
+    {
+      "g": 514,
+      "t": 388
+    }
+  ],
+  "errors": []
+}

@@ -8,6 +8,7 @@ import {Ponds} from '../src/ponds';
 import {MAZE_SITE,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from '../src/maze-layout';
 import {roundMeadowPath} from '../src/meadow-path';
 import {MILL_BAGS} from '../src/mill-quest';
+import {META_KNIGHT_PORTAL_APPROACH} from '../src/meta-knight-arena-site';
 
 test('shared trails reach entrances and keep full clearance from trunks and water',()=>{
  const forest=createForest(),trees=forest.userData.treePositions,layout=forest.userData.meadowLayout as MeadowLayout;
@@ -34,7 +35,12 @@ test('shared trails reach entrances and keep full clearance from trunks and wate
   const lengths=Math.hypot(ux,uz)*Math.hypot(vx,vz);if(lengths<1e-8)continue;
   assert((ux*vx+uz*vz)/lengths>Math.cos(Math.PI*25/180),'every actual approach, obstacle detour and bend turns progressively instead of having a right-angle corner');
  }
- assert(layout.paths.reduce((n,p)=>n+p.points.length,0)<3400,'startup raster/placement budget stays bounded');
+ // The north foothill clearing slightly reroutes the bridge approach.
+ const portalPaths=layout.paths.filter(p=>Math.hypot(p.points[0].x-META_KNIGHT_PORTAL_APPROACH.x,p.points[0].z-META_KNIGHT_PORTAL_APPROACH.z)<1);
+ assert.equal(portalPaths.length,1,'the new corner portal has one connected approach');
+ const portalSamples=portalPaths.reduce((n,p)=>n+p.points.length,0);
+ assert(portalSamples<1500,'the long portal approach has a separate bounded raster budget');
+ assert(layout.paths.reduce((n,p)=>n+p.points.length,0)-portalSamples<3500,'existing trail raster/placement budget stays bounded');
 });
 
 test('rounding preserves endpoints and detours around an obstacle instead of cutting through it',()=>{

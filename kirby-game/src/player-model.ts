@@ -3,16 +3,19 @@ import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {cloneVariant, type KirbyVariant} from './variants';
 
-export type PlayerModel = {model: Object3D; clips: AnimationClip[]; character: 'kirby' | 'pigeon'};
+export type PlayerModel = {model: Object3D; clips: AnimationClip[]; character: 'kirby' | 'pigeon' | 'meta-knight'};
 
-/** Choose the original model and rig, rather than colouring a Kirby as a bird. */
-export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: GLTF, npc = false): PlayerModel {
-  if (variant[0] !== 'Пиджи') {
+/** Native characters keep their original rig, geometry and authored materials. */
+export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: GLTF, npc = false, metaKnight?: GLTF): PlayerModel {
+  const knight=variant[0]==='Meta Knight';
+  if (variant[0] !== 'Пиджи'&&!knight) {
     return {model: cloneVariant(kirby.scene, variant, npc), clips: kirby.animations, character: 'kirby'};
   }
-  if (!pigeon) throw new Error('Модель Пиджи ещё не загрузилась');
-  const model = cloneSkeleton(pigeon.scene);
-  model.userData.character = 'pigeon';
+  const source=knight?metaKnight:pigeon;
+  if (!source) throw new Error(knight?'Модель Meta Knight ещё не загрузилась':'Модель Пиджи ещё не загрузилась');
+  const model = cloneSkeleton(source.scene);
+  const character=knight?'meta-knight':'pigeon';
+  model.userData.character = character;
   const materials = new Map<Material, Material>();
   model.traverse(object => {
     if (!(object instanceof Mesh)) return;
@@ -24,5 +27,5 @@ export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: G
     object.material = Array.isArray(object.material) ? object.material.map(cloneMaterial) : cloneMaterial(object.material);
     object.castShadow = object.receiveShadow = true;
   });
-  return {model, clips: pigeon.animations, character: 'pigeon'};
+  return {model, clips: source.animations, character};
 }

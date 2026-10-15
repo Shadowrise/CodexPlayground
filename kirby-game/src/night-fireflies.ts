@@ -12,7 +12,7 @@ import { Firefly } from './firefly';
 import {batchRigidTree} from './rigid-batch';
 import { sceneryClearance } from './landmarks';
 import {softMist,softMistMaterial} from './soft-mist';
-type Bug={carrier:T.Group;firefly:Firefly;home:T.Vector3;halo:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>;color:T.Color;phase:number;land:boolean;lightPosition:T.Vector3};
+type Bug={carrier:T.Group;firefly:Firefly;home:T.Vector3;halo:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>;color:T.Color;phase:number;land:boolean;lightPosition:T.Vector3;shellSeat?:T.Object3D};
 export class NightFireflies {
   readonly group=new T.Group();
   readonly lights:T.PointLight[]=[];
@@ -20,7 +20,7 @@ export class NightFireflies {
   private time=0;
   private initialState:number[][]=[];
   reset(){
-    this.disembark();this.npcRiders.clear();this.npcCooldown.clear();this.remoteOffsets.clear();
+    this.disembark();this.npcRiders.clear();this.npcCooldown.clear();this.remoteOffsets.clear();this.remoteRiders.clear();
     this.networkBlocked.clear();this.landings.clear();this.pendingLandings.clear();this.npcAfter=3;
     this.networkApply(this.initialState);
   }
@@ -53,6 +53,28 @@ export class NightFireflies {
   networkState(){return this.bugs.map(b=>[this.time,b.home.x,b.home.z,b.phase,...b.carrier.position.toArray(),b.carrier.rotation.y,Number(b.land),b.firefly.object.scale.x]);}
   networkApply(rows:number[][]){rows.forEach((row,i)=>{const b=this.bugs[i];if(!b||!row||b===this.mount||this.networkBlocked.has(i))return;this.time=row[0];this.applyBugState(b,reconcileBugLanding(row,this.pendingLandings.get(i)??this.landings.get(i)));});}
   private remoteOffsets=new Map<number,T.Vector3>();
+  private remoteRiders=new Map<number,CharacterController>();
+  private nativeBodies=new WeakMap<CharacterController,{mesh:T.Mesh;center:T.Vector3;radii:T.Vector3}>();
+  private seatPoint=new T.Vector3();
+  /** Match the native seated belly to the animated shell, including both scales.
+   * Remote actor positions come from interpolation; move their mount instead. */
+  private syncNativeSeat(bug:Bug,rider:CharacterController,remote=false){
+    if(!rider.isMetaKnight||!bug.shellSeat)return false;
+    let body=this.nativeBodies.get(rider);
+    if(!body){
+      const mesh=rider.actor.getObjectByName('Body_motion')?.children.find((node):node is T.Mesh=>node instanceof T.Mesh&&node.name.startsWith('Body_motion_surface'));if(!mesh)return false;
+      if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();const bounds=mesh.geometry.boundingBox!;
+      body={mesh,center:bounds.getCenter(new T.Vector3()),radii:bounds.getSize(new T.Vector3()).multiplyScalar(.5)};this.nativeBodies.set(rider,body);
+    }
+    body.mesh.updateWorldMatrix(true,false);
+    // The native torso is an ellipsoid. Its transformed support is exact for
+    // the sculpt, without visiting thousands of tessellation vertices each frame.
+    const m=body.mesh.matrixWorld.elements,{center,radii}=body;
+    const bottom=m[1]*center.x+m[5]*center.y+m[9]*center.z+m[13]-Math.hypot(m[1]*radii.x,m[5]*radii.y,m[9]*radii.z);
+    const correction=bug.shellSeat.getWorldPosition(this.seatPoint).y-bottom;
+    if(remote)bug.carrier.position.y-=correction;else rider.actor.position.y+=correction;
+    return true;
+  }
   syncRemoteRider(index:number,rider:CharacterController,state:ActorState,dt:number){
     const bug=this.bugs[index],v=state.ride?.data as number[]|undefined;if(!bug||!v||bug===this.mount)return;
     const target=new T.Vector3(v[4]-state.p[0],v[5]-state.p[1],v[6]-state.p[2]);
@@ -61,6 +83,8 @@ export class NightFireflies {
     bug.carrier.position.copy(rider.actor.position).add(offset);bug.carrier.quaternion.copy(rider.actor.quaternion);
     bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,v[9],16,dt));
     bug.land=!!v[8];bug.firefly.setMode(bug.land?'Sit':'Fly');
+    if(rider.isMetaKnight)this.remoteRiders.set(index,rider);else this.remoteRiders.delete(index);
+    this.syncNativeSeat(bug,rider,true);
   }
   outlineBug(c:CharacterController){return !c.flight.active && !c.swimming ? this.nearby(c)?.firefly.object : undefined;}
   private nearby(c:CharacterController){return this.group.visible?this.bugs.filter(b=>!this.networkBlocked.has(this.bugs.indexOf(b)) && !this.occupiedByNpc(this.bugs.indexOf(b)) && b.carrier.position.y<3.6 && Math.abs(c.actor.position.y)<.7 && Math.hypot(c.actor.position.x-b.carrier.position.x,c.actor.position.z-b.carrier.position.z)<4+c.actor.scale.x).sort((a,b)=>a.carrier.position.distanceToSquared(c.actor.position)-b.carrier.position.distanceToSquared(c.actor.position))[0]:undefined;}
@@ -148,7 +172,7 @@ export class NightFireflies {
   moveRider(dt:number,input:Input){
     const c=this.rider;if(!c)return;
     // Keep growth and controller timers alive without playing a walking animation.
-    if(c.isPigeon)c.updateActivity(dt);
+    if(c.hasNativeAnimations)c.updateActivity(dt);
     else {c.state='Idle';c.update(dt,{forward:false,left:false,right:false});c.state='FireflyRide';}
     c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*Math.PI*.55*dt;c.actor.rotation.set(0,c.yaw,0);
     const direction=Number(input.forward)-Number(!!input.backward);this.moving=direction!==0;
@@ -166,8 +190,8 @@ export class NightFireflies {
     const flying=this.moving||this.altitude>.05;bug.land=!flying;bug.firefly.setMode(flying?'Fly':'Sit');
     bug.firefly.object.scale.setScalar(T.MathUtils.damp(bug.firefly.object.scale.x,c.actor.scale.x*1.8,5,dt));
     const seatHeight=bug.firefly.object.scale.x*.95;
-    c.actor.position.y=T.MathUtils.damp(c.actor.position.y,this.altitude+seatHeight,12,dt);
-    for(const side of ['Left','Right']){
+    if(!this.syncNativeSeat(bug,c))c.actor.position.y=T.MathUtils.damp(c.actor.position.y,this.altitude+seatHeight,12,dt);
+    if(!c.hasNativeAnimations)for(const side of ['Left','Right']){
       const foot=c.actor.getObjectByName(`${side}_foot_pivot`),arm=c.actor.getObjectByName(`${side}_shoulder`);
       if(foot)foot.rotation.x=-.85;if(arm){arm.rotation.x=-.45;arm.rotation.z=(side==='Left'?-1:1)*.25;}
     }
@@ -176,6 +200,14 @@ export class NightFireflies {
     this.group.name='Forty meadow fireflies';
     const template=gltf.scene.clone(true),imported:T.Object3D[]=[];
     template.traverse(o=>{if(o instanceof T.PointLight)imported.push(o);});imported.forEach(o=>o.removeFromParent());
+    // Preserve a support point from the actual thorax before rigid batching
+    // merges its mesh. Its animated parent supplies the Sit/Fly body bob.
+    const thorax=template.getObjectByName('Thorax');
+    if(thorax instanceof T.Mesh&&thorax.parent){
+      thorax.updateMatrix();const vertices=thorax.geometry.getAttribute('position'),point=new T.Vector3(),seat=new T.Group();seat.name='Firefly shell seat';seat.position.y=-Infinity;
+      for(let i=0;i<vertices.count;i++){thorax.getVertexPosition(i,point).applyMatrix4(thorax.matrix);if(point.y>seat.position.y)seat.position.copy(point);}
+      thorax.parent.add(seat);
+    }
     batchRigidTree(template,gltf.animations);
     for(let i=0;i<40;i++){
       const object=template.clone(true);
@@ -187,7 +219,7 @@ export class NightFireflies {
       for(let j=0;j<600;j++){const x=home.x+Math.sin(j*2.399+i)*j*.32,z=home.z+Math.cos(j*2.399+i)*j*.32;if(Math.abs(x)<210 && Math.abs(z)<210 && sceneryClearance(x,z,15)){home.set(x,0,z);break;}}
       const carrier=new T.Group();carrier.add(object);this.group.add(carrier);
       const halo=softMist(softMistMaterial(color,.4));halo.material.blending=T.AdditiveBlending;halo.material.fog=false;halo.scale.setScalar(1.75);carrier.add(halo);
-      this.bugs.push({carrier,firefly,home,halo,color,phase:i*1.87,land:true,lightPosition:new T.Vector3()});
+      this.bugs.push({carrier,firefly,home,halo,color,phase:i*1.87,land:true,lightPosition:new T.Vector3(),shellSeat:object.getObjectByName('Firefly shell seat')});
     }
     // A fixed light pool avoids forty point lights on every terrain fragment.
     for(let i=0;i<4;i++){const light=new T.PointLight('#ffffff',0,11,2);light.castShadow=false;this.lights.push(light);}
@@ -202,7 +234,7 @@ export class NightFireflies {
   }
   update(dt:number,night:boolean|number,camera:T.Vector3){
     this.group.visible=true;
-    for(const index of this.remoteOffsets.keys())if(!this.networkBlocked.has(index))this.remoteOffsets.delete(index);
+    for(const index of this.remoteOffsets.keys())if(!this.networkBlocked.has(index)){this.remoteOffsets.delete(index);this.remoteRiders.delete(index);}
     this.time+=dt;
     for(const bug of this.bugs){
       if(bug!==this.mount && !this.networkBlocked.has(this.bugs.indexOf(bug))){
@@ -218,6 +250,10 @@ export class NightFireflies {
       const distance=bug.carrier.position.distanceTo(camera);
       bug.halo.visible=distance<=MIST_DISTANCE;
       const visible=bug===this.mount || distance<=ACTOR_DISTANCE;bug.firefly.object.visible=visible;if(visible)bug.firefly.update(dt);
+      // Animation advances after movement: apply its new shell height in the
+      // same frame so bobbing and mode blends cannot bury the native rider.
+      if(bug===this.mount&&this.rider)this.syncNativeSeat(bug,this.rider);
+      else {const rider=this.remoteRiders.get(this.bugs.indexOf(bug));if(rider)this.syncNativeSeat(bug,rider,true);}
       // Keep the light on the luminous rear end even when the detailed mesh is culled.
       bug.carrier.updateWorldMatrix(true,false);bug.lightPosition.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65).applyMatrix4(bug.carrier.matrixWorld);
       bug.halo.position.set(0,.5+(flying?.23:0),-.58).multiplyScalar(bug.firefly.object.scale.x/.65);bug.halo.scale.setScalar(1.75*bug.firefly.object.scale.x/.65);bug.halo.material.opacity=.325+.075*Math.sin(this.time*2+bug.phase);
