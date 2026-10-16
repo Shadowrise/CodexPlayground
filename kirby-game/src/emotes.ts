@@ -3,7 +3,10 @@ import { poseFace } from './emote-face';
 import {Object3D} from 'three';
 export const EMOTES=[{id:'Hello',name:'Привет',icon:'👋'},{id:'Joy',name:'Радость',icon:'✨'},{id:'Fear',name:'Испуг',icon:'😳'},{id:'Anger',name:'Гнев',icon:'💢'},{id:'Sad',name:'Грусть',icon:'💧'}] as const;
 export type Emote=typeof EMOTES[number]['id'];
-export function emoteSector(x:number,y:number){if(Math.hypot(x,y)<.4)return undefined;return Math.round((Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2)/(Math.PI*2/5))%5;}
+export const PIGEON_EMOTES=[...EMOTES,{id:'Peck',name:'Клевать с земли',icon:'🌱'}] as const;
+export type PlayerEmote=typeof PIGEON_EMOTES[number]['id'];
+export const emotesFor=(pigeon=false)=>pigeon?PIGEON_EMOTES:EMOTES;
+export function emoteSector(x:number,y:number,count:number=EMOTES.length){if(Math.hypot(x,y)<.4)return undefined;return Math.round((Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2)/(Math.PI*2/count))%count;}
 export class EmotePose {
  elapsed=0;
  private restore:(()=>void)[]=[];
@@ -28,19 +31,25 @@ export class EmotePose {
 export class EmoteWheel {
  readonly element=document.createElement('div');
  private choices:HTMLElement[]=[];
+  private emotes:readonly typeof PIGEON_EMOTES[number][]=EMOTES;
  open=false;
  selected:number|undefined;
  constructor(){
   this.element.className='emote-wheel';this.element.hidden=true;this.element.setAttribute('role','dialog');this.element.setAttribute('aria-label',t('Выбор эмоции'));
   const center=document.createElement('div');center.className='emote-center';center.textContent=t('Эмоции');this.element.append(center);
-  EMOTES.forEach((emote,i)=>{const item=document.createElement('div');item.className='emote-choice';item.textContent=`${emote.icon} ${t(emote.name)}`;const a=i*Math.PI*2/5;item.style.left=`${50+34*Math.sin(a)}%`;item.style.top=`${50-34*Math.cos(a)}%`;this.element.append(item);this.choices.push(item);});
+  this.renderChoices();
   const help=document.createElement('p');help.textContent=t('Стик — выбрать · отпусти LB — показать · B — отмена');this.element.append(help);document.body.append(this.element);
-  onLocaleChange(()=>this.choices.forEach((choice,i)=>choice.textContent=`${EMOTES[i].icon} ${t(EMOTES[i].name)}`));
+  onLocaleChange(()=>this.choices.forEach((choice,i)=>choice.textContent=`${this.emotes[i].icon} ${t(this.emotes[i].name)}`));
  }
- update(held:boolean,x:number,y:number,cancel=false):Emote|undefined{
+ private renderChoices(){
+  for(const choice of this.choices)choice.remove();this.choices=[];
+  this.emotes.forEach((emote,i)=>{const item=document.createElement('div');item.className='emote-choice';item.textContent=`${emote.icon} ${t(emote.name)}`;const a=i*Math.PI*2/this.emotes.length;item.style.left=`${50+34*Math.sin(a)}%`;item.style.top=`${50-34*Math.cos(a)}%`;this.element.append(item);this.choices.push(item);});
+ }
+ setPigeon(pigeon:boolean){const emotes=emotesFor(pigeon);if(this.emotes===emotes)return;this.close();this.emotes=emotes;this.renderChoices();}
+ update(held:boolean,x:number,y:number,cancel=false):PlayerEmote|undefined{
   if(cancel){this.close();return;}
-  if(held){this.open=true;this.element.hidden=false;this.selected=emoteSector(x,y);this.choices.forEach((c,i)=>c.classList.toggle('selected',i===this.selected));return;}
-  const result=this.open && this.selected!==undefined?EMOTES[this.selected].id:undefined;this.close();return result;
+  if(held){this.open=true;this.element.hidden=false;this.selected=emoteSector(x,y,this.emotes.length);this.choices.forEach((c,i)=>c.classList.toggle('selected',i===this.selected));return;}
+  const result=this.open && this.selected!==undefined?this.emotes[this.selected].id:undefined;this.close();return result;
  }
  close(){this.open=false;this.selected=undefined;this.element.hidden=true;}
 }

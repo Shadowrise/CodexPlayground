@@ -19,7 +19,7 @@ test('Pidgie optional checkpoint preserves the fourteen existing NPCs and legacy
  const next={...legacy,pidgie:pidgieFixture()};assert(validWorld(next));assert.equal(next.npcs.length,14);
  assert(!validWorld({...next,npcs:[...next.npcs,next.npcs[0]]}));
  assert(!validWorld({...next,pidgie:null}));assert(!validWorld({...next,pidgie:{}}));
- for(const phase of PIDGIE_PHASES)assert(validWorld({...next,pidgie:{...next.pidgie,phase,...(phase==='follow'?{followId:'guest',followSpeed:6.5}:{}),...(['joy','toBread','feast'].includes(phase)?{friend:{by:'guest',at:1,bird:[0,0,0],bread:[0,0,2]}}:{})}}),phase);
+ for(const phase of PIDGIE_PHASES)assert(validWorld({...next,pidgie:{...next.pidgie,phase,...(['follow','greet'].includes(phase)?{followId:'guest',followSpeed:6.5}:{}),...(['joy','toBread','feast'].includes(phase)?{friend:{by:'guest',at:1,bird:[0,0,0],bread:[0,0,2]}}:{})}}),phase);
  for(const clip of PIDGIE_CLIPS)assert(validWorld({...next,pidgie:{...next.pidgie,clip}}),clip);
  assert(!validWorld({...next,pidgie:{...next.pidgie,extra:'x'.repeat(12500)}}),'NPC additions share the attachment size limit');
 });

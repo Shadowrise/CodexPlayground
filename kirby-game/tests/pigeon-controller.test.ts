@@ -46,6 +46,20 @@ test('number-key emotions complete and interrupted emotions restore the native s
  }
 });
 
+test('ground peck plays once while standing, rejects movement and stops immediately when movement starts',()=>{
+ const c=create();assert(c.startEmote('Peck'));const origin=c.actor.position.clone();
+ advance(c,1);assert.equal(c.state,'Peck');assert(c.actor.position.equals(origin));
+ advance(c,PIGEON_CLIP_BY_NAME.Peck.duration);assert.equal(c.state,'Idle');
+ assert(c.startEmote('Peck'));advance(c,.8);
+ c.update(1/60,{...idle,forward:true});assert.equal(c.state,'Run');assert(!c.actions.get('Peck')!.isRunning());
+ assert(!c.startEmote('Peck'));assert(c.actor.position.z>origin.z);
+ for(const input of [{...idle,backward:true},{...idle,left:true},{...idle,right:true},{...idle,jump:true}]){
+  c.setActivity('Idle');c.update(1/60,input);assert(!c.startEmote('Peck'));
+ }
+ c.setActivity('Idle');c.swimming=true;assert(!c.startEmote('Peck'));
+ c.swimming=false;c.setActivity('Sitting');assert(!c.startEmote('Peck'));
+});
+
 test('native flight, moving chest push, air push and swimming preserve game movement',()=>{
  const c=create();c.update(1/60,{...idle,jump:true});assert.equal(c.state,'Jump');advance(c,.22);
  assert(c.flight.active);assert.equal(c.state,'Fly');assert(c.actions.get('Fly')!.isRunning());
@@ -72,7 +86,7 @@ test('pigeon turns never add exported root yaw to the controller heading',()=>{
 
 test('five network pose nodes serialize and replay pigeon rides without Kirby joint names',()=>{
  const source=create(),remote=create();
- for(const state of ['Fly','Sitting','Sleep','Joy','Push']){
+ for(const state of ['Fly','Sitting','Sleep','Joy','Push','Peck']){
   source.setActivity(state);source.mixer.update(.25);
   const snapshot=actorState(source,'Голубь',0);assert.equal(snapshot.pose.length,5);
   assert(snapshot.pose.every(row=>row.length===10&&row.every(Number.isFinite)));

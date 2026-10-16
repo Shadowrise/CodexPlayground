@@ -1,5 +1,10 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Прервать дуэль':['End duel','Прекрати дуела'],
+ 'Завершить дуэль':['Finish duel','Завърши дуела'],
+ 'E — Прервать дуэль':['E — End duel','E — Прекрати дуела'],
+ 'Дуэль прервана. Ты остаёшься на арене.':['Duel ended. You remain in the arena.','Дуелът е прекратен. Оставаш на арената.'],
+ 'Галаксия — Рыцарь звёзд':['Galaxia — Knight of the Stars','Галаксия — Рицарят на звездите'],
  'Метакнайт с уважением смотрит на {0}.':['Meta Knight looks at {0} with respect.','Meta Knight гледа с уважение към {0}.'],
  'Бой с Метакнайтом':['Meta Knight duel','Дуел с Meta Knight'],
  'Метакнайт':['Meta Knight','Meta Knight'],
@@ -299,6 +304,9 @@ export const translations: Record<string, readonly [string, string]> = {
  'Взаимодействовать':['Interact','Взаимодействай'], 'Чат':['Chat','Чат'], 'Как настроение?':['How are you feeling?','Как се чувстваш?'],
  'Закрыть':['Close','Затвори'], 'Привет':['Hello','Поздрав'], 'Радость':['Joy','Радост'], 'Испуг':['Fear','Страх'], 'Гнев':['Anger','Гняв'], 'Грусть':['Sadness','Тъга'],
  'Выбор эмоции':['Choose an emote','Избери емоция'], 'Эмоции':['Emotes','Емоции'],
+ 'Клевать с земли':['Peck the ground','Кълви земята'],
+ 'Клевать с земли (Пиджи)':['Peck the ground (Pidgie)','Кълви земята (Пиджи)'],
+ 'наклоняется и деловито клюёт землю.':['leans down and busily pecks the ground.','навежда се и усърдно кълве земята.'],
  'Стик — выбрать · отпусти LB — показать · B — отмена':['Stick — choose · release LB — show · B — cancel','Стик — избери · отпусни LB — покажи · B — отмени'],
  '«Толчок»':['“Push”','„Бутане“'], '«Действие»':['“Action”','„Действие“'],
  'Выйти из полного экрана':['Exit full screen','Излез от цял екран'], '⛶ На весь экран':['⛶ Full screen','⛶ Цял екран'],

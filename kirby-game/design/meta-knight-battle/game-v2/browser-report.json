@@ -1,0 +1,61 @@
+{
+  "soundtrack": {
+    "active": "knight",
+    "src": "http://127.0.0.1:5193/audio/meta-knight-duel.wav",
+    "loop": true,
+    "playing": true,
+    "backgroundPaused": true
+  },
+  "cancelled": {
+    "arena": true,
+    "position": [
+      2000,
+      0,
+      -2
+    ],
+    "engaged": false,
+    "music": false,
+    "paused": true
+  },
+  "crescent": {
+    "floor": 0.9432113957639614,
+    "depth": 11.870012664911258
+  },
+  "first": {
+    "stage": "slash-warn",
+    "hp": 12,
+    "life": 5,
+    "bossScale": 3.3
+  },
+  "reflected": {
+    "stage": "return",
+    "reflects": 1,
+    "life": 5
+  },
+  "phases": [
+    1,
+    2
+  ],
+  "won": {
+    "hp": 0,
+    "hits": 12,
+    "unlocked": true,
+    "stored": "1",
+    "log": [
+      "зашёл на полянку.",
+      "Метакнайт с уважением смотрит на Звёздочка."
+    ]
+  },
+  "lost": {
+    "stage": "lost",
+    "hearts": 0,
+    "hp": 12
+  },
+  "restored": {
+    "active": false,
+    "size": 3,
+    "speed": 2,
+    "hud": false
+  },
+  "errors": []
+}

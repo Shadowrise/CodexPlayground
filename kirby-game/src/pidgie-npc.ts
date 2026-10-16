@@ -20,7 +20,7 @@ const xz=(p:T.Vector3):PidgiePoint=>[p.x,p.z];
 const distance=(a:PidgiePoint,b:PidgiePoint)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refuge],target:[...s.target],origin:[...s.origin],destination:[...s.destination],...(s.friend?{friend:structuredClone(s.friend)}:{})});
 
-export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;points?:number};
+export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;isPigeon?:boolean;points?:number};
 export type PidgieNpcOptions={
  safeGround:(x:number,z:number)=>boolean;
  /** Grounded body clearance; takeoff/landing still require safeGround. */
@@ -124,13 +124,17 @@ export class PidgieNpc {
   for(const person of people){const d=person.distanceTo(this.actor.position);if(Number.isFinite(d)&&d<best){nearest=person;best=d;}}
   if(!nearest)return;
   const player=players.find(player=>player.position===nearest);
-  if(player&&player.id.length>0&&player.id.length<=64&&player.hasBread){
-   this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
-   this.data.phase='follow';this.data.followId=player.id;this.data.followSpeed=0;this.data.elapsed=0;
-   this.data.pause=0;this.data.walkTimer=0;this.data.target=xz(this.actor.position);this.animate('Idle');
-   this.options.onInterest?.(nearest);return;
+  if(player&&player.id.length>0&&player.id.length<=64&&(player.hasBread||player.isPigeon)){
+   this.startFollowing(player);return;
   }
   this.fleeFrom(nearest,people);
+ }
+
+ private startFollowing(player:PidgiePlayer){
+  this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
+  this.data.phase=player.hasBread?'follow':'greet';this.data.followId=player.id;this.data.followSpeed=0;this.data.elapsed=0;
+  this.data.pause=0;this.data.walkTimer=0;this.data.target=xz(this.actor.position);this.animate(player.hasBread?'Idle':'Hello',true);
+  if(player.hasBread)this.options.onInterest?.(player.position);
  }
 
  private fleeFrom(person:T.Vector3,people:readonly T.Vector3[]){
@@ -179,23 +183,26 @@ export class PidgieNpc {
  private follow(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
   this.followRetry=Math.max(0,this.followRetry-dt);
   const player=players.find(player=>player.id===this.data.followId);
-  if(player&&!player.hasBread){this.fleeFrom(player.position,people);return;}
-  if(!player||!player.position.toArray().every(Number.isFinite)){
+  const greeting=this.data.phase==='greet';
+  if(player&&!player.hasBread&&!player.isPigeon){this.fleeFrom(player.position,people);return;}
+  if(player&&greeting===player.hasBread){this.startFollowing(player);return;}
+  if(!player||!player.position.toArray().every(Number.isFinite)||(greeting&&player.position.distanceTo(this.actor.position)>PIDGIE_APPROACH_DISTANCE+2)){
    delete this.data.followId;delete this.data.followSpeed;this.data.phase='wander';
    this.data.refuge=xz(this.actor.position);this.data.target=[...this.data.refuge];this.data.pause=.6;this.data.walkTimer=0;this.animate('Idle');return;
   }
   const from=this.actor.position,dx=from.x-player.position.x,dz=from.z-player.position.z,d=Math.hypot(dx,dz),gap=d-PIDGIE_FOLLOW_DISTANCE;
   this.data.followSpeed=0;
   const facePlayer=()=>this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));
-  if(Math.abs(gap)<=(this.data.elapsed>=PIDGIE_FOLLOW_REACTION_SECONDS?FOLLOW_BAND:FOLLOW_START_BAND)){
+  const stand=()=>this.animate(greeting&&this.data.clip==='Hello'&&this.active!.time<PIGEON_CLIP_BY_NAME.Hello.duration-1e-8?'Hello':'Idle');
+  if((greeting&&gap>=0)||Math.abs(gap)<=(this.data.elapsed>=PIDGIE_FOLLOW_REACTION_SECONDS?FOLLOW_BAND:FOLLOW_START_BAND)){
    this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
    this.data.elapsed=0;
-   this.data.target=xz(from);facePlayer();this.animate('Idle');return;
+   this.data.target=xz(from);facePlayer();stand();return;
   }
   // A wider start band and a checkpointed reaction clock avoid tiny Run/Idle
   // bursts whenever the player takes a step or the network pose shifts.
   this.data.elapsed=Math.min(PIDGIE_FOLLOW_REACTION_SECONDS,this.data.elapsed+dt);
-  if(this.data.elapsed<PIDGIE_FOLLOW_REACTION_SECONDS-1e-8){this.data.target=xz(from);facePlayer();this.animate('Idle');return;}
+  if(this.data.elapsed<PIDGIE_FOLLOW_REACTION_SECONDS-1e-8){this.data.target=xz(from);facePlayer();stand();return;}
   const away=d>1e-6?new T.Vector3(dx/d,0,dz/d):new T.Vector3(Math.sin(this.data.yaw),0,Math.cos(this.data.yaw));
   const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE);
   const clear=(a:PidgiePoint,b:PidgiePoint)=>{
@@ -249,7 +256,7 @@ export class PidgieNpc {
    this.wander(dt,people,players,constrain);
    if(this.data.phase==='wander'){this.mixer.update(dt);this.syncPosition();return;}
   }
-  if(this.data.phase==='follow'){this.follow(dt,people,players,constrain);this.mixer.update(dt);this.syncPosition();return;}
+  if(this.data.phase==='follow'||this.data.phase==='greet'){this.follow(dt,people,players,constrain);this.mixer.update(dt);this.syncPosition();return;}
   this.data.elapsed=Math.min(this.duration(),this.data.elapsed+dt);
   if(this.data.phase==='fear'){
    this.setYaw(this.data.turnStart+wrap(this.data.turnTarget-this.data.turnStart)*smooth(this.data.elapsed/.25));
@@ -357,7 +364,7 @@ export class PidgieNpc {
    this.remote=copyState(this.data);this.actor.position.lerpVectors(displayed,new T.Vector3().fromArray(this.remote.p),1-Math.exp(-14*dt));return;
   }
   const checkpoint=this.remote;
-  if(!['wander','hidden','follow'].includes(checkpoint.phase))checkpoint.elapsed=Math.min(this.duration(),checkpoint.elapsed+dt);
+  if(!['wander','hidden','follow','greet'].includes(checkpoint.phase))checkpoint.elapsed=Math.min(this.duration(),checkpoint.elapsed+dt);
   checkpoint.cooldown=Math.max(0,checkpoint.cooldown-dt);checkpoint.pause=Math.max(0,checkpoint.pause-dt);checkpoint.walkTimer=Math.max(0,checkpoint.walkTimer-dt);
   const point=new T.Vector3().fromArray(checkpoint.p);
   if(checkpoint.phase==='fear'){
@@ -371,7 +378,7 @@ export class PidgieNpc {
    const u=smooth(checkpoint.elapsed/checkpoint.flightDuration),a=checkpoint.origin,b=checkpoint.destination;
    point.set(T.MathUtils.lerp(a[0],b[0],u),checkpoint.height,T.MathUtils.lerp(a[1],b[1],u));checkpoint.yaw=Math.atan2(b[0]-a[0],b[1]-a[1]);
   }else if(checkpoint.phase==='landing')point.set(checkpoint.destination[0],checkpoint.height*(1-smooth(checkpoint.elapsed/this.verticalDuration())),checkpoint.destination[1]);
-  else if(checkpoint.phase==='follow'&&checkpoint.clip==='Run'&&(checkpoint.followSpeed??0)>0){
+  else if((checkpoint.phase==='follow'||checkpoint.phase==='greet')&&checkpoint.clip==='Run'&&(checkpoint.followSpeed??0)>0){
    const target=new T.Vector3(checkpoint.target[0],0,checkpoint.target[1]),remaining=point.distanceTo(target);
    const proposed=point.clone().addScaledVector(target.sub(point).normalize(),Math.min(remaining,checkpoint.followSpeed!*Math.min(dt,.2)));
    const travel=point.distanceTo(proposed);constrain?.(proposed,this.actor.scale.x,point);proposed.y=0;

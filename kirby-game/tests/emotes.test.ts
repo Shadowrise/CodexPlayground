@@ -4,7 +4,7 @@ import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {CharacterController} from '../src/controller';
-import {EMOTES,emoteSector} from '../src/emotes';
+import {EMOTES,PIGEON_EMOTES,emotesFor,emoteSector} from '../src/emotes';
 async function create(){const b=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const g=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');return new CharacterController(g.scene,g.animations);}
 const idle={forward:false,left:false,right:false};
 test('every emotion animates then restores movement and root orientation without accumulating offsets',async()=>{
@@ -24,6 +24,13 @@ test('fear recoils once, movement interrupts and activities or flight refuse emo
 test('wheel maps five directions and central dead zone to predictable choices',()=>{
  assert.equal(emoteSector(0,0),undefined);assert.equal(emoteSector(.1,.1),undefined);
  for(let i=0;i<5;i++){const a=i*Math.PI*2/5;assert.equal(emoteSector(Math.sin(a),-Math.cos(a)),i);}
+});
+
+test('only Pidgie gets a sixth ground-peck choice and all six wheel sectors are reachable',async()=>{
+ assert.equal(emotesFor(false),EMOTES);assert.equal(emotesFor(true),PIGEON_EMOTES);
+ assert.equal(PIGEON_EMOTES[5].id,'Peck');assert.equal(emoteSector(0,0,6),undefined);
+ for(let i=0;i<6;i++){const a=i*Math.PI*2/6;assert.equal(emoteSector(Math.sin(a),-Math.cos(a),6),i);}
+ const kirby=await create();assert(!kirby.startEmote('Peck'));assert.equal(kirby.state,'Idle');
 });
 
 test('all five facial expressions affect eyes and mouth, restore on interruption, and preserve Eat bindings',async()=>{

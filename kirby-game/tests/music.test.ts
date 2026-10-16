@@ -67,6 +67,7 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     assert(background.paused);assert(event.loop);assert(!event.paused);assert(event.src.endsWith('/audio/topotushka-play.wav'));assert.equal(event.volume,.37);
     volume.value='29';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.29);assert.equal(background.volume,.29);
     music.setEvent('celebrate');await Promise.resolve();assert(!event.loop);assert(event.src.endsWith('/audio/topotushka-victory.wav'));assert.equal(event.volume,.29);assert(!event.paused);
+    music.setEvent('knight');await Promise.resolve();assert(event.loop);assert(event.src.endsWith('/audio/meta-knight-duel.wav'));assert(background.paused);assert(!event.paused);assert.equal(event.volume,.29);assert.match(label.textContent,/Галаксия/);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
     music.updateDucking(true,.05);assert(background.volume<.29&&background.volume>.29*.2,'fade into the quieter mix');
     for(let i=0;i<120;i++)music.updateDucking(true,1/60);

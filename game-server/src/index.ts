@@ -1,4 +1,4 @@
-import {startKnightBattle,advanceKnightBattle,knightAttack,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
+import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
 import {META_KNIGHT_ARENA} from '../../kirby-game/src/meta-knight-arena-site';
 import {metaKnightVictoryLog} from '../../kirby-game/src/world-log';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
@@ -189,7 +189,7 @@ export class GameRoom extends DurableObject<Env>{
  private knightActors(current?:Attachment):KnightActor[]{return this.players().map(socket=>{const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor;if(!c)return undefined;const q=c.q;return {id:a.id,p:[c.p[0]-META_KNIGHT_ARENA.x,c.p[1],c.p[2]] as [number,number,number],yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),available:c.location==='meta-knight-arena'&&!c.ride};}).filter((a):a is KnightActor=>!!a);}
  private advanceKnight(now:number,current?:Attachment){
   const s=this.room?.knightBattle;if(!s)return false;const changed=advanceKnightBattle(s,this.knightActors(current),now);
-  if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??''));}}return true;}
+  if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&!p.withdrawn&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??''));}}return true;}
   return changed;
  }
  private advanceBoss(now:number,current?:Attachment,contacts=true){
@@ -309,8 +309,9 @@ export class GameRoom extends DurableObject<Env>{
    }
    else if(e.type==='knight'&&a.actor?.location==='meta-knight-arena'){
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
-    if(e.action==='start'&&(!r.knightBattle||['won','lost'].includes(r.knightBattle.stage))){const battle=startKnightBattle(actors,a.id,now);if(battle){r.knightBattle=battle;changed=true;}}
+    if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){const battle=startKnightBattle(actors,a.id,now);if(battle){r.knightBattle=battle;changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
+    else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }
    else if(e.type==='centipede-start'&&!holdsBread(r.bread,a.id)){
     // A simultaneous/stale request never replaces the running event. Return the

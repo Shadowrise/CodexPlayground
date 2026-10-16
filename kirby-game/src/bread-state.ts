@@ -19,7 +19,7 @@ export type BreadAction={kind:'pick'|'drop'|'feed'};
 export type BreadBird={phase:string;p:readonly number[]};
 export function canFeedPidgie(b:BreadState,a:BreadActor,bird?:BreadBird){
  b=breadLoaves(b).find(v=>v.owner===a.id)??b;
- if(b.active===false||!bird||!a.available||b.owner!==a.id||b.offering||!['wander','follow'].includes(bird.phase)||Math.abs(a.p[1]-bird.p[1])>1.3)return false;
+ if(b.active===false||!bird||!a.available||b.owner!==a.id||b.offering||!['wander','follow','greet'].includes(bird.phase)||Math.abs(a.p[1]-bird.p[1])>1.3)return false;
  const dx=bird.p[0]-a.p[0],dz=bird.p[2]-a.p[2],distance=Math.hypot(dx,dz);
  return distance<=8.5+Math.min(2,a.size*.7)&&(distance<.1||(dx*Math.sin(a.yaw)+dz*Math.cos(a.yaw))/distance>=.8);
 }

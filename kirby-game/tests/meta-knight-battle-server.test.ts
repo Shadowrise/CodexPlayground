@@ -24,6 +24,7 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   const send=(s:Socket,p:ActorState,events:any[]=[],extra={})=>{now+=200;room.webSocketMessage(s,JSON.stringify({type:'frame',actor:p,events,...extra}));};
   send(b,actor([2025,0,20]));send(a,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.hp,12);
   send(a,actor(),[{type:'knight',action:'win',hp:0}],{knightBattle:{stage:'won',hp:0}});assert.equal(room.room.knightBattle.hp,12);assert(!a.messages.some(m=>m.type==='knight-victory'));
+  send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert(room.room.knightBattle.players[b.data.id].withdrawn);assert.notEqual(room.room.knightBattle.stage,'cancelled');assert.equal(b.data.actor.location,'meta-knight-arena');
   for(let i=0;i<12;i++){
    const s=room.room.knightBattle;Object.assign(s,{stage:'open',since:now,until:now+2500,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});
    now+=800;send(a,actor([2000,0,2]),[{type:'knight',action:'attack'}]);send(a,actor([2000,0,2]));
@@ -36,5 +37,6 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   assert(b.messages.some(m=>m.type==='log'&&m.entry.text==='Метакнайт с уважением смотрит на Рыцарь.'));
   send(a,actor());assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,1);
   assert(!a.data.room?.knightBattle,'large encounter is stored outside socket attachments');
+  send(a,actor(),[{type:'knight',action:'start'}]);send(a,actor(),[{type:'knight',action:'cancel'}]);send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert.equal(room.room.knightBattle.stage,'cancelled');assert.equal(a.data.actor.location,'meta-knight-arena');assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,1);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;sql.close();}
 });

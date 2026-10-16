@@ -2,7 +2,7 @@ import type {StarfallState} from './starfall';
 import {PushRoll,applyPushArms,pushClip,PUSH_HIT,PUSH_DURATION} from './push-motion';
 import {PUSH_COOLDOWN_MS} from './push-target';
 import type { ScoreAction } from './score';
-import { EmotePose, type Emote } from './emotes';
+import { EmotePose, type PlayerEmote } from './emotes';
 import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRepeat, Object3D, PropertyBinding, Quaternion, Vector3 } from 'three';
 import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
@@ -30,15 +30,16 @@ export class CharacterController {
   private constrainPosition() { (this.positionConstraint ?? constrainToMeadow)(this.actor.position, this.actor.scale.x); }
   yaw = 0;
   private active?: AnimationAction;
-  private emotion?:Pick<EmotePose,'kind'|'elapsed'|'clear'|'update'>;
+  private emotion?:Pick<EmotePose,'elapsed'|'clear'|'update'>&{kind:PlayerEmote};
   private flightElapsed=0;
   private readonly gaitFrom=new Vector3();
   private gaitFrame?:{state:PigeonGait;rate:number;mixerTime:number};
-  startEmote(kind:Emote){
+  startEmote(kind:PlayerEmote){
+    if(kind==='Peck'&&(!this.isPigeon||this.state!=='Idle'))return false;
     if(this.emotion || this.flight.active || this.swimming || !['Idle','Run','WalkBackward','RotateLeft','RotateRight'].includes(this.state))return false;
     this.setActivity(kind);
     const duration=this.actions.get(kind)?.getClip().duration;
-    this.emotion=this.hasNativeAnimations?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=(duration??2.4);}}:new EmotePose(kind,this.animationRoot);
+    this.emotion=this.hasNativeAnimations||kind==='Peck'?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=(duration??2.4);}}:new EmotePose(kind,this.animationRoot);
     return true;
   }
   private turn?: Turn;
@@ -281,7 +282,7 @@ export class CharacterController {
     if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.hasNativeAnimations)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');this.constrainPosition();return;}
     if(this.emotion){
       this.emotion.clear();
-      if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){this.emotion=undefined;this.play('Idle');}
+      if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){if(this.emotion.kind==='Peck')this.actions.get('Peck')!.stop();this.emotion=undefined;this.play('Idle');}
       else {
         this.mixer.update(dt);
         const emote=this.emotion;

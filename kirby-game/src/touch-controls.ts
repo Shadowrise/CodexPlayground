@@ -1,8 +1,8 @@
 import {t,onLocaleChange} from './i18n';
-import {EMOTES,type Emote} from './emotes';
+import {emotesFor,type PlayerEmote} from './emotes';
 
 type Actions={jump:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
-  emote:(emote:Emote)=>void;orbit:(x:number,y:number)=>void;zoom:(delta:number)=>void};
+  emote:(emote:PlayerEmote)=>void;orbit:(x:number,y:number)=>void;zoom:(delta:number)=>void};
 
 /** Every finger has its own owner: moving, looking and jumping can overlap. */
 export class TouchControls {
@@ -16,6 +16,8 @@ export class TouchControls {
   private thumb=document.createElement('span');
   private look=new Map<number,{x:number;y:number}>();
   private action:HTMLButtonElement;
+  private emotes=emotesFor();
+  private emoteButtons:HTMLButtonElement[]=[];
   get choosing(){return !this.chooser.hidden;}
   get looking(){return this.look.size>0;}
   get moving(){return Math.hypot(this.x,this.y)>.18;}
@@ -45,8 +47,8 @@ export class TouchControls {
     this.root.append(this.stick,buttons,utilities);
     this.chooser.id='touch-emote-menu';this.chooser.hidden=true;this.chooser.setAttribute('role','dialog');this.chooser.setAttribute('aria-label',t('Эмоции'));
     const title=document.createElement('h3');title.textContent=t('Как настроение?');this.chooser.append(title);
-    for(const emote of EMOTES){const b=document.createElement('button');b.type='button';b.textContent=`${emote.icon} ${t(emote.name)}`;b.addEventListener('click',()=>{this.chooser.hidden=true;actions.emote(emote.id);});this.chooser.append(b);}
-    onLocaleChange(()=>this.chooser.querySelectorAll('button').forEach((button,i)=>{if(EMOTES[i])button.textContent=`${EMOTES[i].icon} ${t(EMOTES[i].name)}`;}));
+    this.renderEmotes();
+    onLocaleChange(()=>this.emoteButtons.forEach((button,i)=>{const emote=this.emotes[i];button.textContent=`${emote.icon} ${t(emote.name)}`;}));
     const close=document.createElement('button');close.type='button';close.textContent=t('Закрыть');close.addEventListener('click',()=>this.chooser.hidden=true);this.chooser.append(close);
     document.body.append(this.root,this.interactionLayer,this.chooser);
     this.stick.addEventListener('pointerdown',e=>{
@@ -73,6 +75,12 @@ export class TouchControls {
     window.addEventListener('resize',()=>this.reset());
     document.addEventListener('visibilitychange',()=>this.reset());
   }
+  private renderEmotes(){
+    for(const button of this.emoteButtons)button.remove();this.emoteButtons=[];
+    const before=this.chooser.querySelector('button');
+    for(const emote of this.emotes){const b=document.createElement('button');b.type='button';b.textContent=`${emote.icon} ${t(emote.name)}`;b.addEventListener('click',()=>{this.chooser.hidden=true;this.actions.emote(emote.id);});this.chooser.insertBefore(b,before);this.emoteButtons.push(b);}
+  }
+  setPigeon(pigeon:boolean){const emotes=emotesFor(pigeon);if(this.emotes===emotes)return;this.chooser.hidden=true;this.emotes=emotes;this.renderEmotes();}
   private moveStick(e:PointerEvent){
     const box=this.stick.getBoundingClientRect(),radius=box.width*.34;
     const x=(e.clientX-box.left-box.width/2)/radius,y=(e.clientY-box.top-box.height/2)/radius,length=Math.max(1,Math.hypot(x,y));

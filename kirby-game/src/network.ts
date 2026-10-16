@@ -7,7 +7,7 @@ import {validNumberDigit} from './number-garden-site';
 import {numberDeadline} from './number-garden-game';
 import {flowerDeadline} from './musical-flower-game';
 import {newSealProgress,normalizeSealProgress} from './meta-knight-seal-state';
-import type {Emote} from './emotes';
+import type {PlayerEmote} from './emotes';
 import type {LogEntry} from './world-log';
 import type {DeviceInfo} from './history-types';
 import {BUILD,PROTOCOL,type ActorState,type WorldState,type RoomState,type Event,type ServerMessage} from './network-protocol';
@@ -18,7 +18,7 @@ export class NetworkSession{
  private clockOffset=0;
  get serverNow(){return Date.now()+this.clockOffset;}
  id='';peerCount=1;room!:RoomState;resume?:ActorState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
- onEmote?:(emote:Emote,id:string)=>void;
+ onEmote?:(emote:PlayerEmote,id:string)=>void;
  onFlowerNote?:(index:number)=>void;
  onFlowerComplete?:()=>void;
  onKnightVictory?:()=>void;
@@ -57,7 +57,7 @@ export class NetworkSession{
    else if(m.type==='flower-complete')this.onFlowerComplete?.();
    else if(m.type==='centipede-progress')this.onCentipedeProgress?.(m.points,m.completed);
    else if(m.type==='centipede-bump')this.onCentipedeBump?.(m.direction);
-   else if(m.type==='emote'&&m.id!==this.id&&emoteMessage(m.emote))this.onEmote?.(m.emote as Emote,m.id);
+   else if(m.type==='emote'&&m.id!==this.id&&emoteMessage(m.emote))this.onEmote?.(m.emote as PlayerEmote,m.id);
    else if(m.type==='flower-note'&&m.id!==this.id&&validFlowerIndex(m.index))this.onFlowerNote?.(m.index);
    else if(m.type==='log'){this.log=[...this.log,m.entry].slice(-10);}
    else if(m.type==='presence'){if(m.count>this.peerCount){this.worldElapsed=2;this.lastActor='';}this.peerCount=m.count;}

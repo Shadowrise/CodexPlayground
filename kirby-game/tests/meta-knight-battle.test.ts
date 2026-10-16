@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {startKnightBattle,advanceKnightBattle,knightAttack,knightDanger,knightPosition,knightProjectile,type KnightActor,type KnightBattle} from '../src/meta-knight-battle';
+import {KNIGHT,startKnightBattle,advanceKnightBattle,knightAttack,knightDanger,knightPosition,knightProjectile,cancelKnightBattle,knightBattleActive,type KnightActor,type KnightBattle} from '../src/meta-knight-battle';
 import {metaKnightVictoryLog} from '../src/world-log';
 import {CharacterUnlocks} from '../src/character-unlocks';
 const actor=(id='a'):KnightActor=>({id,p:[0,0,-2],yaw:Math.PI,available:true});
@@ -18,9 +18,9 @@ test('warnings leave the boss stationary and lock destinations; actual jump/dash
 });
 test('sword sectors, swept flight lanes, impact circles and low waves have distinct honest hit regions',()=>{
  const s=battle();setStage(s,'slash');const a=actor();a.p=[0,0,3];assert(knightDanger(s,a,2100));a.p=[4,0,0];assert(!knightDanger(s,a,2100));a.p=[0,2.9,3];assert(!knightDanger(s,a,2100));
- setStage(s,'dash');s.to=[10,0,0];a.p=[5,0,0];assert(knightDanger(s,a,3200,2800));a.p=[5,0,3];assert(!knightDanger(s,a,3200,2800));
+ setStage(s,'dash');s.to=[10,0,0];a.p=[5,0,0];assert(knightDanger(s,a,3200,2800));a.p=[5,0,KNIGHT.laneHalfWidth+1];assert(!knightDanger(s,a,3200,2800));
  setStage(s,'slam');a.p=[0,0,1];assert(knightDanger(s,a,2100));a.p=[0,3,1];assert(!knightDanger(s,a,2100));
- setStage(s,'wave');a.p=[0,0,3.5];assert(knightDanger(s,a,2500,2450));a.p[1]=1.2;assert(!knightDanger(s,a,2500,2450));
+ setStage(s,'wave');a.p=[0,0,KNIGHT.waveSpeed*500];assert(knightDanger(s,a,2500,2450));a.p[1]=1.2;assert(!knightDanger(s,a,2500,2450));
 });
 test('one attack cannot drain multiple hearts; no hearts is a real loss',()=>{
  const s=battle(),a=actor();setStage(s,'slash');a.p=[0,0,2];advanceKnightBattle(s,[a],2001);assert.equal(s.players.a.hp,4);
@@ -55,4 +55,9 @@ test('disconnection and late spectators cannot award themselves a victory; loss 
 });
 test('requested respect message has no player prefix, treats player names as text and supports literal replacement symbols',()=>{
  const entry=metaKnightVictoryLog('Саша $&');assert.equal(entry.name,'');assert.equal(entry.chat,false);assert.equal(entry.text,'Метакнайт с уважением смотрит на Саша $&.');
+});
+test('twofold boss and effects share doubled danger radii and lanes',()=>{assert.equal(KNIGHT.modelScale,1.65*2);assert.equal(KNIGHT.slashRadius,5.8*2);assert.equal(KNIGHT.laneHalfWidth,1.5*2);assert.equal(KNIGHT.impactRadius,2.5*2);assert.equal(KNIGHT.waveSpeed,.007*2);});
+test('cancelling keeps the player position, never grants victory, and lets friends continue',()=>{
+ const a=actor(),b=actor('b'),s=startKnightBattle([a,b],'a',1000)!,position=[...a.p];assert(cancelKnightBattle(s,'a',2100));assert(s.players.a.withdrawn);assert(knightBattleActive(s));assert.deepEqual(a.p,position);assert(!knightAttack(s,a,2200));
+ assert(cancelKnightBattle(s,'b',2300));assert.equal(s.stage,'cancelled');assert(!knightBattleActive(s));assert(!advanceKnightBattle(s,[a,b],5000));assert.equal(s.hp,12);assert(!s.rewarded);assert(!cancelKnightBattle(s,'a',2400));
 });

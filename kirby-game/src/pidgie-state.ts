@@ -5,8 +5,8 @@ export const PIDGIE_FOLLOW_REACTION_SECONDS=.6;
 /** Measured forward beak contact in the native ground-peck animation. */
 export const PIDGIE_PECK_REACH=1.4;
 export const PIDGIE_FOLLOW_MAX_SPEED=18;
-export const PIDGIE_PHASES = ['hidden','wander','fear','takeoff','fly','landing','follow','joy','toBread','feast'] as const;
-export const PIDGIE_CLIPS = ['Idle','Walk','Fear','Jump','Fly','Peck','Run','Joy'] as const;
+export const PIDGIE_PHASES = ['hidden','wander','fear','takeoff','fly','landing','follow','greet','joy','toBread','feast'] as const;
+export const PIDGIE_CLIPS = ['Idle','Walk','Fear','Jump','Fly','Peck','Run','Joy','Hello'] as const;
 export type PidgiePhase = typeof PIDGIE_PHASES[number];
 export type PidgieClip = typeof PIDGIE_CLIPS[number];
 export type PidgiePoint = [number,number];
@@ -47,7 +47,7 @@ export function validPidgieState(value:unknown):value is PidgieState {
  const s=value as Partial<PidgieState>;
  const followId=typeof s.followId==='string'&&s.followId.length>0&&s.followId.length<=64&&!/[\u0000-\u001f\u007f]/.test(s.followId);
  if((s.followId!==undefined&&!followId)||(s.followSpeed!==undefined&&!finite(s.followSpeed,0,PIDGIE_FOLLOW_MAX_SPEED)))return false;
- if(s.phase==='follow'&&(!followId||s.followSpeed===undefined))return false;
+ if((s.phase==='follow'||s.phase==='greet')&&(!followId||s.followSpeed===undefined))return false;
  if(s.friend!==undefined&&!validBreadOffering(s.friend))return false;
  if(['joy','toBread','feast'].includes(s.phase as string)&&!s.friend)return false;
  return PIDGIE_PHASES.includes(s.phase as PidgiePhase)
