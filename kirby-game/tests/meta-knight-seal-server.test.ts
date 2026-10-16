@@ -52,7 +52,7 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     room.room.locks['bug:0']=aid;
     send(a,actor('maze',{ride:{key:'bug:0',data:Array(10).fill(0)}}),[{type:'seal',id:'maze'}]);
     send(a,actor('maze'),[{type:'seal',id:'maze'}]);delete room.room.locks['bug:0'];
-    room.room.bread.owner=aid;send(a,actor('maze'),[{type:'seal',id:'maze'}]);room.room.bread.owner='';
+    room.room.bread.active=true;room.room.bread.owner=aid;send(a,actor('maze'),[{type:'seal',id:'maze'}]);room.room.bread.owner='';
     room.room.millQuest={...newMillQuest(),stage:'bags',owner:aid,carried:1,updatedAt:now};
     send(a,actor('maze'),[{type:'seal',id:'maze'}]);room.room.millQuest=newMillQuest();
     assert.deepEqual(room.room.sealProgress,newSealProgress(),'flying, mounted, hidden, tumbling, carrying or through-wall claims all fail');

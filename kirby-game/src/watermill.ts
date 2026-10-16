@@ -3,7 +3,8 @@ import {batchRigidMeshes} from './rigid-batch';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
-import {newMillQuest,advanceMill,applyMill,millNear,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
+import {MillBakery} from './mill-bakery';
+import {newMillQuest,advanceMill,applyMill,millNear,millWorking,MILL_TABLE,MILL_OVEN,MILL_BAKE_MS,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
 
 // The eastern bank of the existing central pond; inside its tree-free clearing.
 export const MILL_SITE = new T.Vector3(32, 0, 34);
@@ -47,8 +48,9 @@ export class Watermill {
   quest:MillQuest=newMillQuest();
   private readonly water=createMillWaterMaterial();
   readonly decor=new MillQuestDecor(this.water);
+  readonly bakery=new MillBakery();
   now=0;
-  get running(){return this.quest.stage==='running';}
+  get running(){return millWorking(this.quest);}
   private requestedAt=0;
   onFeedback?:(kind:'branch'|'gate'|'wrong'|'bag'|'finish')=>void;
   setQuest(q:MillQuest,now:number){
@@ -59,6 +61,7 @@ export class Watermill {
       else if(q.stage==='bags'&&old.stage==='flow'||q.delivered>old.delivered||q.carried!==old.carried&&q.carried>=0)this.onFeedback?.('bag');
       else if(q.branches.filter(Boolean).length>old.branches.filter(Boolean).length)this.onFeedback?.('branch');
       else if(q.gate!==old.gate)this.onFeedback?.('gate');
+      else if(q.kneadStep!==old.kneadStep||q.bakeAt!==old.bakeAt)this.onFeedback?.('bag');
     }
     this.quest=q;
   }
@@ -77,8 +80,19 @@ export class Watermill {
     if(q.owner!==actor.id)return;
     if(q.stage==='flow'&&millNear(actor,MILL_LEVER.toArray()))return {kind:'gate'};
     if(q.stage==='bags'&&q.carried>=0&&millNear(actor,MILL_HOPPER))return {kind:'deliver'};
+    if(q.stage==='knead'){
+      if(q.kneadStep===0&&millNear(actor,MILL_HOPPER,2))return {kind:'flour'};
+      if(millNear(actor,MILL_TABLE,1.65)){
+        if(q.kneadStep===1)return {kind:'mix'};
+        if(q.kneadStep>=2)return {kind:'knead'};
+      }
+    }
+    if(q.stage==='bake'&&millNear(actor,MILL_OVEN,1.65)){
+      if(!q.bakeAt)return {kind:'load'};
+      if(this.now-q.bakeAt>=MILL_BAKE_MS)return {kind:'collect'};
+    }
   }
-  target(actor:MillActor){return this.action(actor)?.kind==='deliver'?this.decor.hopper:this.handle;}
+  target(actor:MillActor){const kind=this.action(actor)?.kind;return kind==='deliver'||kind==='flour'?this.decor.hopper:kind==='mix'||kind==='knead'?this.bakery.bowl:kind==='load'||kind==='collect'?this.bakery.oven:this.handle;}
 
   get flow() {return this.openness;}
   private openness = 0;
@@ -264,12 +278,18 @@ export class Watermill {
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);
     this.splashes.frustumCulled=false;this.splashes.visible=false;root.add(this.splashes);
     this.decor.group.position.copy(MILL_SITE).multiplyScalar(-1);root.add(this.decor.group);
+    this.bakery.group.position.copy(MILL_SITE).multiplyScalar(-1);root.add(this.bakery.group);
   }
   prompt(actor:MillActor) {
     const q=this.quest,action=this.action(actor);
     if(action?.kind==='start')return 'E — начни приключение на мельнице · 6 очков';
     if(action?.kind==='gate')return q.gate===1?`Подожди ${Math.max(0,3-Math.floor((this.now-q.steadyAt)/1000))} с — не трогай рычаг`:'E — поверни рычаг, чтобы стрелка попала в зелёную зону';
     if(action?.kind==='deliver')return q.carried===q.order[q.delivered]?`E — положи ${MILL_COLOR_NAMES[q.carried]} мешочек в воронку`:`E — верни этот мешочек. Найди ${MILL_COLOR_NAMES[q.order[q.delivered]]}`;
+    if(action?.kind==='flour')return 'E — забери мешочек муки';
+    if(action?.kind==='mix')return 'E — высыпь муку в миску и добавь воду';
+    if(action?.kind==='knead')return `E — помеси тесто · ${q.kneadStep-2}/3`;
+    if(action?.kind==='load')return 'E — положи тесто в печку';
+    if(action?.kind==='collect')return 'E — достань готовый хлебушек';
     return '';
   }
   update(dt:number,owner?:T.Object3D) {
@@ -290,8 +310,10 @@ export class Watermill {
     }
     this.splashes.instanceMatrix.needsUpdate=true;
     this.decor.update(this.quest,this.now,owner);
+    this.bakery.update(dt,this.quest,this.now,owner);
   }
   constrain(position:T.Vector3,size:number) {
+    this.bakery.constrain(position,size);
     const x=position.x-MILL_SITE.x,z=position.z-MILL_SITE.z,padding=.65*size;
     const minX=12.4-padding,maxX=21.6+padding,minZ=-5.1-padding,maxZ=3.2+padding;
     if(x>minX && x<maxX && z>minZ && z<maxZ) {

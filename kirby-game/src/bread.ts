@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {breadCarryScale,breadPosition,newBread,type BreadState} from './bread-state';
+import {breadCarryScale,breadPosition,newBread,holdsBread,normalizeBread,type BreadState} from './bread-state';
 import {softMist,softMistMaterial} from './soft-mist';
 
 function sparkleTexture(){
@@ -23,25 +23,37 @@ export class BreadWorld{
  private mist:T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>;
  private halfThickness=.15;
  private scratch=new T.Vector3();
+ private extraWorlds:BreadWorld[]=[];
+ private modelTemplate?:T.Object3D;
  constructor(){
-  this.group.name='Golden mountain bread';this.loaf.name='Carryable white bread slice';this.aura.name='Golden bread aura';this.group.add(this.loaf,this.aura);
+  this.group.name='Fresh bakery bread';this.loaf.name='Carryable white bread slice';this.aura.name='Golden bread aura';this.group.add(this.loaf,this.aura);
   this.mist=softMist(softMistMaterial('#f2c653',.4));this.mist.name='Golden bread volume mist';this.aura.add(this.mist);
   const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.BufferAttribute(new Float32Array(48*3),3));
   this.sparkles=new T.Points(geometry,new T.PointsMaterial({map:sparkleTexture(),color:'#fff0a4',size:.28,transparent:true,opacity:1,blending:T.AdditiveBlending,depthWrite:false,toneMapped:false}));
   this.sparkles.frustumCulled=false;this.aura.add(this.sparkles);this.update(0,new Map());
  }
  setModel(source:T.Object3D){
+  this.modelTemplate=source.clone(true);
   const bounds=new T.Box3().setFromObject(source),center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()),factor=1.55/size.y;
   const normalized=new T.Group();normalized.name='Textured Tiny Treats bread';source.position.sub(center);normalized.add(source);normalized.scale.setScalar(factor);
   source.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=o.receiveShadow=true;});
   this.halfThickness=size.z*factor/2;this.loaf.clear();this.loaf.add(normalized);
  }
- reset(state?:BreadState){this.state=state?structuredClone(state):newBread();}
- holds(id:string){return this.state.owner===id;}
+ reset(state?:BreadState){this.state=normalizeBread(state?structuredClone(state):undefined);}
+ holds(id:string){return holdsBread(this.state,id);}
  update(now:number,actors:ReadonlyMap<string,T.Object3D>){
+  const extras=this.state.others??[];
+  while(this.extraWorlds.length>extras.length){
+   const old=this.extraWorlds.pop()!;old.group.removeFromParent();old.sparkles.geometry.dispose();
+   const m=old.sparkles.material as T.PointsMaterial;m.map?.dispose();m.dispose();old.mist.material.dispose();
+  }
+  extras.forEach((state,i)=>{
+   let world=this.extraWorlds[i];if(!world){world=new BreadWorld();if(this.modelTemplate)world.setModel(this.modelTemplate.clone(true));this.extraWorlds.push(world);this.group.add(world.group);}
+   world.state=state;world.update(now,actors);
+  });
   const b=this.state,owner=actors.get(b.owner),seconds=now/1000;
   const held=!!b.owner,scale=owner?breadCarryScale(owner.scale.x):b.scale;
-  this.loaf.visible=!held||!!owner;this.aura.visible=this.loaf.visible&&!b.offering;this.loaf.scale.setScalar(scale);
+  this.loaf.visible=b.active!==false&&(!held||!!owner);this.aura.visible=this.loaf.visible&&!b.offering;this.loaf.scale.setScalar(scale);
   if(owner){
    // The sword stays in the right fist; the free gauntlet carries the loaf.
    const knightHand=owner.getObjectByName('Left_hand_attachment');

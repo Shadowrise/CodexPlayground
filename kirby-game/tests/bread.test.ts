@@ -12,14 +12,15 @@ import {softMistMaterial} from '../src/soft-mist';
 import {canFeedPidgie} from '../src/bread-state';
 import {pidgieFixture} from './pidgie-fixture';
 import {achievementPoints} from '../src/score';
-import {applyBread,advanceBread,breadFloor,breadPosition,canPickBread,newBread,validBread,BREAD_SPAWN,type BreadActor} from '../src/bread-state';
+import {applyBread,advanceBread,breadFloor,breadPosition,canPickBread,newBread,grantBread,holdsBread,normalizeBread,breadLoaves,validBread,BREAD_SPAWN,type BreadActor} from '../src/bread-state';
 import {MOUNTAIN_STEPS,MOUNTAIN_SUMMIT,MOUNTAIN_SEAL_NICHE,mountainWorld} from '../src/mountain-ledges-layout';
+const freshBread=()=>({...newBread(),active:true});
 const actor=(id='solo',p:readonly number[]=BREAD_SPAWN):BreadActor=>({id,p:[...p],yaw:0,size:1,available:true});
 
 test('feeding requires carried bread, a nearby grounded bird and a facing player; the throw lands midway and cannot be reclaimed',()=>{
- const a=actor('solo',[0,0,0]),b={...newBread(),owner:'solo'},bird={phase:'follow',p:[0,0,4]};
+ const a=actor('solo',[0,0,0]),b={...freshBread(),owner:'solo'},bird={phase:'follow',p:[0,0,4]};
  assert(canFeedPidgie(b,a,bird));assert(!canFeedPidgie(b,{...a,yaw:Math.PI},bird));
- assert(!canFeedPidgie(newBread(),a,bird));assert(canFeedPidgie(b,a,{...bird,p:[0,0,8.4]}));assert(!canFeedPidgie(b,a,{...bird,p:[0,0,10]}));assert(!canFeedPidgie(b,a,{...bird,phase:'fly'}));
+ assert(!canFeedPidgie(freshBread(),a,bird));assert(canFeedPidgie(b,a,{...bird,p:[0,0,8.4]}));assert(!canFeedPidgie(b,a,{...bird,p:[0,0,10]}));assert(!canFeedPidgie(b,a,{...bird,phase:'fly'}));
  const offered=applyBread(b,{kind:'feed'},a,1000,undefined,bird);
  assert.deepEqual(offered.p,[0,0,2]);assert(offered.drop);assert.equal(offered.offering?.by,a.id);
  assert(breadPosition(offered,1200)[1]>0);assert(!canPickBread(offered,{...a,p:offered.p},100000));assert(validBread(offered));
@@ -37,12 +38,12 @@ test('golden aura shares the fruit mist shader and keeps all sparkles inside the
  }
 });
 
-test('one textured loaf starts on the summit and only a nearby available character can take it',()=>{
- const b=newBread(),a=actor();assert(validBread(b));assert.equal(b.p[1],MOUNTAIN_SUMMIT.y);
+test('only baked bread can be picked up by a nearby available character',()=>{
+ const b=freshBread(),a=actor();assert(validBread(b));assert.equal(b.p[1],0);assert(!canPickBread(newBread(),a,1000));
  assert.equal(breadFloor(b.p[0],b.p[2],b.p[1]),b.p[1]);
  assert(canPickBread(b,a,1000));
  assert(!canPickBread(b,{...a,available:false},1000));
- assert(!canPickBread(b,{...a,p:[b.p[0],0,b.p[2]]},1000));
+ assert(!canPickBread(b,{...a,p:[b.p[0],10,b.p[2]]},1000));
  assert(!canPickBread(b,{...a,p:[b.p[0]+5,b.p[1],b.p[2]]},1000));
  const held=applyBread(b,{kind:'pick'},a,1000);assert.equal(held.owner,'solo');
  assert.equal(applyBread(held,{kind:'pick'},actor('pigeon'),1000),held,'another character cannot duplicate the loaf');
@@ -52,13 +53,13 @@ test('one textured loaf starts on the summit and only a nearby available charact
 test('a loaf released on the permanent seal niche keeps its visible supporting floor',()=>{
  const niche=MOUNTAIN_SEAL_NICHE,p=mountainWorld(niche.tangent,niche.radial-.35);
  assert.equal(breadFloor(p.x,p.z,niche.y),niche.y);
- const loaf={...newBread(),p:[p.x,niche.y,p.z] as [number,number,number]};
+ const loaf={...freshBread(),p:[p.x,niche.y,p.z] as [number,number,number]};
  assert.equal(advanceBread(loaf,10000),loaf,'the new niche is a real floor for shared loose items');
 });
 
 test('a drop falls forward, rests on the ground, and can be picked up again without snapping back',()=>{
  for(const yaw of [0,Math.PI/2,Math.PI,-Math.PI/2]){
-  const a={...actor(),p:[0,0,0],yaw},held={...newBread(),owner:a.id};
+  const a={...actor(),p:[0,0,0],yaw},held={...freshBread(),owner:a.id};
   const drop=applyBread(held,{kind:'drop'},a,10000);
   assert.equal(drop.owner,'');assert(drop.drop);
   assert(Math.abs(drop.p[0]-Math.sin(yaw)*3.4)<1e-8);assert(Math.abs(drop.p[2]-Math.cos(yaw)*3.4)<1e-8);
@@ -71,7 +72,7 @@ test('a drop falls forward, rests on the ground, and can be picked up again with
 });
 
 test('dropping on the high platform uses its height, while throwing off its edge falls to the lower surface',()=>{
- const a={...actor(),yaw:-Math.PI*3/4},b={...newBread(),owner:a.id};
+ const top=mountainWorld(MOUNTAIN_SUMMIT.tangent,MOUNTAIN_SUMMIT.radial-.5),a={...actor('solo',[top.x,MOUNTAIN_SUMMIT.y,top.z]),yaw:-Math.PI*3/4},b={...freshBread(),owner:a.id};
  const onTop=applyBread(b,{kind:'drop'},a,1000);assert.equal(onTop.p[1],MOUNTAIN_SUMMIT.y);
  const edge=mountainWorld(MOUNTAIN_SUMMIT.tangent,MOUNTAIN_SUMMIT.radial-MOUNTAIN_SUMMIT.depth/2+.2);
  const off=applyBread(b,{kind:'drop'},{...a,p:[edge.x,MOUNTAIN_SUMMIT.y,edge.z]},1000);
@@ -80,7 +81,7 @@ test('dropping on the high platform uses its height, while throwing off its edge
 });
 
 test('bread saves reject invalid positions and drop times',()=>{
- const b=newBread();assert(validBread(JSON.parse(JSON.stringify(b))));
+ const b=freshBread();assert(validBread(JSON.parse(JSON.stringify(b))));
  assert(!validBread({...b,p:[0,NaN,0]}));assert(!validBread({...b,scale:0}));
  assert(!validBread({...b,drop:{from:[0,1,0],at:0,duration:0}}));assert(!validBread({...b,pickupAt:-1}));
  const actor=(variant:string)=>({variant,x:0,z:0,yaw:0,size:1,fruitsEaten:0});
@@ -91,13 +92,13 @@ test('bread saves reject invalid positions and drop times',()=>{
 });
 
 test('a loaf left on a disappearing step falls with the lost support',()=>{
- const p=MOUNTAIN_STEPS[0],xy=mountainWorld(p.tangent,p.radial),b={...newBread(),p:[xy.x,p.y,xy.z] as [number,number,number]},steps=MOUNTAIN_STEPS.map(()=>[0,0,0]);
+ const p=MOUNTAIN_STEPS[0],xy=mountainWorld(p.tangent,p.radial),b={...freshBread(),p:[xy.x,p.y,xy.z] as [number,number,number]},steps=MOUNTAIN_STEPS.map(()=>[0,0,0]);
  assert.equal(advanceBread(b,1000,steps),b);steps[0]=[2,0,0];const falling=advanceBread(b,1000,steps);
  assert(falling.p[1]<p.y);assert.equal(falling.drop?.speed,0);assert(breadPosition(falling,1100)[1]<p.y);
  assert.deepEqual(breadPosition(falling,100000),falling.p);
 });
 
-test('the room arbitrates one loaf, blocks other interactions, and drops it when its carrier leaves',async()=>{
+test('the room arbitrates one loaf, permits fruit pickup while carrying it, blocks other interactions, and drops it when its carrier leaves',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
   .replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }')
   .replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './","from '"+new URL('../../game-server/src/',import.meta.url).href)
@@ -120,11 +121,28 @@ test('the room arbitrates one loaf, blocks other interactions, and drops it when
   const first=await join('Baker',0),second=await join('Bird',1);
   const a={p:[...BREAD_SPAWN],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Baker',variant:0,star:0};
   const send=(s:Socket,p:number[],events:unknown[])=>room.webSocketMessage(s,JSON.stringify({type:'frame',actor:{...a,p},events}));
-  send(first,a.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,first.data.id);
+  send(first,a.p,[{type:'bread',action:{kind:'pick'}},{type:'mill',action:{kind:'collect'}}]);assert.equal(room.room.bread.active,false);
+  const {MILL_QUEST_LEVER,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_TABLE,MILL_OVEN,MILL_BAKE_MS}=await import('../src/mill-quest');
+  const act=(p:readonly number[],action:unknown)=>{now+=1000;send(first,[...p],[{type:'mill',action}]);};
+  act(MILL_QUEST_LEVER,{kind:'start'});
+  for(const p of MILL_BRANCHES){now+=1000;send(first,[...p],[{type:'hit'}]);}
+  act(MILL_QUEST_LEVER,{kind:'gate'});act(MILL_QUEST_LEVER,{kind:'gate'});now+=3100;send(first,[...MILL_QUEST_LEVER],[]);
+  for(const index of room.room.millQuest.order){act(MILL_BAGS[index],{kind:'pick',index});act(MILL_HOPPER,{kind:'deliver'});}
+  assert.equal(room.room.millQuest.stage,'knead');assert(!first.data.actor.achievements.includes('millQuest'));
+  act(MILL_HOPPER,{kind:'flour'});act(MILL_TABLE,{kind:'mix'});for(let i=0;i<3;i++)act(MILL_TABLE,{kind:'knead'});
+  act(MILL_OVEN,{kind:'load'});act(MILL_OVEN,{kind:'collect'});assert.equal(room.room.bread.active,false,'no early bread');
+  now+=MILL_BAKE_MS;send(second,[...MILL_OVEN],[{type:'mill',action:{kind:'collect'}}]);assert.equal(room.room.bread.active,false,'another player cannot claim the bake');
+  act(MILL_OVEN,{kind:'collect'});assert.equal(room.room.bread.owner,first.data.id);const rewarded=structuredClone(room.room.bread);
+  act(MILL_OVEN,{kind:'collect'});assert.deepEqual(room.room.bread,rewarded,'duplicate collects do not produce more loaves');
   send(second,a.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,first.data.id);
   send(first,[49,0,40.5],[{type:'lock',key:'cart:0'},{type:'mill',action:{kind:'start'}},{type:'fruit',index:0},{type:'star'}]);
-  assert.equal([...first.messages].reverse().find(m=>m.type==='lock').ok,false);assert.equal(room.room.millQuest.stage,'idle');
-  assert.equal(room.room.fruits[0],null);assert.equal(room.room.starAt,0);
+  assert.equal([...first.messages].reverse().find(m=>m.type==='lock').ok,false);assert.equal(room.room.millQuest.stage,'running');
+  assert.equal(room.room.fruits[0],first.data.id);assert.equal(room.room.starAt,0);
+  assert.equal(first.data.actor.fruits,1);assert.deepEqual(first.data.actor.fruitBoost,{stacks:1,remaining:20});
+  assert.equal(room.room.bread.owner,first.data.id,'eating fruit keeps the loaf in the carrier’s hands');
+  send(second,[49,0,40.5],[{type:'fruit',index:0}]);assert.equal(second.data.actor.fruits,0,'another player cannot collect the same fruit');
+  send(first,[49,0,40.5],[{type:'fruit',index:0}]);assert.equal(first.data.actor.fruits,1);
+  assert.deepEqual(first.data.actor.fruitBoost,{stacks:1,remaining:20},'duplicate claims do not add another speed stack');
   send(first,[0,0,0],[{type:'bread',action:{kind:'drop'}}]);const dropped=room.room.bread;
   assert.equal(dropped.owner,'');assert.deepEqual(dropped.p,[0,0,3.4]);
   send(second,dropped.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,'');
@@ -135,15 +153,36 @@ test('the room arbitrates one loaf, blocks other interactions, and drops it when
   const world={npcs:Array.from({length:14},()=>({...a,p:[0,0,0]})),npcLife:Array.from({length:14},()=>Array(15).fill(0)),carts:Array.from({length:12},()=>Array(4).fill(0)),balloons:Array.from({length:3},()=>[0,'parked',...Array(14).fill(0)]),bugs:Array.from({length:40},()=>Array(10).fill(0)),pidgie};
   room.webSocketMessage(first,JSON.stringify({type:'frame',actor:{...a,p},world,events:[{type:'bread',action:{kind:'pick'}}]}));
   send(first,p,[{type:'bread',action:{kind:'feed'}}]);const offered=structuredClone(room.room.bread);
-  assert(offered.offering);assert.equal(room.room.world.pidgie.phase,'joy');assert.equal(achievementPoints(first.data.actor.achievements),10);
+  assert(offered.offering);assert.equal(room.room.world.pidgie.phase,'joy');assert.equal(achievementPoints(first.data.actor.achievements),16);
   const notices=()=>room.room.log.filter((m:any)=>m.text.includes('угостил дикого Пиджи хлебушком'));
   assert.equal(notices().length,1);assert.equal(notices()[0].text,'Baker угостил дикого Пиджи хлебушком, теперь Пиджи его лучший друг.');
   send(first,p,[{type:'bread',action:{kind:'feed'}},{type:'bread',action:{kind:'drop'}}]);
   now+=5000;send(third,offered.p,[{type:'bread',action:{kind:'pick'}}]);
-  assert.deepEqual(room.room.bread,offered);assert.equal(notices().length,1);assert.equal(achievementPoints(first.data.actor.achievements),10);
+  assert.deepEqual(room.room.bread,offered);assert.equal(notices().length,1);assert.equal(achievementPoints(first.data.actor.achievements),16);
   room.webSocketMessage(first,JSON.stringify({type:'frame',actor:{...a,p},world,events:[]}));
   assert.equal(room.room.world.pidgie.friend.by,first.data.id,'stale host frames cannot undo the friendship');
   await room.webSocketClose(first);assert.deepEqual(room.room.bread,offered);assert.equal(room.room.world.pidgie.friend.by,first.data.id);
   const awakened=new GameRoom(ctx,{});assert.deepEqual(awakened.room.bread,offered,'permanent bread and friendship survive hibernation');
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
+});
+
+
+test('baked rewards coexist, stay with their owners, and preserve an offered loaf',()=>{
+ const a=actor('a',[0,0,0]),b=actor('b',[8,0,0]);
+ let state=grantBread(newBread(),a,1000);state=grantBread(state,b,2000);
+ assert(holdsBread(state,'a'));assert(holdsBread(state,'b'));assert.equal(breadLoaves(state).length,2);assert(validBread(state));
+ assert.equal(grantBread(state,b,3000),state,'a carrier cannot receive a duplicate');
+ state=applyBread(state,{kind:'feed'},a,4000,undefined,{phase:'wander',p:[0,0,4]});
+ assert(state.offering);assert(holdsBread(state,'b'));assert(validBread(state));
+ state=applyBread(state,{kind:'drop'},b,5000);assert(!holdsBread(state,'b'));assert(breadLoaves(state).some(v=>v.offering?.by==='a'));
+ const world=new BreadWorld();world.state=state;world.update(5500,new Map());assert.equal(world.group.children.length,3,'both world loaves render');
+ assert(!validBread({...state,others:[{...freshBread(),owner:'same'},{...freshBread(),owner:'same'}]}));
+});
+
+test('old untouched mountain bread migrates away while carried and dropped rewards survive',()=>{
+ const p=mountainWorld(MOUNTAIN_SUMMIT.tangent,MOUNTAIN_SUMMIT.radial-.5),old={...freshBread(),active:undefined,p:[p.x,MOUNTAIN_SUMMIT.y,p.z] as [number,number,number]};
+ assert.equal(normalizeBread(old).active,false);
+ assert.equal(normalizeBread({...old,owner:'solo'}).owner,'solo');
+ assert.equal(normalizeBread(newBread()).active,false);
+ const world=new BreadWorld();world.update(0,new Map());assert(!world.loaf.visible);assert(!world.aura.visible);
 });

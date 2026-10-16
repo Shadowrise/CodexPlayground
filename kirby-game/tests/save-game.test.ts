@@ -25,7 +25,7 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
  const npcs=createNpcs(model.scene,model.animations,variant),world=new FruitWorld();
  player.actor.position.set(12,0,33);player.yaw=.8;player.resizeTo(2,true);player.shrink(3);player.eatFruit();player.eatFruit();player.fruitBoost.update(10);
  player.achievements.add('bench');player.achievements.add('star');player.achievements.add('firefly');npcs[3].achievements.add('balloon');
- player.skyCheckpoint=3;player.eventPoints=6;
+ player.skyCheckpoint=3;player.mountainCheckpoint=2;player.eventPoints=6;
  player.starBlessed=true;player.starRemaining=18;player.starCooldown=108;
  npcs[3].actor.position.set(-15,0,90);npcs[3].eatFruit();
  world.restore(world.fruits.map((_,i)=>i<3),1);
@@ -45,7 +45,7 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
  assert.deepEqual([...restored.achievements],['bench','star','firefly']);assert(friends[3].achievements.has('balloon'));
  assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,achievements:['bench','bench']}})));
  assert.equal(restored.eventPoints,6);assert.throws(()=>parseSave(JSON.stringify({...save,player:{...save.player,eventPoints:13}})));
- assert.equal(restored.skyCheckpoint,3);assert(restored.starBlessed);assert.equal(restored.starRemaining,18);assert.equal(restored.starCooldown,108);
+ assert.equal(restored.skyCheckpoint,3);assert.equal(restored.mountainCheckpoint,2);assert(restored.starBlessed);assert.equal(restored.starRemaining,18);assert.equal(restored.starCooldown,108);
  assert.equal(save.player.variant,variant[0]);assert.equal(restored.actor.position.x,12);assert.equal(restored.actor.position.z,33);
  assert.equal(restored.yaw,.8);assert.equal(restored.actor.scale.x,.3);assert.equal(restored.fruitsEaten,2);
  assert.equal(restored.sizeSpeedMultiplier,2);assert.equal(restored.fruitBoost.multiplier,1.4);assert.equal(restored.fruitBoost.remaining,10);
@@ -56,6 +56,8 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
  assert.throws(()=>parseSave('broken'));
  const nightSave=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,undefined,true)));assert.equal(nightSave.night,true);const timed=parseSave(JSON.stringify({...save,dayPhase:.137}));assert.equal(timed.dayPhase,.137);assert.throws(()=>parseSave(JSON.stringify({...save,dayPhase:1})));assert.throws(()=>parseSave(JSON.stringify({...save,night:'yes'})));
  assert.throws(()=>parseSave(JSON.stringify({...save,mazeStar:'yes'})));
+ for(const mountainCheckpoint of [-1,3,1.5,'2'])assert.throws(()=>parseSave(JSON.stringify({...save,mountainCheckpoint})));
+ const beforeMountainFlags=structuredClone(save);delete beforeMountainFlags.mountainCheckpoint;restoreGame(beforeMountainFlags,restored,friends,fruits);assert.equal(restored.mountainCheckpoint,0);
  const oldFormat=JSON.parse(JSON.stringify(save));delete oldFormat.player.achievements;for(const npc of oldFormat.npcs)delete npc.achievements;
  restoreGame(parseSave(JSON.stringify(oldFormat)),restored,friends,fruits);assert.deepEqual([...restored.achievements],['star']);assert.equal(friends[3].achievements.size,0);assert.equal(restored.fruitsEaten,2);
  const legacy={...save};delete legacy.mazeStar;delete legacy.starRemaining;delete legacy.starCooldown;restoreGame(parseSave(JSON.stringify(legacy)),restored,friends,fruits);assert(!restored.starBlessed);assert.equal(restored.starRemaining,0);assert.equal(restored.starCooldown,0);

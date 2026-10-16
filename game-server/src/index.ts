@@ -1,7 +1,7 @@
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
-import {newMillQuest,advanceMill,applyMill,millPushTarget,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
-import {newBread,applyBread,advanceBread,type BreadAction} from '../../kirby-game/src/bread-state';
+import {newMillQuest,advanceMill,applyMill,millPushTarget,millWorking,millCarrying,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
+import {newBread,applyBread,advanceBread,grantBread,holdsBread,breadOffering,normalizeBread,type BreadAction} from '../../kirby-game/src/bread-state';
 import {newSealProgress,normalizeSealProgress,collectSeal,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
 import {canPressNumber,NUMBER_PRESS_MS} from '../../kirby-game/src/number-garden-site';
@@ -37,7 +37,7 @@ export class HistoryStore extends DurableObject<Env>{
 export class GameRoom extends DurableObject<Env>{
  private room?:RoomState;private bossSaved='';private flowerSaved='null';private numberSaved='null';private chaseSentAt=0;private chatRoom?:string;
  constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}this.restoreSeals();ctx.blockConcurrencyWhile(async()=>{const [event,flowers,numbers]=await Promise.all([ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game'),ctx.storage.get<NumberGame>('number-game')]);if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}if(this.room&&validNumberGame(numbers)){this.room.numberGame=numbers;this.numberSaved=JSON.stringify(numbers);}});}
- private restoreSeals(){if(this.room)this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();}
+ private restoreSeals(){if(this.room){this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};}}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
@@ -112,28 +112,28 @@ export class GameRoom extends DurableObject<Env>{
  }
  private millActor(a:Attachment):MillActor|undefined{
   const c=a.actor;if(!c)return;const q=c.q;
-  return {id:a.id,p:c.p,yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),size:c.s,available:this.room?.bread?.owner!==a.id&&!c.ride&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};
+  return {id:a.id,p:c.p,yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),size:c.s,available:!holdsBread(this.room?.bread,a.id)&&!c.ride&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};
  }
  private sealActor(a:Attachment,id:unknown):SealActor|undefined{
   const c=a.actor,r=this.room;if(!c||!r)return;
-  const carryingBag=r.millQuest?.owner===a.id&&(r.millQuest.carried??-1)>=0;
+  const carryingBag=millCarrying(r.millQuest,a.id);
   const activity=id==='treehouse'
    ?r.locks['tree:0']===a.id&&c.ride?.key==='tree:0'&&!Object.entries(r.locks).some(([key,owner])=>owner===a.id&&key!=='tree:0')&&['Lookout','Walk','WalkBackward'].includes(c.state)
    :!c.ride&&!Object.values(r.locks).includes(a.id)&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight'].includes(c.state);
-  return {id:a.id,p:c.p,size:c.s,available:a.visible===true&&!c.roll&&r.bread?.owner!==a.id&&!carryingBag&&activity};
+  return {id:a.id,p:c.p,size:c.s,available:a.visible===true&&!c.roll&&!holdsBread(r.bread,a.id)&&!carryingBag&&activity};
  }
  private advanceMill(now:number){
   const r=this.room;if(!r)return false;const old=r.millQuest??newMillQuest();
   const next=advanceMill(old,now,old.stage==='idle'||old.stage==='running'||this.players().some(s=>(s.deserializeAttachment() as Attachment).id===old.owner));
-  r.millQuest=next;r.mill=next.stage==='running';return next!==old;
+  r.millQuest=next;r.mill=millWorking(next);return next!==old;
  }
  private breadAction(a:Attachment,action:BreadAction,now:number){
   const r=this.room,actor=this.millActor(a);if(!r||!actor)return false;
-  const bag=r.millQuest?.owner===a.id&&(r.millQuest?.carried??-1)>=0;
+  const bag=millCarrying(r.millQuest,a.id);
   actor.available=!a.actor?.ride&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push','Jump','Fly'].includes(a.actor!.state)&&!bag&&!Object.values(r.locks).includes(a.id);
   const old=r.bread??newBread(),next=applyBread(old,action,{...actor,available:actor.available!==false},now,r.world?.mountainSteps,r.world?.pidgie);
   if(next===old)return false;r.bread=next;
-  if(next.offering&&a.actor){
+  if(action.kind==='feed'&&next.offering&&a.actor){
    if(!a.actor.achievements.includes('pidgieFriend'))a.actor.achievements.push('pidgieFriend');
    if(r.world?.pidgie)r.world.pidgie=beginPidgieFeeding(r.world.pidgie,next.offering);
    this.logEntry(pidgieFriendLog(a.actor.name));
@@ -143,10 +143,11 @@ export class GameRoom extends DurableObject<Env>{
  private millAction(a:Attachment,action:MillAction,now:number){
   const r=this.room,actor=this.millActor(a);if(!r||!actor||!action||typeof action!=='object')return false;
   const old=r.millQuest??newMillQuest(),next=applyMill(old,action,actor,now);if(next===old)return false;
-  r.millQuest=next;r.mill=next.stage==='running';
+  r.millQuest=next;r.mill=millWorking(next);
   if(next.stage==='running'&&old.stage!=='running'&&a.actor){
+   r.bread=grantBread(r.bread??newBread(),{...actor,available:true},now);
    if(!a.actor.achievements.includes('millQuest'))a.actor.achievements.push('millQuest');
-   this.log(a,'запустил радужную мельницу — над поляной закружились мыльные пузыри!');
+   this.log(a,'испёк хлебушек на мельнице — над поляной закружились мыльные пузыри!');
   }
   return true;
  }
@@ -278,7 +279,7 @@ export class GameRoom extends DurableObject<Env>{
   let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
-   if(r.bread?.offering&&next.pidgie)next.pidgie=beginPidgieFeeding(next.pidgie,r.bread.offering);
+   if(breadOffering(r.bread)&&next.pidgie)next.pidgie=beginPidgieFeeding(next.pidgie,breadOffering(r.bread)!);
 
   }
   socket.serializeAttachment(a);
@@ -296,7 +297,7 @@ export class GameRoom extends DurableObject<Env>{
     const actor=this.sealActor(a,e.id),old=r.sealProgress??newSealProgress();
     if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){r.sealProgress=next;changed=true;}}
    }
-   else if(e.type==='centipede-start'&&r.bread?.owner!==a.id){
+   else if(e.type==='centipede-start'&&!holdsBread(r.bread,a.id)){
     // A simultaneous/stale request never replaces the running event. Return the
     // current state so the caller also removes an outdated interaction prompt.
     if(!r.centipede&&!r.festival){const boss=this.bossActor(a);if(boss){const q=startCentipede(e.trail,boss,now);if(q){r.centipede=q;this.log(a,'позвал Топотушку поиграть в догонялки и подружиться!');changed=true;}}}
@@ -307,14 +308,14 @@ export class GameRoom extends DurableObject<Env>{
    else if((e.type==='pidgie-scare'||e.type==='pidgie-interest')&&a.id===r.host){
     const player=e.playerId===a.id?a:this.players().map(s=>s.deserializeAttachment() as Attachment).find(p=>p.id===e.playerId);
     if(player?.actor){
-     if(!r.bread?.offering&&(e.type==='pidgie-scare'||r.bread?.owner===player.id))this.logEntry((e.type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(player.actor.name));
+     if(!breadOffering(r.bread)&&(e.type==='pidgie-scare'||holdsBread(r.bread,player.id)))this.logEntry((e.type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(player.actor.name));
     }
    }
    else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);this.broadcast({type:'emote',emote:e.emote,id:a.id},socket);}}
    else if(e.type==='number-start'){
-    const actor=this.flowerActor(a),old=r.numberGame;if(actor&&!r.festival&&r.bread?.owner!==a.id)r.numberGame=startNumberGame(old,actor,now);if(r.numberGame!==old)numbersChanged=true;this.send(socket,{type:'number-game',game:r.numberGame});
+    const actor=this.flowerActor(a),old=r.numberGame;if(actor&&!r.festival&&!holdsBread(r.bread,a.id))r.numberGame=startNumberGame(old,actor,now);if(r.numberGame!==old)numbersChanged=true;this.send(socket,{type:'number-game',game:r.numberGame});
    }
-   else if(e.type==='number-note'&&a.actor&&a.visible&&r.bread?.owner!==a.id&&now-(a.lastNumber??0)>=NUMBER_PRESS_MS&&canPressNumber(e.digit,{x:a.actor.p[0],y:a.actor.p[1],z:a.actor.p[2]},a.actor.s)){
+   else if(e.type==='number-note'&&a.actor&&a.visible&&!holdsBread(r.bread,a.id)&&now-(a.lastNumber??0)>=NUMBER_PRESS_MS&&canPressNumber(e.digit,{x:a.actor.p[0],y:a.actor.p[1],z:a.actor.p[2]},a.actor.s)){
     if(r.numberGame&&r.numberGame.stage!=='answer')continue;const actor=this.flowerActor(a);if(!actor?.available)continue;
     a.lastNumber=now;this.broadcast({type:'number-note',digit:e.digit,id:a.id},socket);
     const old=r.numberGame;r.numberGame=pressNumberGame(old,e.digit,actor,now,this.flowerActors(a));if(r.numberGame!==old){numbersChanged=true;this.rewardNumbers(a);}
@@ -330,18 +331,18 @@ export class GameRoom extends DurableObject<Env>{
     const old=r.flowerGame;r.flowerGame=playFlowerGame(old,e.index,flowerActor,now,this.flowerActors(a));if(r.flowerGame!==old){flowersChanged=true;this.rewardFlowers(a);}
    }
    else if(e.type==='fruit'&&Number.isInteger(e.index)&&e.index>=0&&e.index<70&&!r.fruits[e.index]&&a.actor){
-    if(e.npc===undefined){if(r.bread?.owner===a.id)continue;r.fruits[e.index]=a.id;changed=true;}
+    if(e.npc===undefined){r.fruits[e.index]=a.id;changed=true;}
     else if(a.id===r.host&&Number.isInteger(e.npc)&&e.npc>=0&&e.npc<14){r.fruits[e.index]='npc:'+e.npc;changed=true;}
    }else if(e.type==='bread'){if(this.breadAction(a,e.action,now))changed=true;}
    else if(e.type==='mill'){if(e.action?.kind!=='push'&&this.millAction(a,e.action,now))changed=true;}
-   else if(e.type==='star'&&r.bread?.owner!==a.id&&now>=r.starAt&&a.actor){r.starAt=now+120000;a.actor.star=30;this.send(socket,{type:'star'});changed=true;}
+   else if(e.type==='star'&&!holdsBread(r.bread,a.id)&&now>=r.starAt&&a.actor){r.starAt=now+120000;a.actor.star=30;this.send(socket,{type:'star'});changed=true;}
    else if(e.type==='lock'&&validResourceKey(e.key)){
-    const ok=r.bread?.owner!==a.id&&(!r.locks[e.key]||r.locks[e.key]===a.id);if(ok){for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];r.locks[e.key]=a.id;changed=true;}this.send(socket,{type:'lock',key:e.key,ok});
+    const ok=!holdsBread(r.bread,a.id)&&(!r.locks[e.key]||r.locks[e.key]===a.id);if(ok){for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];r.locks[e.key]=a.id;changed=true;}this.send(socket,{type:'lock',key:e.key,ok});
    }else if(e.type==='release'&&r.locks[e.key]===a.id){
     if(e.key.startsWith('bug:')&&validBugLanding(e.bugState)){const i=e.key.split(':')[1];(r.bugLandings??={})[i]=[...e.bugState];if(r.world)r.world.bugs[Number(i)]=[...e.bugState];}
     delete r.locks[e.key];changed=true;
    }
-   else if(e.type==='hit'&&r.bread?.owner!==a.id&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
+   else if(e.type==='hit'&&!holdsBread(r.bread,a.id)&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const millActor=this.millActor(a),branch=millActor?millPushTarget(r.millQuest??newMillQuest(),millActor):-1;
     if(pushChaser(r.centipede,this.bossActor(a)!,now)){this.broadcast({type:'hit',id:a.id,actor:a.actor,target:'centipede-ball'});changed=true;continue;}
     if(pushCentipede(r.centipede,this.bossActor(a)!,now)){this.advanceBoss(now,a,false);changed=true;continue;}
@@ -395,7 +396,7 @@ export class GameRoom extends DurableObject<Env>{
    await this.ctx.storage.put(`player:${r.id}:${playerNameKey(a.name??actor.name)}`,{id:a.id,actor,savedAt:Date.now()} satisfies DepartedPlayer);
   }
   for(const key of Object.keys(r.locks))if(r.locks[key]===a.id)delete r.locks[key];
-  if(r.bread?.owner===a.id)this.breadAction(a,{kind:'drop'},Date.now());
+  if(holdsBread(r.bread,a.id))this.breadAction(a,{kind:'drop'},Date.now());
   if(r.millQuest?.owner===a.id&&r.millQuest.stage!=='running'){r.millQuest=newMillQuest();r.mill=false;}
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
   this.advanceBoss(Date.now());

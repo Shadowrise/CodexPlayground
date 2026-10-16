@@ -112,6 +112,7 @@ test('Worker keeps host-owned Pidgie pecking through late join, host transfer an
   room.room.fruits[0]=guest.data.id;
   room.webSocketMessage(guest,JSON.stringify({type:'frame',actor:{...world.npcs[0],name:'Guest',variant:1,fruits:70,achievements},events:[]}));
   frame(host,[{type:'pidgie-interest',playerId:guest.data.id}]);assert.equal(interests().length,0,'even 100 points cannot replace bread in hand');
+  room.room.bread.active=true; // Fixture: a baked loaf already rests at the bakery.
   room.webSocketMessage(guest,JSON.stringify({type:'frame',actor:{...world.npcs[0],p:room.room.bread.p,name:'Guest',variant:1,fruits:70,achievements},events:[{type:'bread',action:{kind:'pick'}}]}));
   assert.equal(room.room.bread.owner,guest.data.id);
   frame(host,[{type:'pidgie-interest',playerId:guest.data.id}]);assert.equal(interests().length,1);

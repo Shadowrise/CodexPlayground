@@ -15,8 +15,8 @@ import {validPidgieState,type PidgieState} from './pidgie-state';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-17';
-export type ActorState={location?:'meta-knight-arena';p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;ground:number};ride?:{key:string;data:(number|string)[]}};
+export const BUILD='meadow-network-18';
+export type ActorState={location?:'meta-knight-arena';p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;mountainCheckpoint?:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][];pidgie?:PidgieState;mountainSteps?:number[][]};
 export type Event={type:'seal';id:SealId}|{type:'number-start'}|{type:'number-step'}|{type:'number-note';digit:number}|{type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};
 export type RoomState={id:string;host:string;epoch:number;dayPhase?:number;fruits:(string|null)[];starAt:number;mill:boolean;millQuest?:MillQuest;bread?:BreadState;sealProgress?:SealProgress;flowerGame?:FlowerGame;numberGame?:NumberGame;centipede?:CentipedeEvent;locks:Record<string,string>;bugLandings?:Record<string,number[]>;world?:WorldState;log?:LogEntry[];festival?:StarfallState;pranks?:Prank[]};
@@ -29,6 +29,7 @@ export function validActor(v:unknown):v is ActorState{
  const progress=a?.progress;
  if(a?.location!==undefined&&a.location!=='meta-knight-arena')return false;
  if(a?.fruitBoost!==undefined&&!validFruitBoost(a.fruitBoost))return false;
+ if(progress?.mountainCheckpoint!==undefined&&(!Number.isInteger(progress.mountainCheckpoint)||progress.mountainCheckpoint<0||progress.mountainCheckpoint>2))return false;
  if(progress?.speed!==undefined&&(!Number.isFinite(progress.speed)||progress.speed<.1||progress.speed>20))return false;
  if(a?.eventPoints!==undefined&&(!Number.isInteger(a.eventPoints)||a.eventPoints<0||a.eventPoints>12))return false;
  if(a?.fit!==undefined&&(!Number.isFinite(a.fit)||a.fit<.01||a.fit>1))return false;

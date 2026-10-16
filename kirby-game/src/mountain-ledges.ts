@@ -4,12 +4,13 @@ import { createMountainTexture } from './mountain-texture';
 import { BIOME_TERRAIN } from './biome-style';
 import { MEADOW_HALF_SIZE,MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
 import { mountainSurfaceHeight } from './mountain-surface';
+import {MountainRecovery,type MountainSound} from './mountain-recovery';
 import { standingFootprint, footprintOverlapsRect } from './standing-footprint';
 import {
   MOUNTAIN_LEDGE_SITE as SITE, MOUNTAIN_LEDGE_YAW as YAW, MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT,
   MOUNTAIN_PEAK as SEAL_NICHE,mountainCourseEnvelope,
   LEDGE_STAND_SECONDS, LEDGE_RETRACT_SECONDS, LEDGE_HIDDEN_SECONDS, LEDGE_EXTEND_SECONDS, LEDGE_RETRACT_DISTANCE,
-  mountainFace, mountainLocal, mountainWorld, mountainLedgePose, type MountainLedge,
+  mountainFace, mountainLocal, mountainWorld, mountainLedgePose, mountainLedgeOutline, mountainOutlineContains, type MountainLedge,
 } from './mountain-ledges-layout';
 
 type Phase = 'ready' | 'retracting' | 'hidden' | 'extending';
@@ -26,12 +27,17 @@ export class MountainLedges {
   readonly summit: T.Mesh;
   readonly sealNiche: T.Mesh;
   readonly peak:T.Mesh;
+  readonly recovery:MountainRecovery;
+  get active(){return this.recovery.active;}
+  prompt(c:CharacterController){return this.recovery.prompt(c);}
+  start(c:CharacterController){return this.recovery.start(c);}
+  cancel(){this.recovery.cancel();this.resetPlayer();}
   private base = 0;
   private fall: number | undefined;
   private time = 0;
   private readonly cameraDelta=new T.Vector3();
 
-  constructor(mountainMaterial?: T.MeshStandardMaterial) {
+  constructor(mountainMaterial?: T.MeshStandardMaterial,sound?:(kind:MountainSound)=>void) {
     this.group.name = 'Mountain corner retracting ledges';
     this.group.position.set(SITE.x, 0, SITE.z); this.group.rotation.y = YAW;
     const material = mountainMaterial?.clone() ?? new T.MeshStandardMaterial({ map: createMountainTexture(), roughness: 1 });
@@ -48,6 +54,9 @@ export class MountainLedges {
     this.sealNiche.position.set(SEAL_NICHE.tangent,SEAL_NICHE.y,SEAL_NICHE.radial);this.sealNiche.receiveShadow=this.sealNiche.castShadow=true;this.group.add(this.sealNiche);
     const start = mountainWorld(STEPS[0].tangent, mountainFace(0, STEPS[0].tangent) - 3);
     this.entry = new T.Vector3(start.x, 0, start.z);
+    this.recovery=new MountainRecovery(this.entry,sound);
+    // Recovery uses world coordinates, independently of the rotated rock group.
+    this.group.add(this.recovery.group);this.recovery.group.position.set(-SITE.x/Math.SQRT2+SITE.z/Math.SQRT2,0,-(SITE.x+SITE.z)/Math.SQRT2);this.recovery.group.rotation.y=-YAW;
   }
 
   private geometry(vertices: number[], indices: number[], seed: number, greenBase = false, origin?: MountainLedge) {
@@ -68,6 +77,7 @@ export class MountainLedges {
   }
 
   private slab(p: MountainLedge, thickness: number, seed: number) {
+    if(p.seam)return this.fittedSlab(p,thickness,seed);
     const w = p.width / 2, front = -p.depth / 2, back = p.depth / 2 + (p.embedDepth??EMBED_DEPTH), cut = .16;
     const outline = p.shape === 'semicircle'
       ? [...Array.from({length:33},(_,i)=>{const angle=Math.PI*i/32;return [Math.cos(angle)*w,p.depth/2-Math.sin(angle)*w];}),[-w,back],[w,back]]
@@ -93,6 +103,24 @@ export class MountainLedges {
     const indexed = this.geometry(vertices, indices, seed, false, p), geometry = indexed.toNonIndexed(); indexed.dispose(); geometry.computeVertexNormals(); return geometry;
   }
 
+  private fittedSlab(p:MountainLedge,thickness:number,seed:number){
+    const vertices:number[]=[],indices:number[]=[],anchors:number[]=[],w=p.width/2,seam=p.seam!;
+    seam.forEach((back,i)=>{
+      const x=-w+2*w*i/(seam.length-1),front=p.depth/2-p.depth*Math.sqrt(Math.max(0,1-(x/w)**2)),rear=back-p.radial,lower=p.undersideSeam![i]-p.radial;
+      vertices.push(x,0,front,x,0,rear,x,-thickness,front+.12,x,-thickness,lower);
+      anchors.push(rear,rear,lower,lower);
+      if(i===seam.length-1)return;
+      const a=i*4,b=a+4;
+      indices.push(a,a+1,b,a+1,b+1,b, a+2,b+2,a+3,a+3,b+2,b+3,
+        a,b,a+2,a+2,b,b+2, a+1,a+3,b+1,a+3,b+3,b+1);
+    });
+    const end=(seam.length-1)*4;
+    indices.push(0,2,1,1,2,3,end,end+1,end+2,end+1,end+3,end+2);
+    const indexed=this.geometry(vertices,indices,seed,false,p),geometry=indexed.toNonIndexed();indexed.dispose();geometry.computeVertexNormals();
+    geometry.userData.retraction={original:new Float32Array(geometry.getAttribute('position').array),anchors:new Float32Array(indices.map(i=>anchors[i])),scale:1};
+    return geometry;
+  }
+
   contains(p: T.Vector3, padding = 0) { const local=mountainLocal(p.x,p.z),bounds=mountainCourseEnvelope(SEAL_NICHE.y,0);return local.tangent>bounds.minT-2-padding&&local.tangent<bounds.maxT+2+padding&&local.radial>-17-padding&&local.radial<SEAL_NICHE.radial+SEAL_NICHE.depth/2+8+padding; }
   handles(c: CharacterController) { return this.contains(c.actor.position, c.actor.scale.x) || this.fall !== undefined || this.base > 0; }
   savePosition(c: CharacterController) { return this.handles(c) ? this.entry.clone() : undefined; }
@@ -102,6 +130,10 @@ export class MountainLedges {
   private surface(p: MountainLedge, index: number, tangent: number) {
     const slide = index < STEPS.length ? this.steps[index].slide : 0;
     if (index < STEPS.length && this.steps[index].phase === 'hidden') return undefined;
+    if(p.seam){
+      const outline=mountainLedgeOutline(p,slide),front=Math.min(...outline.map(v=>v[1])),back=Math.max(...p.seam);
+      return {height:p.y,index,tangent:p.tangent,radial:(front+back)/2,halfWidth:p.width/2,halfDepth:(back-front)/2};
+    }
     const pose=mountainLedgePose(p,slide),front=pose.radial-p.depth/2*pose.scale;
     let back=pose.radial+p.depth/2*pose.scale;
     if(index<STEPS.length){
@@ -118,14 +150,24 @@ export class MountainLedges {
     return [...STEPS, SUMMIT, SEAL_NICHE].flatMap((ledge, i) => {
       if(Math.abs(p.tangent+footprint.dx-ledge.tangent)>ledge.width/2+footprint.extentX)return [];
       const slide=i<STEPS.length?this.steps[i].slide:0,pose=mountainLedgePose(ledge,slide);
-      if(pose.scale<=0||p.radial+footprint.dz<pose.radial-ledge.depth/2*pose.scale-footprint.extentZ||p.radial+footprint.dz>pose.radial+(ledge.depth/2+(ledge.embedDepth??EMBED_DEPTH))*pose.scale+footprint.extentZ)return [];
+      if(pose.scale<=0||p.radial+footprint.dz<pose.radial-ledge.depth/2*pose.scale-footprint.extentZ||p.radial+footprint.dz>(ledge.seam?Math.max(...ledge.seam):pose.radial+(ledge.depth/2+(ledge.embedDepth??EMBED_DEPTH))*pose.scale)+footprint.extentZ)return [];
       const s = this.surface(ledge, i, p.tangent);
       if(!s)return [];
+      if(ledge.seam)return this.onOutline(mountainLedgeOutline(ledge,slide),p.tangent,p.radial,footprint)?[s]:[];
       if(ledge.shape==='semicircle'){
         return this.onSemicircle(ledge,pose,s.radial+s.halfDepth,p.tangent,p.radial,footprint)?[s]:[];
       }
       return footprintOverlapsRect(p.tangent - s.tangent, p.radial - s.radial, s.halfWidth, s.halfDepth, footprint) ? [s] : [];
     }).sort((a, b) => b.height - a.height);
+  }
+
+  private onOutline(outline:number[][],tangent:number,radial:number,f:ReturnType<typeof standingFootprint>){
+    if(mountainOutlineContains(outline,tangent+f.dx,radial+f.dz))return true;
+    if(f.rx<=0||f.rz<=0)return false;
+    const transform=(point:number[])=>{const dx=point[0]-tangent-f.dx,dz=point[1]-radial-f.dz;return [(dx*f.cos-dz*f.sin)/f.rx,(dx*f.sin+dz*f.cos)/f.rz];};
+    let previous=transform(outline.at(-1)!);
+    for(const point of outline){const next=transform(point),dx=next[0]-previous[0],dz=next[1]-previous[1],length=dx*dx+dz*dz,t=length?T.MathUtils.clamp(-(previous[0]*dx+previous[1]*dz)/length,0,1):0;if((previous[0]+t*dx)**2+(previous[1]+t*dz)**2<=1)return true;previous=next;}
+    return false;
   }
 
   private onSemicircle(ledge:MountainLedge,pose:{radial:number;scale:number},clippedBack:number,tangent:number,radial:number,f:ReturnType<typeof standingFootprint>){
@@ -154,7 +196,9 @@ export class MountainLedges {
     return false;
   }
 
-  update(dt: number, actors: readonly CharacterController[] = [], authority = true) {
+  update(dt: number, actors: readonly CharacterController[] = [], authority = true,localPlayer?:CharacterController) {
+    const recovering=this.active;this.recovery.update(dt,localPlayer);
+    if(recovering&&!this.active&&localPlayer)this.restorePosition(localPlayer);
     this.time += dt;
     const occupied = new Set<number>();
     if (authority) for (const c of actors) {
@@ -185,7 +229,15 @@ export class MountainLedges {
     const ease = (t: number) => t * t * (3 - 2 * t);
     step.slide = LEDGE_RETRACT_DISTANCE * (step.phase === 'retracting' ? ease(step.elapsed / LEDGE_RETRACT_SECONDS) : step.phase === 'hidden' ? 1 : step.phase === 'extending' ? 1 - ease(step.elapsed / LEDGE_EXTEND_SECONDS) : 0);
     const pose=mountainLedgePose(STEPS[i],step.slide);
-    step.mesh.position.z = pose.radial;step.mesh.scale.z=pose.scale;
+    step.mesh.position.z = pose.radial;
+    const fitted=step.mesh.geometry.userData.retraction;
+    if(fitted){
+      if(fitted.scale!==pose.scale){
+        const positions=step.mesh.geometry.getAttribute('position') as T.BufferAttribute;
+        for(let vertex=0;vertex<positions.count;vertex++)positions.setZ(vertex,fitted.anchors[vertex]+(fitted.original[vertex*3+2]-fitted.anchors[vertex])*pose.scale);
+        positions.needsUpdate=true;step.mesh.geometry.computeVertexNormals();step.mesh.geometry.computeBoundingSphere();fitted.scale=pose.scale;
+      }
+    }else step.mesh.scale.z=pose.scale;
     step.mesh.position.x = STEPS[i].tangent + (step.phase === 'ready' && step.standing > 2.4 ? Math.sin(this.time * 35) * .025 : 0);
     step.mesh.visible = step.phase !== 'hidden'&&pose.scale>0;
   }
@@ -237,6 +289,7 @@ export class MountainLedges {
   }
 
   apply(c: CharacterController, previous: T.Vector3, dt: number, enabled = true) {
+    if(this.active)return;
     if (!enabled) { this.resetPlayer(); return; }
     if (!this.handles(c)&&!this.contains(previous,c.actor.scale.x+2)) { this.resetPlayer(); return; }
     const p = c.actor.position;
@@ -253,6 +306,7 @@ export class MountainLedges {
     if (support) {
       if (c.flight.active) c.setActivity('Idle');
       p.y = c.surfaceY = this.base = support.height; this.fall = undefined;
+      if(support.index===STEPS.length||support.index===STEPS.length+1)this.recovery.reach(c,support.index-STEPS.length+1);
     } else if (c.flight.active) c.surfaceY = this.base;
     else if (this.fall === undefined) { this.fall = 0; c.surfaceY = 0; }
     if (p.y <= 0 && !c.flight.active) { p.y = c.surfaceY = this.base = 0; this.fall = undefined; }

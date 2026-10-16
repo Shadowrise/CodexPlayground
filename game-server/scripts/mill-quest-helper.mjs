@@ -9,10 +9,17 @@ export async function finishMill(client,baseActor){
  send([49,0,40.5],[{type:'mill',action:{kind:'gate'}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.gate===1);
  await pause(3100);send([49,0,40.5]);
  const q=(await client.wait(m=>m.type==='room'&&m.room.millQuest?.stage==='bags')).room.millQuest;
- const positions=[[76,0,61],[53,0,65],[76,0,69]];
+ const positions=[[80,0,40],[53,0,65],[76,0,69]];
  const wrong=(q.order[0]+1)%3;send(positions[wrong],[{type:'mill',action:{kind:'pick',index:wrong}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.carried===wrong);
  send([56.5,0,39],[{type:'mill',action:{kind:'deliver'}}]);const rejected=await client.wait(m=>m.type==='room'&&m.room.millQuest?.rejected===wrong);assert.equal(rejected.room.millQuest.delivered,0);assert.equal(rejected.room.millQuest.stage,'bags');
  await pause(1250);
  for(let i=0;i<3;i++){const index=q.order[i];send(positions[index],[{type:'mill',action:{kind:'pick',index}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.carried===index&&m.room.millQuest.delivered===i);send([56.5,0,39],[{type:'mill',action:{kind:'deliver'}}]);await client.wait(m=>m.type==='room'&&m.room.millQuest?.delivered===i+1);}
+ await client.wait(m=>m.type==='room'&&m.room.millQuest?.stage==='knead');
+ const step=async(p,kind,condition)=>{send(p,[{type:'mill',action:{kind}}]);return client.wait(m=>m.type==='room'&&condition(m.room.millQuest));};
+ await step([56.5,0,39],'flour',q=>q.kneadStep===1);
+ await step([62,0,44],'mix',q=>q.kneadStep===2);
+ for(let i=0;i<3;i++){await pause(480);await step([62,0,44],'knead',q=>q.kneadStep===i+3);}
+ await step([62.5,0,38],'load',q=>q.bakeAt>0);
+ await pause(10100);await step([62.5,0,38],'collect',q=>q.stage==='running');
  const done=(await client.wait(m=>m.type==='room'&&m.room.millQuest?.stage==='running')).room.millQuest;assert.equal(done.runningUntil-done.updatedAt,60000);
 }

@@ -23,7 +23,7 @@ import {createMetaKnightPortal} from './meta-knight-portal';
 import {META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
 import {META_KNIGHT_SEAL_SITES} from './meta-knight-seal-sites';
 import {newSealProgress,allSealsCollected,canCollectSeal,collectSeal,type SealProgress,type SealActor} from './meta-knight-seal-state';
-import {applyBread,advanceBread,canPickBread,canFeedPidgie,newBread,type BreadActor,type BreadAction} from './bread-state';
+import {applyBread,advanceBread,canPickBread,canFeedPidgie,newBread,grantBread,breadOffering,type BreadActor,type BreadAction} from './bread-state';
 import {PrankEffects} from './prank-effects';
 import {MusicalFlowers} from './musical-flowers';
 import {NumberGarden} from './number-garden';
@@ -77,7 +77,7 @@ import { FruitWorld } from './fruits';
 import { FollowCamera } from './follow-camera';
 import { Coaster, STATION } from './coaster';
 import { Watermill, MILL_LEVER } from './watermill';
-import {millPushTarget,newMillQuest,type MillActor,type MillAction} from './mill-quest';
+import {millPushTarget,newMillQuest,millCarrying,restoreMillQuest,type MillActor,type MillAction} from './mill-quest';
 import { Treehouse, TREEHOUSE_SITE } from './treehouse';
 import { Benches, BENCH_SEATS } from './benches';
 import { Balloons } from './balloons';
@@ -287,7 +287,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress)));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest)));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -465,7 +465,7 @@ let soloFlowerGame:FlowerGame|undefined;
 const flowerGameView=new MusicalFlowerGameView((index,transpose)=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index,transpose);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
 const coaster=new Coaster();scene.add(coaster.group);
 await startupTask();
-const mountainLedges=new MountainLedges((scene.getObjectByName('Continuous square mountain range') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>).material);scene.add(mountainLedges.group);
+const mountainLedges=new MountainLedges((scene.getObjectByName('Continuous square mountain range') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>).material,kind=>{if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(mountainLedges.group);
 const bread=new BreadWorld();scene.add(bread.group);let lastBreadRequest=0;
 const sealLocations=new MetaKnightSealLocations();scene.add(sealLocations.group);
 const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
@@ -533,7 +533,7 @@ chat.configureCommands({
   cosmicArena.leave();
   // This also restores the model fitted into a basket, bed, cart or boat.
   clearTutorialInput();coaster.disembark();boats.cancel();fireflies?.disembark();
-  home.cancel();benches.cancel();treehouse.cancel();balloons.cancel();trampoline.cancel();skyTrail.cancel();
+  home.cancel();benches.cancel();treehouse.cancel();balloons.cancel();trampoline.cancel();skyTrail.cancel();mountainLedges.cancel();
   character.setActivity('Idle');character.actor.rotation.set(0,character.yaw,0);
   character.surfaceY=0;character.swimming=false;
   const {x,z,y=0}=command.destination;character.actor.position.set(x,y,z);
@@ -761,7 +761,7 @@ async function loadCharacter() {
     metaKnightReflections.update(daylight(currentDayPhase()));
     coaster.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     boats.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
-    bread.setModel(breadModel.scene);
+    watermill.bakery.setBreadModel(breadModel.scene.clone(true));bread.setModel(breadModel.scene);
     arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
     await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);
@@ -816,7 +816,7 @@ startButton.addEventListener('click', async () => {
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
   soloPortalOverride=undefined;
   lastSealRequest=0;seenSealCount=Object.keys(sealProgress.collected).length;clearSealNotice();
-  bread.reset(pendingSave?.bread);lastBreadRequest=0;
+  bread.reset(pendingSave?.bread);lastBreadRequest=0;watermill.setQuest(pendingSave?.millQuest?restoreMillQuest(pendingSave.millQuest,Date.parse(pendingSave.savedAt),Date.now()):newMillQuest(),Date.now());
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
   mountainLedges.resetPlayer();
   if(network?.resume){restoreNetworkPlayer(character,network.resume);skyTrail.restorePosition(character);mountainLedges.restorePosition(character);}
@@ -862,7 +862,7 @@ startButton.addEventListener('click', async () => {
       if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
       if(target==='centipede-ball'){sounds.playBoing(Math.max(0,.7*(1-character.actor.position.distanceTo(new THREE.Vector3().fromArray(a.p))/35)));return;}
       const npc=target.startsWith('npc:')?npcs[Number(target.slice(4))]:undefined;
-      if(target===network!.id && !coaster.riding && !boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active){if(fireflies?.riding)fireflies.disembark(true);character.takePush(Math.sin(yaw),Math.cos(yaw));}
+      if(target===network!.id && !coaster.riding && !boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!mountainLedges.active){if(fireflies?.riding)fireflies.disembark(true);character.takePush(Math.sin(yaw),Math.cos(yaw));}
       else if(npc&&network!.host)npc.takePush(Math.sin(yaw),Math.cos(yaw));
       const position=npc?.actor.position??(target===network!.id?character.actor.position:remotePlayers?.players.get(target)?.actor.position);
       if(position)sounds.playBoing(Math.max(0,1-position.distanceTo(character.actor.position)/35));
@@ -891,7 +891,7 @@ function returnToMenu(){
   coaster.disembark();boats.cancel();boats.syncRemoteRiders(new Map());musicalFlowers.reset();
   soloFlowerGame=undefined;flowerGameView.reset();
   soloNumberGame=undefined;numberGarden.reset();numberGameView.reset();
-  balloons.reset();home.cancel();benches.cancel();treehouse.cancel();trampoline.cancel();skyTrail.cancel();fireflies?.reset();
+  balloons.reset();home.cancel();benches.cancel();treehouse.cancel();trampoline.cancel();skyTrail.cancel();mountainLedges.cancel();fireflies?.reset();
   prankEffects.beginFrame();prankEffects.update([],Date.now(),()=>undefined,camera.position);
   maze.reset();
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
@@ -1045,41 +1045,42 @@ renderer.setAnimationLoop((time: number) => {
     const previousYaw = character.yaw;
     const previousPosition=playerPrevious.copy(character.actor.position);
     character.positionConstraint=mountainLedges.constrainTravel;
-    mountainLedges.update(dt,[character,...(remotePlayers?.players.values()??[])],!network||network.host);
-    const skyWasActive=skyTrail.active;
+    const mountainWasActive=mountainLedges.active;
+    mountainLedges.update(dt,[character,...(remotePlayers?.players.values()??[])],!network||network.host,character);
+    const skyWasActive=skyTrail.active||mountainWasActive;
     boats.update(dt,boatTime(),camera.position);
     if(pendingBoard)void interactOnline();
-    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !boats.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && !skyTrail.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote,character.isPigeon);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
+    if(pendingEmote && !fireflies?.riding && !home.active && !coaster.riding && !boats.riding && !treehouse.active && !benches.active && !balloons.riding && !trampoline.active && !skyTrail.active&&!mountainLedges.active && character.startEmote(pendingEmote)){sounds.playEmote(pendingEmote,character.isPigeon);if(network)network.event({type:'emote',emote:pendingEmote});else addLocalLog(emoteMessage(pendingEmote)!);}
     pendingEmote=undefined;
     const treehouseWasActive=treehouse.active;
     const balloonWasActive=balloons.riding;
     const homeWasActive=home.active,bedOwner=network?.room.locks['home:0'];
     home.update(dt,bedOwner&&bedOwner!==network?.id?remotePlayers?.players.get(bedOwner):undefined);
-    if(!carryingBread && !character.roll.active && !skyTrail.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
+    if(!carryingBread && !character.roll.active && !skyTrail.active&&!mountainLedges.active && !fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !balloonWasActive && !treehouseWasActive && !benches.active && (pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0))))trampoline.start(character);
     skyTrail.update(dt,character);
     const trampolineWasActive=trampoline.active;trampoline.update(dt);
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
-    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);numberGarden.constrain(character.actor.position,character.actor.scale.x);}
-    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active){
+    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);numberGarden.constrain(character.actor.position,character.actor.scale.x);}
+    if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){
       maze.constrain(character.actor.position,character.actor.scale.x,groundPrevious.set(previousX,0,previousZ));
       if(maze.contains(character.actor.position,2) && character.flight.active){character.setActivity('Idle');character.actor.position.y=0;}
     }
     const onSkyTrail=skyTrail.handles(character)&&!fireflies?.riding&&!homeWasActive&&!coaster.riding && !boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive;
-    const freeMountainMovement=!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive&&!skyWasActive&&!skyTrail.active;
+    const freeMountainMovement=!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive&&!skyWasActive&&!skyTrail.active&&!mountainLedges.active;
     const onMountainLedges=freeMountainMovement&&mountainLedges.handles(character);
     const skySurface=character.surfaceY;
-    ponds.apply(character,groundPrevious.set(previousX,0,previousZ),!onMountainLedges&&!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
+    ponds.apply(character,groundPrevious.set(previousX,0,previousZ),!onMountainLedges&&!onSkyTrail&&!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active);
     if(!carryingBread)fountain.bathe(dt,character);
     if(onSkyTrail||onMountainLedges)character.surfaceY=skySurface;
-    if(onSkyTrail&&!skyWasActive&&!skyTrail.active)skyTrail.apply(character,previousPosition,dt);
+    if(onSkyTrail&&!skyWasActive&&!skyTrail.active&&!mountainLedges.active)skyTrail.apply(character,previousPosition,dt);
     mountainLedges.apply(character,previousPosition,dt,freeMountainMovement&&!onSkyTrail);
     arenaCentipede?.collision.apply(character,previousPosition,dt,!onMountainLedges&&!onSkyTrail&&!fireflies?.riding&&!homeWasActive&&!coaster.riding&&!boats.riding&&!treehouseWasActive&&!benchWasActive&&!balloonWasActive&&!trampolineWasActive);
-    sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active);
+    sounds.updateWater(dt,character.swimming,Math.hypot(character.actor.position.x-previousX,character.actor.position.z-previousZ)>.002,!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active);
     fireflies?.syncRider(dt);
     character.finishPigeonGroundMovement(dt,previousX,previousZ);
     const breadNow=network?.serverNow??Date.now();
@@ -1131,7 +1132,7 @@ renderer.setAnimationLoop((time: number) => {
     }
     if(playing&&pidgieNpc&&pidgieReady){
       if(!network||network.host){
-        if(bread.state.offering)pidgieNpc.acceptBread(bread.state.offering);
+        if(breadOffering(bread.state))pidgieNpc.acceptBread(breadOffering(bread.state)!);
         const players:PidgiePlayer[]=[{id:network?.id??'solo',position:character.actor.position,hasBread:bread.holds(network?.id??'solo')},...Array.from(network?.actors??[],([id,actor])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(actor.p),hasBread:bread.holds(id)}))];
         pidgieNpc.update(dt,people,constrainNpc,players);
       }
@@ -1153,7 +1154,7 @@ renderer.setAnimationLoop((time: number) => {
     if(network && character.attackHit){network.event({type:'hit'});character.attackHit=false;}
     if(!network&&resolveAttack(character,npcs))sounds.playBoing(.8);
     const fireflyPickup=fireflies?.fruitPickupPosition;
-    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], bread.holds(network?.id??'solo') || coaster.riding || boats.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
+    const eaten = fruits.update(dt, character, !network||network.host?npcs:[], coaster.riding || boats.riding || treehouse.active || benches.active || balloons.riding || trampoline.active || skyTrail.active || home.active || (!!fireflies?.riding && !fireflyPickup),fireflyPickup);
     sounds.update(dt, character, npcs, followCamera.azimuth);
     sounds.updateRide(coaster.riding,coaster.rideMotion);
     sounds.updateBoat(dt,boats.riding);
@@ -1285,21 +1286,21 @@ window.addEventListener('resize', () => {
 watermill.onFeedback=kind=>{if(!character||character.actor.position.distanceTo(MILL_LEVER)>32)return;sounds.playMill(kind);};
 
 function millActor(c:CharacterController):MillActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:!bread.holds(network?.id??'solo')&&!c.flight.active&&!c.roll.active&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push'].includes(c.state)};}
-function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else watermill.apply(action,millActor(character));}
+function sendMill(action:MillAction){if(!character)return;if(network)network.event({type:'mill',action});else{const old=watermill.quest;watermill.apply(action,millActor(character));if(old.stage!=='running'&&watermill.quest.stage==='running')bread.state=grantBread(bread.state,breadActor(character),Date.now());}}
 function breadActor(c:CharacterController):BreadActor{
- const id=network?.id??'solo',bag=watermill.quest.owner===id&&watermill.quest.carried>=0;
- return {id,p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!bag&&!acquiring&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding};
+ const id=network?.id??'solo',bag=millCarrying(watermill.quest,id);
+ return {id,p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!bag&&!acquiring&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!mountainLedges.active&&!fireflies?.riding};
 }
 function sealActor(c:CharacterController):SealActor{
  const actor=breadActor(c);
- const balcony=treehouse.onBalcony(c),bag=watermill.quest.owner===actor.id&&watermill.quest.carried>=0;
+ const balcony=treehouse.onBalcony(c),bag=millCarrying(watermill.quest,actor.id);
  const onFoot=balcony?['Lookout','Walk','WalkBackward'].includes(c.state):actor.available&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight'].includes(c.state);
  return {...actor,available:onFoot&&!bag&&!acquiring&&!bread.holds(actor.id)&&!c.flight.active&&!c.roll.active&&!c.swimming&&!document.hidden};
 }
 function sendBread(action:BreadAction){
  if(!character)return;if(network){network.event({type:'bread',action});return;}
  const old=bread.state;bread.state=applyBread(old,action,breadActor(character),Date.now(),mountainLedges.networkState(),pidgieNpc?.networkState());
- if(bread.state!==old&&bread.state.offering){
+ if(action.kind==='feed'&&bread.state!==old&&bread.state.offering){
   pidgieNpc?.acceptBread(bread.state.offering);character.achievements.add('pidgieFriend');
   localLog.push(pidgieFriendLog(nameInput.value));if(localLog.length>10)localLog.shift();
  }
@@ -1314,7 +1315,7 @@ function pressNumber(digit:number){
 }
 function playNumberSound(digit:number){if(!character)return;const d=NUMBER_DIGITS[digit],p=character.actor.position;sounds.playNumber(digit,d.x-p.x,d.z-p.z,followCamera.azimuth);}
 function currentFlowerGame(){return network?network.room.flowerGame:soloFlowerGame;}
-function flowerActor(c:CharacterController):FlowerActor{const a=millActor(c);return {...a,available:a.available&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,present:playing&&!document.hidden};}
+function flowerActor(c:CharacterController):FlowerActor{const a=millActor(c);return {...a,available:a.available&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!mountainLedges.active&&!fireflies?.riding,present:playing&&!document.hidden};}
 function flowerButtonPrompt(c:CharacterController){if(network?.flowerStarting||network?.room.festival||!nearFlowerButton(flowerActor(c)))return;const q=currentFlowerGame();return !q?'E — Начать цветочную мелодию':q.stage==='repeat'?'E — Послушать мелодию ещё раз':undefined;}
 function startFlowerAdventure(){if(!character||!flowerButtonPrompt(character))return;const q=currentFlowerGame();if(network)network.event({type:q?'flower-replay':'flower-start'});else soloFlowerGame=q?replayFlowerGame(q,flowerActor(character),Date.now()):startFlowerGame(undefined,flowerActor(character),Date.now());}
 function playFlower(index:number){
@@ -1324,7 +1325,7 @@ function playFlower(index:number){
 }
 
 function currentCentipede(){return network?network.room.centipede:soloCentipede;}
-function centipedeActor(c:CharacterController):CentipedeActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!fireflies?.riding,done:c.achievements.has('centipede'),points:c.eventPoints};}
+function centipedeActor(c:CharacterController):CentipedeActor{return {id:network?.id??'solo',p:c.actor.position.toArray(),yaw:c.yaw,size:c.actor.scale.x,available:playing&&!c.roll.active&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active&&!skyTrail.active&&!mountainLedges.active&&!fireflies?.riding,done:c.achievements.has('centipede'),points:c.eventPoints};}
 function centipedePrompt(c:CharacterController){if(Math.hypot(c.actor.position.x-BOSS_ARENA.x,c.actor.position.z-BOSS_ARENA.z)>BOSS_ARENA.radius)return;return !currentCentipede()&&!network?.centipedeStarting&&!network?.room.festival&&arenaCentipede&&nearCentipede(centipedeActor(c),arenaCentipede.startTrail(boatTime()))?'E — Поиграть с Топотушкой':undefined;}
 function startCentipedeGame(){
  if(!character||!arenaCentipede||!centipedePrompt(character))return;const trail=arenaCentipede.startTrail(boatTime());
@@ -1354,7 +1355,7 @@ function tickMeadowWhileAway(dt:number){
  const people=Array.from(remotePlayers?.players.values()??[],c=>c.actor.position),neighbors=[...people,...npcs.map(n=>n.actor.position)];
  if(host){npcSwimming.update(dt,npcs,constrainNpc);fireflies?.prepareNpcs(npcs,true,dt,character!.actor.position);
   for(const npc of npcs){npc.fruitBoost.update(dt);npcPrevious.copy(npc.actor.position);if(!balloons.owns(npc))npc.update(dt,neighbors,constrainNpc);const foot=npc.state!=='Balloon'&&npc.fireflyIndex===undefined;if(foot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);ponds.apply(npc,npcPrevious,foot);npc.syncSwimming();}
-  if(pidgieNpc&&pidgieReady){if(bread.state.offering)pidgieNpc.acceptBread(bread.state.offering);pidgieNpc.update(dt,people,constrainNpc,Array.from(network?.actors??[],([id,a])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(a.p),hasBread:bread.holds(id)})));}
+  if(pidgieNpc&&pidgieReady){if(breadOffering(bread.state))pidgieNpc.acceptBread(breadOffering(bread.state)!);pidgieNpc.update(dt,people,constrainNpc,Array.from(network?.actors??[],([id,a])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(a.p),hasBread:bread.holds(id)})));}
  }else if(pidgieNpc&&pidgieReady)pidgieNpc.updateRemote(dt,constrainNpc);
  fireflies?.update(dt,daylight(currentDayPhase()).night,camera.position);fireflies?.syncNpcRiders(npcs,host,dt);
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
@@ -1379,7 +1380,8 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   const region=(key:unknown,root:THREE.Object3D,center:THREE.Vector3,size:number[])=>outlineRegion(key,root,center,new THREE.Vector3(...size));
   const object=(root?:THREE.Object3D):OutlineTarget|undefined=>root?{key:root,root}:undefined;
   if(boats.riding)return result(boats.prompt(c),()=>boats.disembark());
-  if(skyTrail.active)return undefined;
+  if(skyTrail.active||mountainLedges.active)return undefined;
+  if(mountainLedges.prompt(c)&&!fireflies?.riding&&!coaster.riding&&!boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active)return result(mountainLedges.prompt(c),()=>mountainLedges.start(c),object(mountainLedges.recovery.target(c)));
   if(skyTrail.prompt(c)&&!fireflies?.riding&&!coaster.riding && !boats.riding&&!balloons.riding&&!home.active&&!treehouse.active&&!benches.active&&!trampoline.active)return result(skyTrail.prompt(c),()=>skyTrail.start(c),object(skyTrail.target(c)));
   if(fireflies?.riding)return result(fireflies.prompt(c),()=>fireflies?.disembark());
   if(home.active)return result(home.prompt(p,c.actor.scale.x),()=>home.wake());
@@ -1476,7 +1478,7 @@ function syncNetworkWorld(dt:number){
 function resourceKey(c:CharacterController){
  if(bread.holds(network?.id??'solo'))return;
  if(boats.riding)return boats.networkKey(c);
- if(skyTrail.active||skyTrail.prompt(c))return;
+ if(skyTrail.active||skyTrail.prompt(c)||mountainLedges.active||mountainLedges.prompt(c))return;
  if(coaster.riding)return coaster.networkKey(c);if(balloons.riding)return balloons.networkKey(c.actor.position);if(fireflies?.riding)return fireflies.networkKey(c);
  if(home.active||home.prompt(c.actor.position,c.actor.scale.x))return 'home:0';
  if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
@@ -1497,7 +1499,7 @@ async function interactOnline(){
  if(!heldResource&&(numberButtonPrompt(character)||numberGarden.nearest(character.actor.position,character.actor.scale.x)>=0)){action.run();return;}
  if(watermill.prompt(millActor(character))&&!heldResource&&!home.active&&!treehouse.active){action.run();return;}
  if(musicalFlowers.nearest(character.actor.position,character.actor.scale.x)>=0&&!heldResource){action.run();return;}
- if(skyTrail.prompt(character)&&!heldResource){action.run();return;}
+ if((skyTrail.prompt(character)||mountainLedges.prompt(character))&&!heldResource){action.run();return;}
  if(heldResource){action.run();return;}
  const key=resourceKey(character);if(!key)return;
  const session=network,player=character;

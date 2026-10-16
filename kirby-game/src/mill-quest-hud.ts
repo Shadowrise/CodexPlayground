@@ -1,5 +1,5 @@
 import {t,getLocale} from './i18n';
-import {MILL_COLORS,MILL_COLOR_NAMES,type MillQuest} from './mill-quest';
+import {MILL_COLORS,MILL_COLOR_NAMES,MILL_BAKE_MS,type MillQuest} from './mill-quest';
 
 /** Same event plaque as the starfall; DOM changes only when the instruction changes. */
 export class MillQuestHud {
@@ -14,7 +14,7 @@ export class MillQuestHud {
   this.element.append(this.title,this.message,this.order);document.body.append(this.element);
  }
  update(q:MillQuest,id:string,now:number,pushKey:string,actionKey:string,visible:boolean){
-  this.element.hidden=!visible||q.owner!==id||q.stage==='idle'||q.stage==='running'&&now-q.deliveredAt>8000;
+  this.element.hidden=!visible||q.owner!==id||q.stage==='idle'||q.stage==='running'&&now-q.completedAt>8000;
   if(this.element.hidden)return;
   const wrong=q.rejectedAt>0&&now-q.rejectedAt<1800;
   const needed=MILL_COLOR_NAMES[q.order[q.delivered]];
@@ -24,9 +24,15 @@ export class MillQuestHud {
     :q.carried<0?`Найди ${needed} мешочек на полянке. Подойди к нему, чтобы взять · ${q.delivered}/3`
     :q.carried!==q.order[q.delivered]?`Верни этот мешочек в воронку (${actionKey}), затем найди ${needed}`
     :`Отнеси ${needed} мешочек к воронке и нажми ${actionKey} · Загружено ${q.delivered}/3`
-   :'Ты запустил мельницу! Полюбуйся радужными пузырями';
+   :q.stage==='knead'?q.kneadStep===0?t('Мука готова! Забери её у воронки: {0}',[t(actionKey)])
+    :q.kneadStep===1?t('Отнеси муку к миске на столике. Нажми {0}, чтобы добавить воду',[t(actionKey)])
+    :t('Помеси тесто у столика: {0} · Готово {1}/3',[t(actionKey),q.kneadStep-2])
+   :q.stage==='bake'?!q.bakeAt?t('Тесто готово! Отнеси его к печке и нажми {0}',[t(actionKey)])
+    :now-q.bakeAt<MILL_BAKE_MS?t('Хлебушек печётся · Осталось {0} с',[Math.ceil((MILL_BAKE_MS-now+q.bakeAt)/1000)])
+    :t('Хлебушек готов! Достань его из печки: {0}',[t(actionKey)])
+   :'Ты испёк хлебушек!';
   const signature=JSON.stringify([getLocale(),q.stage,text,q.order,q.delivered]);if(signature===this.signature)return;this.signature=signature;
-  this.title.textContent=t(q.stage==='running'?'Радужная мельница · Готово!':`Радужная мельница · Шаг ${q.stage==='clear'?1:q.stage==='flow'?2:3}/3`);
+  this.title.textContent=t(q.stage==='running'?'Радужная мельница · Готово!':`Радужная мельница · Шаг ${q.stage==='clear'?1:q.stage==='flow'?2:q.stage==='bags'?3:q.stage==='knead'?4:5}/5`);
   this.message.textContent=t(text);this.order.replaceChildren();this.order.hidden=q.stage!=='bags';
   if(q.stage==='bags')q.order.forEach((color,i)=>{const chip=document.createElement('span');chip.style.setProperty('--bag-color',MILL_COLORS[color]);chip.textContent=i<q.delivered?'✓':String(i+1);chip.className=i===q.delivered?'current':'';chip.title=t(MILL_COLOR_NAMES[color]);chip.setAttribute('aria-label',`${i+1}: ${t(MILL_COLOR_NAMES[color])}${i<q.delivered?t(', загружен'):''}`);this.order.append(chip);});
  }

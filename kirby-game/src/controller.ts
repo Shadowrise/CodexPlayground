@@ -64,6 +64,7 @@ export class CharacterController {
   bonusPoints=0;
   eventPoints=0;
   skyCheckpoint=0;
+  mountainCheckpoint=0;
   festival?:StarfallState;
   readonly achievements=new Set<ScoreAction>();
   starBlessed = false;

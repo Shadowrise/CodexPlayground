@@ -21,7 +21,7 @@ function poseNodes(c:CharacterController|KirbyNpc){
 }
 export function actorState(c:CharacterController|KirbyNpc,name:string,variant:number):ActorState{
  const fruitBoost=c.fruitBoost.snapshot();
- return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(fruitBoost?{fruitBoost:{...fruitBoost,remaining:Math.max(.001,round(fruitBoost.remaining))}}:{}),...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),speed:round(c.savedSpeedSize),checkpoint:c.skyCheckpoint,ground:round(c.surfaceY)}}:{})};
+ return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(fruitBoost?{fruitBoost:{...fruitBoost,remaining:Math.max(.001,round(fruitBoost.remaining))}}:{}),...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),speed:round(c.savedSpeedSize),checkpoint:c.skyCheckpoint,mountainCheckpoint:c.mountainCheckpoint,ground:round(c.surfaceY)}}:{})};
 }
 /** Restore durable progress without resuming an abandoned ride or animation. */
 export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
@@ -30,7 +30,7 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
  c.yaw=new T.Euler().setFromQuaternion(new T.Quaternion().fromArray(a.q).normalize(),'YXZ').y;c.actor.rotation.set(0,c.yaw,0);
  c.fruitsEaten=a.fruits;c.achievements.clear();for(const action of a.achievements)c.achievements.add(action as import('./score').ScoreAction);
  c.eventPoints=a.eventPoints??0;
- c.skyCheckpoint=a.progress?.checkpoint??0;c.starRemaining=a.star;c.starBlessed=c.achievements.has('star');
+ c.skyCheckpoint=a.progress?.checkpoint??0;c.mountainCheckpoint=a.progress?.mountainCheckpoint??0;c.starRemaining=a.star;c.starBlessed=c.achievements.has('star');
  if(a.location==='meta-knight-arena'){c.actor.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset);c.surfaceY=0;}
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){

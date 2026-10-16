@@ -13,7 +13,7 @@ try {
   assert(body.includes('renderer.setAnimationLoop('));
   // Drive the real game loop at a fixed cadence, including every attraction.
   await route.fulfill({response,body:body.replace('renderer.setAnimationLoop(','window.fruitFrame=(')+`
-window.fruitCheck={fruits,fountain,home,renderer,get c(){return character},step(seconds){for(let i=0;i<Math.round(seconds*20);i++)window.fruitFrame(previousTime+50)}};
+window.fruitCheck={fruits,bread,fountain,home,renderer,get c(){return character},step(seconds){for(let i=0;i<Math.round(seconds*20);i++)window.fruitFrame(previousTime+50)}};
 `});
  });
  await page.goto(process.env.KIRBY_URL??'http://127.0.0.1:5174/');
@@ -49,6 +49,26 @@ window.fruitCheck={fruits,fountain,home,renderer,get c(){return character},step(
  assert.equal(result.small.size,.3);assert.equal(result.small.speed,result.grown.speed);
  assert.equal(result.smallFruit.size,.3);assert.equal(result.smallFruit.bonus,1.4);assert.match(result.hud,/140%.*20 с/);
  assert(result.resting);assert(result.homeActive);assert.equal(result.afterRest.bonus,1);assert.equal(result.afterRest.size,.3);assert.equal(result.afterRest.speed,3.4*3);
+ const beforeCarry=await page.evaluate(()=>{
+  const m=window.fruitCheck,c=m.c;m.home.wake();m.step(2);c.setActivity('Idle');c.resizeTo(1,true);
+  c.actor.position.set(49,0,42);c.surfaceY=0;c.swimming=false;c.yaw=0;c.actor.rotation.set(0,0,0);
+  m.bread.reset({...m.bread.state,owner:'',p:c.actor.position.toArray(),pickupAt:0,drop:undefined,offering:undefined});
+  m.step(.05);
+  const fruit=m.fruits.fruits[13];fruit.object.position.copy(c.actor.position);fruit.object.position.z+=3;
+  return {carrying:m.bread.holds('solo'),fruits:c.fruitsEaten,z:c.actor.position.z};
+ });
+ assert(beforeCarry.carrying,'the player automatically picks up bread before walking into fruit');
+ await page.keyboard.down('w');
+ const carriedFruit=await page.evaluate(()=>{
+  const m=window.fruitCheck;m.step(1.1);
+  return {carrying:m.bread.holds('solo'),eaten:m.fruits.fruits[13].eaten,visible:m.fruits.fruits[13].object.visible,fruits:m.c.fruitsEaten,bonus:m.c.fruitBoost.multiplier,z:m.c.actor.position.z};
+ });
+ await page.keyboard.up('w');
+ assert(carriedFruit.z>beforeCarry.z,'the player walks forward while carrying bread');
+ assert(carriedFruit.eaten);assert(!carriedFruit.visible);assert(carriedFruit.carrying);
+ assert.equal(carriedFruit.fruits,beforeCarry.fruits+1);assert.equal(carriedFruit.bonus,1.2);
+ await page.evaluate(()=>window.fruitCheck.step(.5));
+ assert.equal(await page.evaluate(()=>window.fruitCheck.c.fruitsEaten),carriedFruit.fruits,'the fruit counts once');
  assert.deepEqual(errors,[]);
- console.log('PASS: live fruit pickup, shared timer refresh, 300% cap, expiry, HUD, admin speed, fountain and sleeping timer');
+ console.log('PASS: live fruit pickup, shared timer refresh, 300% cap, expiry, HUD, admin speed, fountain, sleeping timer and walking through fruit while carrying bread');
 } finally {await browser.close();}

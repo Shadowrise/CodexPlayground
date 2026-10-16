@@ -132,7 +132,7 @@ test('steps attach to the unchanged slope and the enlarged semicircular summit c
   assert(STEPS.every(p => p.width < SUMMIT.width && p.depth < SUMMIT.depth));
   assert(STEPS.every(p=>p.shape==='semicircle'&&Math.abs(p.width/2-p.depth)<1e-8));
   assert(!world.group.getObjectByName('Mountain corner rock buttress'));
-  assert.equal(world.group.children.length,STEPS.length+2);
+  assert.equal(world.group.children.length,STEPS.length+3);
   assert(Math.abs(Math.PI*(SUMMIT.width/2)**2/2-36.96*3)<1e-8);assert.equal(SUMMIT.shape,'semicircle');
   const left=mountainWorld(SUMMIT.tangent-SUMMIT.width/2,SUMMIT.radial+SUMMIT.depth/2);
   assert(mountainSurfaceHeight(left.x,left.z)>=SUMMIT.y-.001,'the left end meets the existing rock without an air gap');

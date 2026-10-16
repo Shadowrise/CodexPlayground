@@ -28,7 +28,7 @@ test('dropping the carried bread ends interest with exactly one scare and flight
 
 test('offered bread becomes permanent: joy, a run to its midpoint, then repeated pecking and joy despite nearby players',()=>{
  const bird=create(),at=bird.actor.position.clone(),player={id:'baker',p:[at.x,0,at.z+4],yaw:Math.PI,size:1,available:true};
- const bread=applyBread({...newBread(),owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());
+ const bread=applyBread({...newBread(),active:true,owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());
  assert(bread.offering);assert.equal(bread.p[2],at.z+2);assert(!canPickBread(bread,{...player,p:bread.p},100000));
  assert(bird.acceptBread(bread.offering));assert(!bird.acceptBread(bread.offering));
  advance(bird,2.2,[at]);assert.equal(bird.phase,'joy');assert.equal(bird.state,'Joy');
@@ -276,7 +276,7 @@ test('following waits before starting, ignores small steps, and preserves a pend
 test('all three native beak contacts hit the bread centre from different approach angles, including a close toss',()=>{
  for(const angle of [-1.7,0,.9])for(const separation of [2,4,8]){
   const bird=create(),start=bird.actor.position.clone(),player={id:'baker',p:[start.x+Math.sin(angle)*separation,0,start.z+Math.cos(angle)*separation],yaw:angle+Math.PI,size:1,available:true};
-  const bread=applyBread({...newBread(),owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());assert(bread.offering);
+  const bread=applyBread({...newBread(),active:true,owner:player.id},{kind:'feed'},player,1000,undefined,bird.networkState());assert(bread.offering);
   bird.acceptBread(bread.offering);advance(bird,6);assert.equal(bird.phase,'feast');
   const food=new T.Vector3().fromArray(bread.p);assert(Math.abs(bird.actor.position.distanceTo(food)-PIDGIE_PECK_REACH)<.011);
   const beak=bird.model.getObjectByName('Beak_sculpt_paint') as T.Mesh,positions=beak.geometry.attributes.position;let front=0;

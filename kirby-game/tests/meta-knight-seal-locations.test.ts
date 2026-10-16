@@ -63,15 +63,16 @@ test('peak cap touches the actual highest rendered vertex of this corner and has
  assert(isInsideMountainPeak(p.x,p.z));const back=mountainWorld(PEAK.tangent,PEAK.radial+PEAK.depth/2+.1);assert(!isInsideMountainPeak(back.x,back.z,10),'size never extends pickup behind the crest');
 });
 
-test('upper landing arcs are clear of mountain spikes and trimmed backs stay fixed while retracting',async()=>{
- const world=new MountainLedges(),c=await player(),ray=new Raycaster(),trimmed=STEPS.map((p,i)=>({p,i})).filter(({p})=>p.embedDepth!==undefined);
- assert.equal(trimmed.length,7);
+test('upper landing arcs are clear of mountain spikes and contoured backs meet the slope and stay attached while retracting',async()=>{
+ const world=new MountainLedges(),c=await player(),ray=new Raycaster(),trimmed=STEPS.map((p,i)=>({p,i})).filter(({p})=>p.seam);
+ assert.equal(trimmed.length,UPPER.length);
  for(const {p,i} of trimmed){
   for(let x=-p.width/2;x<=p.width/2;x+=.12)for(let z=-p.depth/2;z<=p.depth/2;z+=.12){
    if((x/(p.width/2))**2+((z-p.depth/2)/p.depth)**2>1)continue;
    const point=mountainWorld(p.tangent+x,p.radial+z);assert(mountainSurfaceHeight(point.x,point.z)<p.y-.01,`no terrain on step ${i+1}`);
   }
-  const back=p.radial+p.depth/2+p.embedDepth!;
+  const back=Math.max(...p.seam!);
+  for(let sample=0;sample<p.seam!.length;sample++){const t=p.tangent-p.width/2+p.width*sample/(p.seam!.length-1),xy=mountainWorld(t,p.seam![sample]);assert(mountainSurfaceHeight(xy.x,xy.z)>=p.y-.001,`the full back of step ${i+1} meets the real mountain`);}
   for(const elapsed of [0,.1,.2,.3,.4,.55,.69]){
    world.networkApply(STEPS.map((_,index)=>index===i?[1,elapsed,0]:[0,0,0]));world.group.updateMatrixWorld(true);
    const mesh=world.steps[i].mesh,vertices=mesh.geometry.getAttribute('position');
@@ -79,7 +80,7 @@ test('upper landing arcs are clear of mountain spikes and trimmed backs stay fix
    c.setActivity('Idle');c.actor.scale.setScalar(.1);c.yaw=Math.PI/4;
    for(let z=p.radial-p.depth/2-.1;z<=back+.1;z+=.1){
     const xy=mountainWorld(p.tangent,z);c.actor.position.set(xy.x,p.y,xy.z);ray.set(c.actor.position.clone().add(new Vector3(0,.5,0)),new Vector3(0,-1,0));
-    if(mesh.visible&&ray.intersectObject(mesh).some(hit=>Math.abs(hit.point.y-p.y)<.001)){
+    if(mesh.visible&&mountainSurfaceHeight(xy.x,xy.z)<p.y-.02&&ray.intersectObject(mesh).some(hit=>Math.abs(hit.point.y-p.y)<.001)){
      assert(world.surfaces(c).some(surface=>surface.index===i),'visible retracting rock supports feet');
      assert.equal(breadFloor(xy.x,xy.z,p.y,world.networkState()),p.y,'the authoritative bread floor matches the visible retracting rock');
     }

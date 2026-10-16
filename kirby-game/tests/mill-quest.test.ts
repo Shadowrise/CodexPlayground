@@ -2,7 +2,7 @@ import {allTasks} from '../src/starfall';
 import {SCORE_ACTIONS} from '../src/score';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {newMillQuest,applyMill,advanceMill,millPushTarget,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_QUEST_LEVER,MILL_IDLE_MS,MILL_RUN_MS,type MillActor,type MillQuest} from '../src/mill-quest';
+import {newMillQuest,applyMill,advanceMill,millPushTarget,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_QUEST_LEVER,MILL_IDLE_MS,MILL_RUN_MS,MILL_TABLE,MILL_OVEN,MILL_BAKE_MS,MILL_KNEAD_MS,validMillQuest,restoreMillQuest,type MillActor,type MillQuest} from '../src/mill-quest';
 import {awardFirst,scoreOf,validAchievements,type ScoreAction} from '../src/score';
 import {Watermill} from '../src/watermill';
 import {Vector3} from 'three';
@@ -27,7 +27,12 @@ test('automatic bag pickup, wrong colour returns, and ordered delivery awards si
  q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),6200);assert.equal(q.carried,-1);assert.equal(q.delivered,0);assert.equal(q.rejected,wrong);
  const earned={fruitsEaten:0,achievements:new Set<ScoreAction>()};let now=8000;
  for(const index of q.order){q=applyMill(q,{kind:'pick',index},actor(MILL_BAGS[index]),now++);q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),now++);}
- assert.equal(q.stage,'running');assert.equal(q.delivered,3);assert(awardFirst(earned,'millQuest'));assert.equal(scoreOf(earned),6);assert(!awardFirst(earned,'millQuest'));assert.equal(scoreOf(earned),6);
+ assert.equal(q.stage,'knead');assert.equal(q.delivered,3);
+ q=applyMill(q,{kind:'flour'},actor(MILL_HOPPER),now+=1000);q=applyMill(q,{kind:'mix'},actor(MILL_TABLE),now+=1000);
+ for(let i=0;i<3;i++)q=applyMill(q,{kind:'knead'},actor(MILL_TABLE),now+=MILL_KNEAD_MS);
+ assert.equal(q.stage,'bake');q=applyMill(q,{kind:'load'},actor(MILL_OVEN),++now);
+ assert.equal(applyMill(q,{kind:'collect'},actor(MILL_OVEN),now+MILL_BAKE_MS-1),q);
+ q=applyMill(q,{kind:'collect'},actor(MILL_OVEN),now+=MILL_BAKE_MS);assert.equal(q.stage,'running');assert(awardFirst(earned,'millQuest'));assert.equal(scoreOf(earned),6);assert(!awardFirst(earned,'millQuest'));assert.equal(scoreOf(earned),6);
  assert.equal(advanceMill(q,q.runningUntil-1),q);const idle=advanceMill(q,q.runningUntil);assert.equal(idle.stage,'idle');assert.equal(applyMill(idle,{kind:'start'},actor(MILL_QUEST_LEVER,'b'),q.runningUntil+1).owner,'b');
  assert.equal(q.runningUntil,q.updatedAt+MILL_RUN_MS);
 });
@@ -63,4 +68,27 @@ test('blue instead of yellow, then yellow, advances by exactly one sack',()=>{
  assert.equal(q.delivered,1);assert.equal(q.stage,'bags');assert.equal(q.order[q.delivered],2);
  q=applyMill(q,{kind:'deliver'},actor(MILL_HOPPER),9700);
  assert.equal(q.delivered,1);
+});
+
+
+test('kneading enforces order, proximity, ownership and time; saved bakes pause and never burn',()=>{
+ let q={...newMillQuest(),stage:'knead' as const,owner:'a',startedAt:1000,updatedAt:1000,delivered:3};
+ assert(validMillQuest(q));
+ assert.equal(applyMill(q,{kind:'mix'},actor(MILL_TABLE),2000),q);
+ assert.equal(applyMill(q,{kind:'flour'},actor(MILL_HOPPER,'b'),2000),q);
+ assert.equal(applyMill(q,{kind:'flour'},actor([0,0,0]),2000),q);
+ let next=applyMill(q,{kind:'flour'},actor(MILL_HOPPER),2000);
+ next=applyMill(next,{kind:'mix'},actor(MILL_TABLE),3000);
+ assert.equal(applyMill(next,{kind:'knead'},actor(MILL_TABLE),3449),next);
+ for(let i=0;i<3;i++)next=applyMill(next,{kind:'knead'},actor(MILL_TABLE),3450+i*450);
+ assert.equal(next.stage,'bake');assert(validMillQuest(next));
+ next=applyMill(next,{kind:'load'},actor(MILL_OVEN),5000);assert(validMillQuest(next));
+ const saved=restoreMillQuest(JSON.parse(JSON.stringify(next)),10000,1000000);
+ assert.equal(saved.bakeAt,995000);assert(validMillQuest(saved));
+ assert.equal(applyMill(saved,{kind:'collect'},actor(MILL_OVEN),1004999),saved);
+ const waiting=advanceMill(saved,1000000+MILL_IDLE_MS*2);assert.equal(waiting.stage,'bake','ready bread waits safely');
+ const finished=applyMill(waiting,{kind:'collect'},actor(MILL_OVEN),1000000+MILL_IDLE_MS*2);
+ assert.equal(finished.stage,'running');assert(validMillQuest(finished));
+ assert.equal(advanceMill(next,6000,false).stage,'idle');
+ assert(!validMillQuest({...next,kneadStep:NaN}));assert(!validMillQuest({...next,order:[0,0,1]}));
 });

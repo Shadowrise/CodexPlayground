@@ -112,7 +112,7 @@ export class MillQuestDecor {
   const splashBranch=q.branches.findIndex(t=>t>0&&now-t<900);
   this.lights.visible=q.stage==='running';this.bubbles.visible=q.stage==='running'||q.stage==='flow'&&q.gate===2||splashBranch>=0;
   if(this.bubbles.visible){
-   const party=q.stage==='running',elapsed=Math.max(0,(now-q.deliveredAt)/1000);
+   const party=q.stage==='running',elapsed=Math.max(0,(now-(q.completedAt||q.deliveredAt))/1000);
    this.bubbles.count=party?this.bubbleCount:24;
    for(let i=0;i<this.bubbles.count;i++){
     const t=((party?elapsed:seconds)*(.16+(i%5)*.013)+i/this.bubbles.count)%1;
