@@ -26,6 +26,22 @@ test('prepared scenery restores placement, raw geometry, culling bounds, LOD and
    camera.position.copy(centre);camera.updateMatrixWorld();object.update(camera);assert.equal(object.getCurrentLevel(),0);assert(object.levels[0].object.visible);
   }
  });assert(instances>500);assert(lods>100);
+ let grassCells=0,plantCells=0;
+ decor.traverse(object=>{
+  if(!(object instanceof T.LOD)||object.userData.boundsLodRadius!==undefined)return;
+  const mesh=object.levels[0].object;if(!(mesh instanceof T.Mesh))return;
+  const sphere=mesh instanceof T.InstancedMesh?mesh.boundingSphere:mesh.geometry.boundingSphere;
+  assert(sphere,'prepared undergrowth keeps its culling bounds');
+  const centre=sphere.center.clone().applyMatrix4(mesh.matrixWorld),camera=new T.PerspectiveCamera();
+  camera.position.copy(centre).add(new T.Vector3(0,2,0));camera.updateMatrixWorld();object.update(camera);
+  assert(mesh.visible,`undergrowth beside the camera must remain visible at ${centre.x},${centre.z}`);
+  camera.position.copy(centre).setX(centre.x+1000);camera.updateMatrixWorld();object.update(camera);
+  assert(!mesh.visible,'distant undergrowth still gets culled');
+  camera.position.copy(centre);camera.updateMatrixWorld();object.update(camera);
+  assert(mesh.visible,'approaching restores the nearby undergrowth');
+  if(mesh instanceof T.InstancedMesh)grassCells++;else plantCells++;
+ });
+ assert(grassCells>100);assert(plantCells>10);
  const grass=[...materials].find(m=>m.customProgramCacheKey()==='meadow-grass-distance-veins-v2');assert(grass);
  const shrub=[...materials].find(m=>m.customProgramCacheKey()==='attached-shrub-wind-v1');assert(shrub);
  const shader={uniforms:{},vertexShader:'#include <common>\n#include <beginnormal_vertex>\n#include <begin_vertex>',fragmentShader:''} as unknown as T.WebGLProgramParametersWithUniforms;

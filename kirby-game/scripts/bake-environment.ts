@@ -21,6 +21,9 @@ try{
 console.time('Prepare meadow');configureSceneryBatching(false);
 const forest=createForest(),world=new T.Group();world.name='Prepared meadow';
 world.add(forest,createMeadowDecor(forest.userData.treePositions,forest.userData.meadowLayout),createLandmarks(forest.userData.meadowLayout,forest.userData.treePositions),createMountains());
+// Object3D.toJSON writes cached local matrices. Commit generated transforms
+// before baking, including the cell centres used by grass and plant LODs.
+world.updateMatrixWorld(true);
 const geometries=new Map<string,T.BufferGeometry>(),textures=new Map<string,T.Texture>(),materials=new Map<string,T.Material>();
 const bounds:EnvironmentDocument['bounds']={},shaders:EnvironmentDocument['shaders']={};
 world.traverse(object=>{
