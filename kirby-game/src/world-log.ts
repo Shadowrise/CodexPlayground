@@ -6,6 +6,8 @@ export const EMOTE_MESSAGES={
  Sad:'грустно опускает голову и тихонько вздыхает, ожидая поддержки.'
 } as const;
 export type LogEntry={id:string;name:string;variant:number;text:string;chat:boolean};
+export const META_KNIGHT_VICTORY_MESSAGE='Метакнайт с уважением смотрит на {0}.';
+export function metaKnightVictoryLog(playerName:string):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:META_KNIGHT_VICTORY_MESSAGE.replace('{0}',()=>playerName),chat:false};}
 export const PIDGIE_SCARE_MESSAGE='Дикий Пиджи окинул {0} голодным взглядом. Хлебушка не заметил, испугался и улетел на другую полянку.';
 export const PIDGIE_INTEREST_MESSAGE='Дикий Пиджи внимательно смотрит на {0}. Что-то его очень заинтересовало.';
 export function pidgieScareLog(playerName:string):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:PIDGIE_SCARE_MESSAGE.replace('{0}',()=>playerName),chat:false};}

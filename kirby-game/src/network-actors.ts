@@ -49,7 +49,7 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
   // Buffered positions drive the native gait clock. Old foot poses belong to
   // another presentation time and would undo planted-foot travel each frame.
   if(!nativeGait)poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
-  c.flight.active=a.state==='Jump'||a.state==='Fly';c.flight.height=c.flight.active?Math.max(0,a.p[1]/a.s):0;c.updateFlightVisual();
+  c.flight.active=a.state==='Jump'||a.state==='Fly';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual();
  }else {
   c.swimming=a.state==='Swim';c.surfaceY=a.p[1];
   c.networkAnimate(a.state,dt,Math.hypot(c.actor.position.x-previousX,c.actor.position.z-previousZ)>.00001);

@@ -21,6 +21,7 @@ export class NetworkSession{
  onEmote?:(emote:Emote,id:string)=>void;
  onFlowerNote?:(index:number)=>void;
  onFlowerComplete?:()=>void;
+ onKnightVictory?:()=>void;
  onNumberNote?:(digit:number)=>void;onNumberComplete?:()=>void;
  private numberStartPending=false;private numberStep='';
  get numberStarting(){return this.numberStartPending;}
@@ -49,6 +50,7 @@ export class NetworkSession{
   s.onmessage=e=>{if(this.closed||e.data==='pong')return;let m:ServerMessage;try{m=JSON.parse(e.data);}catch{return;}
    if(m.type==='welcome'){if(Number.isFinite(m.serverNow))this.clockOffset=m.serverNow!-Date.now();if(m.protocolVersion!==PROTOCOL){s.close();reject(Error('Нужно обновить сервер и страницу игры.'));return;}clearTimeout(timeout);this.id=m.playerId;this.resume=m.resume;this.peerCount=m.players.length;this.room=this.readRoom(m.room);this.log=m.room.log??[];this.world=m.room.world;this.revision++;for(const p of m.players)if(p.actor&&p.id!==this.id)this.receiveActor(p.id,p.actor);this.heartbeat=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send('ping');},15000);resolve();}
    else if(m.type==='number-game'){this.room.numberGame=m.game;this.numberStartPending=false;}
+   else if(m.type==='knight-victory')this.onKnightVictory?.();
    else if(m.type==='number-complete')this.onNumberComplete?.();
    else if(m.type==='number-note'&&m.id!==this.id&&validNumberDigit(m.digit))this.onNumberNote?.(m.digit);
    else if(m.type==='flower-game'){this.room.flowerGame=m.game;this.flowerStartPending=false;}

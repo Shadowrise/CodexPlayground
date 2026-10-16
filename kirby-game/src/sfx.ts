@@ -249,6 +249,18 @@ export class SoundEffects {
       for(let i=0;i<data.length;i++){const t=i/rate,u=t/.62;phase+=2*Math.PI*(170+240*Math.exp(-t*5)+110*Math.sin(t*43)*Math.exp(-t*5))/rate;data[i]=(Math.sin(phase)+.12*Math.sin(phase*2))*Math.min(1,t/.012)*Math.sin(Math.PI*u)*Math.exp(-u*2)*.32;}this.buffers.set('push-boing',buffer);}
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
+  playKnight(kind:'warn'|'hit'|'reflect'|'hurt'|'win'){
+    const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
+    if(kind==='win'){this.playTaskComplete();return;}
+    const key='knight-'+kind;
+    if(!this.buffers.has(key)){
+      const rate=22050,duration=kind==='reflect'?.42:.24,buffer=ctx.createBuffer(1,Math.ceil(rate*duration),rate),data=buffer.getChannelData(0);
+      const frequency=kind==='warn'?480:kind==='reflect'?1160:kind==='hit'?260:160;
+      for(let i=0;i<data.length;i++){const t=i/rate,u=t/duration,phase=2*Math.PI*frequency*t*(kind==='warn'?1+t*.8:1-t*.12);data[i]=(Math.sin(phase)+.35*Math.sin(phase*1.51)+.15*Math.sin(phase*2.31))*Math.min(1,t/.012)*Math.pow(1-u,2)*.24;}
+      this.buffers.set(key,buffer);
+    }
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.75;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
+  }
   playPrank(kind:import('./prank-effects').PrankSound,volume:number){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;
     const key='prank-'+kind;

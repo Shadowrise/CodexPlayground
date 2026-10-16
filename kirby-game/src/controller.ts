@@ -76,9 +76,12 @@ export class CharacterController {
   // Keep the size used for speed when the fountain changes only the body.
   private movementScale?: number;
   private growth?: { from: number; to: number; speedFrom: number; speedTo: number; elapsed: number };
-  get savedSize() { return this.growth?.to ?? this.actor.scale.x; }
+  private duelSize?:{body:number;speed:number};
+  beginDuel(){if(this.duelSize)return;const body=this.savedSize,speed=this.savedSpeedSize;this.resizeTo(1,true);this.duelSize={body,speed};}
+  endDuel(){const saved=this.duelSize;if(!saved)return;this.duelSize=undefined;this.resizeTo(saved.body,true);this.restoreMovementSpeed(saved.speed);this.actor.visible=true;}
+  get savedSize() { return this.duelSize?.body ?? this.growth?.to ?? this.actor.scale.x; }
   get sizeSpeedMultiplier() { return Math.max(1, this.movementScale ?? this.actor.scale.x); }
-  get savedSpeedSize() { return this.growth?.speedTo ?? this.movementScale ?? this.actor.scale.x; }
+  get savedSpeedSize() { return this.duelSize?.speed ?? this.growth?.speedTo ?? this.movementScale ?? this.actor.scale.x; }
   restoreMovementSpeed(size: number) { this.movementScale = Math.max(MIN_BODY_SIZE, size); }
   shrink(amount:number){
     if(amount<=0)return;
@@ -100,8 +103,8 @@ export class CharacterController {
     this.eatElapsed = undefined;
   }
   readonly animationRoot: Object3D;
-  get speed() { return 3.4 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
-  get backwardSpeed() { return 1.65 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
+  get speed() { return this.duelSize?3.4:3.4 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
+  get backwardSpeed() { return this.duelSize?2.8:1.65 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
   readonly turnStep = Math.PI / 18;
   readonly turnDuration = .1;
 
@@ -346,7 +349,7 @@ export class CharacterController {
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
-      this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x*this.flightBoost;
+      this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
       this.updateFlightVisual();
       this.mixer.update(dt);
       if(this.airPush!==undefined){const previous=this.airPush;this.airPush+=dt;if(this.pushArmed&&previous<PUSH_HIT&&this.airPush>=PUSH_HIT){this.attackHit=true;this.pushArmed=false;}if(!this.hasNativeAnimations){this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);}if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}

@@ -45,7 +45,7 @@ import {MeadowIndex} from './meadow-index';
 import {sceneryClearance} from './landmarks';
 import {flatGround} from './pond-layout';
 import {MeadowChat} from './chat';
-import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,type LogEntry} from './world-log';
+import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightVictoryLog,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
@@ -667,7 +667,13 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind)});
+function completeKnightVictory(local=false){
+ if(!character)return;
+ if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
+ if(characterUnlocks.unlockMetaKnight()){unlockAnnouncements.push('Meta Knight');lockedCharacterTooltip.hide();updateVariantLocks();}
+ checkCharacterUnlock();
+}
 const tutorial=new MeadowTutorial({
  scheme:gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard',storage:tutorialStorage,
  adventures:document.querySelector<HTMLElement>('.tasks-panel')!,route:routePanel,
@@ -857,6 +863,7 @@ startButton.addEventListener('click', async () => {
     network.onStar=()=>{if(character){sounds.playStarPickup();awardFirst(character,'star');character.starBlessed=true;character.activateStarPower();}};
     network.onResize=size=>{if(character)character.resizeTo(size);};
     network.onCentipedeProgress=(points,completed)=>{if(!character)return;character.eventPoints=points;if(completed&&awardFirst(character,'centipede'))sounds.playTaskComplete();};
+    network.onKnightVictory=()=>completeKnightVictory();
     network.onCentipedeBump=direction=>{if(character?.takePush(direction[0],direction[1]))sounds.playBoing(.7);};
     network.onHit=(a,target)=>{
       if(!character||typeof target!=='string')return;const yaw=new THREE.Euler().setFromQuaternion(new THREE.Quaternion().fromArray(a.q)).y;
@@ -1017,16 +1024,18 @@ renderer.setAnimationLoop((time: number) => {
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
     if(roundFinished()){cosmicArena.leave();return;}
     if(cosmicArena.active){
-      if(pendingBoard&&cosmicArena.nearExit(character)){cosmicArena.leave();return;}
+      if(pendingBoard&&!settingsOpen){if(cosmicArena.nearExit(character)){cosmicArena.leave();return;}cosmicArena.startBattle();}
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       cosmicArena.update(dt,time*.001,character,{steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
-      const hint=cosmicArena.nearExit(character)?t('E — Вернуться на поляну'):'';
+      const hint=cosmicArena.nearExit(character)?t('E — Вернуться на поляну'):!cosmicArena.battle&&cosmicArena.nearKnight(character)?t('E — Начать дуэль'):'';
       setText(rideHint,hint.replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —'));touch?.setInteraction(hint||undefined);
       sounds.update(dt,character,[],followCamera.azimuth);
     }
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
     updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.values()??[]);
-    chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();cosmicArena.render();
+    const knightBattle=network?.room.knightBattle,knightPlayer=knightBattle?.players[network?.id??''];
+    if(knightBattle?.stage==='won'&&knightPlayer&&knightPlayer.hp>0&&knightPlayer.hits+knightPlayer.reflects>0)completeKnightVictory();
+    checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();cosmicArena.render();
     return;
   }
   if(character&&playing&&!settingsOpen&&metaKnightPortalReady()&&insideMetaKnightPortal(character.actor.position)&&sealActor(character).available){void cosmicArena.enter(character);return;}

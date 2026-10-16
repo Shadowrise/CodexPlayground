@@ -1,0 +1,37 @@
+{
+  "first": {
+    "stage": "slash-warn",
+    "hp": 12,
+    "life": 5
+  },
+  "reflected": {
+    "stage": "return",
+    "reflects": 1,
+    "life": 2
+  },
+  "phases": [
+    1,
+    2
+  ],
+  "won": {
+    "hp": 0,
+    "hits": 12,
+    "unlocked": true,
+    "stored": "1",
+    "log": [
+      "зашёл на полянку.",
+      "Метакнайт с уважением смотрит на Звёздочка."
+    ]
+  },
+  "lost": {
+    "stage": "lost",
+    "hearts": 0,
+    "hp": 12
+  },
+  "restored": {
+    "size": 3,
+    "speed": 2,
+    "hud": false
+  },
+  "errors": []
+}
