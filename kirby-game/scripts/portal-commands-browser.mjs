@@ -21,7 +21,7 @@ try{
  };
  `});});
  await page.goto(process.env.GAME_URL??'http://127.0.0.1:5184/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
- const start=async(load=false)=>{await page.locator(load?'#load-game':'#new-game').click();await page.locator('#player-name-input').fill('Портал');await page.locator('#start-game').click();await page.waitForFunction(()=>!!portalCommandsQA.c);};
+ const start=async(load=false)=>{await page.locator(load?'#load-game':'#new-game').click();if(!load){await page.locator('#player-name-input').fill('Портал');await page.locator('#start-game').click();}await page.waitForFunction(()=>!!portalCommandsQA.c);};
  const state=async open=>{await page.waitForFunction(open=>portalCommandsQA.portal.working===open,open);};
  const command=async text=>{await page.evaluate(()=>portalCommandsQA.chat.show());await page.locator('#chat-input').fill(text);if(mobile)await page.locator('#chat-composer button[type=submit]').click();else await page.keyboard.press('Enter');assert(await page.locator('#chat-command-error').isHidden(),text);if(mobile)await page.evaluate(()=>portalCommandsQA.chat.close());};
  const save=async()=>{await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.evaluate(()=>portalCommandsQA.leave());await page.locator('#startup-menu').waitFor({state:'visible'});};
@@ -35,14 +35,14 @@ try{
  await command('/portal 1');await state(true);assert.equal(arenaRequests.length,0,'opening alone must not load the arena');assert.equal(await page.evaluate(()=>Object.keys(portalCommandsQA.progress.collected).length),0);
  await command('/portal 0');await state(false);await page.evaluate(()=>portalCommandsQA.complete());await state(false);
  await command('/portal 1');await state(true);assert.equal(await page.evaluate(()=>Object.keys(portalCommandsQA.progress.collected).length),3);
- await command('/portal 0');await state(false);await save();await start(true);await state(true); // Save preserves badges, not the forced closed state.
+ await command('/portal 0');await state(false);await save();await start(true);await state(false);
  await page.evaluate(()=>portalCommandsQA.online=true);await page.evaluate(()=>portalCommandsQA.chat.show());await page.locator('#chat-input').fill('/portal 0');if(mobile)await page.locator('#chat-composer button[type=submit]').click();else await page.keyboard.press('Enter');
- assert(await page.locator('#chat-command-error').isVisible());await state(true);await page.evaluate(()=>{portalCommandsQA.online=false;portalCommandsQA.chat.close();});
- await page.evaluate(()=>portalCommandsQA.leave());await start();await state(false);await command('/portal 1');await state(true);await save();await start(true);await state(false); // A forced open without badges also resets on load.
+ assert(await page.locator('#chat-command-error').isVisible());await state(false);await page.evaluate(()=>{portalCommandsQA.online=false;portalCommandsQA.chat.close();});
+ await page.evaluate(()=>portalCommandsQA.leave());await start();await state(false);await command('/portal 1');await state(true);await save();await start(true);await state(true);
  await command('/portal 1');await page.evaluate(()=>{const q=portalCommandsQA,p=q.portal.group.position;q.c.setActivity('Idle');q.c.actor.position.set(p.x,0,p.z);});
  await page.waitForFunction(()=>portalCommandsQA.travel.active,null,{timeout:90000});assert.equal(arenaRequests.length,1);
  await page.evaluate(()=>portalCommandsQA.travel.leave());await page.waitForFunction(()=>!portalCommandsQA.travel.active);await command('/portal 0');await state(false);
  await page.screenshot({path:output+(mobile?'phone':'desktop')+'.png'});assert.deepEqual(errors,[]);
- const report={mobile,tooltip:true,englishCommands:true,soloOnly:true,overrideOpenAndClosed:true,badgesUnchanged:true,resetOnNewGameAndLoad:true,lazyArenaEntry:true,errors};
+ const report={mobile,tooltip:true,englishCommands:true,soloOnly:true,overrideOpenAndClosed:true,badgesUnchanged:true,resetOnNewGame:true,preservePortalOnLoad:true,lazyArenaEntry:true,errors};
  await writeFile(output+(mobile?'phone':'desktop')+'.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }finally{await browser.close();}

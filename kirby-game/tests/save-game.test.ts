@@ -8,6 +8,8 @@ import { FruitWorld } from '../src/fruits';
 import { captureGame, parseSave, restoreGame } from '../src/save-game';
 import { KIRBY_VARIANTS, cloneVariant } from '../src/variants';
 import { STATION } from '../src/coaster';
+import {Vector3} from 'three';
+import {META_KNIGHT_ARENA} from '../src/meta-knight-arena-site';
 
 test('the former pigeon name migrates to Pidgie without losing saved progress',()=>{
  const actor=(variant:string)=>({variant,x:12,z:33,yaw:.8,size:1.2,fruitsEaten:2,achievements:['bench'],eventPoints:3});
@@ -70,4 +72,21 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
  restoreGame(smallSave,restored,friends,fruits);
  assert.equal(restored.savedSize,.3);assert(friends.every(n=>n.savedSize===.3));
  assert.equal(restored.fruitsEaten,save.player.fruitsEaten);assert.equal(fruits.onMap,67);
+ // Manual portal choices survive loading; automatic portals keep following
+ // the collected seals instead of becoming permanently forced closed.
+ for(const open of [false,true]){
+  const portal={open,override:open};
+  const snapshot=captureGame(player,variant,npcs,world,false,undefined,false,undefined,undefined,undefined,undefined,undefined,portal);
+  portal.open=!open;assert.deepEqual(parseSave(JSON.stringify(snapshot)).portal,{open,override:open});
+ }
+ const automatic=parseSave(JSON.stringify({...save,portal:{open:false}}));assert.equal(automatic.portal?.override,undefined);
+ assert.equal(parseSave(JSON.stringify(save)).portal,undefined);
+ for(const portal of [null,{},true,{open:1},{open:true,override:'yes'},{open:true,override:false}])assert.throws(()=>parseSave(JSON.stringify({...save,portal})));
+ player.actor.position.set(META_KNIGHT_ARENA.x+8,0,-12);player.yaw=1.2;player.actor.userData.location='meta-knight-arena';
+ const arena=parseSave(JSON.stringify(captureGame(player,variant,npcs,world,false,()=>new Vector3(1,0,2))));
+ assert.equal(arena.player.location,'meta-knight-arena');assert.equal(arena.player.x,META_KNIGHT_ARENA.x+8);assert.equal(arena.player.z,-12);assert.equal(arena.player.yaw,1.2);
+ restoreGame(arena,restored,friends,fruits);assert.equal(restored.actor.position.x,META_KNIGHT_ARENA.x+8);assert.equal(restored.actor.position.z,-12);assert.equal(restored.yaw,1.2);
+ const landing={...arena.player,x:META_KNIGHT_ARENA.x+META_KNIGHT_ARENA.exitX,z:META_KNIGHT_ARENA.exitZ};assert.deepEqual(parseSave(JSON.stringify({...arena,player:landing})).player,landing,'saving beside the relocated portal remains supported');
+ for(const player of [{...arena.player,location:'elsewhere'},{...arena.player,x:0},{...arena.player,z:1000}])assert.throws(()=>parseSave(JSON.stringify({...arena,player})));
+ assert.equal(parseSave(JSON.stringify(save)).player.location,undefined,'old saves still load on the meadow');
 });

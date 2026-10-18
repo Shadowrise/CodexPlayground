@@ -58,7 +58,8 @@ window.menuCheck={scene,renderer,shadows,gamepad,chat,fruits,coaster,station:STA
  await page.evaluate(()=>{menuCheck.c.resizeTo(3,true);menuCheck.c.eatFruit();menuCheck.c.skyCheckpoint=2;menuCheck.c.achievements.add('sleep');menuCheck.c.actor.position.copy(menuCheck.home.entrance);menuCheck.home.start(menuCheck.c);});
  // A save remains usable after an in-page exit, even from a scripted attraction.
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.locator('#exit-to-menu').click();await checkMenu();
- await page.locator('#load-game').click();await page.locator('#start-game').click();await page.waitForFunction(()=>menuCheck.playing);
+ await page.locator('#load-game').click();await page.waitForFunction(()=>menuCheck.playing);
+ assert(await page.locator('#character-select').isHidden(),'loading enters the saved game without character selection or another start click');
  assert(await page.evaluate(()=>menuCheck.c.achievements.has('sleep')&&menuCheck.c.fruitsEaten===1&&menuCheck.c.skyCheckpoint===2));await exit();
  const afterSolo=await page.evaluate(()=>menuCheck.shadows.shaders.size);
  for(let i=0;i<3;i++){

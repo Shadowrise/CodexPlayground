@@ -150,7 +150,7 @@ try{
  await page.reload();await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
  await page.waitForFunction(()=>window.metaKnightCheck&&!document.querySelector('#start-game').disabled,null,{timeout:120000});
  assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),'1');
- await page.locator('#load-game').click();assert.equal(await knight().getAttribute('aria-pressed'),'true');await start(page);
+ await page.locator('#load-game').click();await page.waitForFunction(()=>metaKnightCheck.c?.isMetaKnight);assert(await page.locator('#character-select').isHidden());
  assert.equal(await page.evaluate(()=>metaKnightCheck.c.isMetaKnight),true);
  report.desktop={lockedHint:hint,onlineCommandBlocked:true,persistedUnlock:true,native,movementDistance:distance,emotions,rides:checkedRides,savedNativeSelection:true};
  await page.close();

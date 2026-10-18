@@ -16,7 +16,8 @@ export function grantBread(b:BreadState,a:BreadActor,now:number):BreadState{
  const others=breadLoaves(b);return {...loaf,...(others.length?{others}:{})};
 }
 export type BreadAction={kind:'pick'|'drop'|'feed'};
-export type BreadBird={phase:string;p:readonly number[]};
+export type BreadBird={phase:string;p:readonly number[];friend?:BreadOffering};
+export const BREAD_PICKUP_DELAY_MS=2000;
 export function canFeedPidgie(b:BreadState,a:BreadActor,bird?:BreadBird){
  b=breadLoaves(b).find(v=>v.owner===a.id)??b;
  if(b.active===false||!bird||!a.available||b.owner!==a.id||b.offering||!['wander','follow','greet'].includes(bird.phase)||Math.abs(a.p[1]-bird.p[1])>1.3)return false;
@@ -40,10 +41,17 @@ export function breadPosition(b:BreadState,now:number):Point{
  if(t>=b.drop.duration)return [...b.p];
  return [b.drop.from[0]+(b.p[0]-b.drop.from[0])*u,b.drop.from[1]+(b.drop.speed??upwardSpeed)*t-gravity*t*t/2,b.drop.from[2]+(b.p[2]-b.drop.from[2])*u];
 }
-export function canPickBread(b:BreadState,a:BreadActor,now:number){
- return !holdsBread(b,a.id)&&breadLoaves(b).some(v=>canPickLoaf(v,a,now));
+export function canPickBread(b:BreadState,a:BreadActor,now:number,bird?:BreadBird){
+ return !holdsBread(b,a.id)&&breadLoaves(b).some(v=>canPickLoaf(v,a,now,bird));
 }
-const canPickLoaf=(b:BreadLoaf,a:BreadActor,now:number)=>b.active!==false&&!b.owner&&!b.offering&&a.available&&now>=b.pickupAt&&Math.abs(a.p[1]-b.p[1])<1.3&&Math.hypot(a.p[0]-b.p[0],a.p[2]-b.p[2])<1.4+Math.min(14,a.size*.7);
+function canPickLoaf(b:BreadLoaf,a:BreadActor,now:number,bird?:BreadBird){
+ const friend=bird?.friend;
+ // Keep the bird's accepted target reserved even if the bread and NPC arrive
+ // in different snapshots. Another loaf dropped here later remains independent.
+ const reserved=!!b.offering||!!friend&&b.drop?.at===friend.at&&Math.hypot(b.p[0]-friend.bread[0],b.p[1]-friend.bread[1],b.p[2]-friend.bread[2])<.05;
+ const pickupAt=Math.max(b.pickupAt,b.drop?b.drop.at+b.drop.duration*1000+BREAD_PICKUP_DELAY_MS:0);
+ return b.active!==false&&!b.owner&&!reserved&&a.available&&now>=pickupAt&&Math.abs(a.p[1]-b.p[1])<1.3&&Math.hypot(a.p[0]-b.p[0],a.p[2]-b.p[2])<1.4+Math.min(14,a.size*.7);
+}
 /** The same exposed mountain surfaces are used by solo and the authoritative room. */
 export function breadFloor(x:number,z:number,ceiling:number,steps?:number[][]){
  let floor=Math.max(0,mountainSurfaceHeight(x,z));
@@ -71,18 +79,18 @@ function advanceLoaf(b:BreadLoaf,now:number,steps?:number[][]):BreadLoaf{
  const from=breadPosition(b,now),floor=breadFloor(from[0],from[2],from[1],steps);
  if(floor>=from[1]-.03)return b;
  const duration=Math.sqrt(2*(from[1]-floor)/gravity);
- return {...b,p:[from[0],floor,from[2]],pickupAt:now+duration*1000+500,drop:{from,at:now,duration,speed:0}};
+ return {...b,p:[from[0],floor,from[2]],pickupAt:now+duration*1000+BREAD_PICKUP_DELAY_MS,drop:{from,at:now,duration,speed:0}};
 }
 export function applyBread(b:BreadState,action:BreadAction,a:BreadActor,now:number,steps?:number[][],bird?:BreadBird):BreadState{
  const loaves=breadLoaves(b);
  if(action?.kind==='pick'&&holdsBread(b,a.id))return b;
- const index=action?.kind==='pick'?loaves.findIndex(v=>canPickLoaf(v,a,now)):loaves.findIndex(v=>v.owner===a.id);
+ const index=action?.kind==='pick'?loaves.findIndex(v=>canPickLoaf(v,a,now,bird)):loaves.findIndex(v=>v.owner===a.id);
  if(index<0)return b;
  const old=loaves[index],next=applyLoaf(old,action,a,now,steps,bird);if(old===next)return b;
  return {...next,...(loaves.length>1?{others:loaves.filter((_,i)=>i!==index)}:{})};
 }
 function applyLoaf(b:BreadLoaf,action:BreadAction,a:BreadActor,now:number,steps?:number[][],bird?:BreadBird):BreadLoaf{
- if(action?.kind==='pick')return canPickLoaf(b,a,now)?{...b,owner:a.id,drop:undefined}:b;
+ if(action?.kind==='pick')return canPickLoaf(b,a,now,bird)?{...b,owner:a.id,drop:undefined}:b;
  if(action?.kind==='feed'&&!canFeedPidgie(b,a,bird))return b;
  if(!['drop','feed'].includes(action?.kind)||b.owner!==a.id||b.offering)return b;
  const sx=Math.sin(a.yaw),sz=Math.cos(a.yaw),distance=2+1.4*a.size;
@@ -97,7 +105,7 @@ function applyLoaf(b:BreadLoaf,action:BreadAction,a:BreadActor,now:number,steps?
  const from:Point=[a.p[0]+sx*.35,a.p[1]+Math.max(.6,a.size*1.1),a.p[2]+sz*.35];
  floor=Math.min(floor,from[1]);
  const duration=(upwardSpeed+Math.sqrt(upwardSpeed**2+2*gravity*(from[1]-floor)))/gravity;
- return {owner:'',p:[x,floor,z],scale:breadCarryScale(a.size),yaw:a.yaw,pickupAt:now+duration*1000+800,drop:{from,at:now,duration},...(action.kind==='feed'&&bird?{offering:{by:a.id,at:now,bird:[...bird.p] as Point,bread:[x,floor,z] as Point}}:{})};
+ return {owner:'',p:[x,floor,z],scale:breadCarryScale(a.size),yaw:a.yaw,pickupAt:now+duration*1000+BREAD_PICKUP_DELAY_MS,drop:{from,at:now,duration},...(action.kind==='feed'&&bird?{offering:{by:a.id,at:now,bird:[...bird.p] as Point,bread:[x,floor,z] as Point}}:{})};
 }
 export function validBreadOffering(value:unknown):value is BreadOffering{
  const f=value as BreadOffering,point=(p:unknown)=>Array.isArray(p)&&p.length===3&&p.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=512);

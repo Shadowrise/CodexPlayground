@@ -8,11 +8,12 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number}|{kind:'portal';open:boolean};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3}|{kind:'godmode'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
  enabled:()=>boolean;
+ duelActive?:()=>boolean;
  destinations:()=>readonly Destination[];
  execute:(command:ChatCommand)=>void;
 };
@@ -24,13 +25,19 @@ const commands=[
  {name:'portal',description:'Портал Метакнайта: 1 — открыть, 0 — закрыть'},
 ];
 const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'}] as const;
+const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–3'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
-export function parseChatCommand(text:string,enabled:boolean,destinations:readonly Destination[]):CommandResult|undefined{
+export function parseChatCommand(text:string,enabled:boolean,destinations:readonly Destination[],duelActive=false):CommandResult|undefined{
  if(!text.trimStart().startsWith('/'))return;
  if(!enabled)return {error:'Команды доступны только в одиночной игре.'};
  const match=parts(text.trim());
  const name=match?.[1].toLowerCase(),argument=match?.[2]?.trim()??'';
+ if(name==='phase'||name==='godmode'){
+  if(!duelActive)return {error:'Эта команда доступна только во время дуэли с Метакнайтом.'};
+  if(name==='godmode')return argument?{error:'Введи /godmode без аргументов.'}:{command:{kind:'godmode'}};
+  return /^[123]$/.test(argument)?{command:{kind:'phase',phase:Number(argument) as 1|2|3}}:{error:'Введи /phase 1, /phase 2 или /phase 3.'};
+ }
  if(name==='portal'){
   if(argument!=='0'&&argument!=='1')return {error:'Введи /portal 1, чтобы открыть портал, или /portal 0, чтобы закрыть.'};
   return {command:{kind:'portal',open:argument==='1'}};
@@ -54,18 +61,19 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
   return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie или /unlock meta-knight, чтобы открыть персонажа.'};
  }
- return {error:'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
+ return {error:duelActive?'Доступные команды: /size, /tele, /unlock, /time, /portal, /phase и /godmode.':'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }
 
-export function commandSuggestions(text:string,enabled:boolean,destinations:readonly Destination[]):CommandSuggestion[]{
+export function commandSuggestions(text:string,enabled:boolean,destinations:readonly Destination[],duelActive=false):CommandSuggestion[]{
  if(!enabled)return [];
  const match=parts(text);if(!match)return [];
  const name=match[1].toLowerCase(),argument=match[2]?.trim().toLowerCase()??'';
+ if(name==='phase')return duelActive?[1,2,3].filter(phase=>String(phase).startsWith(argument)).map(phase=>({value:`/phase ${phase}`,label:String(phase),description:t('Фаза {0}',[phase]),complete:true})):[];
  if(name==='portal')return [{value:'1',description:'Открыть портал'},{value:'0',description:'Закрыть портал'}].filter(option=>option.value.startsWith(argument)).map(option=>({value:`/portal ${option.value}`,label:option.value,description:t(option.description),complete:true}));
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,
  }));
  if(name==='unlock')return unlockCharacters.filter(entry=>entry.character.startsWith(argument)).map(entry=>({value:`/unlock ${entry.character}`,label:entry.character,description:t(entry.name),complete:true}));
  if(match[2]!==undefined)return [];
- return commands.filter(c=>c.name.startsWith(name)).map(c=>({value:`/${c.name} `,label:`/${c.name}`,description:t(c.description),complete:false}));
+ return [...commands,...(duelActive?duelCommands:[])].filter(c=>c.name.startsWith(name)).map(c=>({value:`/${c.name}${c.name==='godmode'?'':' '}`,label:`/${c.name}`,description:t(c.description),complete:c.name==='godmode'}));
 }

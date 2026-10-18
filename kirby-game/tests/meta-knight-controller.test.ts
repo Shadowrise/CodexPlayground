@@ -14,7 +14,7 @@ function advance(c:CharacterController,seconds:number,input=idle){for(let i=0;i<
 test('Meta Knight retains every native gameplay clip and plays all ride poses',()=>{
  const c=create();assert(c.isMetaKnight);assert(c.hasNativeAnimations);assert(!c.isPigeon);
  assert.equal(c.animationRoot.name,'MetaKnight_root');
- assert.equal(c.actions.size,META_KNIGHT_CLIPS.length,'all native states, including the Attack alias, are callable');
+ assert.equal(c.actions.size,META_KNIGHT_CLIPS.length+1,'all native states and the flying Dash alias are callable');
  for(const definition of META_KNIGHT_CLIPS){
   const clip=c.actions.get(definition.name)!.getClip();
   assert.equal(clip.duration,definition.duration,`${definition.name} keeps its native duration`);
@@ -35,7 +35,7 @@ test('native movement preserves forward, sprint, reverse, steering and growth sp
  const c=create();advance(c,1,{...idle,forward:true});assert.equal(c.state,'Run');assert(Math.abs(c.actor.position.z-3.4)<1e-6);
  let z=c.actor.position.z;advance(c,1,{...idle,forward:true,sprint:true});assert(Math.abs(c.actor.position.z-z-6.8)<1e-6);assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
  z=c.actor.position.z;advance(c,1,{...idle,backward:true,sprint:true});assert.equal(c.state,'WalkBackward');assert(Math.abs(c.actor.position.z-z+1.65)<1e-6);
- advance(c,.2,{...idle,left:true});advance(c,.2);assert(Math.abs(c.yaw-Math.PI/9)<1e-6);
+ advance(c,.2,{...idle,left:true});advance(c,.2);assert(Math.abs(c.yaw-Math.PI*.55*2*.2)<1e-6);
  const facing=new Vector3(0,0,1).applyQuaternion(c.animationRoot.getWorldQuaternion(new Quaternion()));
  assert(Math.abs(Math.atan2(facing.x,facing.z)-c.yaw)<1e-6,'the native root never doubles the game heading');
  c.resizeTo(1.5,true);c.eatFruit();z=c.actor.position.z;advance(c,1,{...idle,forward:true});assert(Math.abs(c.actor.position.z-z-c.speed*Math.cos(c.yaw))<1e-6);
@@ -106,9 +106,14 @@ test('held keyboard turns keep native footwork cycling after the first one-shot 
   const c=create(),input={...idle,left:direction===1,right:direction===-1};advance(c,1.1,input);
   const action=c.actions.get(direction===1?'RotateLeft':'RotateRight')!,before=action.time;
   const foot=c.actor.getObjectByName('Left_foot_pivot')!,rotation=foot.quaternion.clone();
-  advance(c,.05,input);assert(action.isRunning());assert.equal(action.loop,LoopRepeat);
+  let footMoved=false;
+  for(let frame=0;frame<3;frame++){
+   advance(c,1/60,input);
+   footMoved ||= foot.quaternion.clone().normalize().angleTo(rotation.clone().normalize())>.01;
+  }
+  assert(action.isRunning());assert.equal(action.loop,LoopRepeat);
   assert.notEqual(action.time,before,'the repeated step still advances the mixer');
-  assert(foot.quaternion.clone().normalize().angleTo(rotation.normalize())>.01,'native feet continue turning instead of freezing');
-  assert(Math.abs(c.yaw-direction*115*Math.PI/180)<1e-6);advance(c,.3);assert.equal(c.state,'Idle');
+  assert(footMoved,'native feet continue turning instead of freezing');
+  const yaw=c.yaw;assert(Math.abs(yaw-direction*198*1.15*Math.PI/180)<1e-6);advance(c,.3);assert.equal(c.state,'Idle');assert.equal(c.yaw,yaw);
  }
 });

@@ -505,7 +505,7 @@ export class SoundEffects {
     }
   }
 
-  private synthesize(kind: Exclude<SoundKind,'eat'|'hello'>, variant: number) {
+  private synthesize(kind: Exclude<SoundKind,'eat'|'hello'|'thrust'>, variant: number) {
     const ctx = this.context!, rate = 22050;
     const duration = { jump: .32, attack: .22, death: .85, revive: .8, grow: .62, voice: .78, step: .15 }[kind];
     const buffer = ctx.createBuffer(1, Math.ceil(rate * duration), rate), data = buffer.getChannelData(0);
@@ -581,6 +581,7 @@ export class SoundEffects {
     // Player and important life-cycle events take precedence over ambient chatter.
     events.sort((a, b) => Number(a.kind === 'step') - Number(b.kind === 'step') || Number(!!b.actor.player) - Number(!!a.actor.player));
     for (const event of events) {
+      if(event.kind==='thrust'){this.playKnight('thrust');continue;}
       const dx = event.actor.x - player.actor.position.x, dz = event.actor.z - player.actor.position.z;
       const distance = Math.hypot(dx, dz);
       // Greetings accompany the visible wave, including the full 24m greeting

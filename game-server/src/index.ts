@@ -1,5 +1,6 @@
-import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
-import {META_KNIGHT_ARENA} from '../../kirby-game/src/meta-knight-arena-site';
+import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,knightArenaSide,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
+import {constrainKnightShield} from '../../kirby-game/src/meta-knight-shield';
+import {META_KNIGHT_ARENA,constrainMetaKnightArena} from '../../kirby-game/src/meta-knight-arena-site';
 import {metaKnightVictoryLog} from '../../kirby-game/src/world-log';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
@@ -286,8 +287,13 @@ export class GameRoom extends DurableObject<Env>{
   if(r.festival?.results){if(alreadyFinished)this.send(socket,{type:'room',room:r});return;}
   this.accountHistory(a,now);
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
+  const oldKnightPoint=a.actor?.location==='meta-knight-arena'?[a.actor.p[0]-META_KNIGHT_ARENA.x,a.actor.p[1],a.actor.p[2]] as [number,number,number]:undefined;
   let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
   if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
+  if(actor?.location==='meta-knight-arena'){
+   const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
+   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
+  }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    if(breadOffering(r.bread)&&next.pidgie)next.pidgie=beginPidgieFeeding(next.pidgie,breadOffering(r.bread)!);
 

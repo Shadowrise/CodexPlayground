@@ -346,6 +346,9 @@ export class PidgieNpc {
  /** Invalid snapshots do not corrupt either animation or the host checkpoint. */
  applyNetworkState(snapshot:PidgieState,snap=false){
   if(!validPidgieState(snapshot))return false;
+  // Friendship is permanent. An older wild/hidden checkpoint must not undo
+  // acceptance of the bread while the bird is still running towards it.
+  if(this.data.friend&&!snapshot.friend)return false;
   this.followRoute=[];this.followRoutePlayer=undefined;this.followRetry=0;
   const first=!this.remote,sameClip=this.data.clip===snapshot.clip;this.data=copyState(snapshot);this.remote=copyState(snapshot);
   this.actor.visible=snapshot.phase!=='hidden';

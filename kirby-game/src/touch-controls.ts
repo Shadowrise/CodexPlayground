@@ -16,6 +16,10 @@ export class TouchControls {
   private thumb=document.createElement('span');
   private look=new Map<number,{x:number;y:number}>();
   private action:HTMLButtonElement;
+  private actionRequiresHold=false;private interactionWasHold=false;private interactionId?:number;
+  private jumpId?:number;
+  get jumpHeld(){return this.jumpId!==undefined;}
+  get interactionHeld(){return this.interactionId!==undefined;}
   private emotes=emotesFor();
   private emoteButtons:HTMLButtonElement[]=[];
   get choosing(){return !this.chooser.hidden;}
@@ -37,10 +41,17 @@ export class TouchControls {
       b.addEventListener('click',e=>{if(e.detail===0&&this.enabled)fn();});
       parent.append(b);return b;
     };
-    button('touch-jump','↑','Прыжок / полёт',actions.jump);
+    const jump=button('touch-jump','↑','Прыжок / полёт',actions.jump);
+    jump.addEventListener('pointerdown',e=>{if(!this.enabled||e.pointerType!=='touch'||this.jumpId!==undefined)return;this.jumpId=e.pointerId;jump.setPointerCapture(e.pointerId);});
+    const releaseJump=(e:PointerEvent)=>{if(e.pointerId===this.jumpId)this.jumpId=undefined;};
+    for(const name of ['pointerup','pointercancel','lostpointercapture'])jump.addEventListener(name,releaseJump as EventListener);
     button('touch-attack','✦','Толчок',actions.attack);
     // Keep the contextual action above the scrollable HUD, outside the movement layer.
-    this.action=button('touch-interact','Действие','Взаимодействовать',actions.interact,this.interactionLayer);this.action.hidden=true;
+    this.action=button('touch-interact','Действие','Взаимодействовать',()=>{if(!this.interactionWasHold&&!this.actionRequiresHold)actions.interact();},this.interactionLayer);this.action.hidden=true;
+    this.action.addEventListener('pointerdown',e=>{if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.interactionId!==undefined)return;this.interactionWasHold=this.actionRequiresHold;if(this.actionRequiresHold){this.interactionId=e.pointerId;this.action.setPointerCapture(e.pointerId);}});
+    const releaseInteraction=(e:PointerEvent)=>{if(e.pointerId===this.interactionId)this.interactionId=undefined;};
+    for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)this.action.addEventListener(name,releaseInteraction);
+    this.action.addEventListener('pointermove',e=>{const r=this.action.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)releaseInteraction(e);});
     const utilities=document.createElement('div');utilities.className='touch-tools';
     button('touch-emotes','☺','Эмоции',()=>{this.reset();this.chooser.hidden=false;},utilities);
     button('touch-chat','Чат','Написать в чат',()=>{this.reset();actions.chat();},utilities);
@@ -90,11 +101,15 @@ export class TouchControls {
     if(this.enabled===enabled)return;this.enabled=enabled;this.root.hidden=this.interactionLayer.hidden=!enabled;
     if(!enabled){this.reset();this.chooser.hidden=true;}
   }
-  setInteraction(text?:string){
+  setInteraction(text?:string,hold=false,progress=0){
+    this.actionRequiresHold=hold;if(!text)this.interactionId=undefined;
+    this.action.dataset.hold=String(hold);this.action.style.setProperty('--interaction-progress',`${hold?Math.max(0,Math.min(1,progress))*100:0}%`);
     this.action.hidden=!text;this.action.textContent=(text?t(text).replace(/^E\s*—\s*/,''):t('Действие'));
     this.action.setAttribute('aria-label',this.action.textContent);
   }
   reset(){
+    const jump=this.root.querySelector<HTMLButtonElement>('#touch-jump'),jumpId=this.jumpId;this.jumpId=undefined;if(jumpId!==undefined&&jump?.hasPointerCapture(jumpId))jump.releasePointerCapture(jumpId);
+    const interaction=this.interactionId;this.interactionId=undefined;if(interaction!==undefined&&this.action.hasPointerCapture(interaction))this.action.releasePointerCapture(interaction);
     const id=this.stickId;this.stickId=undefined;this.x=this.y=0;this.thumb.style.transform='';
     if(id!==undefined&&this.stick.hasPointerCapture(id))this.stick.releasePointerCapture(id);
     const ids=[...this.look.keys()];this.look.clear();for(const i of ids)if(this.canvas.hasPointerCapture(i))this.canvas.releasePointerCapture(i);

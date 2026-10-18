@@ -1,4 +1,4 @@
-export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'eat' | 'voice' | 'step' | 'hello';
+export type SoundKind = 'jump' | 'attack' | 'death' | 'revive' | 'grow' | 'eat' | 'voice' | 'step' | 'hello' | 'thrust';
 export type SoundActor = { id: string; state: string; down: boolean; size: number; x: number; z: number; player?: boolean; fruitsEaten?: number };
 export type SoundEvent = { kind: SoundKind; actor: SoundActor };
 
@@ -38,7 +38,8 @@ export class SoundEvents {
         if (!before.down && actor.down) events.push({ kind: 'death', actor });
         else if (before.down && !actor.down) events.push({ kind: 'revive', actor });
         else if (!actor.down && before.state !== actor.state) {
-          if (actor.state === 'Jump' || actor.state === 'Fly') events.push({ kind: 'jump', actor });
+          if (actor.state === 'Jump' || actor.state === 'Fly'&&before.state!=='Dash') events.push({ kind: 'jump', actor });
+          if (actor.state === 'Dash') events.push({ kind: 'thrust', actor });
           if (actor.state === 'Push') events.push({ kind: 'attack', actor });
         }
         if (actor.fruitsEaten !== undefined) {

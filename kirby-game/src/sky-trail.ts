@@ -3,6 +3,7 @@ import * as T from 'three';
 import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
 import {skyGlass,mergeSkyDetails,mergeSkyMetal,SkyMovingDetails} from './sky-trail-visuals';
+import {collideSkyPlatforms} from './sky-trail-collision';
 import type {CharacterController} from './controller';
 import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHECKPOINTS,SKY_COLORS as COLORS,rainbowHeight,skySurfaces,SKY_RAINBOW_START,SKY_RAINBOW_END,platformThickness} from './sky-trail-layout';
 export type SkySound='bounce'|'checkpoint'|'star'|'leaves';
@@ -95,15 +96,19 @@ export class SkyTrail{
   if(!rider.hasNativeAnimations)for(const side of ['Left','Right']){const arm=rider.actor.getObjectByName(`${side}_shoulder`);if(arm)arm.rotation.z=(side==='Left'?-1:1)*(1+.15*Math.sin(u*18));}
   if(u===1){if(!t.landed){t.landed=true;if(t.leaves){this.leaves.burst();this.sound('leaves');}else this.sound('checkpoint');}rider.actor.position.copy(t.to);if(!t.leaves||flightTime>t.duration+.65){rider.setActivity('Idle');rider.surfaceY=this.base=t.to.y;this.inCourse=this.contains(t.to);this.rider=undefined;this.travel=undefined;}}
  }
- /** Swept foot-height tests land on tops only; stepping off an edge starts real gravity. */
+ /** Solid cube faces plus rounded foot support; stepping off starts real gravity. */
  apply(c:CharacterController,previous:T.Vector3,dt:number){
   if(this.active)return;
   if(!this.handles(c)){this.base=0;this.fall=undefined;this.inCourse=false;return;}
-  this.inCourse=true;c.swimming=false;const p=c.actor.position,localX=p.x-SITE.x,localZ=p.z-SITE.z;
-  const surfaces=[{height:0,index:-2},...skySurfaces(localX,localZ,c.actor.scale.x,c.yaw)].sort((a,b)=>b.height-a.height);
+  this.inCourse=true;c.swimming=false;const p=c.actor.position;
   if(this.fall!==undefined){c.flight.reset();c.cloud.visible=false;this.fall-=24*dt;p.y=previous.y+this.fall*dt;}
+  if(collideSkyPlatforms(p,previous,c.actor.scale.x,c.yaw)){
+   c.setActivity('Idle');this.fall=0;c.surfaceY=0;
+  }
+  const localX=p.x-SITE.x,localZ=p.z-SITE.z;
+  const surfaces=[{height:0,index:-2},...skySurfaces(localX,localZ,c.actor.scale.x,c.yaw)].sort((a,b)=>b.height-a.height);
   let support=surfaces.find(s=>previous.y>=s.height-.03&&p.y<=s.height+.03&&p.y<=previous.y+.01);
-  if(this.fall===undefined&&!c.flight.active){support=surfaces.find(s=>Math.abs(s.height-this.base)<.65&&Math.abs(previous.y-this.base)<.08);}
+  if(this.fall===undefined&&!c.flight.active){support=surfaces.find(s=>Math.abs(s.height-this.base)<.65&&Math.abs(previous.y-this.base)<.08)??support;}
   if(support){
    p.y=support.height;c.surfaceY=this.base=support.height;this.fall=undefined;
    if(c.flight.active){c.setActivity('Idle');c.surfaceY=support.height;}

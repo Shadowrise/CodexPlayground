@@ -11,9 +11,18 @@ import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './
 import {PIGEON_CLIP_BY_NAME, type PigeonClipName} from './pigeon-clips';
 import {META_KNIGHT_CLIP_BY_NAME, type MetaKnightClipName} from './meta-knight-clips';
 import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
+import {MetaKnightPlayerDash,PLAYER_KNIGHT_DASH} from './meta-knight-player-dash';
+import {MetaKnightBattleMotion} from './meta-knight-battle-motion';
+import {MetaKnightDashSparks} from './meta-knight-dash-sparks';
+import {DuelDazedPose} from './duel-dazed-pose';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
-type Turn = { direction: number; startYaw: number; elapsed: number; duration: number };
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; dashHeld?:boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
+const KEYBOARD_TURN_SPEED = 2;
+const ANALOG_TURN_RATE = Math.PI * .55;
+
+function turnRate(input: Input) {
+  return ANALOG_TURN_RATE * (input.steer === undefined ? KEYBOARD_TURN_SPEED : 1);
+}
 
 export class CharacterController {
   readonly actor = new Group();
@@ -42,8 +51,27 @@ export class CharacterController {
     this.emotion=this.hasNativeAnimations||kind==='Peck'?{kind,elapsed:0,clear(){},update(dt:number){this.elapsed+=dt;return this.elapsed>=(duration??2.4);}}:new EmotePose(kind,this.animationRoot);
     return true;
   }
-  private turn?: Turn;
   readonly flight = new Flight();
+  readonly knightDash = new MetaKnightPlayerDash();
+  private dashMotion?:MetaKnightBattleMotion;
+  private dashSparks?:MetaKnightDashSparks;
+  private duelDazedPose?:DuelDazedPose;
+  clearDuelDazedPose(){this.duelDazedPose?.clear();}
+  updateDuelDazedPose(now:number,dazed:boolean,seat=true){
+    if(!dazed){this.clearDuelDazedPose();return;}
+    this.duelDazedPose??=new DuelDazedPose(this.actor,this.isMetaKnight?'meta-knight':this.isPigeon?'pigeon':'kirby');this.duelDazedPose.apply(now,seat);
+  }
+  clearKnightDashPose(){this.dashMotion?.clear();}
+  updateKnightDashVisual(){
+    const active=this.isMetaKnight&&this.state==='Dash';
+    if(active){
+      this.dashMotion??=new MetaKnightBattleMotion(this.actor);
+      this.dashSparks??=new MetaKnightDashSparks(this.actor.getObjectByName('Galaxia')!);
+      this.dashMotion.applyThrust();
+    }
+    this.dashSparks?.update(this.mixer.time*1000,active);
+  }
+  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -106,8 +134,6 @@ export class CharacterController {
   readonly animationRoot: Object3D;
   get speed() { return this.duelSize?3.4:3.4 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
   get backwardSpeed() { return this.duelSize?2.8:1.65 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
-  readonly turnStep = Math.PI / 18;
-  readonly turnDuration = .1;
 
   constructor(model: Object3D, clips: AnimationClip[]) {
     let pigeon=false,metaKnight=false;
@@ -152,6 +178,7 @@ export class CharacterController {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
     if(!this.hasNativeAnimations)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
+    if(this.isMetaKnight){const dash=this.actions.get('Fly')!.getClip().clone();dash.name='Dash';this.actions.set('Dash',this.mixer.clipAction(dash));}
     this.play('Idle');
   }
 
@@ -195,10 +222,12 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.clearDuelDazedPose();
+    this.clearKnightDashPose();this.knightDash.cancel();this.dashSparks?.update(0,false);
     this.clearAirPose();this.airPush=undefined;
     this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
-    this.flight.reset();this.flightElapsed=0;this.cloud.visible=false;this.turn=undefined;
+    this.flight.reset();this.flightElapsed=0;this.cloud.visible=false;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
     this.play(this.hasNativeAnimations && this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
@@ -264,15 +293,20 @@ export class CharacterController {
 
   /** A mount moves the actor while its native pose and growth continue. */
   updateActivity(dt:number){
+    this.clearDuelDazedPose();
+    this.clearKnightDashPose();this.knightDash.tick(dt);this.knightDash.cancelCharge();
     this.updateGrowth(dt);this.pushReady=Math.max(0,this.pushReady-dt);
     this.mixer.update(dt);
+    this.updateKnightDashVisual();
   }
 
   update(dt: number, input: Input) {
+    this.clearDuelDazedPose();
+    this.clearKnightDashPose();this.knightDash.tick(dt);
+    this.dashSparks?.update(0,false);
     this.gaitFrame=undefined;
     this.clearAirPose();
     this.roll.clearPose();
-    if(input.steer!==undefined)this.turn=undefined;
     this.updateGrowth(dt);
     this.constrainPosition();
     this.gaitFrom.copy(this.actor.position);
@@ -299,10 +333,9 @@ export class CharacterController {
     const jumpPressed = !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if(jumpPressed && this.flight.active)this.flight.press();
-    if(input.allowAirPush&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=!this.isMetaKnight;this.pushArmed=this.isMetaKnight;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
-    if (!this.turn && !this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
-    if (!this.turn && !this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
-      const direction = input.steer===undefined ? Number(input.left) - Number(input.right) : 0;
+    if(input.allowAirPush&&!this.knightDash.active&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=!this.isMetaKnight;this.pushArmed=this.isMetaKnight;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
+    if (!this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
+    if (!this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       if (eatPressed) {
         this.play('Eat');
         this.eatElapsed = 0;
@@ -311,11 +344,20 @@ export class CharacterController {
         this.flightElapsed=0;
         this.flightBoost = this.starRemaining > 0 ? 2 : 1;
         this.flight.press();
-      } else if (direction) {
-        this.turn = { direction, startYaw: this.yaw, elapsed: 0, duration: this.turnDuration };
-      } else if(input.steer===undefined) {
-        this.play(this.locomotion(input));
       }
+    }
+    const dashStart=this.isMetaKnight?this.knightDash.chargeHold(dt,input.dashHeld??!!input.jump,(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined):undefined;
+    if(dashStart!==undefined){
+      if(!this.flight.active){this.flight.press();this.flightBoost=this.starRemaining>0?2:1;}
+      this.play('Dash');
+    }
+    if(this.knightDash.active){
+      const step=this.knightDash.step(dashStart??dt),distance=step*PLAYER_KNIGHT_DASH.distance/PLAYER_KNIGHT_DASH.duration*this.sizeSpeedMultiplier;
+      this.actor.position.x+=Math.sin(this.yaw)*distance;this.actor.position.z+=Math.cos(this.yaw)*distance;
+      this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
+      this.updateFlightVisual();this.mixer.update(dt);
+      if(!this.knightDash.active)this.play(this.flight.active?'Fly':this.locomotion(input));
+      this.constrainPosition();this.updateKnightDashVisual();return;
     }
     if(!this.isPigeon)this.actions.get('Run')!.setEffectiveTimeScale(input.sprint && input.forward && !input.backward ? 2 : 1);
     if (this.eatElapsed !== undefined) {
@@ -333,7 +375,7 @@ export class CharacterController {
       this.attackElapsed += dt;
       if(this.pushArmed && previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT){this.attackHit=true;this.pushArmed=false;}
       const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
-      if(steering){this.yaw+=steering*Math.PI*.55*dt;this.actor.rotation.y=this.yaw;}
+      if(steering){this.yaw+=steering*turnRate(input)*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
       const moving=!!(input.forward||input.backward);
       if(!this.hasNativeAnimations && moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
@@ -347,7 +389,7 @@ export class CharacterController {
     } else if (this.flight.active) {
       this.flightElapsed+=dt;
       if(this.hasNativeAnimations && (this.flightElapsed>.18||this.isMetaKnight&&this.airPush!==undefined))this.play(this.airPush!==undefined?'Push':'Fly');
-      this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*Math.PI*.55*dt;
+      this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*turnRate(input)*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
@@ -355,37 +397,19 @@ export class CharacterController {
       this.mixer.update(dt);
       if(this.airPush!==undefined){const previous=this.airPush;this.airPush+=dt;if(this.pushArmed&&previous<PUSH_HIT&&this.airPush>=PUSH_HIT){this.attackHit=true;this.pushArmed=false;}if(!this.hasNativeAnimations){this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);}if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
       if(!this.flight.active){this.cloud.visible=false;this.airPush=undefined;this.pushArmed=false;this.play(this.locomotion(input));}
-    } else if (this.turn) {
-      const t = this.turn;
-      const locomotion=this.locomotion(input);
-      const name=locomotion==='Idle' ? (t.direction>0?'RotateLeft':'RotateRight') : locomotion;
-      this.play(name);
-      const action=this.actions.get(name)!;
-      // A held key repeats heading steps, so native one-shot preview turns must
-      // keep their footwork cycling throughout the complete keyboard turn.
-      if(name.startsWith('Rotate'))action.setLoop(LoopRepeat,Infinity);
-      action.setEffectiveTimeScale(name.startsWith('Rotate') ? action.getClip().duration/.4 : name==='Run' && input.sprint ? 2 : 1);
-      t.elapsed = Math.min(t.duration, t.elapsed + dt);
-      // GLB time keys are float32: 1.2 may decode as 1.2000000477.
-      if (t.duration - t.elapsed < 1e-6) t.elapsed = t.duration;
-      const u = t.elapsed / t.duration;
-      this.yaw = t.startYaw + t.direction * this.turnStep * u * u * (3 - 2 * u);
-      this.actor.rotation.y = this.yaw;
-      this.move(dt,input);
-      this.advanceGroundMixer(dt);
-      if (t.elapsed >= t.duration - 1e-8) {
-        this.turn = undefined;
-        const heldDirection = Number(input.left) - Number(input.right);
-        if (heldDirection !== t.direction) this.play(this.locomotion(input));
-      }
     } else {
-      if(input.steer!==undefined) {
-        const steering=Math.max(-1,Math.min(1,input.steer));
-        this.yaw+=steering*Math.PI*.55*dt;
-        this.actor.rotation.y=this.yaw;
-        const motion=this.locomotion(input);
-        this.play(motion==='Idle' && steering!==0 ? (steering>0?'RotateLeft':'RotateRight') : motion);
-        if(this.state.startsWith('Rotate'))this.actions.get(this.state)!.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(Math.max(.35,Math.abs(steering))*this.actions.get(this.state)!.getClip().duration/.4);
+      const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
+      this.yaw+=steering*turnRate(input)*dt;
+      this.actor.rotation.y=this.yaw;
+      const motion=this.locomotion(input);
+      this.play(motion==='Idle' && steering!==0 ? (steering>0?'RotateLeft':'RotateRight') : motion);
+      if(this.state.startsWith('Rotate')) {
+        const action=this.actions.get(this.state)!;
+        // Native preview clips are one-shot; held steering keeps footwork cycling.
+        const speed=input.steer===undefined?KEYBOARD_TURN_SPEED:Math.max(.35,Math.abs(steering));
+        action.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(speed*action.getClip().duration/.4);
+      } else if(this.state==='Run'&&!this.isPigeon) {
+        this.actions.get('Run')!.setEffectiveTimeScale(input.sprint?2:1);
       }
       this.move(dt, input);
       this.advanceGroundMixer(dt);

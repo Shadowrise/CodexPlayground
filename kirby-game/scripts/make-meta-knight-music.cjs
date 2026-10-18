@@ -1,7 +1,8 @@
 const fs=require('node:fs'),path=require('node:path');
-// Original score: “Galaxia — Knight of the Stars”, D minor, 144 BPM, 32 bars.
-// A / B / A variation / finale. Every instrument tail wraps into the loop.
-const rate=44100,bpm=144,beat=60/bpm,bars=32,duration=bars*4*beat,n=Math.round(rate*duration);
+// Original score: “Galaxia — Knight of the Stars”, D minor, 144 BPM, 64 bars.
+// Theme, answer, reprise, lyrical bridge, bridge variation, return and two-part finale.
+// Every instrument tail wraps into the loop.
+const rate=44100,bpm=144,beat=60/bpm,bars=64,duration=bars*4*beat,n=Math.round(rate*duration);
 const left=new Float32Array(n),right=new Float32Array(n),hz=m=>440*2**((m-69)/12);
 let seed=23491;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
 const chords=[[50,53,57],[46,50,53],[53,57,60],[48,52,55],[43,46,50],[46,50,53],[45,50,52],[45,49,55]];
@@ -15,6 +16,11 @@ const themeB=[
  [84,-1,81,79,77,81,84,86],[88,84,79,76,79,-1,84,81],
  [86,82,79,77,74,77,79,82],[89,-1,86,82,81,77,79,81],
  [88,86,85,81,79,76,74,73],[81,79,76,73,76,79,85,-1]];
+const themeC=[
+ [77,-1,74,-1,81,79,77,-1],[74,-1,70,-1,77,74,72,-1],
+ [81,-1,77,79,84,-1,81,77],[79,-1,76,-1,72,76,79,-1],
+ [79,-1,74,77,82,-1,79,77],[77,-1,74,70,77,81,82,-1],
+ [76,-1,73,74,81,-1,79,76],[73,-1,76,79,85,81,79,-1]];
 function add(at,seconds,sound,gain,pan=0){
  const start=Math.round(at*rate),l=Math.sqrt((1-pan)/2),r=Math.sqrt((1+pan)/2),count=Math.round(seconds*rate);
  for(let i=0;i<count;i++){const t=i/rate,v=sound(t)*gain*Math.min(1,t/.012,(seconds-t)/.035),j=(start+i)%n;left[j]+=v*l;right[j]+=v*r;}
@@ -30,15 +36,16 @@ function note(midi,at,seconds,voice,gain,pan=0){
  },gain,pan);
 }
 for(let bar=0;bar<bars;bar++){
- const section=Math.floor(bar/8),c=chords[bar%8],at=bar*4*beat,melody=(section===1||section===3?themeB:themeA)[bar%8],energy=section===3?1.12:section===0?.86:1;
+ const section=Math.floor(bar/8),bridge=section===3||section===4,c=chords[bar%8],at=bar*4*beat;
+ const melody=(bridge?themeC:section===1||section===5||section===7?themeB:themeA)[bar%8],energy=[.86,1,.98,.72,.88,1.02,1.08,1.15][section];
  for(let i=0;i<8;i++){
   note(c[[0,2,1,2,0,2,1,2][i]]+12,at+i*beat/2,beat*.65,'strings',.065*energy,-.48);
   note(c[[2,1,2,0,2,1,2,0][i]]+12,at+i*beat/2+.012,beat*.62,'strings',.054*energy,.5);
  }
  for(let i=0;i<4;i++)note(c[i%2?2:0]-12,at+i*beat,beat*.8,'bass',.15,0);
- melody.forEach((m,i)=>{if(m>=0){note(m,at+i*beat/2,beat*(melody[i+1]===-1?.96:.48),'horn',.1*energy,-.08);if(section===3&&i%2===0)note(m+12,at+i*beat/2,beat*.6,'bell',.038,.4);}});
+ melody.forEach((m,i)=>{if(m>=0){note(m,at+i*beat/2,beat*(melody[i+1]===-1?.96:.48),bridge?'strings':'horn',.1*energy,-.08);if((section>=6||section===4)&&i%2===0)note(m+12,at+i*beat/2,beat*.6,'bell',.038,.4);}});
  for(const b of [0,2])c.forEach((m,i)=>note(m+12,at+b*beat+i*.008,beat*.55,'horn',.034*energy,(i-1)*.25));
- if(section===1||section===3)c.forEach((m,i)=>note(m+24,at,beat*3.7,'pad',.026,(i-1)*.65));
+ if(section%2===1||bridge)c.forEach((m,i)=>note(m+24,at,beat*3.7,'pad',.026,(i-1)*.65));
  if(bar%2===0)note(c[2]+24,at+3.5*beat,beat*1.3,'bell',.07,.55);
  // Timpani, a brushed snare with a body resonance, and a restrained shaker.
  for(const b of [0,2])add(at+b*beat,.7,t=>Math.sin(2*Math.PI*(53*t+9*(1-Math.exp(-t*30))/30))*Math.exp(-t*9),.22*energy);

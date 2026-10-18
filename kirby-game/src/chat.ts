@@ -39,7 +39,7 @@ export class MeadowChat{
   }
   this.composer.addEventListener('submit',e=>{
    e.preventDefault();const text=chatText(this.input.value);
-   const result=parseChatCommand(text,this.commands?.enabled()??false,this.commands?.destinations()??[]);
+   const result=parseChatCommand(text,this.commands?.enabled()??false,this.commands?.destinations()??[],this.commands?.duelActive?.()??false);
    if(result?.error){this.error.textContent=t(result.error);this.error.hidden=false;this.input.setAttribute('aria-invalid','true');this.input.focus({preventScroll:true});return;}
    if(result?.command)this.commands!.execute(result.command);else if(text)send(text);
    if(this.mobile){
@@ -66,7 +66,7 @@ export class MeadowChat{
  configureCommands(options:ChatCommandOptions){this.commands=options;}
  private updateSuggestions(){
   this.error.hidden=true;this.input.removeAttribute('aria-invalid');this.selected=-1;
-  this.choices=commandSuggestions(this.input.value,this.commands?.enabled()??false,this.commands?.destinations()??[]);
+  this.choices=commandSuggestions(this.input.value,this.commands?.enabled()??false,this.commands?.destinations()??[],this.commands?.duelActive?.()??false);
   this.hint.textContent=t(this.choices.length?'↑↓ — выбрать · Tab — подставить · Enter — подтвердить':'Enter — отправить · Escape — отменить · до 255 символов');
   this.suggestions.hidden=!this.choices.length;this.input.setAttribute('aria-expanded',String(!!this.choices.length));this.input.removeAttribute('aria-activedescendant');
   this.suggestions.replaceChildren(...this.choices.map((choice,i)=>{

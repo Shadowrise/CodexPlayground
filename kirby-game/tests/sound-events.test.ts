@@ -3,6 +3,12 @@ import { test } from 'node:test';
 import { SoundEvents, type SoundActor } from '../src/sound-events';
 const actor = (id: string): SoundActor => ({ id, state: 'Idle', down: false, size: 1, x: 0, z: 0 });
 
+test('sword flight sounds once at launch, stays observed while muted and returns to flight silently',()=>{
+ const events=new SoundEvents(),player={...actor('player'),player:true};const update=(ready=true)=>events.update(.016,[player],player,ready).map(e=>e.kind);
+ update();player.state='Dash';assert.deepEqual(update(),['thrust']);for(let i=0;i<30;i++)assert.deepEqual(update(),[]);
+ player.state='Fly';assert.deepEqual(update(),[]);player.state='Idle';update();player.state='Dash';assert.deepEqual(update(false),['thrust']);assert.deepEqual(update(true),[],'unmuting cannot replay an old launch');
+});
+
 test('audio unlock retries a still-active greeting once without replaying muted fruit sounds or old greetings',()=>{
  const events=new SoundEvents(),npc=actor('npc'),player={...actor('player'),player:true,fruitsEaten:0};
  const update=(ready:boolean)=>events.update(.016,[player,npc],player,ready).map(e=>e.kind);

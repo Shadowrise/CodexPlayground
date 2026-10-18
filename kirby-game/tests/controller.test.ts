@@ -43,7 +43,7 @@ test('running, sprinting and backing turn without losing movement or animation c
       assert(Math.abs(c.actor.position.distanceTo(before)-speed/60)<1e-7);
       assert.equal(c.state,mode==='backward'?'WalkBackward':'Run');
     }
-    assert(Math.abs(c.yaw-100*Math.PI/180)<1e-6);
+    assert(Math.abs(c.yaw-198*Math.PI/180)<1e-6);
     if(mode==='sprint')assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
     c.update(1/60,{...idle,left:true});assert.equal(c.state,'RotateLeft');
   }
@@ -103,18 +103,44 @@ test('Shift doubles forward speed and Run cadence, releases immediately and scal
   assert.equal(c.state, 'Idle');
   assert(c.actor.position.distanceTo(position) < 1e-6);
 });
-test('tap turns left 10 degrees, heading survives Idle and subsequent Run', async () => {
+test('a short tap turns only while held and the small heading survives Idle and subsequent Run', async () => {
   const c = await create();
   c.update(1 / 60, { ...idle, left: true });
   advance(c, 1.4);
   assert.equal(c.state, 'Idle');
-  assert(Math.abs(c.yaw - Math.PI / 18) < 1e-6);
+  const angle=Math.PI*.55*2/60;
+  assert(angle<Math.PI/18);
+  assert(Math.abs(c.yaw - angle) < 1e-6);
   assert(Math.abs(c.animationRoot.rotation.y) < 1e-6);
   advance(c, 1, { ...idle, forward: true });
-  assert(Math.abs(c.actor.position.x - Math.sin(Math.PI / 18) * c.speed) < 1e-6);
-  assert(Math.abs(c.actor.position.z - Math.cos(Math.PI / 18) * c.speed) < 1e-6);
+  assert(Math.abs(c.actor.position.x - Math.sin(angle) * c.speed) < 1e-6);
+  assert(Math.abs(c.actor.position.z - Math.cos(angle) * c.speed) < 1e-6);
 });
-test('visible root turns only 10 degrees across every frame in both directions', async () => {
+
+test('continuous keyboard turning reaches 198 degrees per second at low and high frame rates',async()=>{
+  for(const fps of [20,24,30,60,75,120,144])for(const direction of [-1,1]){
+    const c=await create();
+    for(let frame=0;frame<fps;frame++)c.update(1/fps,{...idle,left:direction===1,right:direction===-1});
+    assert(Math.abs(c.yaw-direction*198*Math.PI/180)<1e-6,`${fps} fps, direction ${direction}`);
+  }
+});
+
+test('keyboard turning is twice as fast during attacks and flight, with analog sensitivity preserved',async()=>{
+  for(const mode of ['attack','flight'])for(const direction of [-1,1]){
+    const keyboard=await create(),analog=await create();
+    const start={...idle,attack:mode==='attack',jump:mode==='flight'};
+    keyboard.update(1/60,start);analog.update(1/60,start);
+    for(let frame=0;frame<12;frame++){
+      keyboard.update(1/60,{...idle,left:direction===1,right:direction===-1});
+      analog.update(1/60,{...idle,steer:direction});
+    }
+    assert.equal(keyboard.flight.active,mode==='flight');
+    assert.equal(keyboard.state,mode==='flight'?'Jump':'Push');
+    assert(Math.abs(analog.yaw-direction*Math.PI*.55*.2)<1e-6,`${mode}: analog sensitivity`);
+    assert(Math.abs(keyboard.yaw-analog.yaw*2)<1e-6,`${mode}: keyboard speed`);
+  }
+});
+test('a tap immediately stops rotating the visible root in both directions', async () => {
   for (const direction of [-1, 1]) {
     const c = await create();
     assert.notEqual(c.animationRoot, c.actor.children[0]);
@@ -124,8 +150,8 @@ test('visible root turns only 10 degrees across every frame in both directions',
       const forward = new Vector3(0, 0, 1).applyQuaternion(c.animationRoot.getWorldQuaternion(new Quaternion()));
       const angle = Math.atan2(forward.x, forward.z);
       assert(Math.abs(angle - c.yaw) < 1e-6, 'Model yaw must not add another animated rotation');
-      assert(Math.abs(angle) <= Math.PI / 18 + 1e-6);
-      assert(direction * (angle - previous) >= -1e-6, 'No end-of-turn snap back');
+      assert(Math.abs(angle-direction*Math.PI*.55*2/60)<1e-6);
+      if(i>0)assert(Math.abs(angle-previous)<1e-6,'Release must stop yaw without completing a step');
       previous = angle;
     }
   }
@@ -155,24 +181,36 @@ test('jump rises, lands, cannot retrigger while Space is held and works again af
   c.update(1 / 60, { ...idle, jump: true });
   assert.equal(c.state, 'Jump');
 });
-test('held right repeats turns without position drift; opposite keys cancel', async () => {
+test('held right turns continuously without position drift; opposite keys cancel immediately', async () => {
   const c = await create();
   advance(c, 2.4, { ...idle, right: true });
-  assert(Math.abs(c.yaw + 24 * Math.PI / 18) < 1e-6);
+  assert(Math.abs(c.yaw + 198*2.4*Math.PI/180) < 1e-6);
   assert(c.actor.position.length() < 1e-6);
   const yaw = c.yaw;
   advance(c, .5, { ...idle, left: true, right: true });
   assert.equal(c.yaw, yaw);
   assert.equal(c.state, 'Idle');
 });
-test('release finishes only the current 10-degree step and stops repeating', async () => {
+test('release stops at the exact heading and reversing responds in the next frame', async () => {
   const c = await create();
   advance(c, .45, { ...idle, left: true });
-  advance(c, 1);
-  assert(Math.abs(c.yaw - 5 * Math.PI / 18) < 1e-6);
   const yaw = c.yaw;
+  assert(Math.abs(yaw-198*.45*Math.PI/180)<1e-6);
+  c.update(1/60,idle);assert.equal(c.yaw,yaw);assert.equal(c.state,'Idle');
   advance(c, 1);
   assert.equal(c.yaw, yaw);
+  c.update(1/60,{...idle,right:true});
+  assert(Math.abs(c.yaw-yaw+Math.PI*.55*2/60)<1e-6);
+  assert.equal(c.state,'RotateRight');
+});
+
+test('holding a turn never delays a jump or attack',async()=>{
+  for(const action of ['jump','attack'] as const){
+    const c=await create();c.update(1/120,{...idle,left:true});
+    c.update(1/120,{...idle,left:true,[action]:true});
+    assert.equal(c.state,action==='jump'?'Jump':'Push');
+    assert.equal(c.flight.active,action==='jump');
+  }
 });
 test('small Kirby moves at full base speed, with sprint and star power still multiplying it',async()=>{
   for(const [size,multiplier] of [[.3,1],[.5,1],[.99,1],[1,1],[1.5,1.5],[2,2]]){
@@ -203,15 +241,17 @@ test('each fruit adds twenty percentage points to forward and backward speed wit
   advance(c, 1, { ...idle, backward: true });
   assert(Math.abs(c.actor.position.z - (z - 1.65 * 1.4)) < 1e-6);
 });
-test('fast heading steps preserve continuous half-speed footwork while held', async () => {
+test('continuous turning keeps footwork cycling without resetting it each frame', async () => {
   const c = await create();
   advance(c, .25, { ...idle, left: true });
   const action = c.actions.get('RotateLeft')!;
-  assert(Math.abs(c.yaw - 25 * Math.PI / 180) < 1e-6);
+  const yaw=198*.25*Math.PI/180;
+  assert(Math.abs(c.yaw - yaw) < 1e-6);
   const duration = action.getClip().duration;
-  assert(Math.abs(action.getEffectiveTimeScale() - duration / .4) < 1e-6);
-  assert(Math.abs(action.time - .25 * duration / .4) < 1e-6, 'Foot phase must not reset at 10-degree boundaries');
+  const cycle=.4/2;
+  assert(Math.abs(action.getEffectiveTimeScale() - duration / cycle) < 1e-6);
+  assert(Math.abs(action.time - (.25 * duration / cycle)%duration) < 1e-6, 'Foot phase must not reset during the turn');
   advance(c, .5);
-  assert(Math.abs(c.yaw - 30 * Math.PI / 180) < 1e-6);
+  assert(Math.abs(c.yaw-yaw)<1e-6);
   assert.equal(c.state, 'Idle');
 });

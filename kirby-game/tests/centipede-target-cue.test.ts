@@ -15,3 +15,10 @@ test('a readable target cue follows elevated instruments with a floating downwar
  cue.update([6,1.2,-3],1100,camera,true);assert.deepEqual(cue.group.position.toArray(),[6,1.2,-3]);
  cue.group.traverse(o=>{if(o instanceof Mesh){o.geometry.dispose();(o.material as any).dispose();}});
 });
+
+test('the green target ring counts the actual open window and clears its timer for untimed objectives',()=>{
+ const cue=new CentipedeTargetCue();
+ for(const [progress,want] of [[0,0],[.25,.25],[.75,.75],[1,1],[2,1],[-.5,0]]){cue.update([0,2,0],1000,undefined,false,progress);assert.equal(cue.ring.material.uniforms.progress.value,want);}
+ cue.update([0,2,0],1000);assert.equal(cue.ring.material.uniforms.progress.value,-1,'an active crystal has no invented expiry');
+ cue.group.traverse(o=>{if(o instanceof Mesh){o.geometry.dispose();(o.material as any).dispose();}});
+});

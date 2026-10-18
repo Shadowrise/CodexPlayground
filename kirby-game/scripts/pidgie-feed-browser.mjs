@@ -64,7 +64,7 @@ try{
  for(let i=1;i<coos.length;i++)assert(coos[i]-coos[i-1]>5000,'each joy starts exactly one coo');
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.locator('#settings-toggle').click();
  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')));assert(saved.bread.offering);assert.equal(saved.pidgie.phase,'feast');assert(saved.player.achievements.includes('pidgieFriend'));
- await page.evaluate(()=>window.feedTest.returnToMenu());await page.locator('#load-game').click();await page.locator('#start-game').click();await page.waitForFunction(()=>window.feedTest.character&&window.feedTest.bird.phase==='feast');
+ await page.evaluate(()=>window.feedTest.returnToMenu());await page.locator('#load-game').click();await page.waitForFunction(()=>window.feedTest.character&&window.feedTest.bird.phase==='feast');
  assert.equal(await page.evaluate(()=>window.feedTest.points()),result.points);assert(await page.evaluate(()=>!!window.feedTest.bread.state.offering));
  await page.waitForFunction(()=>window.feedTest.bread.loaf.visible&&!window.feedTest.bread.aura.visible);
  const alignment=await page.evaluate(async()=>{

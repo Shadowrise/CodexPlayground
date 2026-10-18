@@ -109,6 +109,8 @@ import {touchMotion,wantsTouchControls} from './touch-input';
 import {createFullscreenControls} from './fullscreen';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
 import { createGamepadInput, stickSteering } from './gamepad';
+import {MetaKnightPlayerDashHud} from './meta-knight-player-dash-hud';
+const knightDashHud=new MetaKnightPlayerDashHud();
 const gamepad = createGamepadInput();
 const mobile=wantsTouchControls(navigator.maxTouchPoints,matchMedia('(pointer: coarse)').matches,matchMedia('(hover: none)').matches);
 const historyDevice=()=>deviceInfo(navigator.userAgent,navigator.maxTouchPoints,screen.width,screen.height,gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard');
@@ -258,36 +260,30 @@ const saveButton=document.createElement('button');saveButton.type='button';saveB
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
 try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
-loadButton.disabled=!hasSave;
+loadButton.disabled=!hasSave||!startupComplete;
 selectionCard.hidden=true;
 loadButton.title=t(hasSave?'Загрузить сохранение':'Сохранений пока нет');
-loadButton.addEventListener('click',()=>{
+loadButton.addEventListener('click',async()=>{
+  if(!startupComplete||playing||joiningSession)return;
   networkIntent=false;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
-    pendingSave=parseSave(raw);selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
+    pendingSave=parseSave(raw);
     if(pendingSave.player.achievements?.includes('pidgieFriend')&&characterUnlocks.unlockPidgie())unlockAnnouncements.push('Пиджи');
     if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncements.push('Бандана');
-    const savedCharacter=selected[0];
-    const lockedSave=characterUnlocks.isLocked(selected[0]);
-    if(lockedSave){
-      // A save made while a character was freely available keeps all progress.
-      selected=KIRBY_VARIANTS.find(v=>!characterUnlocks.isLocked(v[0])&&!pendingSave!.npcs.some(n=>n.variant===v[0]))!;
-      pendingSave.player.variant=selected[0];
-    }
-    // Keep the saved colour/NPC roster intact, while allowing name entry here.
     resetVariantAvailability();
-    (variantGrid.children[KIRBY_VARIANTS.indexOf(selected)] as HTMLButtonElement).click();
-    variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>{b.disabled=i!==KIRBY_VARIANTS.indexOf(selected);});
-    showCharacterSelection();
-    if(lockedSave){selectionMessage.textContent=t(savedCharacter==='Meta Knight'?'Meta Knight пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.':savedCharacter==='Пиджи'?'Пиджи пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.':'Бандана пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.');selectionMessage.hidden=false;}
+    selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
+    variantGrid.querySelectorAll<HTMLButtonElement>('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===KIRBY_VARIANTS.indexOf(selected))));
+    nameInput.value=normalizePlayerName(nameInput.value)||t(selected[0]);
+    selectionGeneration++;
+    await startGame();
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
 saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest)));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride})));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -517,9 +513,16 @@ const destinations:Destination[]=[
 const wayfinder=new Wayfinder(routePanel,scene,destinations);
 chat.configureCommands({
  enabled:()=>playing&&!network&&!networkIntent,
+ duelActive:()=>cosmicArena.duelCommandsAvailable,
  destinations:()=>destinations,
  execute:command=>{
   if(!character||network||networkIntent)return;
+  if(command.kind==='phase'){cosmicArena.setPhase(command.phase);return;}
+  if(command.kind==='godmode'){
+   const enabled=cosmicArena.toggleGodMode();
+   if(enabled!==undefined)addLocalLog(enabled?'включил неуязвимость до конца дуэли.':'выключил неуязвимость.');
+   return;
+  }
   if(command.kind==='size'){character.resizeTo(command.size,true);return;}
   if(command.kind==='time'){dayStart=Date.now();dayStartPhase=phaseAtHour(command.hour);return;}
   if(command.kind==='portal'){soloPortalOverride=command.open;meadowPortal.setWorking(metaKnightPortalReady());return;}
@@ -791,8 +794,9 @@ export const ready=loadCharacter().then(async()=>{
   performance.mark('kirby-graphics-ready');
   startupComplete=true;renderer.domElement.style.visibility='';startButton.disabled=false;loadButton.disabled=!hasSave;startButton.textContent=t('На поляну →');
 });
-startButton.addEventListener('click', async () => {
-  if (!startupComplete || !loadedModel || playing || joiningSession || selectionCard.hidden || characterUnlocks.isLocked(selected[0]) || !requirePlayerName()) return;
+startButton.addEventListener('click',()=>{void startGame();});
+async function startGame(){
+  if (!startupComplete || !loadedModel || playing || joiningSession || !pendingSave&&(selectionCard.hidden || characterUnlocks.isLocked(selected[0])) || !requirePlayerName()) return;
   lockedCharacterTooltip.hide();
   const generation=selectionGeneration;
   selectionMessage.hidden=true;selectionMessage.textContent='';
@@ -821,8 +825,9 @@ startButton.addEventListener('click', async () => {
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
   const savedPidgie=pendingSave?.pidgie;
+  const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
-  soloPortalOverride=undefined;
+  soloPortalOverride=pendingSave?.portal?.override;
   lastSealRequest=0;seenSealCount=Object.keys(sealProgress.collected).length;clearSealNotice();
   bread.reset(pendingSave?.bread);lastBreadRequest=0;watermill.setQuest(pendingSave?.millQuest?restoreMillQuest(pendingSave.millQuest,Date.parse(pendingSave.savedAt),Date.now()):newMillQuest(),Date.now());
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
@@ -880,8 +885,10 @@ startButton.addEventListener('click', async () => {
   }
   renderer.domElement.tabIndex = -1;
   renderer.domElement.focus();
+  if(savedArena)await cosmicArena.enter(character,savedArena);
+  if(generation!==selectionGeneration||!playing)return;
   tutorial.open();
-});
+}
 
 function checkCharacterUnlock(){
  if(!character||!playing)return;
@@ -1015,12 +1022,15 @@ renderer.setAnimationLoop((time: number) => {
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.held.has(7))padKeys.add('ShiftLeft');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
-    if(pad.pressed.has(3))pendingBoard=true;
+    if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
     followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
   const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
+  const dashHeld=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&(usingPad?pad.held.has(0):usingTouch?!!touch?.jumpHeld:held('Space'));
+  if(!dashHeld)character?.knightDash.chargeHold(0,false,true);
+  knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'));
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
   meadowPortal.setWorking(metaKnightPortalReady());meadowPortal.update(time*.001);
@@ -1028,15 +1038,16 @@ renderer.setAnimationLoop((time: number) => {
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
     if(roundFinished()){cosmicArena.leave();return;}
     if(cosmicArena.active){
-      if(pendingBoard&&!settingsOpen){if(cosmicArena.nearExit(character)){cosmicArena.leave();return;}if(cosmicArena.engaged)cosmicArena.cancelBattle();else cosmicArena.startBattle();}
+      if(pendingBoard&&!settingsOpen&&!cosmicArena.engaged){if(cosmicArena.nearExit(character)){cosmicArena.leave();return;}cosmicArena.startBattle();}
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
-      cosmicArena.update(dt,time*.001,character,{steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
+      const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
+      cosmicArena.update(dt,time*.001,character,{cancelDuel,dashHeld,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       const hint=cosmicArena.nearExit(character)?t('E — Вернуться на поляну'):cosmicArena.engaged?t('E — Прервать дуэль'):(!cosmicArena.battle||['won','lost','cancelled'].includes(cosmicArena.battle.stage))&&cosmicArena.nearKnight(character)?t('E — Начать дуэль'):'';
-      setText(rideHint,hint.replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —'));touch?.setInteraction(hint||undefined);
+      setText(rideHint,hint.replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —'));touch?.setInteraction(hint||undefined,cosmicArena.engaged,cosmicArena.cancelProgress);
       sounds.update(dt,character,[],followCamera.azimuth);
     }
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
-    updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.values()??[]);
+    updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.entries()??[]);
     const knightBattle=network?.room.knightBattle,knightPlayer=knightBattle?.players[network?.id??''];
     if(knightBattle?.stage==='won'&&knightPlayer&&!knightPlayer.withdrawn&&knightPlayer.hp>0&&knightPlayer.hits+knightPlayer.reflects>0)completeKnightVictory();
     checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();cosmicArena.render();
@@ -1075,7 +1086,7 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { dashHeld:dashHeld&&!maze.contains(character.actor.position,2),allowAirPush:currentCentipede()?.stage==='back'||hasChasers(currentCentipede()),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);numberGarden.constrain(character.actor.position,character.actor.scale.x);}
@@ -1098,7 +1109,7 @@ renderer.setAnimationLoop((time: number) => {
     character.finishPigeonGroundMovement(dt,previousX,previousZ);
     const breadNow=network?.serverNow??Date.now();
     if(!network)bread.state=advanceBread(bread.state,breadNow,mountainLedges.networkState());
-    if(canPickBread(bread.state,breadActor(character),breadNow)&&(!network||breadNow-lastBreadRequest>350)){lastBreadRequest=breadNow;sendBread({kind:'pick'});}
+    if(canPickBread(bread.state,breadActor(character),breadNow,pidgieNpc?.networkState())&&(!network||breadNow-lastBreadRequest>350)){lastBreadRequest=breadNow;sendBread({kind:'pick'});}
     const sealCollector=sealActor(character);
     const nearbySeal=META_KNIGHT_SEAL_SITES.find(site=>(site.id!=='treehouse'||treehouse.onBalcony(character!))&&canCollectSeal(sealProgress,site.id,sealCollector));
     if(nearbySeal&&(!network||breadNow-lastSealRequest>500)){
@@ -1377,7 +1388,7 @@ function tickMeadowWhileAway(dt:number){
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
  if(!network){bread.state=advanceBread(bread.state,now,mountainLedges.networkState());soloFlowerGame=advanceFlowerGame(soloFlowerGame,now,[]);soloNumberGame=advanceNumberGame(soloNumberGame,now,[]);centipedeTick();}
  fruits.update(dt,character!,host?npcs:[],true);
- music.setEvent(cosmicArena.engaged?'knight':false);music.updateDucking(false,dt);
+ music.setEvent(cosmicArena.engaged?'knight':false);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);music.updateDucking(false,dt);
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   if(nearMetaKnightPortal(c.actor.position)&&sealActor(c).available)return {text:metaKnightPortalReady()?'E — Войти на арену Метакнайта':'Портал пока не работает',run:()=>{if(metaKnightPortalReady())void cosmicArena.enter(c);},target:{key:meadowPortal,root:meadowPortal.group}};

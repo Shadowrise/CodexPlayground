@@ -2,6 +2,7 @@ import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
 import {createMetaKnightPortal} from './meta-knight-portal';
+import {createMetaKnightAnnex} from './meta-knight-annex';
 
 function arenaFloor(){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=2048;const c=canvas.getContext('2d')!,n=2048;
@@ -53,6 +54,7 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
  const scene=new T.Scene();scene.name='Meta Knight cosmic arena';scene.background=new T.Color('#07091f');
  const root=new T.Group();root.position.set(SITE.x,0,SITE.z);scene.add(root);
  const ownedTextures:T.Texture[]=[];
+ const crystals:T.Mesh[]=[];
  const silver=new T.MeshStandardMaterial({color:'#afb9d5',metalness:.6,roughness:.32});
  const dark=new T.MeshStandardMaterial({color:'#44365d',metalness:.35,roughness:.46});
  const violet=new T.MeshStandardMaterial({color:'#7356b1',emissive:'#452779',emissiveIntensity:.17,metalness:.35,roughness:.3});
@@ -76,6 +78,7 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
   add(new T.CylinderGeometry(1.5,1.5,.12,8),gold,x,.59,z,0,a);
   add(new T.CylinderGeometry(1.2,1.35,.55,8),silver,x,.91,z,0,a);
   const gem=add(new T.OctahedronGeometry(1.15),crystal,x,2.5,z,0,a);gem.scale.set(.65,1.6,.65);
+  gem.name='Cosmic arena crystal '+i;crystals.push(gem);
   const bottom=add(new T.OctahedronGeometry(1),crystal,x,-3.1,z,0,a);bottom.scale.set(.55,1.9,.55);
   // Architectural ribs tie each crystal into the tapered underside.
   const start=new T.Vector3(x,-1.8,z),end=new T.Vector3(Math.sin(a)*14,-11,Math.cos(a)*14),delta=end.clone().sub(start);
@@ -84,9 +87,10 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
  }
  // Merge architecture by material; the quiet floor remains one separate mesh.
  root.updateMatrixWorld(true);const groups=new Map<T.Material,T.Mesh[]>();
- for(const object of [...root.children])if(object instanceof T.Mesh&&object!==floor){const m=object.material as T.Material;const list=groups.get(m)??[];list.push(object);groups.set(m,list);}
+ for(const object of [...root.children])if(object instanceof T.Mesh&&object!==floor&&!crystals.includes(object)){const m=object.material as T.Material;const list=groups.get(m)??[];list.push(object);groups.set(m,list);}
  for(const [material,meshes] of groups){const geometries=meshes.map(mesh=>{const g=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone();g.applyMatrix4(mesh.matrix);return g;});const geometry=mergeGeometries(geometries);if(!geometry)throw Error('Cannot batch cosmic arena');const merged=new T.Mesh(geometry,material);merged.name='Cosmic arena architecture';root.add(merged);for(const mesh of meshes){mesh.removeFromParent();mesh.geometry.dispose();}geometries.forEach(g=>g.dispose());}
- const portal=createMetaKnightPortal();portal.group.position.set(0,0,SITE.exitZ);portal.group.rotation.y=Math.PI;root.add(portal.group);
+ const annex=createMetaKnightAnnex();root.add(annex.group);
+ const portal=createMetaKnightPortal();portal.group.position.set(SITE.exitX,0,SITE.exitZ);portal.group.rotation.y=Math.PI+annex.group.rotation.y;root.add(portal.group);
  // A camera outside the rim should see the arena, not the back of its veil.
  for(const name of ['Portal swirling surface','Dormant portal surface'])((portal.group.getObjectByName(name) as T.Mesh).material as T.Material).side=T.FrontSide;
  const sky=new T.Mesh(new T.SphereGeometry(650,32,20),nebula());sky.name='Cosmic nebula sky';root.add(sky);
@@ -107,7 +111,7 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
  const fill=new T.DirectionalLight('#9698ff',1.3);fill.position.set(SITE.x+70,20,-45);fill.target.position.set(SITE.x,0,0);scene.add(fill,fill.target);
  // One small environment map is prepared behind the loading screen.
  const generator=new T.PMREMGenerator(renderer),environment=generator.fromScene(scene,.04,.1,1400,{size:128,position:new T.Vector3(SITE.x,4,0)});scene.environment=environment.texture;generator.dispose();
- return {scene,root,portal,update:(seconds:number)=>portal.update(seconds),dispose:()=>{
+ return {scene,root,portal,annex,update:(seconds:number)=>{portal.update(seconds);annex.update(seconds);},dispose:()=>{
   portal.dispose();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();
   scene.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.Points){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});
   geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());ownedTextures.forEach(t=>t.dispose());environment.dispose();light.shadow.dispose();scene.clear();

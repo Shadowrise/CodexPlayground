@@ -56,7 +56,6 @@ commercial projects. Attribution is kept here for provenance.
 
 ## Shiba bark
 
-
 - Game file: `public/audio/shiba-bark.wav`
 - Sound: **Tiny Dog Bark**, by **qubodup** (https://freesound.org/people/qubodup/sounds/813120/).
 - Original recording: **Dog Shih Tzu Bark Single 06.wav**, by **Glitchedtones** (https://freesound.org/people/Glitchedtones/sounds/372527/).
@@ -64,3 +63,13 @@ commercial projects. Attribution is kept here for provenance.
 - Downloaded the official public high-quality MP3 preview on 2026-10-07.
 - Converted to mono PCM WAV, 22050 Hz, normalized to peak 0.65, with 3 ms onset and 8 ms ending fades; duration approximately 0.223 seconds.
 - Played once as Shiba opens her mouth, with distance attenuation, stereo panning and the existing sound toggle/volume.
+
+## Meta Knight duel music and sounds
+
+- Game file: `public/audio/meta-knight-duel.wav` — original score “Galaxia — Knight of the Stars”, generated for this project by `scripts/make-meta-knight-music.cjs`.
+- D minor, 144 BPM, 64 bars, 106.667 seconds, stereo PCM WAV at 44100 Hz. Theme, answer, reprise, lyrical bridge, bridge variation, return and two-part finale; instrument tails wrap into the loop.
+- Original combat sound palette synthesized by `src/meta-knight-sounds.ts` with metallic partials, filtered noise and stereo echoes.
+- Countdown uses three original short wooden knocks and a bright layered starting bell from the same synthesizer.
+- The crystal assault adds original layered crystal bells, an ascending constellation arpeggio and an airy spiral cue. Phase-three music eases to 110% tempo while preserving pitch and the existing mute/volume controls.
+- The crystal shield adds original resonant glass, pressure-wave sweeps and a layered crystal-shattering chime; synthesized in the same sound palette without external samples. Dome, segmented/full pressure waves, violet crystal flares and rubble are procedural Three.js geometry and shaders.
+- Both the music and combat sounds use synthesis without third-party recordings or samples.

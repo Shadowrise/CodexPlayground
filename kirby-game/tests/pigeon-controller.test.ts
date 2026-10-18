@@ -80,7 +80,7 @@ test('pigeon turns never add exported root yaw to the controller heading',()=>{
    const forward=new Vector3(0,0,1).applyQuaternion(c.animationRoot.getWorldQuaternion(new Quaternion()));
    assert(Math.abs(Math.atan2(forward.x,forward.z)-c.yaw)<1e-6,'root heading must be applied only once');
   }
-  assert.equal(c.state,'Idle');assert(Math.abs(c.yaw-direction*Math.PI/18)<1e-6);
+  assert.equal(c.state,'Idle');assert(Math.abs(c.yaw-direction*Math.PI*.55*2/60)<1e-6);
  }
 });
 

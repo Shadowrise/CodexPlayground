@@ -74,6 +74,13 @@ export class BackgroundMusic {
     if(Math.abs(this.mix-target)<.001)this.mix=target;
     this.applyVolume();
   }
+  /** Preserve pitch while the final duel phase gradually gains tempo. */
+  updateKnightPhase(phase:number,dt:number){
+    const audio=this.eventAudio;if(!audio||this.eventActive!=='knight')return;
+    audio.preservesPitch=true;const target=phase===3?1.10:1;
+    const rate=audio.playbackRate+(target-audio.playbackRate)*(1-Math.exp(-Math.max(0,dt)/.65));
+    audio.playbackRate=Math.abs(rate-target)<.0005?target:rate;
+  }
   private applyVolume(){
     this.audio.volume=this.volume*this.mix;
     if(this.eventAudio)this.eventAudio.volume=this.audio.volume;
@@ -87,6 +94,7 @@ export class BackgroundMusic {
       const event=this.eventAudio=new Audio();event.preload='none';event.volume=this.audio.volume;
       event.addEventListener('error',()=>{this.eventActive=false;if(this.enabled)void this.play();});
     }
+    if(this.eventAudio)this.eventAudio.playbackRate=1;
     if(active&&this.eventAudio){this.eventAudio.loop=active!=='celebrate';const file=active==='knight'?'meta-knight-duel':`topotushka-${active==='celebrate'?'victory':'play'}`;this.eventAudio.src=`${import.meta.env?.BASE_URL??'/'}audio/${file}.wav`;}
     this.updateTrackLabel();
     if(this.enabled)void this.play();

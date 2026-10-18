@@ -33,7 +33,7 @@ try{
  // Save/load through the real menu while the loaf is still in the oven.
  await page.click('#settings-toggle');await page.click('#save-game');
  const save=await page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')));assert.equal(save.millQuest.stage,'bake');assert.equal(save.bread.active,false);
- await page.evaluate(()=>bakingQA.leave());await page.click('#load-game');await page.click('#start-game');await page.waitForFunction(()=>bakingQA.c&&bakingQA.watermill.quest.stage==='bake');
+ await page.evaluate(()=>bakingQA.leave());await page.click('#load-game');await page.waitForFunction(()=>bakingQA.c&&bakingQA.watermill.quest.stage==='bake');
  const restored=await page.evaluate(()=>Date.now()-bakingQA.watermill.quest.bakeAt);assert(restored<5000,'time spent outside the game does not consume baking time');
  await move(anchors.oven);await page.screenshot({path:output+'baking-stage'+suffix+'.png'});
  await page.waitForFunction(()=>Date.now()-bakingQA.watermill.quest.bakeAt>=10000);assert.equal(await page.evaluate(()=>bakingQA.bread.loaf.visible),false);

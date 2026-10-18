@@ -2,6 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import {r
 import {SkyTrail} from '../src/sky-trail';import {SKY_PLATFORMS as P,SKY_TRAIL_SITE as S,SKY_CHECKPOINTS,SKY_COLORS,rainbowHeight,SKY_RAINBOW_START as RS,SKY_RAINBOW_END as RE,platformThickness,skySurfaces} from '../src/sky-trail-layout';import {CharacterController} from '../src/controller';import {scoreOf} from '../src/score';import {sceneryClearance} from '../src/landmarks';
 import {HedgeMaze} from '../src/maze';
 import {actorState,restoreNetworkPlayer} from '../src/network-actors';
+import {collideSkyPlatforms} from '../src/sky-trail-collision';
 async function player(){const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));const m=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');return new CharacterController(m.scene,m.animations);}
 const pos=(i:number)=>new Vector3(S.x+P[i].x,P[i].y,S.z+P[i].z);
 
@@ -19,7 +20,7 @@ test('jump through all platforms, walk the rainbow, collect once and return via 
  const c=await player(),trail=new SkyTrail();c.actor.position.copy(trail.entry);assert(!trail.start(c));
  for(let step=0;step<P.length;step++){
   const start=c.actor.position.clone(),end=pos(step);
-  if(step===RE){for(let i=1;i<=150;i++){const previous=c.actor.position.clone();c.actor.position.lerpVectors(start,end,i/150);c.actor.position.y=previous.y;trail.apply(c,previous,1/60);}assert(Math.abs(c.actor.position.y-end.y)<.01);continue;}
+  if(step===RE){for(let i=1;i<=150;i++){const previous=c.actor.position.clone();c.actor.position.lerpVectors(start,end,i/150);c.actor.position.y=previous.y;trail.apply(c,previous,1/60);}assert(Math.abs(c.actor.position.y-end.y)<.01,`rainbow landing: ${c.actor.position.toArray()} vs ${end.toArray()}`);continue;}
   for(let i=0;i<210;i++){const previous=c.actor.position.clone();c.update(1/60,{forward:false,left:false,right:false,jump:i===0});const u=Math.min(1,(i+1)/45);c.actor.position.x=start.x+(end.x-start.x)*u;c.actor.position.z=start.z+(end.z-start.z)*u;trail.apply(c,previous,1/60);}
   assert(Math.abs(c.actor.position.y-end.y)<.02,`land on step ${step}: ${c.actor.position.y} vs ${end.y}`);
  }
@@ -105,4 +106,50 @@ test('expanded footprint still cannot land from below or while rising through a 
  c.actor.scale.setScalar(7);c.actor.position.copy(pos(P.length-1));c.actor.position.x+=top.size/2+4;c.flight.press();
  const previous=c.actor.position.clone();previous.y=top.y-1;c.actor.position.y=top.y+.1;
  trail.apply(c,previous,1/60);assert.equal(c.actor.position.y,top.y+.1);assert(c.flight.active);
+});
+
+test('all four cube faces block walking and fast crossings at different character sizes',()=>{
+ const cube=P.at(-1)!,centre=pos(P.length-1),y=cube.y-.6;
+ for(const size of [.3,1,7])for(const axis of ['x','z'] as const)for(const side of [-1,1]){
+  const previous=centre.clone();previous.y=y;previous[axis]+=side*(cube.size/2+size+1);
+  const target=previous.clone();target[axis]=centre[axis]-side*(cube.size/2+size+1);
+  collideSkyPlatforms(target,previous,size,0);
+  assert(side*(target[axis]-centre[axis])>=cube.size/2+.5*size,`${axis} face, side ${side}, size ${size}`);
+  assert.equal(target.y,y);
+ }
+});
+
+test('cube faces allow sliding and walking underneath or across their tops',()=>{
+ const cube=P.at(-1)!,centre=pos(P.length-1),outside=centre.x+cube.size/2+2;
+ const previous=new Vector3(outside,cube.y-.6,centre.z-1);
+ const target=new Vector3(centre.x,cube.y-.6,centre.z+1);
+ collideSkyPlatforms(target,previous,1,0);
+ assert(target.x>centre.x+cube.size/2);assert.equal(target.z,centre.z+1);
+ for(const y of [cube.y,cube.y-platformThickness(P.length-1)-2]){
+  const start=new Vector3(outside,y,centre.z),end=new Vector3(centre.x,y,centre.z);
+  collideSkyPlatforms(end,start,1,0);assert.equal(end.x,centre.x);assert.equal(end.y,y);
+ }
+});
+
+test('hitting the underside stops a real jump and starts falling instead of entering the cube',async()=>{
+ const c=await player(),trail=new SkyTrail(),index=4,cube=P[index];
+ const bottom=cube.y-platformThickness(index),head=1.8;
+ c.actor.position.copy(pos(index));c.actor.position.y=0;
+ let touched=false,lastY=0;
+ for(let frame=0;frame<100;frame++){
+  const previous=c.actor.position.clone();c.update(1/60,{forward:false,left:false,right:false,jump:frame===0});
+  trail.apply(c,previous,1/60);
+  assert(c.actor.position.y+head<=bottom+1e-6,'head stays below the bottom face');
+  if(Math.abs(c.actor.position.y+head-bottom)<1e-6){touched=true;assert(!c.flight.active);lastY=c.actor.position.y;}
+ }
+ assert(touched);assert(lastY>0);assert.equal(c.actor.position.y,0);assert.equal(c.surfaceY,0);
+});
+
+test('swept falling lands on a cube and an embedded saved position recovers outside its body',()=>{
+ const index=P.length-1,cube=P[index],centre=pos(index);
+ const previous=centre.clone().add(new Vector3(0,5,0)),target=centre.clone().add(new Vector3(0,-5,0));
+ collideSkyPlatforms(target,previous,1,0);assert.equal(target.y,cube.y);
+ const embedded=centre.clone();embedded.y-=.6;
+ collideSkyPlatforms(embedded,embedded.clone(),1,0);
+ assert(Math.max(Math.abs(embedded.x-centre.x),Math.abs(embedded.z-centre.z))>cube.size/2);
 });

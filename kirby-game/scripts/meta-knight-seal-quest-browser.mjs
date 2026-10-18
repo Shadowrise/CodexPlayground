@@ -33,7 +33,7 @@ async function prepare(context,online=false){
 }
 async function open(context){const page=await context.newPage();await page.goto(url);await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});await page.waitForFunction(()=>window.sealQuestTest&&!document.querySelector('#start-game')?.disabled,null,{timeout:120000});return page;}
 async function start(page,{load=false,online=false,name='Искатель печатей'}={}){
- await page.locator(load?'#load-game':online?'#network-join':'#new-game').click();await page.locator('#player-name-input').fill(name);await page.locator('#start-game').click();await page.waitForFunction(()=>sealQuestTest.playing&&sealQuestTest.c);assert.equal(await page.locator('#meta-knight-seal-hud').count(),0,'seal progress must not create a permanent HUD panel');
+ await page.locator(load?'#load-game':online?'#network-join':'#new-game').click();if(!load){await page.locator('#player-name-input').fill(name);await page.locator('#start-game').click();}await page.waitForFunction(()=>sealQuestTest.playing&&sealQuestTest.c);assert.equal(await page.locator('#meta-knight-seal-hud').count(),0,'seal progress must not create a permanent HUD panel');
 }
 async function exit(page){await page.locator('#settings-toggle').click();await page.locator('#exit-to-menu').click();await page.locator('#startup-menu').waitFor({state:'visible',timeout:120000});}
 async function count(page,expected){await page.waitForFunction(n=>Object.keys(sealQuestTest.progress.collected).length===n,expected);assert.equal(await page.locator('#meta-knight-seal-hud').count(),0);}

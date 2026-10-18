@@ -9,6 +9,27 @@ const places:Destination[]=[
  {id:'boss-arena',name:'Арена Топотушки',x:0,z:120},
  ...Object.keys(TELE_ALIASES).filter(id=>id!=='maze'&&id!=='boss-arena').map(id=>({id,name:id,x:5,z:6})),
 ];
+
+test('phase and godmode require both solo play and a current duel; godmode has no space or arguments',()=>{
+ for(const phase of [1,2,3] as const)assert.deepEqual(parseChatCommand(`/phase ${phase}`,true,places,true),{command:{kind:'phase',phase}});
+ assert.deepEqual(parseChatCommand(' /GODMODE ',true,places,true),{command:{kind:'godmode'}});
+ for(const text of ['/phase 1','/phase 2','/phase 3','/godmode']){
+  assert(parseChatCommand(text,true,places,false)?.error,text);
+  assert(parseChatCommand(text,false,places,true)?.error,text);
+  assert.deepEqual(commandSuggestions(text,false,places,true),[]);
+ }
+ for(const text of ['/phase','/phase 0','/phase 4','/phase 01','/phase 1.0','/phase 2 extra','/god mode','/godmode 1','/godmode on'])assert(parseChatCommand(text,true,places,true)?.error,text);
+ assert.deepEqual(commandSuggestions('/ph',true,places,false),[]);
+ assert.deepEqual(commandSuggestions('/god',true,places,false),[]);
+ assert.deepEqual(commandSuggestions('/',true,places,true).slice(-2).map(s=>s.value),['/phase ','/godmode']);
+ assert.deepEqual(commandSuggestions('/phase ',true,places,true).map(s=>s.value),['/phase 1','/phase 2','/phase 3']);
+ for(const locale of ['ru','en','bg'] as const){
+  setLocale(locale);assert.equal(commandSuggestions('/phase 2',true,places,true)[0].description,locale==='en'?'Phase 2':'Фаза 2');
+  const option=commandSuggestions('/godmode',true,places,true)[0];assert.equal(option.value,'/godmode');assert(option.complete);
+  const error=parseChatCommand('/phase 2',true,places,false)!.error!;if(locale!=='ru')assert.notEqual(t(error),error);
+ }
+ setLocale('ru');
+});
 test('size parses full numbers within 30–1000%, never partial or non-finite values',()=>{
  for(const [input,size] of [['/size 30',.3],['/size 1000',10],[' /SIZE   125 ',1.25],['/size 30.5',.305],['/size 30,5',.305]] as const){
   assert.deepEqual(parseChatCommand(input,true,places),{command:{kind:'size',size}});

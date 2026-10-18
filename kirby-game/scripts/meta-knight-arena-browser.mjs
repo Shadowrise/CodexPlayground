@@ -30,7 +30,7 @@ try{
  }
  await page.evaluate(()=>{const p=arenaQA.portal.group.position;arenaQA.c.actor.position.set(p.x,0,p.z+4);});await page.waitForTimeout(600);
  await page.screenshot({path:output+'portal-dormant'+suffix+'.png'});
- const saveReload=async count=>{await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.evaluate(()=>arenaQA.leave());await page.locator('#load-game').click();await page.locator('#start-game').click();await page.waitForFunction(n=>!!arenaQA.c&&Object.keys(arenaQA.progress.collected).length===n&&arenaQA.portal.working===(n===3),count);};
+ const saveReload=async count=>{await page.locator('#settings-toggle').click();await page.locator('#save-game').click();await page.evaluate(()=>arenaQA.leave());await page.locator('#load-game').click();await page.waitForFunction(n=>!!arenaQA.c&&Object.keys(arenaQA.progress.collected).length===n&&arenaQA.portal.working===(n===3),count);};
  await saveReload(2);assert.equal(arenaRequests.length,0,'loading two badges keeps the arena unloaded');
  await page.evaluate(()=>{const p=arenaQA.portal.group.position;arenaQA.c.actor.position.set(p.x,0,p.z+4);arenaQA.claim('treehouse');});
  await page.waitForFunction(()=>arenaQA.portal.working);await saveReload(3);assert.equal(arenaRequests.length,0,'loading all badges opens the portal without loading its destination');
@@ -74,7 +74,7 @@ try{
  await page.reload();await page.locator('#startup-loader').waitFor({state:'hidden',timeout:180000});await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Космонавт');await page.locator('#start-game').click();await page.waitForFunction(()=>arenaQA.c);
  await page.evaluate(()=>{arenaQA.complete();const p=arenaQA.portal.group.position;arenaQA.c.actor.position.set(p.x,0,p.z);});await page.waitForFunction(()=>arenaQA.travel.active,null,{timeout:90000});
  if(!mobile){const before=await page.evaluate(()=>arenaQA.c.actor.position.z);await page.keyboard.down('KeyW');await page.waitForTimeout(550);await page.keyboard.up('KeyW');assert(await page.evaluate(before=>arenaQA.c.actor.position.z<before-.3,before));await page.keyboard.press('Space');await page.waitForTimeout(120);assert(await page.evaluate(()=>arenaQA.c.actor.position.y>0));}
- await page.evaluate(()=>{arenaQA.c.setActivity('Idle');arenaQA.c.actor.position.set(2000,0,35);});await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Вернуться на поляну'));
+ await page.evaluate(async()=>{const {META_KNIGHT_ARENA:s,META_KNIGHT_ANNEX:a}=await import('/src/meta-knight-arena-site.ts');arenaQA.c.setActivity('Idle');arenaQA.c.actor.position.set(s.x+s.exitX-Math.sin(a.angle)*3,0,s.exitZ-Math.cos(a.angle)*3);});await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Вернуться на поляну'));
  if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('KeyE');await page.waitForFunction(()=>!arenaQA.travel.active&&!arenaQA.travel.loading);
  assert(await page.evaluate(()=>arenaQA.c.actor.parent===arenaQA.scene&&arenaQA.c.actor.position.x===arenaQA.portal.group.position.x&&!arenaQA.c.actor.userData.location));
  const released=await page.evaluate(()=>({geometries:arenaQA.renderer.info.memory.geometries,textures:arenaQA.renderer.info.memory.textures}));

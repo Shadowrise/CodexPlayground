@@ -11,18 +11,24 @@ import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import type { FruitWorld } from './fruits';
 import { STATION } from './coaster';
+import {META_KNIGHT_ARENA,insideMetaKnightArena} from './meta-knight-arena-site';
 import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
-type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;speed?:number;fruitBoost?:FruitBoostState;fruitsEaten:number;achievements?:ScoreAction[];eventPoints?:number};
-export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number;mountainCheckpoint?:number;bread?:BreadState;pidgie?:PidgieState;seals?:SealProgress;millQuest?:MillQuest};
-export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number,bread?:BreadState,pidgie?:PidgieState,seals?:SealProgress,millQuest?:MillQuest):GameSave {
+type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;speed?:number;fruitBoost?:FruitBoostState;fruitsEaten:number;achievements?:ScoreAction[];eventPoints?:number;location?:'meta-knight-arena'};
+export type PortalSave={open:boolean;override?:boolean};
+export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number;mountainCheckpoint?:number;bread?:BreadState;pidgie?:PidgieState;seals?:SealProgress;millQuest?:MillQuest;portal?:PortalSave};
+export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number,bread?:BreadState,pidgie?:PidgieState,seals?:SealProgress,millQuest?:MillQuest,portal?:PortalSave):GameSave {
   const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitBoost:c.fruitBoost.snapshot(),fruitsEaten:c.fruitsEaten,achievements:[...c.achievements],...('eventPoints' in c?{eventPoints:c.eventPoints,speed:c.savedSpeedSize}:{})};};
   const savedPlayer=actor(player,variant[0]);
-  if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
-  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,dayPhase,festival:player.festival,skyCheckpoint:player.skyCheckpoint,mountainCheckpoint:player.mountainCheckpoint,...(bread?{bread:structuredClone(bread)}:{}),...(pidgie?{pidgie:structuredClone(pidgie)}:{}),...(seals?{seals:structuredClone(seals)}:{}),...(millQuest?{millQuest:structuredClone(millQuest)}:{})};
+  if(player.actor.userData.location==='meta-knight-arena'){
+    savedPlayer.location='meta-knight-arena';savedPlayer.x=player.actor.position.x;savedPlayer.z=player.actor.position.z;
+  }else if(riding){savedPlayer.x=STATION.x;savedPlayer.z=STATION.z-8;savedPlayer.yaw=0;}
+  return {version:1,savedAt:new Date().toISOString(),player:savedPlayer,npcs:npcs.map(n=>actor(n,n.variant[0])),fruits:fruits.fruits.map(f=>f.eaten),mazeStar:player.starBlessed,starRemaining:player.starRemaining,starCooldown:player.starCooldown,night,dayPhase,festival:player.festival,skyCheckpoint:player.skyCheckpoint,mountainCheckpoint:player.mountainCheckpoint,...(bread?{bread:structuredClone(bread)}:{}),...(pidgie?{pidgie:structuredClone(pidgie)}:{}),...(seals?{seals:structuredClone(seals)}:{}),...(millQuest?{millQuest:structuredClone(millQuest)}:{}),...(portal?{portal:{...portal}}:{})};
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
+  if(data?.portal!==undefined&&(!data.portal||typeof data.portal.open!=='boolean'||data.portal.override!==undefined&&(typeof data.portal.override!=='boolean'||data.portal.override!==data.portal.open)))throw Error('Сохранение повреждено или несовместимо.');
+  if(data?.player?.location!==undefined&&(data.player.location!=='meta-knight-arena'||!Number.isFinite(data.player.x)||!Number.isFinite(data.player.z)||!insideMetaKnightArena(data.player.x-META_KNIGHT_ARENA.x,data.player.z-META_KNIGHT_ARENA.z)))throw Error('Сохранение повреждено или несовместимо.');
   if(data?.bread!==undefined&&!validBread(data.bread))throw Error('Сохранение повреждено или несовместимо.');
   if(data?.bread)data.bread=normalizeBread(data.bread);
   if(data?.millQuest!==undefined&&(!validMillQuest(data.millQuest)||!Number.isFinite(Date.parse(data.savedAt))))throw Error('Сохранение повреждено или несовместимо.');

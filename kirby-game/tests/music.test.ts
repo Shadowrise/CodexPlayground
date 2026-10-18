@@ -26,7 +26,7 @@ test('tracks preserve mute and configured volume, including temporary ducking an
   }
   let audio: FakeAudio;
   class FakeAudio extends EventTarget {
-    src = ''; loop = false; preload = ''; volume = 1; paused = true;
+    src = ''; loop = false; preload = ''; volume = 1; paused = true;playbackRate=1;preservesPitch=true;
     constructor() { super(); audio = this; }
     pause() { this.paused = true; }
     async play() { this.paused = false; }
@@ -68,6 +68,8 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     volume.value='29';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.29);assert.equal(background.volume,.29);
     music.setEvent('celebrate');await Promise.resolve();assert(!event.loop);assert(event.src.endsWith('/audio/topotushka-victory.wav'));assert.equal(event.volume,.29);assert(!event.paused);
     music.setEvent('knight');await Promise.resolve();assert(event.loop);assert(event.src.endsWith('/audio/meta-knight-duel.wav'));assert(background.paused);assert(!event.paused);assert.equal(event.volume,.29);assert.match(label.textContent,/Галаксия/);
+    music.updateKnightPhase(3,.1);assert(event.playbackRate>1&&event.playbackRate<1.1);
+    for(let i=0;i<180;i++)music.updateKnightPhase(3,1/60);assert(Math.abs(event.playbackRate-1.1)<.001);assert(event.preservesPitch);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
     music.updateDucking(true,.05);assert(background.volume<.29&&background.volume>.29*.2,'fade into the quieter mix');
     for(let i=0;i<120;i++)music.updateDucking(true,1/60);
@@ -77,7 +79,7 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     assert(Math.abs(background.volume-.65*.2)<1e-8);assert.equal(event.volume,background.volume);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
     assert.deepEqual(JSON.parse(storage.get('kirby.audio.music')!),{enabled:true,volume:.65},'persist the configured level, never the ducked level');
-    music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);
+    music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);assert.equal(event.playbackRate,1);
     next.dispatchEvent(new Event('click'));assert(Math.abs(background.volume-.65*.2)<1e-8,'changing tracks keeps the quieter mix');
     music.updateDucking(false,.05);assert(background.volume>.65*.2&&background.volume<.65,'fade back rather than jump');
     for(let i=0;i<240;i++)music.updateDucking(false,1/60);

@@ -6,7 +6,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {PidgieNpc,PIDGIE_APPROACH_DISTANCE,PIDGIE_REFUGE_RADIUS,PIDGIE_FLIGHT_DISTANCE,type PidgieNpcOptions,type PidgiePlayer} from '../src/pidgie-npc';
 import {PIDGIE_FOLLOW_DISTANCE,PIDGIE_FOLLOW_REACTION_SECONDS,PIDGIE_PECK_REACH,validPidgieState,type PidgieState} from '../src/pidgie-state';
 import {worldLimit} from '../src/world-bounds';
-import {applyBread,canPickBread,newBread} from '../src/bread-state';
+import {applyBread,canPickBread,newBread,grantBread,holdsBread,breadOffering,breadLoaves} from '../src/bread-state';
 
 // Exercise the same rig and beak trajectory as the game without rebuilding
 // the authored sculpt and its paint atlas for every regression run.
@@ -93,7 +93,51 @@ test('offered bread becomes permanent: joy, a run to its midpoint, then repeated
  assert.deepEqual(remote.networkState(),next.networkState(),'late joins and host changes keep the feeding cycle');
 });
 
+test('pickup attempts after feeding cannot reclaim the offering or hide Pidgie, including when another loaf is picked up',()=>{
+ const bird=create(),at=bird.actor.position.clone();
+ const baker={id:'baker',p:[at.x,0,at.z+4],yaw:Math.PI,size:1,available:true};
+ let bread=applyBread(grantBread(newBread(),baker,0),{kind:'feed'},baker,1000,undefined,bird.networkState());
+ const offering=breadOffering(bread)!;assert(offering);bird.acceptBread(offering);
+ const nearby={...baker,p:offering.bread},seen=new Set<string>();
+ for(let frame=0;frame<600;frame++){
+  for(const id of ['baker','other']){
+   const actor={...nearby,id};assert(!canPickBread(bread,actor,100000));
+   assert.equal(applyBread(bread,{kind:'pick'},actor,100000),bread);
+   assert(!holdsBread(bread,id));
+  }
+  bird.acceptBread(breadOffering(bread)!);bird.update(1/60,[at]);
+  seen.add(bird.phase);assert(bird.actor.visible);assert.equal(bird.fearCount,0);
+ }
+ assert.deepEqual([...seen].sort(),['feast','joy','toBread']);
+ // Drop a second loaf directly beside the permanent offering, then let the
+ // original baker's automatic pickup choose it while the offering is in others.
+ const other={...baker,id:'other',yaw:0,p:[offering.bread[0],offering.bread[1],offering.bread[2]-3.4]};
+ bread=grantBread(bread,other,110000);bread=applyBread(bread,{kind:'drop'},other,111000);
+ const dropped=[...bread.p],picker={...baker,p:dropped};
+ assert(canPickBread(bread,picker,120000));bread=applyBread(bread,{kind:'pick'},picker,120000);
+ assert(holdsBread(bread,baker.id));assert.deepEqual(breadOffering(bread),offering);
+ assert.equal(breadLoaves(bread).length,2);assert.equal(breadLoaves(bread).find(b=>b.offering)?.owner,'');
+ const player:PidgiePlayer={id:baker.id,position:new T.Vector3().fromArray(dropped),hasBread:true};
+ const remote=create();remote.applyNetworkState(JSON.parse(JSON.stringify(bird.networkState())),true);
+ for(let frame=0;frame<600;frame++){
+  bird.acceptBread(breadOffering(bread)!);bird.update(1/60,[player.position],undefined,[player]);remote.updateRemote(1/60);
+  for(const npc of [bird,remote]){assert.equal(npc.phase,'feast');assert(npc.actor.visible);assert.equal(npc.fearCount,0);assert(validPidgieState(npc.networkState()));}
+ }
+});
+
 function approach(bird:PidgieNpc){const p=bird.actor.position.clone();p.x+=PIDGIE_APPROACH_DISTANCE-1;bird.update(.01,[p]);assert.equal(bird.phase,'fear');return p;}
+
+test('a stale pre-feeding hidden snapshot cannot make the running Pidgie disappear',()=>{
+ const bird=create(),before=bird.networkState(),at=bird.actor.position.clone();
+ const baker={id:'baker',p:[at.x,0,at.z+8],yaw:Math.PI,size:1,available:true};
+ const offered=applyBread(grantBread(newBread(),baker,0),{kind:'feed'},baker,1000,undefined,before);
+ bird.acceptBread(offered.offering!);advance(bird,2.5);
+ assert.equal(bird.phase,'toBread');const running=bird.networkState();
+ assert.equal(bird.applyNetworkState({...before,phase:'hidden'},true),false);
+ assert(bird.actor.visible);assert.deepEqual(bird.networkState(),running);
+ assert.equal(bird.applyNetworkState(before,true),false);
+ advance(bird,3);assert.equal(bird.phase,'feast');assert(bird.actor.visible);
+});
 function nearXZ(a:readonly number[],b:readonly number[]){return Math.hypot(a[0]-b[0],a[1]-b[1]);}
 function startPeck(bird:PidgieNpc){
  for(let frame=0;frame<60*90&&bird.state!=='Peck';frame++)bird.update(1/60,[]);

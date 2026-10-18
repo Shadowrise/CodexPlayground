@@ -175,6 +175,53 @@ export function createMetaKnight() {
   const cloth=new T.BufferGeometry();cloth.setAttribute('position',new T.Float32BufferAttribute(capePositions,3));cloth.setIndex(capeIndices);cloth.computeVertexNormals();add(cape,cloth,capeMaterial);cloth.dispose();
   tube(cape,gold,Array.from({length:49},(_,i)=>capePoint(i/48*2-1,1)),.013,64);
 
+  // Embroidered shoulder yoke bridges the straight attachment edge. Project
+  // every stitch onto the folded cloth and inherit the cape's animation.
+  const embroidery=new T.Group();embroidery.name='Cape_embroidered_yoke';cape.add(embroidery);
+  const yokeMaterial=material('Cape · embroidered indigo satin','#292f68',.12,.65);
+  const stitchPoint=(x:number,y:number,lift=.023)=>{
+    const v=(.40-y)/1.12,u=x/(.51+.33*v);
+    return [x,y,capePoint(u,v)[2]-lift];
+  };
+  function embroideredPatch(outline:T.Shape,mat:T.Material,lift:number) {
+    const geometry=surfaceGrid(outline,.025),positions=geometry.getAttribute('position');
+    const normals=new Float32Array(positions.count*3);
+    for(let i=0;i<positions.count;i++) {
+      const x=positions.getX(i),y=positions.getY(i);
+      positions.setXYZ(i,...stitchPoint(x,y,lift) as [number,number,number]);
+      const dx=(stitchPoint(x+.001,y)[2]-stitchPoint(x-.001,y)[2])/.002;
+      const dy=(stitchPoint(x,y+.001)[2]-stitchPoint(x,y-.001)[2])/.002;
+      normals.set(new T.Vector3(dx,dy,-1).normalize().toArray(),i*3);
+    }
+    geometry.setAttribute('normal',new T.BufferAttribute(normals,3));
+    geometry.setIndex(Array.from({length:positions.count},(_,i)=>i-i%3+[0,2,1][i%3]));
+    add(embroidery,geometry,mat);geometry.dispose();
+  }
+  const yoke=new T.Shape();yoke.moveTo(0,.515);
+  yoke.bezierCurveTo(.22,.515,.43,.475,.55,.415);
+  yoke.quadraticCurveTo(.55,.36,.50,.33);
+  yoke.quadraticCurveTo(.39,.38,.28,.28);
+  yoke.quadraticCurveTo(.17,.31,0,.16);
+  yoke.quadraticCurveTo(-.17,.31,-.28,.28);
+  yoke.quadraticCurveTo(-.39,.38,-.50,.33);
+  yoke.quadraticCurveTo(-.55,.36,-.55,.415);
+  yoke.bezierCurveTo(-.43,.475,-.22,.515,0,.515);
+  yoke.closePath();embroideredPatch(yoke,yokeMaterial,.014);
+  tube(embroidery,gold,yoke.getPoints(18).map(p=>stitchPoint(p.x,p.y)),.007,96);
+  for(const side of [-1,1])for(const path of [
+    [[.07,.36],[.19,.445],[.34,.44],[.47,.405]],
+    [[.08,.34],[.21,.39],[.33,.39],[.42,.375]],
+    [[.07,.32],[.17,.325],[.25,.35],[.34,.345]],
+  ]) {
+    const curve=new T.CatmullRomCurve3(path.map(([x,y])=>new T.Vector3(side*x,y,0)));
+    tube(embroidery,gold,curve.getPoints(24).map(p=>stitchPoint(p.x,p.y)),.0055,24);
+  }
+  const star=new T.Shape();
+  [[0,.475],[.025,.385],[.09,.355],[.025,.33],[0,.225],[-.025,.33],[-.09,.355],[-.025,.385]]
+    .forEach(([x,y],i)=>{if(i===0)star.moveTo(x,y);else star.lineTo(x,y);});
+  star.closePath();embroideredPatch(star,silver,.024);
+  tube(embroidery,gold,star.getPoints().map(p=>stitchPoint(p.x,p.y,.031)),.005,40);
+
   const shoulders:T.Group[]=[],feet:T.Group[]=[],wings:T.Group[]=[];
   for(const side of [-1,1]) {
     const label=side<0?'Left':'Right';

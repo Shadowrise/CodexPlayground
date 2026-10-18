@@ -201,7 +201,7 @@ function fail(message: string) {
   status.textContent = 'Модель пока недоступна';
 }
 
-new GLTFLoader().load('/models/meta-knight-animated.glb?v=7', gltf => {
+new GLTFLoader().load('/models/meta-knight-animated.glb?v=8', gltf => {
   model = gltf.scene;
   model.animations = gltf.animations;
   model.traverse(object => {

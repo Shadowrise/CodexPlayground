@@ -114,15 +114,15 @@ try{
  await page.locator('#character-back').click();
  console.log('PASS own online completion only, repeated acknowledgements and compact notification');
 
- // Old free-Bandana saves keep their progress while selecting an available appearance.
+ // Old saves load their saved character directly without granting a new-game unlock.
  await choose(false);await page.locator('.variant-button').first().click();await start();
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();
  await page.evaluate(key=>{
   const save=JSON.parse(localStorage.getItem('kirby-save-v1'));save.player.variant='Бандана';save.player.achievements=['swing'];save.player.fruitsEaten=7;
   save.npcs.find(n=>n.variant==='Сапфир').variant='Классический';localStorage.setItem('kirby-save-v1',JSON.stringify(save));localStorage.removeItem(key);
  },key);
- await page.reload();await loaded();await page.locator('#load-game').click();assert.notEqual(await page.evaluate(()=>unlockCheck.selected[0]),'Бандана');
- assert.match(await page.locator('#selection-message').textContent(),/Прогресс сохранён/);await page.locator('#player-name-input').fill('Игрок');await start();
+ await page.reload();await loaded();await page.locator('#load-game').click();await page.waitForFunction(()=>unlockCheck.playing);
+ assert.equal(await page.evaluate(()=>unlockCheck.selected[0]),'Бандана');assert(await page.locator('#character-select').isHidden());
  assert.equal(await page.evaluate(()=>unlockCheck.c.fruitsEaten),7);assert(await page.evaluate(()=>unlockCheck.c.achievements.has('swing')));assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),null);
  assert.deepEqual(errors,[]);console.log('PASS legacy save progress retained; zero page errors');
  }

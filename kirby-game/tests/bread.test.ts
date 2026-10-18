@@ -146,6 +146,7 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   send(first,[0,0,0],[{type:'bread',action:{kind:'drop'}}]);const dropped=room.room.bread;
   assert.equal(dropped.owner,'');assert.deepEqual(dropped.p,[0,0,3.4]);
   send(second,dropped.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,'');
+  now=Math.floor(dropped.drop.at+dropped.drop.duration*1000)+1999;send(second,dropped.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,'','the server also waits two seconds after landing');
   now=Math.ceil(dropped.pickupAt)+10;send(second,dropped.p,[{type:'bread',action:{kind:'pick'}}]);assert.equal(room.room.bread.owner,second.data.id);
   await room.webSocketClose(second);assert.equal(room.room.bread.owner,'');assert.equal(room.room.bread.p[1],0);
   const third=await join('Friend',2);assert.deepEqual(third.messages.find(m=>m.type==='welcome').room.bread,room.room.bread);
@@ -159,6 +160,11 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   send(first,p,[{type:'bread',action:{kind:'feed'}},{type:'bread',action:{kind:'drop'}}]);
   now+=5000;send(third,offered.p,[{type:'bread',action:{kind:'pick'}}]);
   assert.deepEqual(room.room.bread,offered);assert.equal(notices().length,1);assert.equal(achievementPoints(first.data.actor.achievements),16);
+  room.room.bread={...offered};delete room.room.bread.offering;
+  room.room.world.pidgie.phase='toBread';room.room.world.pidgie.clip='Run';
+  send(third,offered.p,[{type:'bread',action:{kind:'pick'}}]);
+  assert.equal(room.room.bread.owner,'','the running bird reserves his target independently of the loaf marker');
+  room.room.bread=structuredClone(offered);
   room.webSocketMessage(first,JSON.stringify({type:'frame',actor:{...a,p},world,events:[]}));
   assert.equal(room.room.world.pidgie.friend.by,first.data.id,'stale host frames cannot undo the friendship');
   await room.webSocketClose(first);assert.deepEqual(room.room.bread,offered);assert.equal(room.room.world.pidgie.friend.by,first.data.id);
@@ -177,6 +183,26 @@ test('baked rewards coexist, stay with their owners, and preserve an offered loa
  state=applyBread(state,{kind:'drop'},b,5000);assert(!holdsBread(state,'b'));assert(breadLoaves(state).some(v=>v.offering?.by==='a'));
  const world=new BreadWorld();world.state=state;world.update(5500,new Map());assert.equal(world.group.children.length,3,'both world loaves render');
  assert(!validBread({...state,others:[{...freshBread(),owner:'same'},{...freshBread(),owner:'same'}]}));
+});
+
+test('a thrown loaf cannot be picked up until two seconds after landing, including older drops',()=>{
+ const a=actor('solo',[0,0,0]),dropped=applyBread({...freshBread(),owner:a.id},{kind:'drop'},a,1000);
+ const landedAt=1000+dropped.drop!.duration*1000,nearby={...a,p:dropped.p};
+ const oldDrop={...dropped,pickupAt:landedAt+800};
+ for(const time of [landedAt+801,landedAt+1999]){
+  assert(!canPickBread(oldDrop,nearby,time));assert.equal(applyBread(oldDrop,{kind:'pick'},nearby,time),oldDrop);
+ }
+ assert(canPickBread(oldDrop,nearby,landedAt+2000));
+});
+
+test('Pidgie reserves his running target even if a bread snapshot loses its offering marker',()=>{
+ const a=actor('solo',[0,0,0]),offered=applyBread({...freshBread(),owner:a.id},{kind:'feed'},a,1000,undefined,{phase:'wander',p:[0,0,8]});
+ const {offering,...stale}=offered,nearby={...a,p:offered.p};assert(offering);
+ const bird={phase:'toBread',p:[0,0,7],friend:offering};
+ assert(!canPickBread(stale,nearby,100000,bird));
+ assert.equal(applyBread(stale,{kind:'pick'},nearby,100000,undefined,bird),stale);
+ const others=grantBread(stale,{...a,id:'other',p:[20,0,20]},2000);
+ assert.equal(applyBread(others,{kind:'pick'},nearby,100000,undefined,bird),others);
 });
 
 test('old untouched mountain bread migrates away while carried and dropped rewards survive',()=>{

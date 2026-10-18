@@ -1,0 +1,12 @@
+#knight-dash-hud{position:fixed;z-index:26;left:24px;top:94px;width:216px;box-sizing:border-box;padding:11px 13px;border:1px solid #bdacf180;border-radius:14px;background:linear-gradient(120deg,#202c48ed,#342947ed);box-shadow:0 4px 18px #080b2440;color:#f2edff;font:12px/1.4 'Segoe UI',sans-serif;pointer-events:none}
+#knight-dash-hud[hidden]{display:none}
+#knight-dash-hud>div:first-child{display:flex;justify-content:space-between;gap:10px;align-items:center}
+#knight-dash-hud strong{font-size:13px;color:#ffe3a0}
+#knight-dash-hud span{font-variant-numeric:tabular-nums;white-space:nowrap}
+#knight-dash-hud small{display:block;margin-top:5px;color:#cec9e3;font-size:11px}
+.knight-dash-meter{height:5px;border-radius:4px;overflow:hidden;margin-top:8px;background:#0b1029}
+.knight-dash-meter i{display:block;height:100%;transform-origin:left;background:linear-gradient(90deg,#a99bff,#ffe091)}
+#knight-dash-hud[data-state=ready]{border-color:#e5cc89a0}
+#knight-dash-hud[data-state=active] .knight-dash-meter i{background:#ffe091}
+.touch-ui #knight-dash-hud{top:auto;left:50%;bottom:calc(var(--touch-bottom) + 258px);transform:translateX(-50%);width:216px;padding:8px 11px}
+@media(max-height:500px){.touch-ui #knight-dash-hud{bottom:calc(var(--touch-bottom) + 132px);width:200px}}

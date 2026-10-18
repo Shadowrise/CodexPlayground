@@ -34,6 +34,8 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
  if(a.location==='meta-knight-arena'){c.actor.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset);c.surfaceY=0;}
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
+ if(c instanceof CharacterController)c.clearDuelDazedPose();
+ if(c instanceof CharacterController)c.clearKnightDashPose();
  c.actor.userData.location=a.location;
  c.roll.clearPose();c.roll.state=a.roll?[...a.roll]:undefined;
  const previousX=c.actor.position.x,previousZ=c.actor.position.z;
@@ -49,7 +51,8 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
   // Buffered positions drive the native gait clock. Old foot poses belong to
   // another presentation time and would undo planted-foot travel each frame.
   if(!nativeGait)poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
-  c.flight.active=a.state==='Jump'||a.state==='Fly';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual();
+  c.flight.active=a.state==='Jump'||a.state==='Fly'||c.isMetaKnight&&a.state==='Dash';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual();
+  c.updateKnightDashVisual();
  }else {
   c.swimming=a.state==='Swim';c.surfaceY=a.p[1];
   c.networkAnimate(a.state,dt,Math.hypot(c.actor.position.x-previousX,c.actor.position.z-previousZ)>.00001);

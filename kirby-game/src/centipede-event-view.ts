@@ -79,7 +79,7 @@ export class CentipedeEventView{
   }
   this.lane.material.opacity=q.stage==='warning'||q.stage==='wheelWarning'?.6+.025*Math.sin(now*.006):.46;
   this.targetCue.group.visible=['exhausted','back','dizzy'].includes(q.stage);
-  if(this.targetCue.group.visible)this.targetCue.update(targetPosition??centipedeTarget(q),now,camera,q.stage==='dizzy');
+  if(this.targetCue.group.visible)this.targetCue.update(targetPosition??centipedeTarget(q),now,camera,q.stage==='dizzy',(now-q.stageAt)/CENTIPEDE_TIMES[q.stage]);
   this.confetti.visible=['tickle','bell','wheelHit','celebrate'].includes(q.stage);
   if(q.stage==='celebrate'&&this.fireworksKey!==key){
    this.fireworksKey=key;const head=q.trail.at(-1)!,tail=centipedeTail(q);
