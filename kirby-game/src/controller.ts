@@ -14,6 +14,7 @@ import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
 import {MetaKnightPlayerDash,PLAYER_KNIGHT_DASH} from './meta-knight-player-dash';
 import {MetaKnightBattleMotion} from './meta-knight-battle-motion';
 import {MetaKnightDashSparks} from './meta-knight-dash-sparks';
+import {MetaKnightBladeGlow} from './meta-knight-blade-glow';
 import {DuelDazedPose} from './duel-dazed-pose';
 
 export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; dashHeld?:boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
@@ -55,6 +56,7 @@ export class CharacterController {
   readonly knightDash = new MetaKnightPlayerDash();
   private dashMotion?:MetaKnightBattleMotion;
   private dashSparks?:MetaKnightDashSparks;
+  private bladeGlow?:MetaKnightBladeGlow;
   private duelDazedPose?:DuelDazedPose;
   clearDuelDazedPose(){this.duelDazedPose?.clear();}
   updateDuelDazedPose(now:number,dazed:boolean,seat=true){
@@ -62,7 +64,9 @@ export class CharacterController {
     this.duelDazedPose??=new DuelDazedPose(this.actor,this.isMetaKnight?'meta-knight':this.isPigeon?'pigeon':'kirby');this.duelDazedPose.apply(now,seat);
   }
   clearKnightDashPose(){this.dashMotion?.clear();}
+  updateKnightBladeGlow(now=this.mixer.time*1000,charged=this.state==='Dash'||this.state==='Push',visible=true){this.bladeGlow?.update(now,charged,visible);}
   updateKnightDashVisual(){
+    this.updateKnightBladeGlow();
     const active=this.isMetaKnight&&this.state==='Dash';
     if(active){
       this.dashMotion??=new MetaKnightBattleMotion(this.actor);
@@ -71,7 +75,7 @@ export class CharacterController {
     }
     this.dashSparks?.update(this.mixer.time*1000,active);
   }
-  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;}
+  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -180,6 +184,7 @@ export class CharacterController {
     if(!this.hasNativeAnimations)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
     if(this.isMetaKnight){const dash=this.actions.get('Fly')!.getClip().clone();dash.name='Dash';this.actions.set('Dash',this.mixer.clipAction(dash));}
     this.play('Idle');
+    if(this.isMetaKnight){this.bladeGlow=new MetaKnightBladeGlow(this.actor.getObjectByName('Galaxia')!);this.updateKnightBladeGlow();}
   }
 
   private play(name: string) {
@@ -301,6 +306,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.updateKnightBladeGlow((this.mixer.time+dt)*1000);
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.tick(dt);
     this.dashSparks?.update(0,false);

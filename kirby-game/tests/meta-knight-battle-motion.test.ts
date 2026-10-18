@@ -98,7 +98,7 @@ test('dizziness uses three bevelled golden five-point stars floating above the s
 });
 
 test('blade glows gold on its shadowed faces without changing shared character materials',async()=>{
- const {node}=await fixture(),blade=node('Galaxia'),mesh=blade.children.find(o=>o instanceof T.Mesh&&(o.material as T.Material).name.includes('gold')) as T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>;
+ const {c,node}=await fixture();c.disposeEffects();const blade=node('Galaxia'),mesh=blade.children.find(o=>o instanceof T.Mesh&&(o.material as T.Material).name.includes('gold')) as T.Mesh<T.BufferGeometry,T.MeshStandardMaterial>;
  const original=mesh.material,emission=original.emissive.clone(),glow=new MetaKnightBladeGlow(blade);glow.update(500,true);
  assert.notEqual(mesh.material,original);assert(mesh.material.emissiveIntensity>1);assert.equal(mesh.material.emissive.getHex(),0xffb52b);assert(original.emissive.equals(emission));
  assert(blade.getObjectByName('Galaxia warm blade aura'));glow.dispose();assert.equal(mesh.material,original);assert(!blade.getObjectByName('Galaxia warm blade aura'));

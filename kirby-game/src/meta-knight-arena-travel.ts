@@ -141,7 +141,7 @@ export class MetaKnightArenaTravel{
   const c=this.owner,s=this.battle,id=this.battleOptions?.id()??'solo';if(!c||!s||!s.players[id]||s.players[id].withdrawn)return;
   this.withdrawnBattle=s.id;
   this.setGodMode(false);
-  if(this.battleOptions?.online())this.battleOptions.send('cancel');else cancelKnightBattle(s,id,this.soloNow);
+  if(knightBattleActive(s)){if(this.battleOptions?.online())this.battleOptions.send('cancel');else cancelKnightBattle(s,id,this.soloNow);}
   c.setActivity('Idle');c.endDuel();c.actor.visible=true;this.life=5;this.attackHeld=false;this.battleOptions?.music?.(false);this.clearInput();this.renderer.domElement.focus();
  }
  savePosition(c:CharacterController){return c===this.owner&&c.actor.userData.location?c.actor.position.clone():undefined;}

@@ -22,8 +22,10 @@ export class MetaKnightBladeGlow{
   }
  }
  update(now:number,charged:boolean,visible=true){
-  const pulse=1+.045*Math.sin(now*.006);for(const material of this.materials)material.emissiveIntensity=(charged?1.2:.82)*pulse;
-  this.haloMaterial.uniforms.strength.value=(charged?1.2:.8)*pulse;for(const halo of this.halos)halo.visible=visible;
+  const pulse=1+.045*Math.sin(now*.006);
+  // Arena travel temporarily replaces mesh materials with isolated copies.
+  for(const {mesh} of this.originals)for(const material of Array.isArray(mesh.material)?mesh.material:[mesh.material])if(material instanceof T.MeshStandardMaterial&&material.name.includes('gold'))material.emissiveIntensity=(charged?1.2:.82)*pulse;
+  for(const halo of this.halos){halo.visible=visible;(halo.material as T.ShaderMaterial).uniforms.strength.value=(charged?1.2:.8)*pulse;}
  }
  dispose(){for(const {mesh,material} of this.originals)mesh.material=material;for(const halo of this.halos)halo.removeFromParent();this.materials.forEach(m=>m.dispose());this.haloMaterial.dispose();}
 }
