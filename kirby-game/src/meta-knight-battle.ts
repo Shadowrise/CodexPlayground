@@ -191,15 +191,16 @@ function segmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){
 }
 export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=now){
  if(s.pattern==='star')return starDanger(s,a.p,now,previous,KNIGHT.bodyRadius);
- const p=knightPosition(s,now),d=distance(p,a.p),feet=a.p[1];
- if(s.stage==='slash')return d<KNIGHT.slashRadius+KNIGHT.bodyRadius&&Math.abs(feet-s.height)<1.5&&Math.cos(angle(p,a.p)-s.yaw)>Math.cos(KNIGHT.slashHalfAngle);
+ // Marked attacks cover their floor footprint at every height. Only the low ring is jumpable.
+ const p=knightPosition(s,now),d=distance(p,a.p);
+ if(s.stage==='slash')return d<KNIGHT.slashRadius+KNIGHT.bodyRadius&&Math.cos(angle(p,a.p)-s.yaw)>Math.cos(KNIGHT.slashHalfAngle);
  if(s.stage==='dash'){
-  const before=knightPosition(s,Math.max(s.since,previous));return Math.abs(feet-s.height)<1.5&&segmentDistance([before[0],0,before[2]],[p[0],0,p[2]],[a.p[0],0,a.p[2]])<knightDashHalfWidth(s)+KNIGHT.bodyRadius;
+  const before=knightPosition(s,Math.max(s.since,previous));return segmentDistance([before[0],0,before[2]],[p[0],0,p[2]],[a.p[0],0,a.p[2]])<knightDashHalfWidth(s)+KNIGHT.bodyRadius;
  }
- if(s.stage==='slam'||knightJumpOpening(s)&&previous<=s.since&&now-s.since<150)return d<KNIGHT.impactRadius+KNIGHT.bodyRadius&&feet<2.5;
+ if(s.stage==='slam'||knightJumpOpening(s)&&previous<=s.since&&now-s.since<150)return d<KNIGHT.impactRadius+KNIGHT.bodyRadius;
  if(s.stage==='wave'){
   const r=Math.max(0,now-s.since)*KNIGHT.waveSpeed,old=Math.max(0,previous-s.since)*KNIGHT.waveSpeed;
-  return feet<KNIGHT.waveHeight&&d>=old-.8-KNIGHT.bodyRadius&&d<=r+.8+KNIGHT.bodyRadius;
+  return a.p[1]<KNIGHT.waveHeight&&d>=old-.8-KNIGHT.bodyRadius&&d<=r+.8+KNIGHT.bodyRadius;
  }
  return false;
 }
@@ -228,7 +229,8 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
      damageKnight(s,now,actors,'crystal-break');s.from=s.to=[0,0,0];return true;
     }
    }
-   if(s.phase!==3&&s.stage==='open'&&!s.openHit&&now-p.attackAt<550&&distance(a.p,pos)<KNIGHT.meleeReach&&Math.abs(a.p[1]-pos[1])<1.6&&Math.cos(angle(a.p,pos)-a.yaw)>-.15){
+   // Scale vertical melee reach with the enlarged boss so jumps and normal flight can connect.
+   if(s.phase!==3&&s.stage==='open'&&!s.openHit&&now-p.attackAt<550&&distance(a.p,pos)<KNIGHT.meleeReach&&Math.abs(a.p[1]-pos[1])<1.6*KNIGHT.effectScale&&Math.cos(angle(a.p,pos)-a.yaw)>-.15){
     p.hits++;damageKnight(s,now,actors,'stunned');return true;
    }
   }

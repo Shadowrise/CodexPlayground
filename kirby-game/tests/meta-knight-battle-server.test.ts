@@ -35,8 +35,9 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert(room.room.knightBattle.players[b.data.id].withdrawn);assert.notEqual(room.room.knightBattle.stage,'cancelled');assert.equal(b.data.actor.location,'meta-knight-arena');
   for(let i=0;i<7;i++){
    const s=room.room.knightBattle;Object.assign(s,{stage:'open',since:now,until:now+2500,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});
-   now+=800;send(a,actor([2000,0,2]),[{type:'knight',action:'attack'}]);send(a,actor([2000,0,2]));
-   assert.equal(room.room.knightBattle.hp,11-i);
+   const height=[0,1.45,2.2,2.9,2.9,1.45,0][i],attacker=actor([2000,height,2]);attacker.state=height===2.9?'Fly':height?'Jump':'Idle';
+   now+=800;send(a,attacker,[{type:'knight',action:'attack'}]);send(a,attacker);
+   assert.equal(room.room.knightBattle.hp,11-i,`Worker accepts a reachable ${attacker.state} attack at height ${height}`);
    assert.equal(room.room.knightBattle.stage,'stunned');
    if(i===3){await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.equal(room.room.knightBattle.hp,8,'Worker wakeup restores shared progress');assert.equal(room.room.knightBattle.stage,'stunned','the post-hit reaction survives wakeup');}
    now=room.room.knightBattle.until;send(a,actor([2000,0,2]));assert.equal(room.room.knightBattle.stage,'get-up');now=room.room.knightBattle.until;send(a,actor([2000,0,2]));

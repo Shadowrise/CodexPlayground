@@ -1,9 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {serialize} from 'node:v8';
 import ts from 'typescript';
 import {roomSql} from './room-sql';
-import {BUILD,type ActorState} from '../src/network-protocol';
+import {BUILD,validWorld,type ActorState} from '../src/network-protocol';
 import {META_KNIGHT_SEAL_SITES} from '../src/meta-knight-seal-sites';
 import {SEAL_IDS,newSealProgress,validSealProgress,type SealId} from '../src/meta-knight-seal-state';
 import {newMillQuest} from '../src/mill-quest';
@@ -20,7 +21,7 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
   let now=100000;Date.now=()=>now;
   class Socket{
     readyState=1;data:any;messages:any[]=[];
-    deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(data:any){this.data=structuredClone(data);}
+    deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(data:any){assert(serialize(data).length<=16384,'WebSocket attachment exceeds the runtime limit');this.data=structuredClone(data);}
     send(value:string){this.messages.push(JSON.parse(value));}close(){this.readyState=3;}accept(){}
   }
   let lastServer:Socket;globals.WebSocketPair=class{0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class{};
@@ -37,6 +38,14 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     const send=(socket:Socket,position:ActorState,events:any[]=[],extra={})=>{now+=40;room.webSocketMessage(socket,JSON.stringify({type:'frame',actor:position,events,...extra}));};
     const a=await join('Искатель',0),b=await join('Сосед',1),roomId=room.room.id,aid=a.data.id;
     assert.deepEqual(a.messages.find(m=>m.type==='welcome').room.sealProgress,newSealProgress());
+
+    // Legal world values and ten ordinary chat messages can exceed the runtime's
+    // binary attachment limit even though the JSON world passes validation.
+    const rows=(count:number,width:number)=>Array.from({length:count},()=>Array(width).fill(.1234));
+    room.room.world={npcs:Array.from({length:14},(_,i)=>actor('maze',{state:'Hello',pose:i<6?rows(5,10):[]})),npcLife:rows(14,15),carts:rows(12,4),balloons:Array.from({length:3},()=>[0,'parked',...Array(14).fill(.1234)]),bugs:rows(40,10)};
+    room.room.log=Array.from({length:10},(_,i)=>({id:`message-${i}`,name:'Искатель',variant:0,text:'Проверяем хлеб, жетоны и звезду в сетевой игре. '.repeat(6).slice(0,255),chat:true}));
+    assert(validWorld(room.room.world));
+    assert(serialize({room:room.room,actor:actor('maze')}).length>16384,'fixture reproduces the oversized host checkpoint');
 
     const forged={collected:{maze:{by:'attacker',at:1},mountain:{by:'attacker',at:1},treehouse:{by:'attacker',at:1}}};
     send(a,actor('maze',{p:[0,0,0]}),[{type:'seal',id:'maze',by:'attacker',at:1,progress:forged}],{room:{sealProgress:forged},sealProgress:forged});
@@ -92,9 +101,11 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     const count=a.messages.filter(m=>m.type==='room').length;send(a,actor('treehouse'));assert.equal(a.messages.filter(m=>m.type==='room').length,count,'movement adds no seal packets');
 
     await room.webSocketClose(a);assert.equal(room.room.host,b.data.id);assert.deepEqual(room.room.sealProgress,complete);
-    assert.deepEqual(b.data.room.sealProgress,complete,'new host carries the shared state into hibernation');
+    assert(!a.data.room&&!b.data.room,'room state is never attached to a player socket');
+    assert.deepEqual((storage.get('room-state') as any).sealProgress,complete,'shared storage retains progress across host migration');
+    assert.deepEqual((storage.get('room-state') as any).world,room.room.world,'the complete world remains recoverable without being attached to a socket');
     const legacy:{collected:Record<string,{by:string;at:number}>}=structuredClone(complete);legacy.collected.grotto=legacy.collected.treehouse;delete legacy.collected.treehouse;
-    b.data.room.sealProgress=legacy;
+    b.data.room={...(storage.get('room-state') as any),sealProgress:legacy};storage.delete('room-state');
     room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(room.room.sealProgress,complete,'hibernated legacy room migrates the old third seal without changing its collector');
     const returned=await join('Искатель',3),welcome=returned.messages.find(m=>m.type==='welcome');
     assert.equal(welcome.playerId,aid);assert.equal(welcome.room.id,roomId);assert.deepEqual(welcome.room.sealProgress,complete);

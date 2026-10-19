@@ -25,10 +25,11 @@ unchanged updates. Heartbeats every 15 seconds use the Cloudflare runtime's
 WebSocket auto-response and do not wake a hibernating object. Menu presence
 is polled only while visible, once per minute.
 
-Runtime WebSocket attachments retain the latest room snapshot and each player's
-last state through hibernation. No database write per movement packet. Snapshots
-are bounded to stay within attachment limits. The room is cooperative: clients
-simulate movement; this is not a competitive anti-cheat server.
+Runtime WebSocket attachments retain only each player's last state through
+hibernation. World checkpoints and room changes save the shared snapshot under
+`room-state` in Durable Object storage, outside the 16 KiB attachment limit.
+Older host attachments are migrated on wakeup, preserving the room and its progress. The room is
+cooperative: clients simulate movement; this is not a competitive anti-cheat server.
 
 Joining requires a non-empty `name` in the WebSocket URL. Names are normalized
 for whitespace, Unicode compatibility and case; the server reserves the name
@@ -43,7 +44,8 @@ while away. Rides are released, and a returning rider appears on the ground at
 the same horizontal location. The previous colour is restored when free;
 otherwise the new selected colour is used. Snapshots survive host migration and
 hibernation, but are deleted when the room empties or its results timer expires.
-No additional periodic requests or per-frame database writes are introduced.
+Player recovery records are written on departure; shared room checkpoints follow
+the world updates and room changes described above, without extra periodic requests.
 
 ## Shared rules and synchronization
 
@@ -179,9 +181,10 @@ local room and never mutates a production room.
 ## Publish
 
 `npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2
-(`meadow-network-13`) was deployed on 2026-10-14 with admin chat and the current
-gameplay changes. The public health endpoint and admin chat markup were verified.
-Worker version: `6448e2e6-605e-4dca-913a-9520f6eb09c4`.
+(`meadow-network-29`) was deployed on 2026-10-19 with room checkpoints in Durable
+Object storage and the Meta Knight airborne combat fixes. Public `/health` and
+`/room` returned HTTP 200 with protocol version 2 after deployment.
+Worker version: `6490172c-fda3-4614-9325-91c6164c6d43`.
 Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event

@@ -1,16 +1,18 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
-import {MILL_INTAKE,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_COLORS,type MillQuest} from './mill-quest';
+import {MILL_INTAKE,MILL_BRANCHES,MILL_BAGS,MILL_HOPPER,MILL_COLORS,millWorking,type MillQuest} from './mill-quest';
+import {pigeonCarryGrip} from './pigeon-carry';
+import {MillPressureMonitor} from './mill-pressure-monitor';
 
-/** Batched, low-poly props; only the three twigs, sacks and small finale move. */
+/** Batched, low-poly props with animated quest pieces and a pressure terminal. */
 export class MillQuestDecor {
  readonly group=new T.Group();
  readonly bags:T.Mesh[]=[];
  readonly branches:T.Mesh[]=[];
  readonly hopper:T.Mesh;
+ readonly pressureMonitor=new MillPressureMonitor();
  private bubbles:T.InstancedMesh;
  private lights:T.InstancedMesh;
- private needle:T.Mesh;
  private dummy=new T.Object3D();
  private scratch=new T.Vector3();
  private readonly bubbleCount=96;
@@ -57,10 +59,7 @@ export class MillQuestDecor {
   part(hopperParts,new T.CylinderGeometry(.25,.25,.66,12),'#aa9a6a',[0,.33,0]);
   for(let i=0;i<12;i++){const a=i*Math.PI/6;ball(hopperParts,'#ffe3a6',[Math.sin(a)*.84,1.32,Math.cos(a)*.84],[.04,.04,.04]);}
   this.hopper=batch(hopperParts);(this.hopper.material as T.MeshStandardMaterial).side=T.DoubleSide;this.hopper.position.fromArray(MILL_HOPPER);this.group.add(this.hopper);
-  // Gauge with three distinct coloured zones and a pointer.
-  const gaugePos=new T.Vector3(50.7,1.5,40.5);
-  for(let i=0;i<3;i++){box(pieces,['#77aadc','#78d9a0','#f18578'][i],[gaugePos.x+(i-1)*.35,gaugePos.y,gaugePos.z],[.32,.72,.18]);}
-  this.needle=new T.Mesh(new T.ConeGeometry(.12,.27,3),new T.MeshStandardMaterial({color:'#fff4c9'}));this.needle.rotation.z=Math.PI;this.needle.position.copy(gaugePos).add(new T.Vector3(0,.58,.12));this.group.add(this.needle);
+  this.group.add(this.pressureMonitor.group);
   this.group.add(batch(pieces));
   const lightsMaterial=new T.MeshStandardMaterial({color:'#ffffff',vertexColors:false,emissive:'#fff2d0',emissiveIntensity:.35,roughness:.25});
   this.lights=new T.InstancedMesh(new T.SphereGeometry(.14,8,5),lightsMaterial,24);
@@ -81,11 +80,12 @@ export class MillQuestDecor {
   this.bubbles.name='Mill celebration bubbles';
   this.bubbles.frustumCulled=false;for(let i=0;i<this.bubbleCount;i++)this.bubbles.setColorAt(i,new T.Color().setHSL(i/this.bubbleCount,.95,.48));this.group.add(this.bubbles);
  }
- update(q:MillQuest,now:number,owner?:T.Object3D){
+ update(q:MillQuest,now:number,owner?:T.Object3D,pressure?:number){
   const seconds=now/1000;
   // Meta Knight uses his free left fist; the sword grip stays authored.
   const knightHand=owner?.getObjectByName('Left_hand_attachment');
   const arm=owner?.getObjectByName('Right_arm') as T.Mesh|undefined;
+  const wing=owner?.getObjectByName('Right_wing');
   if(q.carried>=0&&owner&&q.stage==='bags'){
    const shoulder=owner.getObjectByName(knightHand?'Left_shoulder':'Right_shoulder');if(shoulder)shoulder.rotation.set(-.38,-.3,.24);
    owner.updateWorldMatrix(true,true);
@@ -103,12 +103,14 @@ export class MillQuestDecor {
      if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();
      const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;
      arm.localToWorld(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
+    }else if(wing){
+     pigeonCarryGrip(wing,this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
     }else{this.scratch.set(1.3*size,.8*size,.25*size).applyQuaternion(owner.quaternion);b.position.copy(owner.position).add(this.scratch);}
    }
    else if(dropping){const t=(now-q.deliveredAt)/650;b.position.set(MILL_HOPPER[0],2.55-t*2,MILL_HOPPER[2]);b.scale.setScalar(1-t*.85);b.rotation.y=t*2;}
    else if(q.rejected===i&&now-q.rejectedAt<1100){const t=(now-q.rejectedAt)/1100;b.position.lerpVectors(new T.Vector3(...MILL_HOPPER),new T.Vector3(...MILL_BAGS[i]),t);b.position.y=1.6*(1-t)+Math.sin(t*Math.PI)*2;b.rotation.z=Math.sin(t*12)*.4;}
   });
-  this.needle.position.x=T.MathUtils.damp(this.needle.position.x,50.7+(q.gate===0?-1:q.gate===2?1:0)*.35,1,1);
+  this.pressureMonitor.update(pressure??(millWorking(q)||q.stage==='bags'?1:q.stage==='flow'?[.22,1,1.5][q.gate]:0));
   const splashBranch=q.branches.findIndex(t=>t>0&&now-t<900);
   this.lights.visible=q.stage==='running';this.bubbles.visible=q.stage==='running'||q.stage==='flow'&&q.gate===2||splashBranch>=0;
   if(this.bubbles.visible){

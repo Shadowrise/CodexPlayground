@@ -40,8 +40,23 @@ export class HistoryStore extends DurableObject<Env>{
 }
 export class GameRoom extends DurableObject<Env>{
  private room?:RoomState;private knightSaved=0;private bossSaved='';private flowerSaved='null';private numberSaved='null';private chaseSentAt=0;private chatRoom?:string;
- constructor(ctx:DurableObjectState,env:Env){super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));for(const s of this.players()){const a=s.deserializeAttachment() as Attachment; if(a?.room)this.room=a.room;}this.restoreSeals();ctx.blockConcurrencyWhile(async()=>{const [event,flowers,numbers]=await Promise.all([ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game'),ctx.storage.get<NumberGame>('number-game')]);if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}if(this.room&&validNumberGame(numbers)){this.room.numberGame=numbers;this.numberSaved=JSON.stringify(numbers);}});}
- private restoreSeals(){this.ctx.blockConcurrencyWhile(async()=>{const battle=await this.ctx.storage.get<KnightBattle>('knight-battle');if(this.room&&battle){this.room.knightBattle=battle;this.knightSaved=battle.revision;}});if(this.room){this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};}}
+ constructor(ctx:DurableObjectState,env:Env){
+  super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));
+  // Read legacy host checkpoints once; new sockets only retain player data.
+  for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a?.room)this.room=a.room;}
+  this.restoreSeals();
+  ctx.blockConcurrencyWhile(async()=>{
+   const [saved,battle,event,flowers,numbers]=await Promise.all([ctx.storage.get<RoomState>('room-state'),ctx.storage.get<KnightBattle>('knight-battle'),ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game'),ctx.storage.get<NumberGame>('number-game')]);
+   if(saved&&(!this.room||this.room.id===saved.id)&&this.players().some(s=>{const a=s.deserializeAttachment() as Attachment;return !a.session||a.session===saved.id;}))this.room=saved;
+   this.restoreSeals();
+   if(this.room&&battle){this.room.knightBattle=battle;this.knightSaved=battle.revision;}
+   if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}
+   if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}
+   if(this.room&&validNumberGame(numbers)){this.room.numberGame=numbers;this.numberSaved=JSON.stringify(numbers);}
+   if(this.room)this.persist();
+  });
+ }
+ private restoreSeals(){if(this.room){this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};}}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
  private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
@@ -230,14 +245,16 @@ export class GameRoom extends DurableObject<Env>{
  }
  private persist(){
   if(!this.room)return;
-  // The world already fills most of the 16KiB WebSocket attachment. Persist the
-  // small quest separately, only on stage/participant changes, never on movement.
+  // A world plus quests/chat can exceed the socket's 16KiB structured-clone
+  // limit. Store room checkpoints independently so persistence cannot interrupt
+  // broadcasts as the room grows. Encounter writes retain their own cadence.
+  this.ctx.waitUntil(this.ctx.storage.put('room-state',{...this.room,knightBattle:undefined,centipede:undefined,flowerGame:undefined,numberGame:undefined}));
   if(this.room.knightBattle&&this.room.knightBattle.revision!==this.knightSaved){this.knightSaved=this.room.knightBattle.revision;this.ctx.waitUntil(this.ctx.storage.put('knight-battle',this.room.knightBattle));}
   const boss=JSON.stringify(this.room.centipede?{...this.room.centipede,chasers:undefined}:null);
   if(boss!==this.bossSaved){this.bossSaved=boss;this.ctx.waitUntil(this.room.centipede?this.ctx.storage.put('centipede-event',this.room.centipede):this.ctx.storage.delete('centipede-event'));}
   const flowers=JSON.stringify(this.room.flowerGame??null);if(flowers!==this.flowerSaved){this.flowerSaved=flowers;this.ctx.waitUntil(this.room.flowerGame?this.ctx.storage.put('flower-game',this.room.flowerGame):this.ctx.storage.delete('flower-game'));}
   const numbers=JSON.stringify(this.room.numberGame??null);if(numbers!==this.numberSaved){this.numberSaved=numbers;this.ctx.waitUntil(this.room.numberGame?this.ctx.storage.put('number-game',this.room.numberGame):this.ctx.storage.delete('number-game'));}
-  for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.id===this.room.host){a.room={...this.room,knightBattle:undefined,centipede:undefined,flowerGame:undefined,numberGame:undefined};s.serializeAttachment(a);}else if(a.room){delete a.room;s.serializeAttachment(a);}}
+  for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;if(a.room){delete a.room;s.serializeAttachment(a);}}
  }
  private logEntry(entry:LogEntry){if(!this.room)return;writeRoomChat(this.chatStorage(),entry);this.room.log=[...(this.room.log??[]),entry].slice(-10);this.broadcast({type:'log',entry});this.persist();}
  private log(a:Attachment,text:string,chat=false){if(!a.actor)return;this.logEntry({id:crypto.randomUUID(),name:a.actor.name,variant:a.variant,text,chat});}
@@ -392,7 +409,7 @@ export class GameRoom extends DurableObject<Env>{
   if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
   if(this.advanceKnight(now,a))changed=true;
-  a.room=a.id===r.host?{...r,knightBattle:undefined,centipede:undefined,flowerGame:undefined,numberGame:undefined}:undefined;socket.serializeAttachment(a);
+  delete a.room;socket.serializeAttachment(a);
   if(changed)this.changed();else if(world||r.festival||flowersChanged||numbersChanged)this.persist();
   if(flowersChanged)this.broadcast({type:'flower-game',game:r.flowerGame});
   if(numbersChanged)this.broadcast({type:'number-game',game:r.numberGame});

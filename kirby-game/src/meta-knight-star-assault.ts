@@ -149,13 +149,13 @@ export function starFacing(s:KnightBattle,now:number){
 }
 function segmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){const x=b[0]-a[0],z=b[2]-a[2],n=x*x+z*z,t=n?clamp(((p[0]-a[0])*x+(p[2]-a[2])*z)/n):0;return Math.hypot(p[0]-a[0]-x*t,p[2]-a[2]-z*t);}
 export function starDanger(s:KnightBattle,p:KnightPoint,now:number,previous:number,bodyRadius:number){
- if(s.stage==='cross')return p[1]<1.7&&Math.hypot(p[0],p[2])<=META_KNIGHT_ARENA.radius+bodyRadius&&(crossLines(s).some(line=>segmentDistance(...line,p)<STAR_ASSAULT.beamHalfWidth+bodyRadius)||crossTriangles(s).some(t=>triangleDistance(t,p)<=bodyRadius));
- if(s.stage==='ricochet'&&p[1]<2.0){
+ if(s.stage==='cross')return Math.hypot(p[0],p[2])<=META_KNIGHT_ARENA.radius+bodyRadius&&(crossLines(s).some(line=>segmentDistance(...line,p)<STAR_ASSAULT.beamHalfWidth+bodyRadius)||crossTriangles(s).some(t=>triangleDistance(t,p)<=bodyRadius));
+ if(s.stage==='ricochet'){
   const index=ricochetIndex(s),before=starProgress(s,Math.max(s.since,previous)),end=starProgress(s,now);
   let a=ricochetCurve(s,index,before);for(let i=1;i<=8;i++){const b=ricochetCurve(s,index,before+(end-before)*i/8);if(segmentDistance(a,b,p)<STAR_ASSAULT.routeHalfWidth+bodyRadius)return true;a=b;}
  }
  if(s.stage==='shield'&&previous<=s.since&&now-s.since<150){
-  if(p[1]<2.5&&Math.hypot(p[0],p[2])<STAR_ASSAULT.impactRadius+bodyRadius)return true;
+  if(Math.hypot(p[0],p[2])<STAR_ASSAULT.impactRadius+bodyRadius)return true;
  }
  return shieldDanger(s,p,now,previous,bodyRadius);
 }

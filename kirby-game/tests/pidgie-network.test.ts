@@ -89,7 +89,7 @@ test('Worker keeps host-owned Pidgie pecking through late join, host transfer an
   for(const [socket,name,variant] of [[host,'Host',0],[guest,'Guest',1]] as const)room.webSocketMessage(socket,JSON.stringify({type:'frame',actor:{...world.npcs[0],name,variant},events:[]}));
   assert(validWorld(world));send(host,world);assert.deepEqual(room.room.world,world);
   assert.deepEqual(guest.messages.filter(m=>m.type==='frame').at(-1).world.pidgie,world.pidgie);
-  assert.deepEqual(host.data.room.world.pidgie,world.pidgie);assert(!guest.data.room);
+  assert.deepEqual((storage.get('room-state') as any).world.pidgie,world.pidgie);assert(!host.data.room&&!guest.data.room);
   assert(new TextEncoder().encode(JSON.stringify(host.data)).length<16*1024,'checkpoint fits the host WebSocket attachment');
   send(guest,{...world,pidgie:{...world.pidgie,seed:123}});assert.deepEqual(room.room.world,world,'guest cannot author NPC movement');
   send(host,{...world,pidgie:{...world.pidgie,p:[0,257,0]}});assert.deepEqual(room.room.world,world,'shared validator rejects the complete malformed snapshot');
@@ -122,9 +122,9 @@ test('Worker keeps host-owned Pidgie pecking through late join, host transfer an
   assert(late.messages[0].room.log.some((entry:any)=>entry.id===hint.id),'a late join receives the existing chat history');
   assert(late.messages[0].room.log.some((entry:any)=>entry.id===interest.id));
   await room.webSocketClose(host);assert.equal(room.room.host,guest.data.id);
-  assert.deepEqual(guest.data.room.world.pidgie,world.pidgie,'new host receives the phase clock, route and PRNG checkpoint');
+  assert.deepEqual((storage.get('room-state') as any).world.pidgie,world.pidgie,'shared storage retains the phase clock, route and PRNG checkpoint');
   assert.deepEqual(late.messages.filter(m=>m.type==='room').at(-1).room.world.pidgie,world.pidgie);
-  room=new GameRoom(ctx,{});assert.deepEqual(room.room.world.pidgie,world.pidgie,'Worker wakes from the new host attachment');
+  room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(room.room.world.pidgie,world.pidgie,'Worker wakes from shared storage');
   assert.equal(hints().length,1,'host handoff and hibernation retain the message without replaying it');
   frame(guest,[{type:'pidgie-scare',playerId:guest.data.id}]);assert.equal(hints().length,2,'the new host can announce its own next scare');
   const afterWake=await join('Awake',3);assert.deepEqual(afterWake.messages[0].room.world.pidgie,world.pidgie);
@@ -134,7 +134,7 @@ test('Worker keeps host-owned Pidgie pecking through late join, host transfer an
   const following={...continued,pidgie:{...continued.pidgie,phase:'follow',p:[67.375,0,-29.25],clip:'Run',followId:guest.data.id,followSpeed:6.5}};
   assert(validWorld(following));send(guest,following);
   assert.deepEqual(afterWake.messages.filter(m=>m.type==='frame').at(-1).world.pidgie,following.pidgie);
-  room=new GameRoom(ctx,{});assert.deepEqual(room.room.world.pidgie,following.pidgie,'the followed player and ground speed survive Worker hibernation');
+  room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(room.room.world.pidgie,following.pidgie,'the followed player and ground speed survive Worker hibernation');
   assert.equal(interests().length,1,'state updates and waking the room never repeat the interest message');
  }finally{globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });

@@ -209,11 +209,42 @@ export class Watermill {
     box('#898e7d',10.8,3.2,-14.2,3.2,6.4,2.2);
     for(let i=0;i<5;i++)box('#acaf97',10.8,6.4+i*.14,-14.2,3.4-i*.35,.18,2.4-i*.2);
     part(root,'cylinder','#65796a',10.8,7,-13.3,.47,1.3,.47,Math.PI/2);
-    // Lever on a dry, accessible pedestal beside the front path.
-    box('#8d9382',17,.55,6.5,1.1,1.1,1.1);
-    this.handle.position.set(17,1.25,6.5);root.add(this.handle);
-    part(this.handle,'cylinder','#35474b',0,.45,0,.065,.9,.065);
-    part(this.handle,'ball','#bd5738',0,.95,0,.2,.2,.2);
+    // A fixed iron cradle joins the stone pedestal to the rotating X-axis hub.
+    // The shaft enters that hub, so every gate angle keeps a continuous joint.
+    const leverMount=new T.Group();leverMount.name='Watermill lever mount';leverMount.position.set(17,0,6.5);root.add(leverMount);
+    part(leverMount,'box','#777b6c',0,.14,0,1.3,.28,1.24);
+    part(leverMount,'box','#a9a58d',0,.59,0,1.02,.72,.95);
+    part(leverMount,'box','#b6b096',0,.96,0,1.16,.16,1.1);
+    // Narrow inset panels, corner stones and a wheat motif echo the mill facade.
+    for(const side of [-1,1]){
+      part(leverMount,'box','#969782',side*.505,.59,0,.035,.52,.72);
+      for(const y of [.37,.79])part(leverMount,'box','#b6b096',side*.43,y,.48,.16,.14,.045);
+    }
+    part(leverMount,'box','#765039',0,.59,.49,.42,.44,.045);
+    part(leverMount,'box','#e3c58a',0,.59,.519,.025,.31,.018);
+    for(let i=0;i<3;i++)for(const side of [-1,1])
+      part(leverMount,'ball','#e3c58a',side*.055,.51+i*.075,.53,.052,.025,.014,0,0,side*.5);
+    part(leverMount,'box','#35474b',0,1.06,0,.86,.1,.7);
+    for(const x of [-.32,.32])for(const z of [-.23,.23]){
+      part(leverMount,'cylinder','#c5a568',x,1.115,z,.043,.025,.043);
+      part(leverMount,'box','#624631',x,1.13,z,.044,.006,.008);
+    }
+    for(const side of [-1,1]){
+      part(leverMount,'box','#35474b',side*.245,1.17,0,.15,.24,.3);
+      part(leverMount,'cylinder','#35474b',side*.245,1.3,0,.19,.15,.19,0,0,Math.PI/2);
+      part(leverMount,'cylinder','#c5a568',side*.332,1.3,0,.115,.035,.115,0,0,Math.PI/2);
+      part(leverMount,'cylinder','#35474b',side*.359,1.3,0,.058,.027,.058,0,0,Math.PI/2);
+    }
+    this.handle.name='Watermill lever arm';this.handle.position.set(17,1.3,6.5);root.add(this.handle);
+    part(this.handle,'cylinder','#35474b',0,0,0,.165,.39,.165,0,0,Math.PI/2);
+    part(this.handle,'cylinder','#35474b',0,.48,0,.075,1.03,.075);
+    part(this.handle,'cylinder','#c5a568',0,.19,0,.091,.12,.091);
+    part(this.handle,'cylinder','#c5a568',0,.97,0,.104,.11,.104);
+    // Turned, warm red wooden grip, with a rounded crown and brass ferrules.
+    const gripProfile=[[0,.99],[.09,.99],[.115,1.03],[.132,1.1],[.14,1.24],[.128,1.35],[.09,1.4],[0,1.42]];
+    const grip=new T.Mesh(new T.LatheGeometry(gripProfile.map(([r,y])=>new T.Vector2(r,y)),16),material('#bd5738'));this.handle.add(grip);
+    for(const [y,r] of [[1.055,.13],[1.315,.143]])part(this.handle,'cylinder','#a6533d',0,y,0,r,.018,r);
+    part(this.handle,'cylinder','#e3c58a',0,1.005,0,.111,.025,.111);
     for(let i=0;i<3;i++) {
       part(root,'cylinder','#967048',20.8+i*.75,.55,4.1,.37,1.05,.37);
       for(const y of [.2,.85])part(root,'ring','#35474b',20.8+i*.75,y,4.1,.38,.38,.38,Math.PI/2);
@@ -271,7 +302,7 @@ export class Watermill {
       }
       batchRigidMeshes(parent);
     };
-    batch(root);batch(this.wheel);batch(this.gate);batch(this.handle);
+    batch(root);batch(this.wheel);batch(this.gate);batch(leverMount);batch(this.handle);
     const race=new T.Mesh(new T.PlaneGeometry(1.9,8.3),this.water);race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.9);root.add(race);
     const lip=new T.Mesh(new T.PlaneGeometry(1.9,2.2),this.water);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
     this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
@@ -309,7 +340,7 @@ export class Watermill {
       this.dummy.scale.setScalar((1-t)*.1*this.openness);this.dummy.updateMatrix();this.splashes.setMatrixAt(i,this.dummy.matrix);
     }
     this.splashes.instanceMatrix.needsUpdate=true;
-    this.decor.update(this.quest,this.now,owner);
+    this.decor.update(this.quest,this.now,owner,this.openness);
     this.bakery.update(dt,this.quest,this.now,owner);
   }
   constrain(position:T.Vector3,size:number) {

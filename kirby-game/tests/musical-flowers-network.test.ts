@@ -31,8 +31,8 @@ test('Worker relays only nearby, available players and rejects malformed or rapi
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
   class Socket {readyState=1;messages:any[]=[];data:any;constructor(id:string){const f=MUSICAL_FLOWERS[2];this.data={id,variant:0,announced:true,seen:now,visible:true,actor:{p:[f.x,0,f.z+1],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:id,variant:0,star:0}};}deserializeAttachment(){return structuredClone(this.data);}serializeAttachment(a:any){this.data=structuredClone(a);}send(text:string){this.messages.push(JSON.parse(text));}}
   const a=new Socket('a'),b=new Socket('b');
-  const ctx={blockConcurrencyWhile:(f:()=>unknown)=>f(),getWebSockets:()=>[a,b],setWebSocketAutoResponse(){},storage:{sql:roomSql(),async get(){},async put(){},async setAlarm(){}}};
-  const room=new GameRoom(ctx,{});room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
+  const ctx={blockConcurrencyWhile:(f:()=>unknown)=>f(),waitUntil(){},getWebSockets:()=>[a,b],setWebSocketAutoResponse(){},storage:{sql:roomSql(),async get(){},async put(){},async delete(){},async setAlarm(){}}};
+  const room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();room.room={id:'room',host:'a',epoch:now,fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
   const play=(index:any)=>room.webSocketMessage(a,JSON.stringify({type:'frame',events:[{type:'flower-note',index}]}));
   play(2);assert.equal(b.messages.filter(m=>m.type==='flower-note').length,1);assert(!a.messages.some(m=>m.type==='flower-note'));
   play(2);now+=200;play(7);play('2');play(-1);assert.equal(b.messages.filter(m=>m.type==='flower-note').length,1);

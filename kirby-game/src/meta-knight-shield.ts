@@ -20,7 +20,7 @@ export function shieldWaves(s:KnightBattle,now:number,previous=now){
  return result;
 }
 export function shieldDanger(s:KnightBattle,p:KnightPoint,now:number,previous:number,bodyRadius:number){
- if(s.stage!=='shield'||p[1]>=SHIELD.waveHeight)return false;
+ if(s.stage!=='shield')return false;
  const r=Math.hypot(p[0],p[2]),a=Math.atan2(p[0],p[2]);
  const checked=Math.max(previous,now-150);
  return shieldWaves(s,now,checked).some(w=>{const before=SHIELD.crystalRadius-Math.max(0,checked-w.born)*SHIELD.waveSpeed;return r>=w.radius-SHIELD.waveHalfWidth-bodyRadius&&r<=before+SHIELD.waveHalfWidth+bodyRadius&&!shieldWaveGap(a,w.angle,r,bodyRadius);});

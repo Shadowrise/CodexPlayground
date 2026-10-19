@@ -28,9 +28,10 @@ test('room restores disconnected players by name, rejects online duplicates, and
  globals.WebSocketPair=class {0=new Socket();1=lastServer=new Socket();};globals.WebSocketRequestResponsePair=class {};
  const sockets:Socket[]=[],storage=new Map<string,unknown>(),sql=roomSql();let writes=0;
  const ctx={waitUntil(){},blockConcurrencyWhile:(fn:()=>unknown)=>fn(),getWebSocketAutoResponseTimestamp:()=>new Date(now),getWebSockets:()=>sockets,acceptWebSocket:(s:Socket)=>sockets.push(s),setWebSocketAutoResponse(){},
-  storage:{sql,async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){writes++;storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();sql.clear();}}};
+  storage:{sql,async get(key:string){return structuredClone(storage.get(key));},async put(key:string,value:unknown){if(key.startsWith('player:'))writes++;storage.set(key,structuredClone(value));},async delete(key:string){storage.delete(key);},async setAlarm(){},async deleteAlarm(){},async deleteAll(){storage.clear();sql.clear();}}};
  try{
   const {GameRoom}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));let room=new GameRoom(ctx,{});
+  const wake=async()=>{room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();};
   const join=async(name:string,variant:number)=>{await room.fetch(new Request(`https://test/ws?build=${BUILD}&variant=${variant}&name=${encodeURIComponent(name)}`,{headers:{Upgrade:'websocket'}}));return lastServer!;};
   const send=(s:Socket,actor?:any,events:any[]=[])=>room.webSocketMessage(s,JSON.stringify({type:'frame',actor,events}));
   const first=await join('  Кирби   Друг  ',0),id=first.data.id,roomId=room.room.id;
@@ -44,8 +45,8 @@ test('room restores disconnected players by name, rejects online duplicates, and
   room.room.festival=createStarfall(now,'Кирби Друг');room.room.festival.players[id]={name:'Кирби Друг',variant:0,base:7,fruits:1,size:2.2,bonus:6,collected:[0,1,2,3,4,5]};
   await room.webSocketClose(first);
   assert.equal(writes,1);assert.equal(room.room.host,second.data.id);assert(!room.room.locks['bug:0']);
-  // A new Durable Object instance recovers the room through the surviving host attachment.
-  room=new GameRoom(ctx,{});now+=5000;
+  // A new Durable Object instance recovers the shared storage checkpoint.
+  await wake();now+=5000;
   const returned=await join('кирби друг',3),welcome=returned.messages.find(m=>m.type==='welcome');
   assert.equal(welcome.playerId,id);assert.equal(welcome.room.id,roomId);assert.equal(welcome.resume.variant,0);
   assert.equal(welcome.resume.fruits,1);assert.deepEqual(welcome.resume.achievements,['mill','bench']);
@@ -79,7 +80,7 @@ test('room restores disconnected players by name, rejects online duplicates, and
   assert.equal((await room.adminChatMessage('stale','Нет')).ok,false);assert.equal((await room.adminChatMessage(activeId,'  ')).ok,false);
   for(let i=0;i<25;i++)await room.adminChatMessage(activeId,'История '+i);
   assert.equal(room.room.log.length,10);
-  room=new GameRoom(ctx,{});
+  await wake();
   const chat=await room.adminChat(activeId);assert(chat.entries.some((e:any)=>e.text==='Привет всем!'));assert(chat.entries.some((e:any)=>e.text==='История 0'));
   assert.equal((await room.adminChat('stale')).ok,false);
   const host=online.players.find((p:any)=>p.id===fresh.data.id);assert.equal(host.ready,true);assert.equal(host.size,2.2);assert.equal(fresh.data.actor.fruits,0);
@@ -105,11 +106,11 @@ test('room restores disconnected players by name, rejects online duplicates, and
   assert.equal((await room.adminDisconnect(activeId,fresh.data.id)).ok,false);
   const reset=await room.adminRecreate(activeId);assert(reset.ok);assert.equal(peer.readyState,3);assert.notEqual(reset.roomId,activeId);
   // The empty replacement survives hibernation; stale close events cannot delete it.
-  room=new GameRoom(ctx,{});await room.webSocketClose(peer);
+  await wake();await room.webSocketClose(peer);
   assert.equal((await room.adminOnline()).room.id,reset.roomId);assert.equal((await room.adminOnline()).players.length,0);
   assert.deepEqual((await room.adminChat(reset.roomId)).entries,[]);assert.equal((await room.adminChatMessage(reset.roomId,'Нет игроков')).ok,false);assert.equal((await room.adminChat(activeId)).ok,false);
   assert.equal((await room.adminRecreate(activeId)).ok,false);assert.equal((await room.adminFestival(reset.roomId,false)).ok,false);
-  const nextPlayer=await join('Кирби Друг',0);assert.equal(nextPlayer.messages[0].room.id,reset.roomId);assert(!nextPlayer.messages[0].resume);assert.equal(storage.size,0);
+  const nextPlayer=await join('Кирби Друг',0);assert.equal(nextPlayer.messages[0].room.id,reset.roomId);assert(!nextPlayer.messages[0].resume);assert.deepEqual([...storage.keys()],['room-state']);
   assert.equal((await room.adminChat(reset.roomId)).entries.length,0);assert.equal((await room.adminChatMessage(reset.roomId,'Новая комната')).ok,true);
   // The admin uses the normal starfall, including immediate results and their deadline.
   send(nextPlayer,{...actor,achievements:['bench'],fruits:0});
@@ -118,7 +119,7 @@ test('room restores disconnected players by name, rejects online duplicates, and
   assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'gift')).ok,false,'do not pile multiple surprises on one player');
   assert.equal((await room.adminPrank('stale',nextPlayer.data.id,'rainbow')).ok,false);
   assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'constructor')).ok,false);
-  room=new GameRoom(ctx,{});assert.equal(room.room.pranks[0].id,prank.id,'effects survive host hibernation');
+  await wake();assert.equal(room.room.pranks[0].id,prank.id,'effects survive host hibernation');
   const spectator=await join('Зритель',3);assert.equal(spectator.messages[0].room.pranks[0].id,prank.id,'late joiners see the same effect timeline');await room.webSocketClose(spectator);
   now=prank.endsAt+1;assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'rainbow')).ok,true);assert.equal(room.room.pranks.length,1);
   now=room.room.pranks[0].endsAt+1;assert.equal((await room.adminPrank(reset.roomId,nextPlayer.data.id,'gift')).ok,true);

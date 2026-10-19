@@ -14,6 +14,7 @@ export type TreehouseSound='ladder'|'creak'|'leaves'|'cheer';
 type Activity='climb'|'deck'|'dive'|'land'|'swing';
 export const TREEHOUSE_HEIGHT_SCALE=2;
 const DECK=TREEHOUSE_DECK_HEIGHT/TREEHOUSE_HEIGHT_SCALE;
+const SWING_SEAT_Y=-5.7,SWING_SEAT_THICKNESS=.18;
 const idle={forward:false,left:false,right:false};
 
 /** A hand-built oak lookout; static repeated details share instanced geometry. */
@@ -129,7 +130,7 @@ export class Treehouse {
     }
     this.swing.position.set(-11,7.5,3);root.add(this.swing);
     for(const x of [-1.45,1.45])beam([x,0,0],[x,-5.7,0],.043,'#d2ba83',this.swing);
-    for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,-5.7,-.65+i*.32,3.3,.18,.28);
+    for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,SWING_SEAT_Y,-.65+i*.32,3.3,SWING_SEAT_THICKNESS,.28);
     for(const x of [-1.45,1.45])part(this.swing,'ball','#dec997',x,-5.68,0,.12,.12,.12);
     this.leafPile.group.position.set(8,0,13);
     root.add(this.leafPile.group);
@@ -209,7 +210,8 @@ export class Treehouse {
       if(u===1)this.finish();
     }else{
       this.swing.updateWorldMatrix(true,false);
-      const seat=this.swing.localToWorld(new T.Vector3(0,-5.58,0));
+      const seatY=c.isPigeon?SWING_SEAT_Y+SWING_SEAT_THICKNESS/2:-5.58;
+      const seat=this.swing.localToWorld(new T.Vector3(0,seatY,0));
       if(this.elapsed>=1.5)awardFirst(c,'swing');
       const mount=Math.min(1,this.elapsed/.65),blend=mount*mount*(3-2*mount);
       c.actor.position.lerpVectors(this.from,seat,blend);

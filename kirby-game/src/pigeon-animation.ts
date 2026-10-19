@@ -197,7 +197,11 @@ export function createPigeonAnimations(rig:PigeonRig){
       case 'Swing':{
         seated(u);euler(body,.045+.035*Math.sin(phase),0,.008*Math.sin(phase));
         look(.025*Math.sin(phase),-.025-.045*Math.cos(phase),.026*Math.sin(phase));
-        legs.forEach(leg=>legPose(leg,.16+.045*Math.sin(phase),.15,.05*Math.sin(phase)));
+        // Both feet rest on the swing instead of paddling above its planks.
+        legs.forEach(leg=>legPose(leg,.16,.15,0));
+        root.updateMatrixWorld(true);
+        const soleY=Math.min(...legs.map(leg=>new T.Box3().setFromObject(leg.foot,true).min.y));
+        motion.position.y-=soleY;
         wings.forEach((_,i)=>openWing(i,.12,.08+.025*Math.sin(phase)));euler(tail,-.10-.03*Math.sin(phase));break;
       }
       case 'Cart':{

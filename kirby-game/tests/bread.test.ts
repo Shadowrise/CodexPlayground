@@ -168,7 +168,7 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   room.webSocketMessage(first,JSON.stringify({type:'frame',actor:{...a,p},world,events:[]}));
   assert.equal(room.room.world.pidgie.friend.by,first.data.id,'stale host frames cannot undo the friendship');
   await room.webSocketClose(first);assert.deepEqual(room.room.bread,offered);assert.equal(room.room.world.pidgie.friend.by,first.data.id);
-  const awakened=new GameRoom(ctx,{});assert.deepEqual(awakened.room.bread,offered,'permanent bread and friendship survive hibernation');
+  const awakened=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(awakened.room.bread,offered,'permanent bread and friendship survive hibernation');
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 

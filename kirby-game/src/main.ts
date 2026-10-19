@@ -16,6 +16,7 @@ import {BOSS_ARENA,constrainArena,constrainNpcOutsideArena} from './boss-arena-s
 import {prepareSurfaceTextures} from './texture-filtering';
 import {MillQuestHud} from './mill-quest-hud';
 import {BreadWorld} from './bread';
+import {clearPigeonCarryPoses} from './pigeon-carry';
 import {MetaKnightSeal} from './meta-knight-seal';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
@@ -1193,7 +1194,7 @@ renderer.setAnimationLoop((time: number) => {
     if (eaten) {
       showFruitPickup(eaten.type);
     }
-    if(network){character.starCooldown=Math.max(0,(network.room.starAt-Date.now())/1000);if(!carryingBread && character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
+    if(network){character.starCooldown=Math.max(0,(network.room.starAt-network.serverNow)/1000);if(!carryingBread && character.starCooldown===0 && performance.now()-lastStarRequest>1000 && character.actor.position.y<.5 && Math.hypot(character.actor.position.x-MAZE_SITE.x-maze.rewardPosition.x,character.actor.position.z-MAZE_SITE.z-maze.rewardPosition.z)<2){network.event({type:'star'});lastStarRequest=performance.now();}}
     if(maze.update(dt,character,!carryingBread && !network && !coaster.riding && !boats.riding && !balloons.riding && !treehouse.active && !benches.active)){
       sounds.playStarPickup();setText(combatMessage,'★ Звезда найдена! Скорость и прыжок ×2 на 30 секунд!');hitMessageRemaining=5;
     }
@@ -1251,8 +1252,9 @@ renderer.setAnimationLoop((time: number) => {
   seenSealCount=foundSeals;
   seals.forEach((seal,index)=>{seal.active=!sealProgress.collected[META_KNIGHT_SEAL_SITES[index].id];seal.update(time/1000,camera.position);});
   sealLocations.update(camera.position);
-  watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   updateNetwork(dt);
+  clearPigeonCarryPoses();
+  watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   const breadActors=new Map<string,THREE.Object3D>();if(character)breadActors.set(network?.id??'solo',character.actor);for(const [id,c] of remotePlayers?.players??[])breadActors.set(id,c.actor);
   bread.update(network?.serverNow??Date.now(),breadActors);
   checkCharacterUnlock();

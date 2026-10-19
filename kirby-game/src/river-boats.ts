@@ -55,10 +55,10 @@ export class RiverBoats {
   }
  }
  private fit(player:CharacterController){
-  // Keep large Kirby's saved/gameplay size; only fit the visual model under the canopy.
+  // Keep saved/gameplay size; fit each character's visual model under the canopy.
   const model=player.animationRoot.parent!;model.scale.setScalar(this.fitScale(player));this.fitted.set(player,model);
  }
- private fitScale(player:CharacterController){return Math.min(1,(player.isMetaKnight?.62:.9)/player.actor.scale.x);}
+ private fitScale(player:CharacterController){return Math.min(1,(player.isMetaKnight?.62:player.isPigeon?.7:.9)/player.actor.scale.x);}
  private unfit(player:CharacterController){this.fitted.get(player)?.scale.setScalar(1);this.fitted.delete(player);}
  private nearby(player:CharacterController){
   if(player.flight.active||player.roll.active||player.actor.position.y>1.3)return -1;

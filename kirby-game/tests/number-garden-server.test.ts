@@ -29,7 +29,7 @@ test('actual Worker shares six rounds, protects rewards, persists progress and r
    if(round<6){assert.equal(room.room.numberGame.stage,'round');now=numberDeadline(room.room.numberGame);frame(a);}
   }
   assert.equal(room.room.numberGame.stage,'celebrate');for(const s of [a,b]){assert.equal(achievementPoints(s.data.actor.achievements),10);assert.equal(s.messages.filter(m=>m.type==='number-complete').length,1);}
-  assert(storage.has('number-game'));assert(!a.data.room.numberGame,'progress stored outside the WebSocket attachment');
+  assert(storage.has('number-game'));assert(!a.data.room,'progress stored outside the WebSocket attachment');
   const snapshot=structuredClone(a.data.actor);snapshot.achievements=[];frame(a,[],snapshot);assert(a.data.actor.achievements.includes('numbers'));
   assert(a.messages.filter(m=>m.type==='number-game').every(m=>JSON.stringify(m).length<1800));
   a.data.actor.achievements=[...SCORE_ACTIONS];frame(a);assert.equal(room.room.festival,undefined,'finale waits for the reward celebration');

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { Vector3, InstancedMesh } from 'three';
+import { Vector3, InstancedMesh, Mesh, Matrix4, Quaternion, Raycaster, Texture } from 'three';
 import { CharacterController } from '../src/controller';
 import { Treehouse, TREEHOUSE_SITE, type TreehouseSound } from '../src/treehouse';
 import { sceneryClearance } from '../src/landmarks';
@@ -31,6 +31,38 @@ test('swing mounts smoothly, moves with the ropes and can be left using interact
   assert(c.actor.position.y<.05);for(let i=0;i<120;i++)house.update(1/60);
   assert.equal(c.state,'Swing');const position=c.actor.position.clone();house.update(.2);assert(position.distanceTo(c.actor.position)>.01);
   assert(sounds.includes('creak'));house.interact(c);assert(!house.active);assert.equal(c.actor.position.y,0);assert.equal(c.actor.rotation.x,0);
+});
+
+test('Pidgie plants both feet on the real swing planks throughout the seated animation and rocking',async()=>{
+  const bytes=await readFile(new URL('../public/models/pigeon-animated.glb',import.meta.url)),loader=new GLTFLoader();
+  loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
+  const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+  const house=new Treehouse(),c=new CharacterController(asset.scene,asset.animations);
+  const feet=['Left','Right'].map(side=>c.actor.getObjectByName(`${side}_foot`)!.children.find(node=>node instanceof Mesh) as Mesh);
+  const inverse=new Matrix4(),up=new Vector3(),point=new Vector3(),contact=new Vector3(),ray=new Raycaster();
+  const planted:Vector3[]=[];
+  c.actor.scale.setScalar(1.5);c.actor.position.copy(TREEHOUSE_SITE).add(new Vector3(-11,0,3));house.interact(c);
+  for(let frame=0;frame<600;frame++){
+    house.update(1/60);
+    if(frame<60||frame%4)continue;
+    house.group.updateMatrixWorld(true);c.actor.updateMatrixWorld(true);inverse.copy(house.swing.matrixWorld).invert();
+    up.set(0,1,0).applyQuaternion(house.swing.getWorldQuaternion(new Quaternion()));
+    feet.forEach((foot,index)=>{
+      const p=foot.geometry.attributes.position;let lowest=Infinity;
+      for(let vertex=0;vertex<p.count;vertex++){
+        foot.getVertexPosition(vertex,point).applyMatrix4(foot.matrixWorld).applyMatrix4(inverse);
+        if(point.y<lowest){lowest=point.y;contact.copy(point);}
+      }
+      if(!planted[index])planted[index]=contact.clone();
+      assert(contact.distanceTo(planted[index])<.00001,'feet cannot paddle or slide over the seat');
+      point.copy(contact).applyMatrix4(house.swing.matrixWorld);
+      ray.set(point.clone().add(up),up.clone().negate());
+      const hit=ray.intersectObject(house.swing,true)[0];assert(hit,'the foot must be over a wooden plank');
+      assert(Math.abs(point.clone().sub(hit.point).dot(up))<.001,'the sole must touch the plank without hovering or penetrating it');
+    });
+  }
+  assert.equal(c.savedSize,1.5);assert(c.achievements.has('swing'));
+  house.interact(c);assert(!house.active);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);assert.equal(c.actor.scale.x,1.5);
 });
 
 test('the seal is on the actual balcony and ordinary deck movement reaches it before the leaf jump',async()=>{

@@ -14,7 +14,7 @@ test('both first-phase sword sweeps stay at ground height even if their warning 
  const s=battle(),a=actor();setStage(s,'approach');Object.assign(s,{pattern:'sword',step:-1,to:[0,0,0]});a.p=[0,2.2,8];s.players.a.invulnerable=1e12;
  for(const step of [0,2]){
   advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'slash-warn');assert.equal(s.step,step);assert.equal(s.height,0);
-  advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'slash');assert.equal(s.height,0);assert(!knightDanger(s,a,s.since+100),'a sufficiently high jump clears either blade');assert(knightDanger(s,{...a,p:[0,0,8]},s.since+100),'standing in the lit cone still hurts');
+  advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'slash');assert.equal(s.height,0);assert(knightDanger(s,a,s.since+100),'jumping above the lit cone still hurts');assert(knightDanger(s,{...a,p:[0,0,8]},s.since+100),'standing in the lit cone still hurts');
  }
 });
 
@@ -120,12 +120,12 @@ test('warnings leave the boss stationary and lock destinations; actual jump/dash
  s.stage='jump';s.height=0;assert.deepEqual(knightPosition(s,3000),[5,5,0]);
 });
 test('sword sectors, swept flight lanes, impact circles and low waves have distinct honest hit regions',()=>{
- const s=battle();setStage(s,'slash');const a=actor();a.p=[0,0,3];assert(knightDanger(s,a,2100));a.p=[4,0,0];assert(!knightDanger(s,a,2100));a.p=[0,2.9,3];assert(!knightDanger(s,a,2100));
+ const s=battle();setStage(s,'slash');const a=actor();a.p=[0,0,3];assert(knightDanger(s,a,2100));a.p=[4,0,0];assert(!knightDanger(s,a,2100));a.p=[0,2.9,3];assert(knightDanger(s,a,2100));
  setStage(s,'dash');s.to=[10,0,0];a.p=[5,0,0];assert(knightDanger(s,a,3200,2800));a.p=[5,0,KNIGHT.laneHalfWidth+1];assert(!knightDanger(s,a,3200,2800));
- setStage(s,'slam');a.p=[0,0,1];assert(knightDanger(s,a,2100));a.p=[0,3,1];assert(!knightDanger(s,a,2100));
+ setStage(s,'slam');a.p=[0,0,1];assert(knightDanger(s,a,2100));a.p=[0,3,1];assert(knightDanger(s,a,2100));
  setStage(s,'wave');a.p=[0,0,KNIGHT.waveSpeed*500];assert(knightDanger(s,a,2500,2450));a.p[1]=1.2;assert(!knightDanger(s,a,2500,2450));
 });
-test('phase two forward flights have a 50% wider lane at every heading with the same height limits',()=>{
+test('phase two forward flights have a 50% wider lane at every heading regardless of player height',()=>{
  for(const yaw of [0,Math.PI/2,Math.PI,Math.PI/4]){
   const s=battle(),a=actor();setStage(s,'dash');s.phase=2;s.pattern='flight';s.height=1.2;s.to=[Math.sin(yaw)*10,0,Math.cos(yaw)*10];
   assert.equal(knightDashHalfWidth(s),4.5);
@@ -135,11 +135,27 @@ test('phase two forward flights have a 50% wider lane at every heading with the 
    a.p=beside(side*(4.5+KNIGHT.bodyRadius-.01));assert(knightDanger(s,a,3200,2800));
    a.p=beside(side*(4.5+KNIGHT.bodyRadius+.01));assert(!knightDanger(s,a,3200,2800),'the outer edge remains safe');
   }
-  a.p=beside(4,2.71);assert(!knightDanger(s,a,3200,2800),'flying above the attack still avoids damage');
+  for(const height of [1.45,2.9,8]){a.p=beside(4,height);assert(knightDanger(s,a,3200,2800),'jumping or flying above the attack still takes damage');}
   a.p=beside(4);s.stage='dash-warn';assert(!knightDanger(s,a,3200,2800));s.stage='dash';
   const normal=structuredClone(s);normal.phase=1;assert.equal(knightDashHalfWidth(normal),3);assert(!knightDanger(normal,a,3200,2800));
   normal.phase=3;assert.equal(knightDashHalfWidth(normal),3);assert(!knightDanger(normal,a,3200,2800));
   advanceKnightBattle(s,[a],3200);assert.equal(s.players.a.hp,4,'shared battle rules apply damage in the wider strip');
+ }
+});
+
+test('marked sword, flight and landing attacks damage airborne players; only the phase-two ring can be jumped',()=>{
+ for(const height of [0,1.45,2.9,8]){
+  for(const stage of ['slash','dash','slam','open'] as const){
+   const s=battle(),a=actor();setStage(s,stage);s.pattern=stage==='open'?'leap':stage==='dash'?'flight':stage==='slam'?'dive':'sword';s.phase=stage==='dash'||stage==='slam'?2:1;
+   const now=stage==='dash'?3000:2001;s.checked=now-25;
+   if(stage==='dash')s.to=[10,0,0];a.p=stage==='dash'?[5,height,0]:[0,height,2];
+   advanceKnightBattle(s,[a],now);assert.equal(s.players.a.hp,4,`${stage} at height ${height}`);
+   advanceKnightBattle(s,[a],now+25);assert.equal(s.players.a.hp,4,'normal hit invulnerability still applies');
+   const safe=battle();setStage(safe,stage);Object.assign(safe,{pattern:s.pattern,phase:s.phase,to:s.to,checked:now-25});a.p=[20,height,20];
+   advanceKnightBattle(safe,[a],now);assert.equal(safe.players.a.hp,5,'moving out of the marked footprint remains safe');
+  }
+  const s=battle(),a=actor();setStage(s,'wave');s.phase=2;s.pattern='dive';s.checked=2450;a.p=[0,height,KNIGHT.waveSpeed*500];
+  advanceKnightBattle(s,[a],2500);assert.equal(s.players.a.hp,height<KNIGHT.waveHeight?4:5,'the expanding phase-two ring keeps its height exception');
  }
 });
 
@@ -259,6 +275,30 @@ test('eight normal openings and four selected crystals win; spam and distant hit
  }
  assert.deepEqual([...phases],[1,2,3]);assert.equal(s.hp,0);assert.equal(s.stage,'won');assert.equal(s.players.a.hits,12);
  const miss=battle();setStage(miss,'open');a.p=[0,0,12];knightAttack(miss,a,2010);advanceKnightBattle(miss,[a],2200);assert.equal(miss.hp,12);
+});
+
+test('grounded, jumping and flying melee hits reach the enlarged boss during either phase opening',()=>{
+ for(const phase of [1,2] as const)for(const pattern of phase===1?['sword','leap'] as const:['flight','dive'] as const)for(const height of [0,1.45,2.2,2.9])for(const yaw of [0,Math.PI/2,Math.PI]){
+  const s=battle(),a=actor();setStage(s,'open');Object.assign(s,{phase,hp:phase===1?12:8,pattern,from:[-8,0,7],to:[-8,0,7]});
+  a.p=[s.from[0]+Math.sin(yaw)*3,height,s.from[2]+Math.cos(yaw)*3];a.yaw=yaw+Math.PI;
+  const before=s.hp;assert(knightAttack(s,a,2100));advanceKnightBattle(s,[a],2250);
+  assert.equal(s.hp,before-1,`phase ${phase}, ${pattern}, height ${height}, heading ${yaw}`);assert.equal(s.players.a.hits,1);assert.equal(s.stage,'stunned');
+  advanceKnightBattle(s,[a],2275);assert.equal(s.hp,before-1,'the same press cannot deal a second hit');
+ }
+});
+
+test('airborne melee still requires reach, facing and an opening, and cannot hit a protected phase-three boss',()=>{
+ for(const miss of ['distant','too high','backwards','closed','stunned','get-up','phase three','spent opening'] as const){
+  const s=battle(),a=actor();setStage(s,'open');a.p=[0,2.9,3];
+  if(miss==='distant')a.p[2]=KNIGHT.meleeReach+.1;
+  if(miss==='too high')a.p[1]=8;
+  if(miss==='backwards')a.yaw=0;
+  if(miss==='closed')s.stage='slash-warn';
+  if(miss==='stunned'||miss==='get-up')s.stage=miss;
+  if(miss==='phase three')s.phase=3;
+  if(miss==='spent opening')s.openHit=true;
+  assert(knightAttack(s,a,2100));advanceKnightBattle(s,[a],2250);assert.equal(s.hp,12,miss);assert.equal(s.players.a.hits,0,miss);
+ }
 });
 
 test('a melee hit removes one HP immediately, then holds a one-second stun and gets up before continuing',()=>{

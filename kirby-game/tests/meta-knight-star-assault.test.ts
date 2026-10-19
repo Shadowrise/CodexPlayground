@@ -47,8 +47,20 @@ test('third phase performs two crystal beams, three aimed curved flights and a c
 test('every phase-three warning is safe; beam and curved sweep damage match their marked footprints',()=>{
  const s=battle();for(const step of [1,3,...Array.from({length:STAR_FLIGHTS},(_,i)=>5+i*2),STAR_LANDING_STEP]){stage(s,step);assert(!knightDanger(s,{...actor,p:[0,0,0]},s.until-1));}
  stage(s,2);const [a,b]=crossLine(s),x=(a[0]+b[0])/2,z=(a[2]+b[2])/2;
- assert(knightDanger(s,{...actor,p:[x,0,z]},5100));assert(!knightDanger(s,{...actor,p:[x,2,z]},5100));
- for(let i=0;i<STAR_FLIGHTS;i++){stage(s,6+i*2);const p=ricochetCurve(s,i,.5);assert(knightDanger(s,{...actor,p:[p[0],0,p[2]]},s.since+(s.until-s.since)*.55,s.since+(s.until-s.since)*.45));assert(!knightDanger(s,{...actor,p:[p[0],2.2,p[2]]},s.since+500,s.since+350));}
+ for(const height of [0,1.45,2.9,8])assert(knightDanger(s,{...actor,p:[x,height,z]},5100),'crystal beams cannot be jumped');
+ for(let i=0;i<STAR_FLIGHTS;i++){stage(s,6+i*2);const p=ricochetCurve(s,i,.5);for(const height of [0,1.45,2.9,8])assert(knightDanger(s,{...actor,p:[p[0],height,p[2]]},s.since+(s.until-s.since)*.55,s.since+(s.until-s.since)*.45),'curved flights cannot be jumped');}
+});
+
+test('phase-three marked zones and segmented waves remove a heart at every player height',()=>{
+ for(const height of [0,1.45,2.9,8])for(const attack of ['cross','ricochet','landing','wave'] as const){
+  const s=battle();let now:number,point:KnightActor['p'];
+  if(attack==='cross'){stage(s,2);s.starCross={pairs:[[0,4],[2,6]],side:0};now=s.since+100;point=[12,height,12];}
+  else if(attack==='ricochet'){stage(s,6);now=s.since+(s.until-s.since)/2;const p=ricochetCurve(s,0,.5);point=[p[0],height,p[2]];}
+  else if(attack==='landing'){stage(s,STAR_SHIELD_STEP);now=s.since;point=[0,height,0];}
+  else {stage(s,STAR_SHIELD_STEP);now=s.since+4500;const w=shieldWaves(s,now)[0],angle=w.angle+Math.PI/8;point=[Math.sin(angle)*w.radius,height,Math.cos(angle)*w.radius];}
+  s.checked=now-25;const a={...actor,p:point};advanceKnightBattle(s,[a],now);assert.equal(s.players.a.hp,4,`${attack} at height ${height}`);
+  advanceKnightBattle(s,[a],now+25);assert.equal(s.players.a.hp,4,'normal hit invulnerability still applies');
+ }
 });
 test('centre landing countdown is continuous and the outer floor no longer has star damage',()=>{
  const s=battle();stage(s,STAR_LANDING_STEP);assert.equal(starImpactProgress(s,s.since),0);const launch=starImpactProgress(s,s.until);stage(s,STAR_FALL_STEP);assert.equal(starImpactProgress(s,s.since),launch);assert.equal(starImpactProgress(s,s.until),1);
@@ -92,7 +104,7 @@ test('inward waves launch every three seconds in alternating crystal sectors wit
  assert.equal(shieldCountdown(s,at+1500),.5);assert.equal(shieldCountdown(s,at+3000),0);
  const now=at+4500,w=shieldWaves(s,now)[0],r=w.radius,point=(a:number):KnightActor=>({...actor,p:[Math.sin(a)*r,0,Math.cos(a)*r]});
  assert(r<SHIELD.crystalRadius);assert.equal(w.angle%(Math.PI/4),0,'arc endpoints align with neighboring crystals');
- for(let i=0;i<4;i++){const arc=w.angle+i*Math.PI/2;assert(!knightDanger(s,point(arc+3*Math.PI/8),now,now-100));assert(knightDanger(s,point(arc+Math.PI/8),now,now-100));assert(!shieldWaveGap(arc+Math.PI/4+.001,w.angle,r,.65),'the body cannot clip a rounded end');}
+ for(let i=0;i<4;i++)for(const height of [0,1.45,2.9,8]){const arc=w.angle+i*Math.PI/2,safe=point(arc+3*Math.PI/8),danger=point(arc+Math.PI/8);safe.p[1]=danger.p[1]=height;assert(!knightDanger(s,safe,now,now-100),'the angular gaps remain safe at every height');assert(knightDanger(s,danger,now,now-100),'segmented waves cannot be jumped');assert(!shieldWaveGap(arc+Math.PI/4+.001,w.angle,r,.65),'the body cannot clip a rounded end');}
  assert(!shieldWaveGap(w.angle+3*Math.PI/8,shieldWaveAngle(s,1),r,.65),'the next wave fills the previous gaps');
  assert(knightDanger(s,point(w.angle+Math.PI/8),now+60,now-60),'swept front cannot skip a player');
  assert.equal(shieldWaves(s,at+6101).length,1,'an absorbed wave is removed');
@@ -157,7 +169,7 @@ test('second phase uses a complete golden pressure ring with the original jumpab
 
 test('the two opposite filled triangles hurt away from the beams and leave the other two triangles safe',()=>{
  const s=battle();stage(s,2);s.starCross={pairs:[[0,4],[2,6]],side:0};const hit=(p:[number,number,number])=>knightDanger(s,{...actor,p},s.since+100);
- assert(hit([12,0,12])&&hit([-12,0,-12]),'filled interiors more than 10m from either beam are dangerous');assert(!hit([12,0,-12])&&!hit([-12,0,12]),'opposite unlit triangles are safe');assert(hit([29,0,29]),'danger continues to the rim without pockets beyond crystal chords');assert(!hit([34,0,34]),'the clipped danger stops beyond the floor');assert(!hit([12,2,12]));
+ for(const height of [0,1.45,2.9,8]){assert(hit([12,height,12])&&hit([-12,height,-12]),'filled interiors more than 10m from either beam are dangerous at every height');assert(!hit([12,height,-12])&&!hit([-12,height,12]),'opposite unlit triangles are safe at every height');assert(hit([29,height,29]),'danger continues to the rim without pockets beyond crystal chords');assert(!hit([34,height,34]),'the clipped danger stops beyond the floor');}
  assert(hit([1.5,0,-15]),'the visible beam remains dangerous');s.starCross.side=1;assert(!hit([12,0,12])&&hit([12,0,-12]));stage(s,1);assert(!hit([12,0,-12]),'even filled warning zones are safe until their timer finishes');
 });
 

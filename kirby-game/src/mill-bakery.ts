@@ -3,6 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {batchRigidMeshes} from './rigid-batch';
 import {MILL_BAKERY_TABLE,MILL_BAKERY_OVEN,MILL_BAKERY_FOOTPRINTS} from './mill-bakery-site';
 import {MILL_BAKE_MS,MILL_HOPPER,type MillQuest} from './mill-quest';
+import {pigeonCarryGrip} from './pigeon-carry';
 
 /** Handcrafted baking props. Separate named groups retain future interaction pivots. */
 export class MillBakery {
@@ -246,8 +247,11 @@ export class MillBakery {
     const hand=owner.getObjectByName('Left_hand_attachment')??owner.getObjectByName('Right_arm')??owner.getObjectByName('Right_wing');
     const shoulder=owner.getObjectByName(owner.getObjectByName('Left_hand_attachment')?'Left_shoulder':'Right_shoulder');if(shoulder)shoulder.rotation.set(-.38,-.3,.24);
     owner.updateWorldMatrix(true,true);
-    if(hand){this.scratch.set(.24,0,0);hand.localToWorld(this.scratch);}else this.scratch.set(1.1,.9,.25).multiplyScalar(owner.scale.x).applyQuaternion(owner.quaternion).add(owner.position);
-    this.group.worldToLocal(this.scratch);carry.position.copy(this.scratch);carry.quaternion.copy(owner.quaternion);carry.scale.setScalar(Math.max(.65,owner.scale.x*.55));
+    const carryScale=Math.max(.65,owner.scale.x*.55);
+    if(hand?.name==='Right_wing'){
+     pigeonCarryGrip(hand,this.scratch);this.scratch.y+=(carry===this.flour?-.77:.18)*carryScale;
+    }else if(hand){this.scratch.set(.24,0,0);hand.localToWorld(this.scratch);}else this.scratch.set(1.1,.9,.25).multiplyScalar(owner.scale.x).applyQuaternion(owner.quaternion).add(owner.position);
+    this.group.worldToLocal(this.scratch);carry.position.copy(this.scratch);carry.quaternion.copy(owner.quaternion);carry.scale.setScalar(carryScale);
    }
   }else{this.flour.scale.setScalar(1);this.flour.quaternion.identity();}
   // Short pouring gesture, followed by a gentle bowl squash with each knead.

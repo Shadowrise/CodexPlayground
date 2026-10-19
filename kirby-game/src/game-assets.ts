@@ -1,4 +1,4 @@
-export const GAME_MODEL_FILES=['kirby-animated.glb','firefly-animated.glb','shiba.glb','centipede-animated.glb','pigeon-animated.glb?v=16','bread-slice.glb','meta-knight-animated.glb?v=8'] as const;
+export const GAME_MODEL_FILES=['kirby-animated.glb','firefly-animated.glb','shiba.glb','centipede-animated.glb','pigeon-animated.glb?v=17','bread-slice.glb','meta-knight-animated.glb?v=8'] as const;
 let models:Promise<ArrayBuffer>[]|undefined;
 let environment:Promise<ArrayBuffer>|undefined;
 

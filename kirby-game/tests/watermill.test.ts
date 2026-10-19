@@ -45,6 +45,23 @@ test('mill blocks building walls at enlarged sizes and leaves the lever approach
   }
   const position=MILL_LEVER.clone();mill.constrain(position,1);assert(position.equals(MILL_LEVER));
 });
+test('pressure monitor follows actual flow through gate changes, milling and shutdown',()=>{
+  const mill=new Watermill(),monitor=mill.decor.pressureMonitor;
+  const settle=()=>{for(let i=0;i<100;i++)mill.update(.1);};
+  mill.update(.1);assert.equal(monitor.percent,0);
+  mill.setQuest({...newMillQuest(),stage:'flow',gate:0},1000);settle();assert.equal(monitor.percent,22);
+  mill.setQuest({...newMillQuest(),stage:'flow',gate:2},2000);settle();assert.equal(monitor.percent,150);
+  mill.setQuest({...newMillQuest(),stage:'flow',gate:1},3000);mill.update(.1);
+  assert(monitor.percent>100&&monitor.percent<150,'reading follows the water settling after a lever change');
+  settle();assert.equal(monitor.percent,100);
+  for(const stage of ['bags','knead','bake','running'] as const){
+    mill.setQuest({...newMillQuest(),stage,gate:2,runningUntil:61000},4000);settle();
+    assert.equal(monitor.percent,100,'later stages show working flow even with a stale gate setting');
+  }
+  mill.setQuest(newMillQuest(),61000);mill.update(.1);assert(monitor.percent>0&&monitor.percent<100);
+  settle();assert.equal(monitor.percent,0);
+});
+
 test('mill batches detailed parts to keep draw calls bounded',()=>{
   const mill=new Watermill();let draws=0,triangles=0;
   mill.group.traverse(o=>{if(o instanceof Mesh){draws++;triangles+=(o.geometry.index?.count??o.geometry.attributes.position.count)/3*(o instanceof InstancedMesh?o.count:1);}});

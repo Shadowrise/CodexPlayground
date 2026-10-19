@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {breadCarryScale,breadPosition,newBread,holdsBread,normalizeBread,type BreadState} from './bread-state';
 import {softMist,softMistMaterial} from './soft-mist';
+import {posePigeonCarryWing} from './pigeon-carry';
 
 function sparkleTexture(){
  const size=64,pixels=new Uint8Array(size*size*4);
@@ -58,7 +59,7 @@ export class BreadWorld{
    // The sword stays in the right fist; the free gauntlet carries the loaf.
    const knightHand=owner.getObjectByName('Left_hand_attachment');
    const shoulder=owner.getObjectByName(knightHand?'Left_shoulder':'Right_shoulder'),wing=owner.getObjectByName('Right_wing');
-   if(shoulder)shoulder.rotation.set(-.38,-.3,.24);else if(wing)wing.rotation.set(-.9,-.25,.85);
+   if(shoulder)shoulder.rotation.set(-.38,-.3,.24);else if(wing)posePigeonCarryWing(wing);
    owner.updateWorldMatrix(true,true);
    const arm=owner.getObjectByName('Right_arm') as T.Mesh|undefined;
    if(knightHand){knightHand.getWorldPosition(this.scratch);}

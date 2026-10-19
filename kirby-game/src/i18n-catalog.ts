@@ -1,5 +1,11 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'НАПОР':['PRESSURE','НАЛЯГАНЕ'],
+ 'НЕТ ПОТОКА':['NO FLOW','НЯМА ПОТОК'],
+ 'НИЗКИЙ':['LOW','НИСКО'],
+ 'НОРМА':['NORMAL','НОРМАЛНО'],
+ 'ВЫСОКИЙ':['HIGH','ВИСОКО'],
+ 'НОРМА — 100%':['NORMAL — 100%','НОРМА — 100%'],
  'Рывок мечом':['Sword dash','Рязък устрем с меч'],
  'Рывок!':['Dash!','Устрем!'],
  'Через {0} с':['Ready in {0} s','Готово след {0} сек'],
