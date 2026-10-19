@@ -7,7 +7,7 @@ import { AnimationAction, AnimationClip, AnimationMixer, Group, LoopOnce, LoopRe
 import { constrainToMeadow } from './world-bounds';
 import { MAX_BODY_SIZE, MIN_BODY_SIZE } from './body-size';
 import { FruitSpeedBoost } from './fruit-speed';
-import { Flight, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
+import { Flight, JUMP_SECONDS, flightClip, swimClip, flightCloud, updateFlightCloud } from './flight';
 import {PIGEON_CLIP_BY_NAME, type PigeonClipName} from './pigeon-clips';
 import {META_KNIGHT_CLIP_BY_NAME, type MetaKnightClipName} from './meta-knight-clips';
 import {isPigeonGait,pigeonGaitRate,type PigeonGait} from './pigeon-locomotion';
@@ -16,8 +16,9 @@ import {MetaKnightBattleMotion} from './meta-knight-battle-motion';
 import {MetaKnightDashSparks} from './meta-knight-dash-sparks';
 import {MetaKnightBladeGlow} from './meta-knight-blade-glow';
 import {DuelDazedPose} from './duel-dazed-pose';
+import {PigeonFlightWings} from './pigeon-flight-wings';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; dashHeld?:boolean; attack?: boolean; eat?: boolean; steer?: number;allowAirPush?:boolean };
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number };
 const KEYBOARD_TURN_SPEED = 2;
 const ANALOG_TURN_RATE = Math.PI * .55;
 
@@ -41,7 +42,6 @@ export class CharacterController {
   yaw = 0;
   private active?: AnimationAction;
   private emotion?:Pick<EmotePose,'elapsed'|'clear'|'update'>&{kind:PlayerEmote};
-  private flightElapsed=0;
   private readonly gaitFrom=new Vector3();
   private gaitFrame?:{state:PigeonGait;rate:number;mixerTime:number};
   startEmote(kind:PlayerEmote){
@@ -57,6 +57,13 @@ export class CharacterController {
   private dashMotion?:MetaKnightBattleMotion;
   private dashSparks?:MetaKnightDashSparks;
   private bladeGlow?:MetaKnightBladeGlow;
+  private pigeonFlightWings?:PigeonFlightWings;
+  clearPigeonFlightWings(){this.pigeonFlightWings?.clear();}
+  updatePigeonFlightWings(flying=this.flight.active&&(this.state==='Fly'||this.airPush!==undefined)){
+    if(!this.isPigeon)return;
+    if(flying)this.pigeonFlightWings??=new PigeonFlightWings(this.animationRoot.parent!,this.actions.get('Fly')!.getClip());
+    this.pigeonFlightWings?.update(this.mixer.time,flying);
+  }
   private duelDazedPose?:DuelDazedPose;
   clearDuelDazedPose(){this.duelDazedPose?.clear();}
   updateDuelDazedPose(now:number,dazed:boolean,seat=true){
@@ -75,7 +82,7 @@ export class CharacterController {
     }
     this.dashSparks?.update(this.mixer.time*1000,active);
   }
-  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;}
+  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -161,7 +168,17 @@ export class CharacterController {
     this.animationRoot = root;
     for (const source of clips) {
       if(source.name==='Attack'&&!this.isMetaKnight)continue;
-      const clip = source.name==='Jump' && !this.hasNativeAnimations ? flightClip(clips.find(c=>c.name==='Idle')!,model,'Jump') : source.clone();
+      const clip = source.clone();
+      if(source.name==='Jump'&&!this.hasNativeAnimations){
+        // The controller owns the ballistic height; keep only the authored jump pose.
+        const rate=JUMP_SECONDS/clip.duration;
+        clip.duration=JUMP_SECONDS;
+        for(const track of clip.tracks){
+          for(let i=0;i<track.times.length;i++)track.times[i]*=rate;
+          const binding=PropertyBinding.parseTrackName(track.name);
+          if(binding.propertyName==='position'&&PropertyBinding.findNode(model,binding.nodeName)===this.animationRoot)track.values.fill(0);
+        }
+      }
       // Heading belongs to the game actor. Strip the GLB root yaw from ALL clips
       // so returning to Run/Idle never undoes a completed 90-degree turn.
       clip.tracks = clip.tracks.filter(track => {
@@ -171,6 +188,7 @@ export class CharacterController {
       this.actions.set(clip.name, this.mixer.clipAction(clip));
     }
     const idleClip=clips.find(c=>c.name==='Idle')!;
+    if(!this.hasNativeAnimations)this.actions.set('Fly',this.mixer.clipAction(flightClip(idleClip,model)));
     if(!this.hasNativeAnimations)this.actions.set('Push',this.mixer.clipAction(pushClip(idleClip,model)));
     for(const [label,side] of [['Left',-1],['Right',1]] as const){
       const arm=model.getObjectByName(`${label}_shoulder`);if(!arm)continue;
@@ -192,7 +210,7 @@ export class CharacterController {
     const next = this.actions.get(name)!;
     next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
     const nativeClip=this.isPigeon?PIGEON_CLIP_BY_NAME[name as PigeonClipName]:this.isMetaKnight?META_KNIGHT_CLIP_BY_NAME[name as MetaKnightClipName]:undefined;
-    const turning = this.hasNativeAnimations ? !(nativeClip?.loop??true) : name === 'Push' || name === 'Eat';
+    const turning = this.hasNativeAnimations ? !(nativeClip?.loop??true) : name === 'Push' || name === 'Eat' || name === 'Jump';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
     next.clampWhenFinished = turning;
     next.fadeIn(.12).play();
@@ -227,12 +245,13 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.cancel();this.dashSparks?.update(0,false);
     this.clearAirPose();this.airPush=undefined;
     this.roll.reset();
     this.emotion?.clear();this.emotion=undefined;
-    this.flight.reset();this.flightElapsed=0;this.cloud.visible=false;
+    this.flight.reset();this.cloud.visible=false;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
     this.play(this.hasNativeAnimations && this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
@@ -247,9 +266,9 @@ export class CharacterController {
   }
 
   /** Winged native characters fly with their wings; Kirby keeps his flight puffs. */
-  updateFlightVisual(){
+  updateFlightVisual(levitating=this.flight.levitating){
     if(this.hasNativeAnimations)this.cloud.visible=false;
-    else updateFlightCloud(this.cloud,this.flight);
+    else updateFlightCloud(this.cloud,this.flight,levitating);
   }
 
   /** Native stance travel determines cadence, including size, sprint and boosts. */
@@ -298,6 +317,7 @@ export class CharacterController {
 
   /** A mount moves the actor while its native pose and growth continue. */
   updateActivity(dt:number){
+    this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.tick(dt);this.knightDash.cancelCharge();
     this.updateGrowth(dt);this.pushReady=Math.max(0,this.pushReady-dt);
@@ -306,6 +326,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.clearPigeonFlightWings();
     this.updateKnightBladeGlow((this.mixer.time+dt)*1000);
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.tick(dt);
@@ -334,12 +355,15 @@ export class CharacterController {
     this.pushReady = Math.max(0, this.pushReady - dt);
     const eatPressed = !!input.eat && !this.eatWasHeld;
     this.eatWasHeld = !!input.eat;
-    const attackPressed = !!input.attack && !this.attackWasHeld;
+    const attackPressed = !!input.attackPressed || !!input.attack && !this.attackWasHeld;
     this.attackWasHeld = !!input.attack;
-    const jumpPressed = !!input.jump && !this.jumpWasHeld;
+    const jumpPressed = !!input.jumpPressed || !!input.jump && !this.jumpWasHeld;
     this.jumpWasHeld = !!input.jump;
     if(jumpPressed && this.flight.active)this.flight.press();
-    if(input.allowAirPush&&!this.knightDash.active&&this.flight.active&&attackPressed&&this.pushReady<=0){this.attackHit=!this.isMetaKnight;this.pushArmed=this.isMetaKnight;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;}
+    if(!this.knightDash.active&&this.flight.active&&attackPressed&&this.pushReady<=0){
+      this.attackHit=!this.isMetaKnight;this.pushArmed=this.isMetaKnight;this.pushReady=PUSH_COOLDOWN_MS/1000;this.airPush=0;
+      if(this.hasNativeAnimations)this.replayPush();
+    }
     if (!this.flight.active && this.eatElapsed === undefined && attackPressed && this.pushReady <= 0) this.beginPush(input);
     if (!this.flight.active && this.attackElapsed === undefined && this.eatElapsed === undefined) {
       if (eatPressed) {
@@ -347,7 +371,6 @@ export class CharacterController {
         this.eatElapsed = 0;
       } else if (jumpPressed) {
         this.play('Jump');
-        this.flightElapsed=0;
         this.flightBoost = this.starRemaining > 0 ? 2 : 1;
         this.flight.press();
       }
@@ -355,6 +378,7 @@ export class CharacterController {
     const dashStart=this.isMetaKnight?this.knightDash.chargeHold(dt,input.dashHeld??!!input.jump,(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined):undefined;
     if(dashStart!==undefined){
       if(!this.flight.active){this.flight.press();this.flightBoost=this.starRemaining>0?2:1;}
+      this.flight.sustain();
       this.play('Dash');
     }
     if(this.knightDash.active){
@@ -393,14 +417,22 @@ export class CharacterController {
         if(this.active===this.actions.get(next))this.state=next;else this.play(next);
       }
     } else if (this.flight.active) {
-      this.flightElapsed+=dt;
-      if(this.hasNativeAnimations && (this.flightElapsed>.18||this.isMetaKnight&&this.airPush!==undefined))this.play(this.airPush!==undefined?'Push':'Fly');
+      if(this.hasNativeAnimations&&this.airPush!==undefined)this.play('Push');
+      else if(this.flight.levitating)this.play('Fly');
+      else if(this.state==='Push'){
+        this.play('Jump');this.actions.get('Jump')!.time=this.actions.get('Jump')!.getClip().duration*.65;
+      }
       this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*turnRate(input)*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
+      if(this.state==='Fly'&&!this.flight.levitating){
+        this.play('Jump');
+        this.actions.get('Jump')!.time=this.actions.get('Jump')!.getClip().duration*.65;
+      }
       this.updateFlightVisual();
       this.mixer.update(dt);
+      this.updatePigeonFlightWings();
       if(this.airPush!==undefined){const previous=this.airPush;this.airPush+=dt;if(this.pushArmed&&previous<PUSH_HIT&&this.airPush>=PUSH_HIT){this.attackHit=true;this.pushArmed=false;}if(!this.hasNativeAnimations){this.airPose=this.pushArms.map(({arm})=>({arm,p:arm.position.clone(),q:arm.quaternion.clone()}));applyPushArms(this.pushArms,this.airPush);}if(this.airPush>=PUSH_DURATION)this.airPush=undefined;}
       if(!this.flight.active){this.cloud.visible=false;this.airPush=undefined;this.pushArmed=false;this.play(this.locomotion(input));}
     } else {

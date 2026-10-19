@@ -4,6 +4,7 @@ import {softMist,softMistMaterial} from './soft-mist';
 export const FLIGHT_HEIGHT=2.9;
 const FLIGHT_GRAVITY=24;
 const FLIGHT_HOVER_SECONDS=2;
+export const JUMP_SECONDS=2*Math.sqrt(FLIGHT_HEIGHT/FLIGHT_GRAVITY);
 export class Flight {
   height=0;
   active=false;
@@ -17,14 +18,28 @@ export class Flight {
   networkApply(v:number[]){this.height=v[0];this.active=!!v[1];this.level=v[2];this.target=v[3];this.hold=v[4];this.dash=v[5];this.velocity=v[6];this.rising=!!v[7];}
   get gliding() {return this.dash>0;}
   get atTop() {return this.height>=FLIGHT_HEIGHT-.08;}
+  get levitating() {return this.active && this.hold>0;}
   press() {
+    if(this.active){
+      if(this.level<2 && this.velocity>=0){this.levitate();return;}
+      // Extra presses may steer a glide, but cannot renew its two-second timer.
+      if(this.levitating && this.level>=2)this.dash=.8;
+      return;
+    }
     this.active=true;
-    if(this.level<2){this.level++;this.target=this.level*FLIGHT_HEIGHT/2;}
-    else {this.target=FLIGHT_HEIGHT;this.dash=.8;}
+    this.level=1;this.target=FLIGHT_HEIGHT/2;
+    this.hold=this.dash=0;
+    this.velocity=Math.sqrt(2*FLIGHT_GRAVITY*this.target);
+    this.rising=true;
+  }
+  private levitate() {
+    this.active=true;this.level=2;this.target=FLIGHT_HEIGHT;
     this.hold=FLIGHT_HOVER_SECONDS;
     this.velocity=Math.sqrt(2*FLIGHT_GRAVITY*Math.max(0,this.target-this.height));
     this.rising=this.velocity>0;
   }
+  /** The charged sword dash sustains its current flight level independently. */
+  sustain() {this.hold=FLIGHT_HOVER_SECONDS;if(!this.rising)this.velocity=0;}
   reset() {this.height=this.level=this.target=this.hold=this.dash=this.velocity=0;this.active=this.rising=false;}
   update(dt:number) {
     if(!this.active)return;
@@ -102,9 +117,9 @@ export function flightCloud() {
   return cloud;
 }
 
-export function updateFlightCloud(cloud:Group,flight:Flight) {
+export function updateFlightCloud(cloud:Group,flight:Flight,levitating=flight.levitating) {
   const progress=Math.min(1,Math.max(0,flight.height/(FLIGHT_HEIGHT/2)));
   const density=progress*progress*(3-2*progress);
-  cloud.visible=flight.active && density>0;
+  cloud.visible=flight.active && levitating && density>0;
   (cloud.children[0] as Mesh<import('three').BufferGeometry,MeshBasicMaterial>).material.opacity=.58*density;
 }

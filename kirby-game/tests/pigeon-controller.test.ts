@@ -62,15 +62,63 @@ test('ground peck plays once while standing, rejects movement and stops immediat
 
 test('native flight, moving chest push, air push and swimming preserve game movement',()=>{
  const c=create();c.update(1/60,{...idle,jump:true});assert.equal(c.state,'Jump');advance(c,.22);
- assert(c.flight.active);assert.equal(c.state,'Fly');assert(c.actions.get('Fly')!.isRunning());
+ assert(c.flight.active);assert.equal(c.state,'Jump');assert(c.actions.get('Jump')!.isRunning());
  c.update(1/60,idle);c.update(1/60,{...idle,jump:true});advance(c,.26);const height=c.actor.position.y;
- assert(height>2.7);c.update(1/60,{...idle,attack:true,forward:true,allowAirPush:true});
+ assert(height>2.7);c.update(1/60,{...idle,attack:true,forward:true});
  assert(c.attackHit);assert(c.flight.active);assert.equal(c.state,'Push');assert(c.actions.get('Push')!.isRunning());
- assert(c.actor.position.y>=height-.05);advance(c,.76,{...idle,allowAirPush:true});assert.equal(c.state,'Fly');
+ assert(c.actor.position.y>=height-.05);advance(c,.76,{...idle});assert.equal(c.state,'Fly');
  advance(c,4);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);
  c.update(1/60,{...idle,attack:true,forward:true});assert(c.attackHit);assert.equal(c.state,'Push');
  assert(c.actions.get('Push')!.isRunning());const position=c.actor.position.clone();advance(c,.2,{...idle,forward:true});assert(c.actor.position.distanceTo(position)>.6);
  advance(c,.6);assert.equal(c.state,'Idle');c.swimming=true;advance(c,.3,{...idle,forward:true});assert.equal(c.state,'Swim');assert(c.actions.get('Swim')!.isRunning());
+});
+
+test('every airborne peck restarts while both wings keep their uninterrupted flight phase',()=>{
+ const bird=create(),reference=create();
+ for(const c of [bird,reference]){
+  c.update(.01,{...idle,jump:true});advance(c,.15);c.update(.01,{...idle,jump:true});advance(c,.4);
+ }
+ const presses=[0,24,70];let hits=0;
+ for(let frame=0;frame<112;frame++){
+  const attack=presses.includes(frame);bird.update(1/60,{...idle,attack});reference.update(1/60,idle);
+  hits+=Number(bird.attackHit);
+  if(attack){assert.equal(bird.state,'Push');assert(Math.abs(bird.actions.get('Push')!.time-1/60)<1e-6,'the second and third pecks restart instead of keeping a clamped pose');}
+  assert.deepEqual(bird.flight.networkState(),reference.flight.networkState());
+  for(const side of ['Left','Right'])for(const suffix of ['_wing','_wing_vane']){
+   const actual=bird.actor.getObjectByName(side+suffix)!,expected=reference.actor.getObjectByName(side+suffix)!;
+   assert(actual.position.distanceTo(expected.position)<1e-6,`${side}${suffix}: the wing stays on its flight path`);
+   assert(actual.quaternion.clone().normalize().angleTo(expected.quaternion.clone().normalize())<1e-6,`${side}${suffix}: peck cannot fold or restart the wings`);
+   assert(actual.scale.distanceTo(expected.scale)<1e-6,`${side}${suffix}: the flight wing remains unfolded`);
+  }
+  if(presses.some(start=>frame===start+18))assert(bird.actor.getObjectByName('Body')!.position.z>.15,'each press has its own visible chest/beak strike');
+ }
+ assert.equal(hits,3);assert.equal(bird.state,'Fly');
+ bird.setActivity('Idle');bird.actor.position.y=0;bird.update(.2,idle);bird.update(.01,{...idle,attack:true});
+ for(const side of ['Left','Right'])assert.equal(bird.actor.getObjectByName(side+'_wing_vane')!.scale.x,1,'a ground peck uses the normal folded wings');
+});
+
+test('remote airborne pecks keep flapping and restore folded wings on the ground',()=>{
+ const bird=create(),remote=create();bird.setActivity('Push');bird.actor.position.y=4;
+ const airborne=actorState(bird,'Пиджи',17);airborne.progress!.ground=1;airborne.pose=[];
+ const wing=remote.actor.getObjectByName('Left_wing')!;let motion=0,previous=wing.quaternion.clone();
+ for(let frame=0;frame<60;frame++){
+  applyActor(remote,airborne,1/60,true);
+  motion+=wing.quaternion.angleTo(previous);previous.copy(wing.quaternion);
+  for(const side of ['Left','Right'])assert(Math.abs(remote.actor.getObjectByName(side+'_wing_vane')!.scale.x-.3)<1e-6);
+ }
+ assert(motion>1,'the peer continues to flap throughout a Push snapshot');
+ bird.setActivity('Idle');bird.actor.position.set(0,0,0);bird.surfaceY=0;
+ bird.update(.01,{...idle,jump:true});advance(bird,.15);bird.update(.01,{...idle,jump:true});advance(bird,.4);bird.update(.01,{...idle,attack:true});
+ for(let frame=0;frame<30;frame++){
+  bird.update(1/60,idle);const snapshot=actorState(bird,'Пиджи',17);applyActor(remote,snapshot,1/60,true);
+  for(const [index,side] of ['Left','Right'].entries()){
+   const node=remote.actor.getObjectByName(side+'_wing')!,values=[...node.position.toArray(),...node.quaternion.toArray(),...node.scale.toArray()];
+   assert(values.every((v,i)=>Math.abs(v-snapshot.pose[index+1][i])<1e-6),'actual transmitted wing poses take precedence over the fallback flight clock');
+   assert(Math.abs(remote.actor.getObjectByName(side+'_wing_vane')!.scale.x-.3)<1e-6,'the untransmitted vane stays unfolded');
+  }
+ }
+ applyActor(remote,{...airborne,p:[0,1,0]},1/60,true);
+ for(const side of ['Left','Right'])assert.equal(remote.actor.getObjectByName(side+'_wing_vane')!.scale.x,1);
 });
 
 test('pigeon turns never add exported root yaw to the controller heading',()=>{
@@ -107,8 +155,10 @@ test('Pidgie flight and remote jump/flight never show smoke while Kirby keeps hi
  const bytes=await readFile(new URL('../public/models/kirby-animated.glb',import.meta.url));
  const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const kirby=new CharacterController(gltf.scene,gltf.animations);
- kirby.update(1/60,{...idle,jump:true});advance(kirby,.35);assert(kirby.cloud.visible,'existing Kirby flight cloud is preserved');
+ kirby.update(1/60,{...idle,jump:true});advance(kirby,.2);assert(!kirby.cloud.visible,'an ordinary jump has no levitation cloud');
+ kirby.update(1/60,{...idle,jump:true});assert(kirby.cloud.visible,'the second press enables the Kirby flight cloud');
  applyActor(kirby,{...actorState(kirby,'Кирби',0),state:'Fly',p:[0,4,0]},1/60,true);assert(kirby.cloud.visible);
+ applyActor(kirby,{...actorState(kirby,'Кирби',0),state:'Jump',p:[0,1,0]},1/60,true);assert(!kirby.cloud.visible);
 });
 
 test('native cadence follows real movement for forward, backward, sprint, size and star boost without changing speed',()=>{

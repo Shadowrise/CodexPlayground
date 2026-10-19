@@ -38,7 +38,7 @@ export class SoundEvents {
         if (!before.down && actor.down) events.push({ kind: 'death', actor });
         else if (before.down && !actor.down) events.push({ kind: 'revive', actor });
         else if (!actor.down && before.state !== actor.state) {
-          if (actor.state === 'Jump' || actor.state === 'Fly'&&before.state!=='Dash') events.push({ kind: 'jump', actor });
+          if (actor.state === 'Jump'&&before.state!=='Fly' || actor.state === 'Fly'&&before.state!=='Dash') events.push({ kind: 'jump', actor });
           if (actor.state === 'Dash') events.push({ kind: 'thrust', actor });
           if (actor.state === 'Push') events.push({ kind: 'attack', actor });
         }

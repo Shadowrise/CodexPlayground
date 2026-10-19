@@ -3,6 +3,15 @@ import { test } from 'node:test';
 import { SoundEvents, type SoundActor } from '../src/sound-events';
 const actor = (id: string): SoundActor => ({ id, state: 'Idle', down: false, size: 1, x: 0, z: 0 });
 
+test('gravity resuming after levitation does not play another jump sound',()=>{
+ const events=new SoundEvents(),player={...actor('player'),player:true};
+ const update=()=>events.update(.016,[player],player).map(e=>e.kind);
+ update();player.state='Jump';assert.deepEqual(update(),['jump']);
+ player.state='Fly';assert.deepEqual(update(),['jump']);
+ player.state='Jump';assert.deepEqual(update(),[]);
+ player.state='Idle';update();player.state='Jump';assert.deepEqual(update(),['jump']);
+});
+
 test('sword flight sounds once at launch, stays observed while muted and returns to flight silently',()=>{
  const events=new SoundEvents(),player={...actor('player'),player:true};const update=(ready=true)=>events.update(.016,[player],player,ready).map(e=>e.kind);
  update();player.state='Dash';assert.deepEqual(update(),['thrust']);for(let i=0;i<30;i++)assert.deepEqual(update(),[]);

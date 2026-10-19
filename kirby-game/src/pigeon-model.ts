@@ -258,7 +258,23 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
       for(let i=0;i<p.count;i++){const px=(p.getZ(i)+tailCenter.z)/pixelScale+originPixel,py=groundPixel-(p.getY(i)+tailCenter.y)/pixelScale;const a=atlasUV(1536,512,512,512,(px-1030)/120,(py-718)/86);uv[i*2]=a[0];uv[i*2+1]=a[1];}
       geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
     }
-    const mesh=new T.Mesh(geometry,isWing?wingMaterial:material);mesh.name=`${parent.name}_sculpt_${material===eyeMaterial?'eyes':'paint'}`;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);geometries.forEach(g=>g.dispose());
+    let mesh:T.Mesh;
+    if(legs.some(leg=>leg.hip===parent)){
+      // The belly sways independently of the planted-foot IK. Skin the top
+      // of each existing thigh to the torso and its lower end to the hip,
+      // keeping the attachment closed without moving the knee or toes.
+      const p=geometry.getAttribute('position'),skinIndices:number[]=[],skinWeights:number[]=[];
+      for(let vertex=0;vertex<p.count;vertex++){
+        const torsoWeight=smooth(p.getY(vertex),-.17,-.025);
+        skinIndices.push(0,1,0,0);skinWeights.push(torsoWeight,1-torsoWeight,0,0);
+      }
+      geometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(skinIndices,4));
+      geometry.setAttribute('skinWeight',new T.Float32BufferAttribute(skinWeights,4));
+      const thigh=new T.Bone();thigh.name=`${parent.name}_skin`;parent.add(thigh);
+      const skin=new T.SkinnedMesh(geometry,material);parent.add(skin);root.updateMatrixWorld(true);
+      skin.bind(new T.Skeleton([body,thigh]));mesh=skin;
+    }else mesh=new T.Mesh(geometry,isWing?wingMaterial:material);
+    mesh.name=`${parent.name}_sculpt_${material===eyeMaterial?'eyes':'paint'}`;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);geometries.forEach(g=>g.dispose());
   }
   sphere.dispose();smallSphere.dispose();root.updateMatrixWorld(true);
   const clips=createPigeonAnimations({root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose});

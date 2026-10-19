@@ -19,6 +19,17 @@ test('a held push yields one impulse, both arms reach forward, and nobody loses 
  for(let i=0;i<180;i++){player.update(1/60,{...idle,attack:true});if(player.state==='Push'&&arm.quaternion.angleTo(initial)>.5)armMotion=true;if(resolveAttack(player,[npc]))hits++;npc.update(1/60,[]);}
  assert.equal(hits,1);assert(armMotion);assert.equal(npc.health,3);assert(!npc.isDown);assert(npc.actor.position.z>5);assert.equal(player.state,'Idle');
 });
+test('jumping and levitating players can push a nearby airborne NPC',async()=>{
+ for(const levitating of [false,true]){
+  const {player,npcs}=await setup(),npc=npcs[0];
+  player.update(.01,{...idle,jump:true});player.update(.1,idle);
+  if(levitating){player.update(.01,{...idle,jump:true});player.update(.4,idle);}
+  const height=player.actor.position.y;npc.actor.position.set(0,height,2.4);
+  player.update(.01,{...idle,attack:true});assert(player.flight.active);
+  assert.equal(resolveAttack(player,[npc]),npc);assert.equal(npc.state,'Roll');assert.equal(npc.actor.position.y,height);
+  assert.equal(resolveAttack(player,[npc]),undefined);assert.equal(npc.health,3);
+ }
+});
 test('only the nearest target in front rolls, in the direction of the push',async()=>{
  const {player,npcs}=await setup(),[front,behind,far,side]=npcs;front.actor.position.set(0,0,2.4);behind.actor.position.set(0,0,-2);far.actor.position.set(0,0,4);side.actor.position.set(2.5,0,0);
  player.attackHit=true;assert.equal(resolveAttack(player,[behind,far,side,front]),front);assert.equal(resolveAttack(player,npcs),undefined);

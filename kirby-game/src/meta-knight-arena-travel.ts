@@ -154,8 +154,8 @@ export class MetaKnightArenaTravel{
   if(active||defeated)c.beginDuel();else c.endDuel();this.battleOptions?.music?.(active);
   const stopped=paused||defeated||active&&battle?.stage==='intro';
   const previous=c.actor.position.clone();c.fruitBoost.update(paused?0:dt);
-  if(stopped){const pose=battle?.stage==='lost'||player?.hp===0?'Sitting':'Idle';if(!paused&&c.state!==pose)c.setActivity(pose);c.updateActivity(paused?0:dt);}else c.update(dt,{...input,allowAirPush:true});this.constrainArena(c.actor.position,c.actor.scale.x);
-  if(!stopped&&input.attack&&!this.attackHeld){if(this.battleOptions?.online())this.battleOptions.send('attack');else if(battle)knightAttack(battle,this.localActor(c),now);}
+  if(stopped){const pose=battle?.stage==='lost'||player?.hp===0?'Sitting':'Idle';if(!paused&&c.state!==pose)c.setActivity(pose);c.updateActivity(paused?0:dt);}else c.update(dt,input);this.constrainArena(c.actor.position,c.actor.scale.x);
+  if(!stopped&&(input.attackPressed||input.attack&&!this.attackHeld)){if(this.battleOptions?.online())this.battleOptions.send('attack');else if(battle)knightAttack(battle,this.localActor(c),now);}
   if(!paused)this.attackHeld=!!input.attack;
   if(!paused&&battle&&!this.battleOptions?.online())advanceKnightBattle(battle,[this.localActor(c)],now,this.soloGodMode?id:undefined);
   battle=this.battle;

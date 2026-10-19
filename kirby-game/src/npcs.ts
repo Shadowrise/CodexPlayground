@@ -217,7 +217,7 @@ export class KirbyNpc {
     this.model.position.y *= Math.exp(-14 * dt);
     if(this.flight.active) {
       const before=this.flightTime;this.flightTime+=dt;
-      if(before<.5 && this.flightTime>=.5)this.flight.press();
+      if(before<.25 && this.flightTime>=.25)this.flight.press();
       if(before<1.3 && this.flightTime>=1.3)this.flight.press();
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x;
       this.actor.position.x+=Math.sin(this.yaw)*1.5*this.actor.scale.x*this.fruitBoost.multiplier*dt;

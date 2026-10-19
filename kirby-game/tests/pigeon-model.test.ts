@@ -10,6 +10,9 @@ import {PIGEON_GAITS,pigeonStanceSpeed} from '../src/pigeon-locomotion';
 function meshes(root:Object3D){
  const result:Mesh[]=[];root.traverse(node=>{if(node instanceof Mesh)result.push(node);});return result;
 }
+function bodySkin(root:Object3D){
+ return meshes(root).find(mesh=>mesh.name.replaceAll('_',' ')==='Continuous pigeon body') as SkinnedMesh;
+}
 function validateGeometry(root:Object3D){
  const all=meshes(root);assert(all.length>0);
  for(const mesh of all){
@@ -46,7 +49,7 @@ function exactBounds(mesh:Mesh){
 
 function validateFlightFeet(root:Object3D,clips:AnimationClip[]){
  const mixer=new AnimationMixer(root),fly=clips.find(clip=>clip.name==='Fly')!;
- const body=meshes(root).find(mesh=>mesh instanceof SkinnedMesh) as SkinnedMesh;
+ const body=bodySkin(root);
  root.updateMatrixWorld(true);
  const standingAnkles=new Map(['Left','Right'].map(side=>[side,root.getObjectByName(`${side}_foot`)!.getWorldPosition(new Vector3())]));
  mixer.clipAction(fly).play();
@@ -99,7 +102,7 @@ function validateGroundPeck(root:Object3D,clips:AnimationClip[]){
  const positions=beak.geometry.attributes.position,tip=new Vector3();
  let front=0;for(let vertex=1;vertex<positions.count;vertex++)if(positions.getZ(vertex)>positions.getZ(front))front=vertex;
  const all=meshes(root),feet=['Left','Right'].map(side=>root.getObjectByName(`${side}_foot`)!);
- const body=all.find(mesh=>mesh instanceof SkinnedMesh) as SkinnedMesh,tuck=body.morphTargetDictionary?.Belly_tuck;
+ const body=bodySkin(root),tuck=body.morphTargetDictionary?.Belly_tuck;
  const ringMap=new Map<number,number[]>(),basePositions=body.geometry.attributes.position;
  for(let vertex=0;vertex<basePositions.count;vertex++){
   const y=basePositions.getY(vertex);
@@ -145,7 +148,7 @@ function validateGroundPeck(root:Object3D,clips:AnimationClip[]){
     const hip=meshes(root.getObjectByName(`${side}_hip`)!).find(mesh=>mesh.parent?.name===`${side}_hip`)!;
     let connected=false;
     for(let vertex=0;vertex<hip.geometry.attributes.position.count;vertex++){
-     point.fromBufferAttribute(hip.geometry.attributes.position,vertex).applyMatrix4(hip.matrixWorld);
+     hip.getVertexPosition(vertex,point).applyMatrix4(hip.matrixWorld);
      if(inside(point,.001)){connected=true;break;}
     }
     assert(connected,`Peck: ${side} hip stays attached when the belly retracts`);
@@ -203,13 +206,52 @@ function skinVolume(mesh:SkinnedMesh){
  return Object.assign((point:Vector3,tolerance=.003)=>gap(point)<-tolerance,{gap});
 }
 
+function validateGroundLegAttachment(root:Object3D,clips:AnimationClip[]){
+ const mixer=new AnimationMixer(root),body=bodySkin(root);
+ const thighs=['Left','Right'].map(side=>meshes(root.getObjectByName(`${side}_hip`)!).find(mesh=>mesh.parent?.name===`${side}_hip`)!);
+ const point=new Vector3();
+ const check=(label:string)=>{
+  root.updateMatrixWorld(true);
+  for(const mesh of meshes(root))if(mesh instanceof SkinnedMesh)mesh.skeleton.update();
+  const inside=skinVolume(body);
+  for(const thigh of thighs){
+   const positions=thigh.geometry.attributes.position;
+   let collar=0,embedded=0;
+   for(let vertex=0;vertex<positions.count;vertex++){
+    if(positions.getY(vertex)<-.025)continue;
+    collar++;thigh.getVertexPosition(vertex,point).applyMatrix4(thigh.matrixWorld);
+    if(inside(point,.001))embedded++;
+   }
+   assert(collar>0&&embedded/collar>.5,`${label}: ${thigh.name} upper attachment detaches from the belly (${embedded}/${collar} collar vertices inside)`);
+  }
+ };
+ for(const name of ['Walk','Run','WalkBackward','RotateLeft','RotateRight']){
+  const clip=clips.find(clip=>clip.name===name)!;
+  mixer.stopAllAction();const action=mixer.clipAction(clip).reset().setLoop(LoopOnce,1);action.clampWhenFinished=true;action.play();
+  for(let frame=0;frame<=180;frame++){
+   mixer.setTime(clip.duration*frame/180);check(`${name}, phase ${frame}/180`);
+  }
+ }
+ for(const [from,to] of [['Idle','Walk'],['Idle','Run'],['Walk','Run'],['Walk','WalkBackward']]){
+  for(const phase of [0,.17,.39,.61,.83])for(let blend=0;blend<=8;blend++){
+   mixer.stopAllAction();
+   for(const [name,weight] of [[from,1-blend/8],[to,blend/8]] as const){
+    const clip=clips.find(clip=>clip.name===name)!;
+    mixer.clipAction(clip).reset().setEffectiveWeight(weight).play();
+   }
+   mixer.setTime(phase);check(`${from}↔${to}, time ${phase}, blend ${blend}/8`);
+  }
+ }
+ mixer.stopAllAction();
+}
+
 test('pigeon geometry has valid indices, finite attributes and normalized skin weights',()=>{
  validateGeometry(createPigeon().root);
 });
 
 test('pigeon has a horizontal torso with a small head and neck over its front third',()=>{
  const {root}=createPigeon();root.updateMatrixWorld(true);
- const sculpt=meshes(root).find(mesh=>mesh instanceof SkinnedMesh);assert(sculpt);
+ const sculpt=bodySkin(root);assert(sculpt);
  const neck=root.getObjectByName('Neck'),head=root.getObjectByName('Head');assert(neck&&head);
  const neckPosition=neck.getWorldPosition(new Vector3()),headPosition=head.getWorldPosition(new Vector3());
  const torsoBounds=new Box3(),headBounds=new Box3(),vertex=new Vector3(),positions=sculpt.geometry.getAttribute('position');
@@ -305,9 +347,13 @@ test('ground clips keep three unchanged foot strides inside one slower upper-bod
  mixer.stopAllAction();
 });
 
+test('upper legs stay embedded in the moving belly through forward, backward and turning steps',()=>{
+ const {root,clips}=createPigeon();validateGroundLegAttachment(root,clips);
+});
+
 test('every pose remains a finite connected sculpt through interpolated frames',()=>{
  const {root,clips}=createPigeon(),mixer=new AnimationMixer(root),all=meshes(root);
- const body=all.find(mesh=>mesh instanceof SkinnedMesh) as SkinnedMesh;assert(body);
+ const body=bodySkin(root);assert(body);
  for(const clip of clips){
   mixer.stopAllAction();mixer.clipAction(clip).reset().play();
   for(const fraction of [0,.071,.19,.333,.47,.63,.79,.917,1]){
@@ -366,7 +412,7 @@ test('model eyes are twenty percent larger than revision six, with matched pupil
 });
 
 test('flight wings spread in a horizontal plane and keep outer feathers out of the actual skin',t=>{
- const {root,clips}=createPigeon(),mixer=new AnimationMixer(root),body=meshes(root).find(mesh=>mesh instanceof SkinnedMesh) as SkinnedMesh;
+ const {root,clips}=createPigeon(),mixer=new AnimationMixer(root),body=bodySkin(root);
  const action=mixer.clipAction(clips.find(clip=>clip.name==='Fly')!).play();
  const wings=['Left','Right'].map(side=>root.getObjectByName(`${side}_wing`)!),point=new Vector3();
  let maximumShoulderGap=-Infinity;
@@ -396,7 +442,7 @@ test('flight wings spread in a horizontal plane and keep outer feathers out of t
 });
 
 test('takeoff and landing blends keep visible wing feathers outside the animated torso',t=>{
- const {root,clips}=createPigeon(),mixer=new AnimationMixer(root),body=meshes(root).find(mesh=>mesh instanceof SkinnedMesh) as SkinnedMesh;
+ const {root,clips}=createPigeon(),mixer=new AnimationMixer(root),body=bodySkin(root);
  const fly=mixer.clipAction(clips.find(clip=>clip.name==='Fly')!),wings=['Left','Right'].map(side=>root.getObjectByName(`${side}_wing`)!);
  const point=new Vector3();
  let maximumShoulderGap=-Infinity;
@@ -437,7 +483,7 @@ test('Walk loops cleanly, keeps feet above the floor and deforms the body withou
   for(let i=0;i<stride;i++)assert(Math.abs(track.values[i]-track.values[track.values.length-stride+i])<1e-6,`${track.name}: loop seam`);
   for(const value of track.values)assert(Number.isFinite(value),`${track.name}: finite animation value`);
  }
- const body=meshes(root).find(n=>n instanceof SkinnedMesh)!;
+ const body=bodySkin(root);
  const feet=meshes(root).filter(n=>n.parent?.name==='Left_foot'||n.parent?.name==='Right_foot');assert.equal(feet.length,2);
  root.updateMatrixWorld(true);(body as SkinnedMesh).skeleton.update();
  const initial=exactBounds(body).getSize(new Vector3()),mixer=new AnimationMixer(root);mixer.clipAction(clip).play();
@@ -472,6 +518,7 @@ test('exported pigeon GLB preserves the shared paint atlas, skeleton and all nat
  const loader=new GLTFLoader();loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
  const gltf=await loader.parseAsync(data.buffer.slice(data.byteOffset,data.byteOffset+data.byteLength),'');
  validateGeometry(gltf.scene);assert.deepEqual(gltf.animations.map(c=>c.name),PIGEON_CLIPS.map(c=>c.name));
+ validateGroundLegAttachment(gltf.scene,gltf.animations);
  validateFlightFeet(gltf.scene,gltf.animations);
  validateGroundPeck(gltf.scene,gltf.animations);
  assert.equal(gltf.scene.getObjectByName('GoofyPigeon')?.userData.character,'pigeon');

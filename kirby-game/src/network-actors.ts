@@ -36,6 +36,7 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
  if(c instanceof CharacterController)c.clearDuelDazedPose();
  if(c instanceof CharacterController)c.clearKnightDashPose();
+ if(c instanceof CharacterController)c.clearPigeonFlightWings();
  c.actor.userData.location=a.location;
  c.roll.clearPose();c.roll.state=a.roll?[...a.roll]:undefined;
  const previousX=c.actor.position.x,previousZ=c.actor.position.z;
@@ -48,10 +49,12 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
   if(c.state!==a.state){c.setActivity(a.state);c.actions.forEach(x=>x.stop());const action=c.actions.get(a.state)??c.actions.get('Idle');action?.reset().play();}
   const nativeGait=c.syncPigeonLocomotion(dt,Math.hypot(c.actor.position.x-previousX,c.actor.position.z-previousZ));
   c.mixer.update(dt);
+  c.updatePigeonFlightWings(a.state==='Fly'||a.state==='Push'&&a.p[1]>(a.progress?.ground??0)+.02);
   // Buffered positions drive the native gait clock. Old foot poses belong to
   // another presentation time and would undo planted-foot travel each frame.
+  // Flight supplies the untransmitted vane pose; transmitted wings stay authoritative.
   if(!nativeGait)poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
-  c.flight.active=a.state==='Jump'||a.state==='Fly'||c.isMetaKnight&&a.state==='Dash';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual();
+  c.flight.active=a.state==='Jump'||a.state==='Fly'||c.isMetaKnight&&a.state==='Dash';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual(a.state==='Fly');
   c.updateKnightDashVisual();
  }else {
   c.swimming=a.state==='Swim';c.surfaceY=a.p[1];

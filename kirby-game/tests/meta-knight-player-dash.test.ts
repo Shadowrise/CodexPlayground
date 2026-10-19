@@ -47,8 +47,8 @@ test('activity interruption resets charge and cancels thrust without resetting c
 });
 
 test('an air attack pressed during a dash cannot leave a queued sword hit',()=>{
- const c=create();advance(c,.5,held);c.update(.1,{...held,attack:true,allowAirPush:true});
- let hits=Number(c.attackHit);for(let i=0;i<100;i++){c.update(.01,{...idle,allowAirPush:true});hits+=Number(c.attackHit);}
+ const c=create();advance(c,.5,held);c.update(.1,{...held,attack:true});
+ let hits=Number(c.attackHit);for(let i=0;i<100;i++){c.update(.01,{...idle});hits+=Number(c.attackHit);}
  assert.equal(hits,0);assert.equal(c.state,'Fly');
 });
 

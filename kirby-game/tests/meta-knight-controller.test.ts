@@ -43,12 +43,12 @@ test('native movement preserves forward, sprint, reverse, steering and growth sp
 
 test('jump and air push use wings and the sword while flight and swimming keep game movement',()=>{
  const c=create();c.update(1/60,{...idle,jump:true});assert.equal(c.state,'Jump');advance(c,.25);
- assert(c.flight.active);assert.equal(c.state,'Fly');assert(!c.cloud.visible);
+ assert(c.flight.active);assert.equal(c.state,'Jump');assert(!c.cloud.visible);
  c.update(1/60,{...idle,jump:true});advance(c,.25);assert(c.actor.position.y>2.7);
  const height=c.actor.position.y,z=c.actor.position.z;
- c.update(1/60,{...idle,attack:true,forward:true,allowAirPush:true});assert(!c.attackHit);assert.equal(c.state,'Push');assert(c.flight.active);
+ c.update(1/60,{...idle,attack:true,forward:true});assert(!c.attackHit);assert.equal(c.state,'Push');assert(c.flight.active);
  assert(c.actor.position.y>=height-.05);assert(c.actor.position.z>z);assert(!c.cloud.visible);
- advance(c,.76,{...idle,allowAirPush:true});assert.equal(c.state,'Fly');assert(!c.cloud.visible);
+ advance(c,.76,{...idle});assert.equal(c.state,'Fly');assert(!c.cloud.visible);
  advance(c,4);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);
  c.swimming=true;advance(c,.3,{...idle,forward:true});assert.equal(c.state,'Swim');assert(c.actions.get('Swim')!.isRunning());
 });
@@ -69,12 +69,22 @@ test('moving sword push keeps its authored arm and grip instead of Kirby push ov
 test('sword lunge emits exactly one hit at forward extension on the ground and in the air',()=>{
  for(const airborne of [false,true]){
   const c=create();if(airborne){c.update(.01,{...idle,jump:true});c.update(.01,idle);}
-  const input={...idle,attack:true,allowAirPush:airborne};c.update(.01,input);assert.equal(c.state,'Push');assert(!c.attackHit);
+  const input={...idle,attack:true};c.update(.01,input);assert.equal(c.state,'Push');assert(!c.attackHit);
   for(let frame=1;frame<23;frame++){c.update(.01,input);if(frame<22)assert(!c.attackHit,'windup must not push a target');}
   assert(c.attackHit,`strike at${PUSH_HIT}s, airborne=${airborne}`);assert(Math.abs(c.actions.get('Push')!.time-PUSH_HIT)<1e-6);
   let extraHits=0;for(let frame=0;frame<60;frame++){c.update(.01,input);extraHits+=Number(c.attackHit);}
   assert.equal(extraHits,0,'holding Q cannot apply a second hit');
  }
+});
+
+test('fresh airborne sword pushes replay the windup and emit a strike on every press',()=>{
+ const c=create();c.update(.01,{...idle,jump:true});advance(c,.1);c.update(.01,{...idle,jump:true});advance(c,.4);
+ let hits=0;
+ for(let press=0;press<3;press++){
+  c.update(.01,{...idle,attack:true});assert.equal(c.state,'Push');assert(Math.abs(c.actions.get('Push')!.time-.01)<1e-6);hits+=Number(c.attackHit);
+  for(let i=0;i<30;i++){c.update(.01,idle);hits+=Number(c.attackHit);}
+ }
+ assert.equal(hits,3);assert(c.flight.active);
 });
 
 test('interrupted sword windup cancels the pending strike',()=>{

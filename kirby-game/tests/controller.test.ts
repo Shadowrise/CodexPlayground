@@ -14,11 +14,44 @@ test('an immediate resize replaces pending growth without changing earned fruits
  assert.equal(c.fruitsEaten,1);assert.equal(c.bonusPoints,3);assert.equal(c.eventPoints,5);
  c.setActivity('Idle');advance(c,1);assert.equal(c.actor.scale.x,10);
 });
-test('arena air push keeps flight height and motion, then restores wing animation',async()=>{
+test('air push keeps flight height and motion, then restores wing animation',async()=>{
  const c=await create();c.update(1/60,{...idle,jump:true});advance(c,.2,idle);c.update(1/60,{...idle,jump:true});advance(c,.25,idle);
  const height=c.actor.position.y;assert(c.flight.active);assert(height>2.7);
- c.update(1/60,{...idle,attack:true,allowAirPush:true,forward:true});assert(c.attackHit);assert(c.flight.active);assert(c.actor.position.y>=height-.05);assert(c.actor.position.z>0);
- advance(c,.75,{...idle,allowAirPush:true});assert(c.flight.active);assert(c.actor.position.y>2.7);assert(!c.attackHit);
+ c.update(1/60,{...idle,attack:true,forward:true});assert(c.attackHit);assert(c.flight.active);assert(c.actor.position.y>=height-.05);assert(c.actor.position.z>0);
+ advance(c,.75,{...idle});assert(c.flight.active);assert(c.actor.position.y>2.7);assert(!c.attackHit);
+});
+
+test('pushing during ascent, descent and levitation never changes the gravity or hover timer',async()=>{
+ for(const phase of ['ascent','descent','levitation']){
+  const c=await create(),reference=await create();
+  for(const player of [c,reference]){
+   player.update(.01,{...idle,jump:true});advance(player,phase==='descent'?.4:.1);
+   if(phase==='levitation'){player.update(.01,{...idle,jump:true});advance(player,.4);}
+  }
+  const arm=c.actor.getObjectByName('Right_shoulder')!,referenceArm=reference.actor.getObjectByName('Right_shoulder')!;
+  let hits=0,armMotion=false;
+  for(let frame=0;frame<90;frame++){
+   c.update(1/60,{...idle,attack:true,forward:true});reference.update(1/60,{...idle,forward:true});
+   hits+=Number(c.attackHit);armMotion ||= arm.quaternion.angleTo(referenceArm.quaternion)>.3;
+   assert.deepEqual(c.flight.networkState(),reference.flight.networkState(),phase);
+   assert(c.actor.position.distanceTo(reference.actor.position)<1e-8,phase);
+  }
+  assert.equal(hits,1,`${phase}: holding push emits only one hit`);assert(armMotion,`${phase}: both the animation and hit work in the air`);
+ }
+});
+
+test('fresh push events are accepted even when the release fell between game frames',async()=>{
+ const c=await create();c.update(.01,{...idle,jump:true});advance(c,.1);c.update(.01,{...idle,jump:true});advance(c,.4);
+ c.update(.01,{...idle,attack:true,attackPressed:true});assert(c.attackHit);
+ for(let i=0;i<12;i++){c.update(.01,{...idle,attack:true});assert(!c.attackHit,'a held key cannot create another push');}
+ c.update(.01,{...idle,attack:true,attackPressed:true});assert(c.attackHit,'a new actual press is not confused with the previous hold');
+ c.update(.01,{...idle,attack:true});assert(!c.attackHit);
+});
+
+test('a fresh second jump event enables flight without needing an idle frame between taps',async()=>{
+ const c=await create();
+ c.update(.05,{...idle,jump:true,jumpPressed:true});assert(!c.flight.levitating);
+ c.update(.05,{...idle,jump:true,jumpPressed:true});assert(c.flight.levitating);assert.equal(c.state,'Fly');
 });
 
 test('analog steering runs continuously, stops immediately and scales with stick strength',async()=>{
@@ -73,7 +106,7 @@ function advance(c: CharacterController, seconds: number, input = idle) {
 }
 test('actual GLB loads and forward movement uses Run', async () => {
   const c = await create();
-  assert.equal(c.actions.size, 11);
+  assert.equal(c.actions.size, 12);
   assert(c.actions.has('Swim'));
   advance(c, 1, { ...idle, forward: true });
   assert.equal(c.state, 'Run');
@@ -172,6 +205,9 @@ test('jump rises, lands, cannot retrigger while Space is held and works again af
   let maxHeight = 0;
   for (let i = 0; i < 180; i++) {
     c.update(1 / 60, { ...idle, jump: true });
+    assert(!c.flight.levitating);assert(!c.cloud.visible);
+    assert(Math.abs(c.animationRoot.position.y)<1e-6,'the animation cannot add height to the ballistic arc');
+    if(i>=48)assert.equal(c.state,'Idle','a single jump has already landed before 0.8s');
     maxHeight = Math.max(maxHeight, c.animationRoot.getWorldPosition(new Vector3()).y);
   }
   assert(maxHeight > 1.3);

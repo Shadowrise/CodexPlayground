@@ -16,7 +16,7 @@ const template=await (async()=>{
  return loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 })();
 const create=(options:Partial<PidgieNpcOptions>={})=>new PidgieNpc(template,{seed:131,safeGround:()=>true,...options});
-const bodyMesh=(root:T.Object3D)=>root.getObjectByProperty('type','SkinnedMesh') as T.SkinnedMesh;
+const bodyMesh=(root:T.Object3D)=>(root.getObjectByName('Continuous pigeon body')??root.getObjectByName('Continuous_pigeon_body')) as T.SkinnedMesh;
 const advance=(bird:PidgieNpc,seconds:number,people:readonly T.Vector3[]=[],players:readonly PidgiePlayer[]=[])=>{for(let i=0;i<Math.ceil(seconds*60);i++)bird.update(Math.min(1/60,seconds-i/60),people,undefined,players);};
 
 test('dropping the carried bread ends interest with exactly one scare and flight',()=>{
