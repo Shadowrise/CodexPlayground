@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3}|{kind:'godmode'};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3}|{kind:'godmode'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -24,7 +24,7 @@ const commands=[
  {name:'time',description:'Установить час в игре: 0–23'},
  {name:'portal',description:'Портал Метакнайта: 1 — открыть, 0 — закрыть'},
 ];
-const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'}] as const;
+const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'},{character:'snowball',name:'Снежок'}] as const;
 const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–3'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
@@ -59,7 +59,7 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  }
  if(name==='unlock'){
   const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
-  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie или /unlock meta-knight, чтобы открыть персонажа.'};
+  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight или /unlock snowball, чтобы открыть персонажа.'};
  }
  return {error:duelActive?'Доступные команды: /size, /tele, /unlock, /time, /portal, /phase и /godmode.':'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }

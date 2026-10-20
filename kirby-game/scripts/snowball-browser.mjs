@@ -24,7 +24,8 @@ try{
  await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
  await page.route('**/src/main.ts*',async route=>{
   const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`
-window.snowQA={get c(){return character},get playing(){return playing},get selected(){return selected},get birds(){return wildBirds},bread,resolveInteraction,sendBread,returnToMenu,captureWorld,pidgieSafeGround,pidgieSafeWalk,renderer,scene,camera,followCamera,cameraTarget,mountainLedges,progress:characterUnlocks,get model(){return loadedModel},get pigeon(){return loadedPigeon},createPlayerModel,KIRBY_VARIANTS};`});
+let snowUnlockSounds=0;const snowUnlockSound=sounds.playCharacterUnlock.bind(sounds);sounds.playCharacterUnlock=()=>{snowUnlockSounds++;snowUnlockSound();};
+window.snowQA={get c(){return character},get playing(){return playing},get selected(){return selected},get birds(){return wildBirds},get unlockSounds(){return snowUnlockSounds},get log(){return localLog},set online(value){networkIntent=value},bread,resolveInteraction,sendBread,returnToMenu,captureWorld,pidgieSafeGround,pidgieSafeWalk,renderer,scene,camera,followCamera,cameraTarget,mountainLedges,progress:characterUnlocks,get model(){return loadedModel},get pigeon(){return loadedPigeon},createPlayerModel,KIRBY_VARIANTS};`});
  });
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
@@ -37,6 +38,25 @@ window.snowQA={get c(){return character},get playing(){return playing},get selec
  await page.screenshot({path:output+'/snowball-locked.png'});
  await page.locator('#variant-grid .variant-button').first().click();await page.locator('#start-game').click();
  await page.waitForFunction(()=>snowQA.playing&&snowQA.birds.size===2);
+ if(process.argv.includes('--unlock-command-only')){
+  const achievements=await page.evaluate(()=>[...snowQA.c.achievements]);
+  await page.evaluate(()=>{snowQA.online=true;});await page.keyboard.press('Enter');await page.locator('#chat-input').fill('/unlock snowball');
+  assert(await page.locator('#chat-command-list').isHidden());await page.keyboard.press('Enter');assert(await page.locator('#chat-command-error').isVisible());
+  assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-snowball-unlocked-v1')),null);
+  await page.evaluate(()=>{snowQA.online=false;});await page.locator('#chat-input').fill('/unlock sno');
+  assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),['snowball']);
+  await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>localStorage.getItem('kirby-snowball-unlocked-v1')==='1');
+  await page.locator('#character-unlock').waitFor({state:'visible'});assert.match(await page.locator('#character-unlock').innerText(),/Снежок/);
+  assert.equal(await page.evaluate(()=>snowQA.unlockSounds),1);assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-pidgie-unlocked-v1')),null);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-bandana-unlocked-v1')),null);
+  assert.deepEqual(await page.evaluate(()=>[...snowQA.c.achievements]),achievements);
+  await page.keyboard.press('Enter');await page.locator('#chat-input').fill('/unlock snowball');await page.keyboard.press('Enter');await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(()=>snowQA.unlockSounds),1);assert(!(await page.evaluate(()=>snowQA.log)).some(m=>m.text.startsWith('/unlock')));
+  await page.evaluate(()=>snowQA.returnToMenu());await page.reload();await page.waitForFunction(()=>document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
+  await page.locator('#new-game').click();assert.equal(await snow.getAttribute('aria-disabled'),'false');await snow.click();assert.equal(await page.evaluate(()=>snowQA.selected[0]),'Снежок');
+  assert.deepEqual(errors,[]);console.log('PASS: /unlock snowball suggestions, online gating, one announcement, independent persisted unlock and selectable character after reload');
+ }else{
  const world=await page.evaluate(async()=>{const {validWorld}=await import('/src/network-protocol.ts'),w=snowQA.captureWorld();return {valid:validWorld(w),bytes:JSON.stringify(w).length,keys:Object.keys(w)};});
  assert(world.valid,JSON.stringify(world));assert(world.keys.includes('snowball'));
  const site=await page.evaluate(()=>{
@@ -89,4 +109,5 @@ window.snowQA={get c(){return character},get playing(){return playing},get selec
  });
  await page.screenshot({path:output+'/pigeons.png'});
  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS: locked menu, targeted feeding, independent durable unlocks, save/load, both social directions, native player models and GPU shaders',world,output}));
+ }
 }finally{await browser?.close();vite?.kill();}

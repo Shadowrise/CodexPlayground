@@ -532,8 +532,8 @@ chat.configureCommands({
   if(command.kind==='time'){dayStart=Date.now();dayStartPhase=phaseAtHour(command.hour);return;}
   if(command.kind==='portal'){soloPortalOverride=command.open;meadowPortal.setWorking(metaKnightPortalReady());return;}
   if(command.kind==='unlock'){
-   const name=command.character==='meta-knight'?'Meta Knight':command.character==='pidgie'?'Пиджи':'Бандана';
-   const unlocked=command.character==='meta-knight'?characterUnlocks.unlockMetaKnight():command.character==='pidgie'?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana();
+   const name=command.character==='snowball'?'Снежок':command.character==='meta-knight'?'Meta Knight':command.character==='pidgie'?'Пиджи':'Бандана';
+   const unlocked=command.character==='snowball'?characterUnlocks.unlockSnowball():command.character==='meta-knight'?characterUnlocks.unlockMetaKnight():command.character==='pidgie'?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana();
    if(unlocked){unlockAnnouncements.push(name);lockedCharacterTooltip.hide();updateVariantLocks();}
    return;
   }
