@@ -169,6 +169,24 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   assert.equal(room.room.world.pidgie.friend.by,first.data.id,'stale host frames cannot undo the friendship');
   await room.webSocketClose(first);assert.deepEqual(room.room.bread,offered);assert.equal(room.room.world.pidgie.friend.by,first.data.id);
   const awakened=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(awakened.room.bread,offered,'permanent bread and friendship survive hibernation');
+  // The new host feeds Snowball without consuming Pidgie's permanent loaf.
+  now+=1000;const snowPlayer=[p[0]+30,0,p[2]],snowball={...pidgie,p:[snowPlayer[0],0,snowPlayer[2]+4]};
+  const both={...world,snowball};
+  room.room.bread=grantBread(room.room.bread,actor(third.data.id,snowPlayer),now);
+  room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:snowPlayer,achievements:['snowballFriend']},world:both,events:[]}));
+  assert(!third.data.actor.achievements.includes('snowballFriend'),'clients cannot forge the Snowball unlock');
+  send(third,snowPlayer,[{type:'bread',action:{kind:'feed',bird:'unknown'}}]);assert.equal(room.room.bread.owner,third.data.id);
+  send(third,snowPlayer,[{type:'bread',action:{kind:'feed',bird:'snowball'}}]);
+  assert(third.data.actor.achievements.includes('snowballFriend'));assert(!third.data.actor.achievements.includes('pidgieFriend'));
+  assert.equal(room.room.world.snowball.phase,'joy');assert.equal(room.room.world.snowball.friend.target,'snowball');
+  assert.equal(room.room.world.pidgie.friend.by,first.data.id);assert.equal(breadLoaves(room.room.bread).length,2);
+  assert.equal(room.room.log.filter((m:any)=>m.text==='Friend угостил дикого Снежка хлебушком, теперь Снежок его лучший друг.').length,1);
+  room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:snowPlayer},world:both,events:[]}));
+  assert.equal(room.room.world.snowball.friend.by,third.data.id,'stale host frames preserve both friendships');
+  const late=await join('Snow watcher',19);assert.equal(late.messages[0].room.world.snowball.friend.by,third.data.id);
+  await room.webSocketClose(third);assert.equal(room.room.host,late.data.id);
+  const afterSnow=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();
+  assert.equal(afterSnow.room.world.snowball.friend.by,third.data.id);assert.equal(breadLoaves(afterSnow.room.bread).length,2);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 

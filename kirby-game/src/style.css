@@ -29,6 +29,7 @@
 .bandana-kirby .mini-kirby > i { visibility: hidden; }
 .pigeon-character .mini-kirby::before { content: ''; position: absolute; inset: 0; background: url('/icons/pidgie.svg?v=6') center / contain no-repeat; }
 .pigeon-character .mini-kirby > i { visibility: hidden; }
+.snowball-character .mini-kirby::before { background-image: url('/icons/snowball.svg'); }
 .meta-knight-character .mini-kirby::before { content: ''; position: absolute; inset: 7px 0 5px; background: linear-gradient(100deg,#191c43,#58548d 44%,#23244f 70%); clip-path: polygon(20% 0,50% 15%,80% 0,100% 90%,77% 75%,65% 100%,50% 82%,35% 100%,23% 75%,0 90%); }
 .meta-knight-character .mini-body { top: 6px; background: linear-gradient(115deg,#f0f5ff,#c9d3e2 42%,#8294b1); border: 1px solid #687a98; border-radius: 46% 46% 43% 43%; box-shadow: inset 3px 2px 0 #ffffff66,inset -4px -4px 0 #6c7d9c66,0 2px 3px #0b103980; }
 .meta-knight-character .mini-body::before,.meta-knight-character .mini-body::after { width: 16px; height: 18px; top: 26px; background: linear-gradient(120deg,#e0e8f5,#8c9fbb); border: 1px solid #536382; }

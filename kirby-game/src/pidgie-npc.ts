@@ -1,5 +1,6 @@
 import * as T from 'three';
-import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
+import {clonePigeon} from './pigeon-appearance';
+import {wildPigeonName,type WildPigeonId} from './wild-pigeons';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import type {NpcConstraint} from './npcs';
 import {constrainToMeadow,insideMeadow,worldLimit} from './world-bounds';
@@ -22,6 +23,7 @@ const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refu
 
 export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;isPigeon?:boolean;points?:number};
 export type PidgieNpcOptions={
+ kind?:WildPigeonId;
  safeGround:(x:number,z:number)=>boolean;
  /** Grounded body clearance; takeoff/landing still require safeGround. */
  walkGround?:(x:number,z:number)=>boolean;
@@ -52,15 +54,8 @@ export class PidgieNpc {
  get fearCount(){return this.data.fearCount;}
 
  constructor(template:Pick<GLTF,'scene'|'animations'>,options:PidgieNpcOptions){
-  this.options=options;this.model=cloneSkeleton(template.scene);
-  const materials=new Map<T.Material,T.Material>();
-  this.model.traverse(node=>{
-   if(!(node instanceof T.Mesh))return;
-   const own=(source:T.Material)=>{let material=materials.get(source);if(!material){material=source.clone();materials.set(source,material);}return material;};
-   node.material=Array.isArray(node.material)?node.material.map(own):own(node.material);
-   node.castShadow=node.receiveShadow=true;
-  });
-  this.actor.name='Пиджи · неуловимый голубь';this.actor.userData.elusivePidgie=true;this.actor.add(this.model);
+  this.options=options;this.model=clonePigeon(template.scene,options.kind==='snowball');
+  this.actor.name=`Дикий ${wildPigeonName(options.kind??'pidgie')}`;this.actor.userData.elusivePidgie=true;this.actor.userData.wildPigeon=options.kind??'pidgie';this.actor.add(this.model);
   this.mixer=new T.AnimationMixer(this.model);
   for(const name of PIDGIE_CLIPS){
    const source=template.animations.find(clip=>clip.name===name);if(!source)throw new Error(`Пиджи: отсутствует анимация ${name}`);
@@ -295,6 +290,7 @@ export class PidgieNpc {
 
  /** The offering is permanent; later proximity and dropped items cannot scare this bird. */
  acceptBread(offering:BreadOffering){
+  if((offering.target??'pidgie')!==(this.options.kind??'pidgie'))return false;
   const current=this.networkState(),next=beginPidgieFeeding(current,offering);
   if(next===current)return false;
   this.applyNetworkState(next,true);return true;

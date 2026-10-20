@@ -8,6 +8,7 @@ import {newMillQuest,advanceMill,applyMill,millPushTarget,millWorking,millCarryi
 import {newBread,applyBread,advanceBread,grantBread,holdsBread,breadOffering,normalizeBread,type BreadAction} from '../../kirby-game/src/bread-state';
 import {newSealProgress,normalizeSealProgress,collectSeal,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
+import {WILD_PIGEONS,isWildPigeonId,pigeonFriendAchievement} from '../../kirby-game/src/wild-pigeons';
 import {canPressNumber,NUMBER_PRESS_MS} from '../../kirby-game/src/number-garden-site';
 import {startNumberGame,advanceNumberGame,pressNumberGame,validNumberGame,NUMBER_EMPTY_MS,type NumberGame} from '../../kirby-game/src/number-garden-game';
 import {canPlayFlower,FLOWER_NOTE_COOLDOWN_MS} from '../../kirby-game/src/musical-flower-site';
@@ -150,12 +151,16 @@ export class GameRoom extends DurableObject<Env>{
   const r=this.room,actor=this.millActor(a);if(!r||!actor)return false;
   const bag=millCarrying(r.millQuest,a.id);
   actor.available=!a.actor?.ride&&['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack','Push','Jump','Fly'].includes(a.actor!.state)&&!bag&&!Object.values(r.locks).includes(a.id);
-  const old=r.bread??newBread(),next=applyBread(old,action,{...actor,available:actor.available!==false},now,r.world?.mountainSteps,r.world?.pidgie);
+  if(action?.kind==='feed'&&action.bird!==undefined&&!isWildPigeonId(action.bird))return false;
+  const bird=action?.kind==='feed'?action.bird??'pidgie':'pidgie';
+  const birds=action?.kind==='pick'?WILD_PIGEONS.flatMap(id=>r.world?.[id]?[r.world[id]!]:[]):r.world?.[bird];
+  const old=r.bread??newBread(),next=applyBread(old,action,{...actor,available:actor.available!==false},now,r.world?.mountainSteps,birds);
   if(next===old)return false;r.bread=next;
   if(action.kind==='feed'&&next.offering&&a.actor){
-   if(!a.actor.achievements.includes('pidgieFriend'))a.actor.achievements.push('pidgieFriend');
-   if(r.world?.pidgie)r.world.pidgie=beginPidgieFeeding(r.world.pidgie,next.offering);
-   this.logEntry(pidgieFriendLog(a.actor.name));
+   const achievement=pigeonFriendAchievement(bird);
+   if(!a.actor.achievements.includes(achievement))a.actor.achievements.push(achievement);
+   if(r.world?.[bird])r.world[bird]=beginPidgieFeeding(r.world[bird]!,next.offering);
+   this.logEntry(pidgieFriendLog(a.actor.name,bird));
   }
   return true;
  }
@@ -306,13 +311,13 @@ export class GameRoom extends DurableObject<Env>{
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   const oldKnightPoint=a.actor?.location==='meta-knight-arena'?[a.actor.p[0]-META_KNIGHT_ARENA.x,a.actor.p[1],a.actor.p[2]] as [number,number,number]:undefined;
   let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
-  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
+  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(actor?.location==='meta-knight-arena'){
    const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
    const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
-   if(breadOffering(r.bread)&&next.pidgie)next.pidgie=beginPidgieFeeding(next.pidgie,breadOffering(r.bread)!);
+   for(const id of WILD_PIGEONS){const offering=breadOffering(r.bread,id);if(offering&&next[id])next[id]=beginPidgieFeeding(next[id]!,offering);}
 
   }
   socket.serializeAttachment(a);
@@ -345,9 +350,11 @@ export class GameRoom extends DurableObject<Env>{
    else if(e.type==='festival-star'&&r.festival){if(collectStar(r.festival,a.id,e.index,now))changed=true;}
    else if(e.type==='chat'&&a.actor&&now-(a.lastChat??0)>=700){const text=chatText(e.text);if(text){a.lastChat=now;this.log(a,text,true);}}
    else if((e.type==='pidgie-scare'||e.type==='pidgie-interest')&&a.id===r.host){
+    if(e.bird!==undefined&&!isWildPigeonId(e.bird))continue;
+    const bird=e.bird??'pidgie';
     const player=e.playerId===a.id?a:this.players().map(s=>s.deserializeAttachment() as Attachment).find(p=>p.id===e.playerId);
     if(player?.actor){
-     if(!breadOffering(r.bread)&&(e.type==='pidgie-scare'||holdsBread(r.bread,player.id)))this.logEntry((e.type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(player.actor.name));
+     if(!breadOffering(r.bread,bird)&&(e.type==='pidgie-scare'||holdsBread(r.bread,player.id)))this.logEntry((e.type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(player.actor.name,bird));
     }
    }
    else if(e.type==='emote'&&a.actor&&now-(a.lastEmote??0)>=1500){const text=emoteMessage(e.emote);if(text){a.lastEmote=now;this.log(a,text);this.broadcast({type:'emote',emote:e.emote,id:a.id},socket);}}

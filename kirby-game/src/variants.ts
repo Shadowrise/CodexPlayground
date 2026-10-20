@@ -2,8 +2,8 @@ import { Color, Material, Mesh, MeshLambertMaterial, MeshStandardMaterial, Objec
 import {rainbowCrown,rainbowSkin} from './rainbow-kirby';
 import {applyBandana} from './bandana-kirby';
 
-import {KIRBY_VARIANTS,type KirbyVariant} from './variant-palette';
-export {NPC_COLORS,KIRBY_VARIANTS,type KirbyVariant} from './variant-palette';
+import {KIRBY_VARIANTS,isPigeonVariant,type KirbyVariant} from './variant-palette';
+export {NPC_COLORS,KIRBY_VARIANTS,isPigeonVariant,type KirbyVariant} from './variant-palette';
 
 export function remainingVariants(selected: KirbyVariant) {
   // Keep the existing fourteen ambient NPCs and network world budget.
@@ -14,7 +14,8 @@ export function styleVariant(element:HTMLElement,variant:KirbyVariant){
   element.style.setProperty('--kirby-color',variant[1]);
   element.classList.toggle('rainbow-kirby',variant[0]==='Радуга');
   element.classList.toggle('bandana-kirby',variant[0]==='Бандана');
-  element.classList.toggle('pigeon-character',variant[0]==='Пиджи');
+  element.classList.toggle('pigeon-character',isPigeonVariant(variant[0]));
+  element.classList.toggle('snowball-character',variant[0]==='Снежок');
   element.classList.toggle('meta-knight-character',variant[0]==='Meta Knight');
 }
 

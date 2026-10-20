@@ -2,8 +2,9 @@ import {onLocaleChange,t} from './i18n';
 
 export const PIDGIE_LOCK_HINT='Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.';
 export const META_KNIGHT_LOCK_HINT='Кто сможет победить Метакнайта, тот станет новым метакнайтом.';
+export const SNOWBALL_LOCK_HINT='Угости Дикого Снежка хлебушком, чтобы поиграть за Снежка.';
 export function lockedCharacterHint(name:string){
- return name==='Meta Knight'?META_KNIGHT_LOCK_HINT:name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
+ return name==='Снежок'?SNOWBALL_LOCK_HINT:name==='Meta Knight'?META_KNIGHT_LOCK_HINT:name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
 }
 
 /** Detached from the scrolling picker so the hint cannot be clipped by it. */

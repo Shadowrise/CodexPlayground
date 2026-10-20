@@ -7,7 +7,7 @@ import {updateFlightCloud} from './flight';
 import * as T from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {CharacterController} from './controller';
-import {KIRBY_VARIANTS} from './variants';
+import {KIRBY_VARIANTS,isPigeonVariant} from './variants';
 import {createPlayerModel} from './player-model';
 import type {KirbyNpc} from './npcs';
 import type {ActorState} from './network-protocol';
@@ -77,7 +77,7 @@ export class RemotePlayers{
    if(c&&c.actor.userData.variant!==a.variant){c.setActivity('Idle');disposeActor(c);this.players.delete(id);c=undefined;}
    const variant=KIRBY_VARIANTS[a.variant]??KIRBY_VARIANTS[0];
    // An optional model may still be loading; keep the state for a later frame.
-   if(variant[0]==='Пиджи'&&!this.pigeon)continue;
+   if(isPigeonVariant(variant[0])&&!this.pigeon)continue;
    if(variant[0]==='Meta Knight'&&!this.metaKnight)continue;
    const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 

@@ -42,6 +42,8 @@ import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './s
 import {NpcSnapshots} from './npc-snapshots';
 import {PidgieNpc,type PidgiePlayer} from './pidgie-npc';
 import type {PidgieState} from './pidgie-state';
+import {WILD_PIGEONS,pigeonFriendAchievement,type WildPigeonId} from './wild-pigeons';
+import {isPigeonVariant} from './variant-palette';
 import {MeadowIndex} from './meadow-index';
 import {sceneryClearance} from './landmarks';
 import {flatGround} from './pond-layout';
@@ -175,15 +177,15 @@ let unlockStorage:Storage|undefined;try{unlockStorage=localStorage;}catch{}
 const characterUnlocks=new CharacterUnlocks(unlockStorage);
 const unlockView=new CharacterUnlockView(()=>sounds.playCharacterUnlock());
 const lockedCharacterTooltip=new LockedCharacterTooltip();
-const unlockAnnouncements:('Бандана'|'Пиджи'|'Meta Knight')[]=[];
+const unlockAnnouncements:('Бандана'|'Пиджи'|'Снежок'|'Meta Knight')[]=[];
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
-function logPidgieReaction(person:THREE.Vector3,type:'pidgie-scare'|'pidgie-interest'){
- if(!network){localLog.push((type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(nameInput.value));if(localLog.length>10)localLog.shift();return;}
+function logPidgieReaction(person:THREE.Vector3,type:'pidgie-scare'|'pidgie-interest',bird:WildPigeonId='pidgie'){
+ if(!network){localLog.push((type==='pidgie-interest'?pidgieInterestLog:pidgieScareLog)(nameInput.value,bird));if(localLog.length>10)localLog.shift();return;}
  if(!network.host)return;
  const playerId=person===character?.actor.position?network.id:Array.from(remotePlayers?.players??[]).find(([,player])=>player.actor.position===person)?.[0];
- if(playerId)network.event({type,playerId});
+ if(playerId)network.event({type,playerId,bird});
 }
 let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
@@ -272,6 +274,7 @@ loadButton.addEventListener('click',async()=>{
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);
     if(pendingSave.player.achievements?.includes('pidgieFriend')&&characterUnlocks.unlockPidgie())unlockAnnouncements.push('Пиджи');
+    if(pendingSave.player.achievements?.includes('snowballFriend')&&characterUnlocks.unlockSnowball())unlockAnnouncements.push('Снежок');
     if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncements.push('Бандана');
     resetVariantAvailability();
     selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
@@ -285,7 +288,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride})));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride},wildBirds.get('snowball')?.npc.networkState())));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -759,9 +762,25 @@ let character: CharacterController | undefined;
 let npcs: KirbyNpc[] = [];
 let pidgieNpc:PidgieNpc|undefined;
 let pidgieReady=false;
-let pidgieFearSeen=0;
-let pidgieJoySeen=false;
-let pidgieHelloSeen=false;
+type WildBird={npc:PidgieNpc;ready:boolean;fearSeen:number;joySeen:boolean;helloSeen:boolean};
+const wildBirds=new Map<WildPigeonId,WildBird>();
+
+function tickWildPigeons(dt:number,people:THREE.Vector3[],players:PidgiePlayer[],withSound=false){
+ for(const [id,bird] of wildBirds){
+  if(!bird.ready)continue;
+  const npc=bird.npc;
+  if(!network||network.host){const offering=breadOffering(bread.state,id);if(offering)npc.acceptBread(offering);npc.update(dt,people,constrainNpc,players);}
+  else npc.updateRemote(dt,constrainNpc);
+  if(withSound&&character){
+   const p=npc.actor.position,listener=character.actor.position;
+   const play=(emote:'Fear'|'Joy'|'Hello')=>void sounds.playPigeonEmoteAt(emote,p.x-listener.x,p.z-listener.z,followCamera.azimuth);
+   if(bird.fearSeen!==npc.fearCount)play('Fear');
+   if(npc.state==='Joy'&&!bird.joySeen)play('Joy');
+   if(npc.state==='Hello'&&!bird.helloSeen)play('Hello');
+  }
+  bird.fearSeen=npc.fearCount;bird.joySeen=npc.state==='Joy';bird.helloSeen=npc.state==='Hello';
+ }
+}
 let metaKnightReflections:MetaKnightReflections|undefined;
 
 async function loadCharacter() {
@@ -826,7 +845,7 @@ async function startGame(){
   const spawn=randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
   dayStart=Date.now();dayStartPhase=Math.random();
-  const savedPidgie=pendingSave?.pidgie;
+  const savedBirds={pidgie:pendingSave?.pidgie,snowball:pendingSave?.snowball};
   const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
   soloPortalOverride=pendingSave?.portal?.override;
@@ -840,17 +859,16 @@ async function startGame(){
   maze.constrain(character.actor.position,character.actor.scale.x);
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
-  pidgieNpc=new PidgieNpc(loadedPigeon!,{safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare'),onInterest:person=>logPidgieReaction(person,'pidgie-interest'),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p))]});
-  if(savedPidgie)pidgieNpc.applyNetworkState(savedPidgie,true);
-  pidgieReady=!network||network.host||!!network.world?.pidgie;
-  if(network?.world?.pidgie)pidgieNpc.applyNetworkState(network.world.pidgie,true);
-  pidgieFearSeen=pidgieNpc.fearCount;
-  pidgieJoySeen=pidgieNpc.state==='Joy';
-  pidgieHelloSeen=pidgieNpc.state==='Hello';
+  for(const id of WILD_PIGEONS){
+   const npc=new PidgieNpc(loadedPigeon!,{kind:id,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare',id),onInterest:person=>logPidgieReaction(person,'pidgie-interest',id),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p)),...Array.from(wildBirds.values(),b=>b.npc.actor.position)]});
+   const checkpoint=network?.world?.[id]??savedBirds[id];if(checkpoint)npc.applyNetworkState(checkpoint,true);
+   wildBirds.set(id,{npc,ready:!network||network.host||!!network.world?.[id],fearSeen:npc.fearCount,joySeen:npc.state==='Joy',helloSeen:npc.state==='Hello'});
+  }
+  pidgieNpc=wildBirds.get('pidgie')!.npc;pidgieReady=wildBirds.get('pidgie')!.ready;
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
-  scene.add(character.actor, ...npcs.map(npc => npc.actor),pidgieNpc.actor);
+  scene.add(character.actor, ...npcs.map(npc => npc.actor),...Array.from(wildBirds.values(),b=>b.npc.actor));
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
   playing = true;meadowPortal.setWorking(metaKnightPortalReady());startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
@@ -865,7 +883,7 @@ async function startGame(){
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{tutorial.cancel();if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
-    network.onEmote=(emote,id)=>sounds.playEmote(emote,KIRBY_VARIANTS[network!.actors.get(id)?.variant??0]?.[0]==='Пиджи');
+    network.onEmote=(emote,id)=>sounds.playEmote(emote,isPigeonVariant(KIRBY_VARIANTS[network!.actors.get(id)?.variant??0]?.[0]));
     network.onFlowerNote=index=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index);};
     network.onFlowerComplete=()=>{if(character)awardFirst(character,'flowers');};
     network.onNumberNote=digit=>{numberGarden.play(digit,performance.now()/1000);playNumberSound(digit);};
@@ -895,6 +913,7 @@ async function startGame(){
 function checkCharacterUnlock(){
  if(!character||!playing)return;
  if(character.achievements.has('pidgieFriend')&&characterUnlocks.unlockPidgie()){unlockAnnouncements.push('Пиджи');updateVariantLocks();}
+ if(character.achievements.has('snowballFriend')&&characterUnlocks.unlockSnowball()){unlockAnnouncements.push('Снежок');updateVariantLocks();}
  if(characterUnlocks.complete(character.achievements)){unlockAnnouncements.push('Бандана');updateVariantLocks();}
  if(unlockAnnouncements.length&&!tutorial.active&&unlockView.element.hidden){const name=unlockAnnouncements.shift()!;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]===name)!);}
 }
@@ -915,7 +934,7 @@ function returnToMenu(){
   maze.reset();
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
   for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
-  if(pidgieNpc)disposeActor(pidgieNpc);pidgieNpc=undefined;pidgieReady=false;pidgieFearSeen=0;pidgieJoySeen=false;pidgieHelloSeen=false;
+  for(const bird of wildBirds.values())disposeActor(bird.npc);wildBirds.clear();pidgieNpc=undefined;pidgieReady=false;
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
@@ -1114,7 +1133,7 @@ renderer.setAnimationLoop((time: number) => {
     character.finishPigeonGroundMovement(dt,previousX,previousZ);
     const breadNow=network?.serverNow??Date.now();
     if(!network)bread.state=advanceBread(bread.state,breadNow,mountainLedges.networkState());
-    if(canPickBread(bread.state,breadActor(character),breadNow,pidgieNpc?.networkState())&&(!network||breadNow-lastBreadRequest>350)){lastBreadRequest=breadNow;sendBread({kind:'pick'});}
+    if(canPickBread(bread.state,breadActor(character),breadNow,Array.from(wildBirds.values(),b=>b.npc.networkState()))&&(!network||breadNow-lastBreadRequest>350)){lastBreadRequest=breadNow;sendBread({kind:'pick'});}
     const sealCollector=sealActor(character);
     const nearbySeal=META_KNIGHT_SEAL_SITES.find(site=>(site.id!=='treehouse'||treehouse.onBalcony(character!))&&canCollectSeal(sealProgress,site.id,sealCollector));
     if(nearbySeal&&(!network||breadNow-lastSealRequest>500)){
@@ -1159,25 +1178,7 @@ renderer.setAnimationLoop((time: number) => {
       if(onFoot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);
       ponds.apply(npc,npcPrevious,onFoot);npc.syncSwimming();
     }
-    if(playing&&pidgieNpc&&pidgieReady){
-      if(!network||network.host){
-        if(breadOffering(bread.state))pidgieNpc.acceptBread(breadOffering(bread.state)!);
-        const players:PidgiePlayer[]=[{id:network?.id??'solo',position:character.actor.position,hasBread:bread.holds(network?.id??'solo'),isPigeon:character.isPigeon},...Array.from(network?.actors??[],([id,actor])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(actor.p),hasBread:bread.holds(id),isPigeon:KIRBY_VARIANTS[actor.variant]?.[0]==='Пиджи'}))];
-        pidgieNpc.update(dt,people,constrainNpc,players);
-      }
-      else pidgieNpc.updateRemote(dt,constrainNpc);
-      if(pidgieFearSeen!==pidgieNpc.fearCount){
-        pidgieFearSeen=pidgieNpc.fearCount;
-        const bird=pidgieNpc.actor.position;
-        void sounds.playPigeonEmoteAt('Fear',bird.x-position.x,bird.z-position.z,followCamera.azimuth);
-      }
-      const joyful=pidgieNpc.state==='Joy';
-      if(joyful&&!pidgieJoySeen){const bird=pidgieNpc.actor.position;void sounds.playPigeonEmoteAt('Joy',bird.x-position.x,bird.z-position.z,followCamera.azimuth);}
-      pidgieJoySeen=joyful;
-      const greeting=pidgieNpc.state==='Hello';
-      if(greeting&&!pidgieHelloSeen){const bird=pidgieNpc.actor.position;void sounds.playPigeonEmoteAt('Hello',bird.x-position.x,bird.z-position.z,followCamera.azimuth);}
-      pidgieHelloSeen=greeting;
-    }
+    if(playing)tickWildPigeons(dt,people,[{id:network?.id??'solo',position:character.actor.position,hasBread:bread.holds(network?.id??'solo'),isPigeon:character.isPigeon},...Array.from(network?.actors??[],([id,actor])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(actor.p),hasBread:bread.holds(id),isPigeon:isPigeonVariant(KIRBY_VARIANTS[actor.variant]?.[0])}))],true);
     centipedeTick();
     if(!network){soloFlowerGame=advanceFlowerGame(soloFlowerGame,Date.now(),[flowerActor(character)]);if(soloFlowerGame?.winners.includes('solo'))awardFirst(character,'flowers');}
     if(!network){soloNumberGame=advanceNumberGame(soloNumberGame,Date.now(),[flowerActor(character)]);if(soloNumberGame?.winners.includes('solo'))awardFirst(character,'numbers');}
@@ -1294,7 +1295,7 @@ renderer.setAnimationLoop((time: number) => {
   fruits.syncInstances();
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
-  if(pidgieNpc)updateVisibility(pidgieNpc.actor,camera.position,pidgieReady&&pidgieNpc.phase!=='hidden');
+  for(const bird of wildBirds.values())updateVisibility(bird.npc.actor,camera.position,bird.ready&&bird.npc.phase!=='hidden');
   for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
   if(character)updateVisibility(character.actor,camera.position,true,true);
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
@@ -1332,10 +1333,12 @@ function sealActor(c:CharacterController):SealActor{
 }
 function sendBread(action:BreadAction){
  if(!character)return;if(network){network.event({type:'bread',action});return;}
- const old=bread.state;bread.state=applyBread(old,action,breadActor(character),Date.now(),mountainLedges.networkState(),pidgieNpc?.networkState());
+ const id=action.kind==='feed'?action.bird??'pidgie':'pidgie',npc=wildBirds.get(id)?.npc;
+ const birds=action.kind==='pick'?Array.from(wildBirds.values(),b=>b.npc.networkState()):npc?.networkState();
+ const old=bread.state;bread.state=applyBread(old,action,breadActor(character),Date.now(),mountainLedges.networkState(),birds);
  if(action.kind==='feed'&&bread.state!==old&&bread.state.offering){
-  pidgieNpc?.acceptBread(bread.state.offering);character.achievements.add('pidgieFriend');
-  localLog.push(pidgieFriendLog(nameInput.value));if(localLog.length>10)localLog.shift();
+  npc?.acceptBread(bread.state.offering);character.achievements.add(pigeonFriendAchievement(id));
+  localLog.push(pidgieFriendLog(nameInput.value,id));if(localLog.length>10)localLog.shift();
  }
 }
 
@@ -1388,8 +1391,8 @@ function tickMeadowWhileAway(dt:number){
  const people=Array.from(remotePlayers?.players.values()??[],c=>c.actor.position),neighbors=[...people,...npcs.map(n=>n.actor.position)];
  if(host){npcSwimming.update(dt,npcs,constrainNpc);fireflies?.prepareNpcs(npcs,true,dt,character!.actor.position);
   for(const npc of npcs){npc.fruitBoost.update(dt);npcPrevious.copy(npc.actor.position);if(!balloons.owns(npc))npc.update(dt,neighbors,constrainNpc);const foot=npc.state!=='Balloon'&&npc.fireflyIndex===undefined;if(foot)constrainNpc(npc.actor.position,npc.actor.scale.x,npcPrevious);ponds.apply(npc,npcPrevious,foot);npc.syncSwimming();}
-  if(pidgieNpc&&pidgieReady){if(breadOffering(bread.state))pidgieNpc.acceptBread(breadOffering(bread.state)!);pidgieNpc.update(dt,people,constrainNpc,Array.from(network?.actors??[],([id,a])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(a.p),hasBread:bread.holds(id),isPigeon:KIRBY_VARIANTS[a.variant]?.[0]==='Пиджи'})));}
- }else if(pidgieNpc&&pidgieReady)pidgieNpc.updateRemote(dt,constrainNpc);
+ }
+ tickWildPigeons(dt,people,Array.from(network?.actors??[],([id,a])=>({id,position:remotePlayers?.players.get(id)?.actor.position??new THREE.Vector3().fromArray(a.p),hasBread:bread.holds(id),isPigeon:isPigeonVariant(KIRBY_VARIANTS[a.variant]?.[0])})));
  fireflies?.update(dt,daylight(currentDayPhase()).night,camera.position);fireflies?.syncNpcRiders(npcs,host,dt);
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
  if(!network){bread.state=advanceBread(bread.state,now,mountainLedges.networkState());soloFlowerGame=advanceFlowerGame(soloFlowerGame,now,[]);soloNumberGame=advanceNumberGame(soloNumberGame,now,[]);centipedeTick();}
@@ -1399,12 +1402,15 @@ function tickMeadowWhileAway(dt:number){
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   if(nearMetaKnightPortal(c.actor.position)&&sealActor(c).available)return {text:metaKnightPortalReady()?'E — Войти на арену Метакнайта':'Портал пока не работает',run:()=>{if(metaKnightPortalReady())void cosmicArena.enter(c);},target:{key:meadowPortal,root:meadowPortal.group}};
   if(bread.holds(network?.id??'solo')){
-    const bird=pidgieReady?pidgieNpc?.networkState():undefined;
-    if(canFeedPidgie(bread.state,breadActor(c),bird)&&bird){
+   const nearby=Array.from(wildBirds).filter(([,b])=>b.ready).sort(([,a],[,b])=>a.npc.actor.position.distanceToSquared(c.actor.position)-b.npc.actor.position.distanceToSquared(c.actor.position));
+   for(const [id,npc] of nearby){
+    const bird=npc.npc.networkState();
+    if(canFeedPidgie(bread.state,breadActor(c),bird)){
       const midpoint=c.actor.position.clone().add(new THREE.Vector3().fromArray(bird.p)).multiplyScalar(.5);
       const clear=Array.from({length:9},(_,i)=>new THREE.Vector3().fromArray(bird.p).lerp(midpoint,i/8)).every(p=>pidgieSafeWalk(p.x,p.z));
-      if(clear)return {text:'E — Угостить дикого Пиджи',run:()=>sendBread({kind:'feed'}),target:{key:pidgieNpc!,root:pidgieNpc!.actor}};
+      if(clear)return {text:id==='snowball'?'E — Угостить дикого Снежка':'E — Угостить дикого Пиджи',run:()=>sendBread({kind:'feed',bird:id}),target:{key:npc.npc,root:npc.npc.actor}};
     }
+   }
     return {text:'E — Бросить хлебушек',run:()=>sendBread({kind:'drop'})};
   }
   const p=c.actor.position;
@@ -1459,7 +1465,7 @@ function playFlowerSound(index:number,transpose=0){
 
 function captureWorld():WorldState{
  const round=(rows:number[][])=>rows.map(row=>row.map(v=>Math.round(v*1000)/1000));
- return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),mountainSteps:round(mountainLedges.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState()),...(pidgieNpc&&pidgieReady?{pidgie:pidgieNpc.networkState()}:{})};
+ return {npcs:npcs.map(n=>actorState(n,n.variant[0],KIRBY_VARIANTS.indexOf(n.variant))),npcLife:round(npcs.map(n=>n.networkLife())),carts:round(coaster.networkState()),mountainSteps:round(mountainLedges.networkState()),balloons:balloons.networkState().map(row=>row.map(v=>typeof v==='number'?Math.round(v*1000)/1000:v)),bugs:round(fireflies!.networkState()),...Object.fromEntries(Array.from(wildBirds).filter(([,b])=>b.ready).map(([id,b])=>[id,b.npc.networkState()]))};
 }
 function applyRide(a:ActorState){
  if(!a.ride)return;const [kind,index]=a.ride.key.split(':'),i=Number(index);
@@ -1485,9 +1491,9 @@ function showSealPickup(by:string,count:number){
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
  const r=network.room;
- let pidgieHandoff:PidgieState|undefined;
+ const birdHandoffs:Partial<Record<WildPigeonId,PidgieState>>={};
  if(npcSnapshotHost!==r.host){
-  if(npcSnapshotHost&&network.host&&pidgieReady&&pidgieNpc)pidgieHandoff=pidgieNpc.networkState();
+  if(npcSnapshotHost&&network.host)for(const [id,bird] of wildBirds)if(bird.ready)birdHandoffs[id]=bird.npc.networkState();
   npcSnapshots.clear();npcSnapshotHost=r.host;worldRevision=-1;
  }
  const blocked=(kind:string)=>new Set(Object.entries(r.locks).filter(([key,owner])=>key.startsWith(kind+':')&&owner!==network!.id).map(([key])=>Number(key.split(':')[1])));
@@ -1495,15 +1501,19 @@ function syncNetworkWorld(dt:number){
  watermill.setQuest(r.millQuest??newMillQuest(),network.serverNow);
  bread.state=r.bread??newBread();
  if(r.sealProgress)sealProgress=r.sealProgress;
- if(r.bread?.offering?.by===network.id)character.achievements.add('pidgieFriend');
+ for(const id of WILD_PIGEONS)if(breadOffering(r.bread,id)?.by===network.id)character.achievements.add(pigeonFriendAchievement(id));
  if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);
   if(w.mountainSteps&&(!network.host||worldRevision<0))mountainLedges.networkApply(w.mountainSteps);
-  if(w.pidgie&&pidgieNpc){
-   const checkpoint=pidgieHandoff&&pidgieHandoff.seed===w.pidgie.seed&&pidgieHandoff.fearCount===w.pidgie.fearCount&&pidgieHandoff.friend?.at===w.pidgie.friend?.at?pidgieHandoff:w.pidgie;
-   pidgieNpc.applyNetworkState(checkpoint,network.host||worldRevision<0);pidgieReady=true;if(worldRevision<0){pidgieFearSeen=checkpoint.fearCount;pidgieJoySeen=checkpoint.clip==='Joy';pidgieHelloSeen=checkpoint.clip==='Hello';}
+  for(const [id,bird] of wildBirds){
+   const state=w[id];if(!state)continue;
+   const handoff=birdHandoffs[id];
+   const checkpoint=handoff&&handoff.seed===state.seed&&handoff.fearCount===state.fearCount&&handoff.friend?.at===state.friend?.at?handoff:state;
+   bird.npc.applyNetworkState(checkpoint,network.host||worldRevision<0);bird.ready=true;
+   if(worldRevision<0){bird.fearSeen=checkpoint.fearCount;bird.joySeen=checkpoint.clip==='Joy';bird.helloSeen=checkpoint.clip==='Hello';}
   }
   worldRevision=network.revision;}
- if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;pidgieJoySeen=pidgieNpc.state==='Joy';pidgieHelloSeen=pidgieNpc.state==='Hello';}
+ if(network.host)for(const bird of wildBirds.values())if(!bird.ready){bird.ready=true;bird.fearSeen=bird.npc.fearCount;bird.joySeen=bird.npc.state==='Joy';bird.helloSeen=bird.npc.state==='Hello';}
+ pidgieReady=wildBirds.get('pidgie')?.ready??false;
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
  r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.confirm(i,owner===network!.id?character:remotePlayers?.players.get(owner));if(owner===network!.id){character!.eatFruit();showFruitPickup(fruits.fruits[i].type);}else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.eatFruit();});
