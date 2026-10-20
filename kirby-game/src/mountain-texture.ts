@@ -12,15 +12,14 @@ export function createMountainTexture(size=512){
   };
   for(let y=0;y<size;y++)for(let x=0;x<size;x++){
     const u=x/size,v=y/size,broad=noise(u,v,8),medium=noise(u,v,32),fine=noise(u,v,128);
-    const warp=.028*Math.sin(u*Math.PI*4)+.014*Math.sin(u*Math.PI*10);
-    const layers=Math.sin((v+warp)*Math.PI*32);
-    const seams=Math.pow(Math.max(0,layers),18);
-    const fractures=Math.pow(Math.max(0,1-Math.abs(noise(u,v,16)-.5)*35),3);
-    const value=T.MathUtils.clamp(.86+(broad-.5)*.11+(medium-.5)*.1+(fine-.5)*.055-seams*.075-fractures*.04,0,1);
+    const warped=noise(u+(medium-.5)*.03,v+(broad-.5)*.04,16);
+    const fractures=Math.pow(Math.max(0,1-Math.abs(warped-.5)*42),3);
+    const grit=noise(u,v,256);
+    const value=T.MathUtils.clamp(.94+(broad-.5)*.075+(medium-.5)*.085+(fine-.5)*.07+(grit-.5)*.045-fractures*.065,0,1);
     const i=(y*size+x)*4;
     data[i]=data[i+1]=data[i+2]=Math.round(value*255);data[i+3]=255;
   }
-  const texture=new T.DataTexture(data,size,size);texture.name='Baked layered stone and fine scree';
+  const texture=new T.DataTexture(data,size,size);texture.name='Weathered granite, fractures and fine scree';
   texture.colorSpace=T.SRGBColorSpace;texture.wrapS=texture.wrapT=T.RepeatWrapping;
   texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.needsUpdate=true;
   return texture;

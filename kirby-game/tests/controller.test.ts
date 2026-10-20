@@ -57,11 +57,11 @@ test('a fresh second jump event enables flight without needing an idle frame bet
 test('analog steering runs continuously, stops immediately and scales with stick strength',async()=>{
   const c=await create();
   for(let i=0;i<60;i++)c.update(1/60,{...idle,forward:true,steer:.5});
-  assert(Math.abs(c.yaw-Math.PI*.275)<1e-6);assert.equal(c.state,'Run');
+  assert(Math.abs(c.yaw-Math.PI*.55)<1e-6);assert.equal(c.state,'Run');
   const yaw=c.yaw;
   c.update(1/60,{...idle,forward:true,steer:0});assert.equal(c.yaw,yaw);
   c.update(1/60,{...idle,steer:-1});assert.equal(c.state,'RotateRight');
-  assert(Math.abs(c.yaw-(yaw-Math.PI*.55/60))<1e-6);
+  assert(Math.abs(c.yaw-(yaw-Math.PI*1.1/60))<1e-6);
   for(let i=0;i<90;i++)c.update(1/60,{...idle,steer:-1});
   assert.equal(c.state,'RotateRight');assert(c.actions.get('RotateRight')!.isRunning());
 });
@@ -150,15 +150,15 @@ test('a short tap turns only while held and the small heading survives Idle and 
   assert(Math.abs(c.actor.position.z - Math.cos(angle) * c.speed) < 1e-6);
 });
 
-test('continuous keyboard turning reaches 198 degrees per second at low and high frame rates',async()=>{
-  for(const fps of [20,24,30,60,75,120,144])for(const direction of [-1,1]){
+test('keyboard and full-stick turning reach 198 degrees per second at low and high frame rates',async()=>{
+  for(const fps of [20,24,30,60,75,120,144])for(const direction of [-1,1])for(const analog of [false,true]){
     const c=await create();
-    for(let frame=0;frame<fps;frame++)c.update(1/fps,{...idle,left:direction===1,right:direction===-1});
-    assert(Math.abs(c.yaw-direction*198*Math.PI/180)<1e-6,`${fps} fps, direction ${direction}`);
+    for(let frame=0;frame<fps;frame++)c.update(1/fps,{...idle,left:direction===1,right:direction===-1,...(analog?{steer:direction}:{})});
+    assert(Math.abs(c.yaw-direction*198*Math.PI/180)<1e-6,`${fps} fps, direction ${direction}, analog ${analog}`);
   }
 });
 
-test('keyboard turning is twice as fast during attacks and flight, with analog sensitivity preserved',async()=>{
+test('keyboard and full-stick turning stay equally fast during attacks and flight',async()=>{
   for(const mode of ['attack','flight'])for(const direction of [-1,1]){
     const keyboard=await create(),analog=await create();
     const start={...idle,attack:mode==='attack',jump:mode==='flight'};
@@ -169,8 +169,8 @@ test('keyboard turning is twice as fast during attacks and flight, with analog s
     }
     assert.equal(keyboard.flight.active,mode==='flight');
     assert.equal(keyboard.state,mode==='flight'?'Jump':'Push');
-    assert(Math.abs(analog.yaw-direction*Math.PI*.55*.2)<1e-6,`${mode}: analog sensitivity`);
-    assert(Math.abs(keyboard.yaw-analog.yaw*2)<1e-6,`${mode}: keyboard speed`);
+    assert(Math.abs(analog.yaw-direction*Math.PI*1.1*.2)<1e-6,`${mode}: analog sensitivity`);
+    assert(Math.abs(keyboard.yaw-analog.yaw)<1e-6,`${mode}: equal speed`);
   }
 });
 test('a tap immediately stops rotating the visible root in both directions', async () => {

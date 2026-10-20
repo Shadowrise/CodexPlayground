@@ -126,7 +126,7 @@ test('the visible rock next to the uneven mountain supports feet while standing 
   assert(checked>300,'cover the visible wall contact across the whole course and character sizes');
 });
 
-test('steps attach to the unchanged slope and the enlarged semicircular summit connects to the left rock', async () => {
+test('steps attach to the rounded slope and the enlarged semicircular summit connects to the left rock', async () => {
   const map = createMountainTexture(), world = new MountainLedges(new MeshStandardMaterial({ map, vertexColors: true }));
   assert.equal((world.summit.material as MeshStandardMaterial).map, map);
   assert(STEPS.every(p => p.width < SUMMIT.width && p.depth < SUMMIT.depth));
@@ -139,7 +139,7 @@ test('steps attach to the unchanged slope and the enlarged semicircular summit c
   const curve = createCoasterCurve(), top = position(SUMMIT); let nearest = new Vector3(), distance = Infinity;
   for (let i = 0; i < 6000; i++) { const p = curve.getPointAt(i / 6000), d = p.distanceTo(top); if (d < distance) { distance = d; nearest = p; } }
   assert(distance < 80, `visible rail distance: ${distance}`);
-  assert(STEPS.slice(1,MAIN_COUNT).every((p, i) => Math.hypot(p.tangent-STEPS[i].tangent,p.radial-STEPS[i].radial)>=8.4));
+  assert(STEPS.slice(1,MAIN_COUNT).every((p, i) => {const gap=Math.hypot(p.tangent-STEPS[i].tangent,p.radial-STEPS[i].radial);return gap>p.width&&gap<12;}),'refitted landing arcs remain separate and within double-jump range');
   assert.equal(SUMMIT.y,30.72);assert(STEPS.slice(0,MAIN_COUNT).every((p,i)=>Math.abs(p.y-(i+1)*2.56)<1e-8));
   const mountains=createMountains();mountains.updateMatrixWorld(true);const ray=new Raycaster();
   for(const p of STEPS.filter(p=>p.embedDepth===undefined)){const back=mountainWorld(p.tangent,p.radial+p.depth/2);ray.set(new Vector3(back.x,150,back.z),new Vector3(0,-1,0));const contact=ray.intersectObject(mountains)[0];assert(contact);assert(Math.abs(contact.point.y-p.y)<.001);assert(Math.abs(mountainSurfaceHeight(back.x,back.z)-p.y)<.001);}

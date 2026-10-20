@@ -17,14 +17,10 @@ import {MetaKnightDashSparks} from './meta-knight-dash-sparks';
 import {MetaKnightBladeGlow} from './meta-knight-blade-glow';
 import {DuelDazedPose} from './duel-dazed-pose';
 import {PigeonFlightWings} from './pigeon-flight-wings';
+import {FruitEatingPose} from './fruit-eating';
+import {TURN_RATE} from './movement-input';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number };
-const KEYBOARD_TURN_SPEED = 2;
-const ANALOG_TURN_RATE = Math.PI * .55;
-
-function turnRate(input: Input) {
-  return ANALOG_TURN_RATE * (input.steer === undefined ? KEYBOARD_TURN_SPEED : 1);
-}
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number; moveYaw?:number };
 
 export class CharacterController {
   readonly actor = new Group();
@@ -34,6 +30,7 @@ export class CharacterController {
   readonly isMetaKnight: boolean;
   /** Native rigs supply their own poses instead of the original Kirby overlays. */
   readonly hasNativeAnimations: boolean;
+  readonly fruitEating: FruitEatingPose;
   state = 'Idle';
   swimming = false;
   surfaceY = 0;
@@ -82,7 +79,7 @@ export class CharacterController {
     }
     this.dashSparks?.update(this.mixer.time*1000,active);
   }
-  disposeEffects(){this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;}
+  disposeEffects(){this.fruitEating.dispose();this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -153,6 +150,7 @@ export class CharacterController {
     this.isMetaKnight=metaKnight;
     this.hasNativeAnimations=pigeon||metaKnight;
     this.actor.add(model);
+    this.fruitEating=new FruitEatingPose(this.actor,metaKnight?'meta-knight':pigeon?'pigeon':'kirby');
     this.actor.add(this.cloud);
     this.mixer = new AnimationMixer(model);
     // Scene and root share a GLB name; GLTFLoader renames the animated node Kirby_1.
@@ -245,6 +243,7 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.cancel();this.dashSparks?.update(0,false);
@@ -261,8 +260,9 @@ export class CharacterController {
     if(this.swimming)factor*=.55;
     const direction = Number(input.forward) - Number(!!input.backward);
     const speed = direction > 0 ? this.speed * (input.sprint ? 2 : 1) : this.backwardSpeed;
-    this.actor.position.x += Math.sin(this.yaw) * speed * direction * dt * factor;
-    this.actor.position.z += Math.cos(this.yaw) * speed * direction * dt * factor;
+    const yaw=input.moveYaw??this.yaw;
+    this.actor.position.x += Math.sin(yaw) * speed * direction * dt * factor;
+    this.actor.position.z += Math.cos(yaw) * speed * direction * dt * factor;
   }
 
   /** Winged native characters fly with their wings; Kirby keeps his flight puffs. */
@@ -317,6 +317,7 @@ export class CharacterController {
 
   /** A mount moves the actor while its native pose and growth continue. */
   updateActivity(dt:number){
+    this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
     this.clearKnightDashPose();this.knightDash.tick(dt);this.knightDash.cancelCharge();
@@ -326,6 +327,7 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.updateKnightBladeGlow((this.mixer.time+dt)*1000);
     this.clearDuelDazedPose();
@@ -405,7 +407,7 @@ export class CharacterController {
       this.attackElapsed += dt;
       if(this.pushArmed && previous < PUSH_HIT && this.attackElapsed >= PUSH_HIT){this.attackHit=true;this.pushArmed=false;}
       const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
-      if(steering){this.yaw+=steering*turnRate(input)*dt;this.actor.rotation.y=this.yaw;}
+      if(steering){this.yaw+=steering*TURN_RATE*dt;this.actor.rotation.y=this.yaw;}
       this.move(dt, input);
       const moving=!!(input.forward||input.backward);
       if(!this.hasNativeAnimations && moving && this.active!==this.actions.get('Run') && this.active!==this.actions.get('WalkBackward')){this.play(this.locomotion(input));this.state='Push';}
@@ -422,7 +424,7 @@ export class CharacterController {
       else if(this.state==='Push'){
         this.play('Jump');this.actions.get('Jump')!.time=this.actions.get('Jump')!.getClip().duration*.65;
       }
-      this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*turnRate(input)*dt;
+      this.yaw+=(input.steer ?? (Number(input.left)-Number(input.right)))*TURN_RATE*dt;
       this.actor.rotation.y=this.yaw;
       this.move(dt, this.flight.gliding?{...input,forward:true,backward:false}:input, .8);
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
@@ -437,14 +439,14 @@ export class CharacterController {
       if(!this.flight.active){this.cloud.visible=false;this.airPush=undefined;this.pushArmed=false;this.play(this.locomotion(input));}
     } else {
       const steering=input.steer!==undefined?Math.max(-1,Math.min(1,input.steer)):Number(input.left)-Number(input.right);
-      this.yaw+=steering*turnRate(input)*dt;
+      this.yaw+=steering*TURN_RATE*dt;
       this.actor.rotation.y=this.yaw;
       const motion=this.locomotion(input);
       this.play(motion==='Idle' && steering!==0 ? (steering>0?'RotateLeft':'RotateRight') : motion);
       if(this.state.startsWith('Rotate')) {
         const action=this.actions.get(this.state)!;
         // Native preview clips are one-shot; held steering keeps footwork cycling.
-        const speed=input.steer===undefined?KEYBOARD_TURN_SPEED:Math.max(.35,Math.abs(steering));
+        const speed=2*Math.max(.35,Math.abs(steering));
         action.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(speed*action.getClip().duration/.4);
       } else if(this.state==='Run'&&!this.isPigeon) {
         this.actions.get('Run')!.setEffectiveTimeScale(input.sprint?2:1);

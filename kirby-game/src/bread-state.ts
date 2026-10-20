@@ -63,6 +63,7 @@ export function breadFloor(x:number,z:number,ceiling:number,steps?:number[][]){
   const slide=state?.[0]===1?LEDGE_RETRACT_DISTANCE*ease(state[1]/LEDGE_RETRACT_SECONDS):state?.[0]===3?LEDGE_RETRACT_DISTANCE*(1-ease(state[1]/LEDGE_EXTEND_SECONDS)):0;
   const pose=mountainLedgePose(p,slide);if(pose.scale<=0)continue;
   if(p.seam){if(mountainOutlineContains(mountainLedgeOutline(p,slide),local.tangent,local.radial))floor=Math.max(floor,p.y);continue;}
+  if(p.shape==='circle'){if(((local.tangent-p.tangent)/(p.width/2))**2+((local.radial-p.radial)/(p.depth/2))**2<=1)floor=Math.max(floor,p.y);continue;}
   const depth=p.depth*pose.scale,back=pose.radial+depth/2,dx=local.tangent-p.tangent,dz=local.radial-back;
   const onArc=dz<=0&&(dx/(p.width/2))**2+(dz/depth)**2<=1;
   const onSeam=p.embedDepth!==undefined&&dz>=0&&dz<=p.embedDepth*pose.scale&&Math.abs(dx)<=p.width/2;

@@ -9,6 +9,7 @@ import {MOUNTAIN_STEPS as STEPS,MOUNTAIN_MAIN_STEP_COUNT as MAIN_COUNT,MOUNTAIN_
 import {MEADOW_HALF_SIZE,MOUNTAIN_WIDTH,insideMeadow} from '../src/world-bounds';
 import {mountainElevation,mountainSurfaceHeight} from '../src/mountain-surface';
 import {breadFloor} from '../src/bread-state';
+import {createMountains} from '../src/mountains';
 
 const idle:Input={forward:false,left:false,right:false};
 async function player(){
@@ -50,7 +51,7 @@ test('bread overlook leads through twenty ordinary double-jump flights to the tr
  assert.equal(SUMMIT.y,30.72);assert(PEAK.y>SUMMIT.y+50);
 });
 
-test('peak cap touches the actual highest rendered vertex of this corner and has real visible support',async()=>{
+test('the round peak is part of the highest terrain and supports walking and bread around its whole circumference',async()=>{
  let highest=0;
  for(const side of [1,2])for(let row=1;row<40;row++)for(let column=0;column<=240;column++){
   const r=MEADOW_HALF_SIZE+MOUNTAIN_WIDTH*row/40,t=(column/240*2-1)*r,x=side===1?r:-t,z=side===1?t:r,local=mountainLocal(x,z);
@@ -59,8 +60,19 @@ test('peak cap touches the actual highest rendered vertex of this corner and has
  assert(Math.abs(PEAK.y-highest)<.001);assert.equal(PEAK.y,mountainSurfaceHeight(MOUNTAIN_PEAK_VERTEX.x,MOUNTAIN_PEAK_VERTEX.z));
  const world=new MountainLedges(),c=await player(),p=ledgePosition(PEAK);world.group.updateMatrixWorld(true);
  const ray=new Raycaster(p.clone().add(new Vector3(0,2,0)),new Vector3(0,-1,0));assert(Math.abs(ray.intersectObject(world.peak)[0].point.y-PEAK.y)<.001);
+ assert.equal(PEAK.shape,'circle');assert.equal(PEAK.width,PEAK.depth);assert(!world.peak.visible,'no separate stone slab is rendered over the summit');
+ const mountains=createMountains();mountains.updateMatrixWorld(true);
+ for(let angle=0;angle<Math.PI*2;angle+=Math.PI/12)for(const fraction of [0,.6,.95]){
+  const xy=mountainWorld(PEAK.tangent+Math.cos(angle)*PEAK.width/2*fraction,PEAK.radial+Math.sin(angle)*PEAK.depth/2*fraction);
+  assert(Math.abs(mountainSurfaceHeight(xy.x,xy.z)-PEAK.y)<.001,'the actual terrain is flat under every part of the circular landing');
+  ray.set(new Vector3(xy.x,PEAK.y+2,xy.z),new Vector3(0,-1,0));const hit=ray.intersectObject(mountains)[0];assert(hit&&Math.abs(hit.point.y-PEAK.y)<.001,'visible mountain triangles support the landing, including the rear half');
+  assert(Math.abs(breadFloor(xy.x,xy.z,PEAK.y)-PEAK.y)<.001);
+  c.setActivity('Idle');c.actor.position.set(xy.x,PEAK.y,xy.z);c.surfaceY=PEAK.y;world.restorePosition(c);
+  for(let frame=0;frame<8;frame++)tick(world,c);
+  assert.equal(c.actor.position.y,PEAK.y);assert(Math.hypot(c.actor.position.x-xy.x,c.actor.position.z-xy.z)<.001,'standing on the plateau does not push the player down the mountain');
+ }
  c.actor.position.copy(p);c.surfaceY=PEAK.y;world.restorePosition(c);assert(world.surfaces(c).some(surface=>surface.index===STEPS.length+1));
- assert(isInsideMountainPeak(p.x,p.z));const back=mountainWorld(PEAK.tangent,PEAK.radial+PEAK.depth/2+.1);assert(!isInsideMountainPeak(back.x,back.z,10),'size never extends pickup behind the crest');
+ assert(isInsideMountainPeak(p.x,p.z));const back=mountainWorld(PEAK.tangent,PEAK.radial+PEAK.depth/2+.1);assert(!isInsideMountainPeak(back.x,back.z,10),'size never extends pickup beyond the circular landing');
 });
 
 test('upper landing arcs are clear of mountain spikes and contoured backs meet the slope and stay attached while retracting',async()=>{
@@ -88,7 +100,7 @@ test('upper landing arcs are clear of mountain spikes and contoured backs meet t
   }
  }
  assert(Math.PI*PEAK.width/2*PEAK.depth/2>2*Math.PI*3.8**2/2,'peak landing area more than doubles');
- const vertices=world.peak.geometry.getAttribute('position');for(let vertex=0;vertex<vertices.count;vertex++)assert(vertices.getZ(vertex)<=PEAK.depth/2+.00001,'peak cap ends at the crest');
+ const vertices=world.peak.geometry.getAttribute('position');for(let vertex=0;vertex<vertices.count;vertex++)assert(Math.hypot(vertices.getX(vertex),vertices.getZ(vertex))<=PEAK.width/2+.00001,'the landing footprint is a full circle');
 });
 
 test('old IDs remain fixed and eleven/thirteen-row snapshots restore omitted new traps ready',()=>{

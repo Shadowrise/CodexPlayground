@@ -107,6 +107,7 @@ import './style.css';
 import './touch-controls.css';
 import {TouchControls} from './touch-controls';
 import {touchMotion,wantsTouchControls} from './touch-input';
+import {TURN_RATE} from './movement-input';
 import {createFullscreenControls} from './fullscreen';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
 import { createGamepadInput, stickSteering } from './gamepad';
@@ -998,7 +999,9 @@ renderer.setAnimationLoop((time: number) => {
   touch?.setEnabled(playing&&!settingsOpen&&!usingPad&&!document.hidden);
   const usingTouch=!!touch&&!usingPad;
   const touchBlocked=settingsOpen||!!touch?.choosing||!playing||document.hidden;
-  const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt):{forward:false,sprint:false,steer:0};
+  // Mounts and the treehouse deck retain their own existing turning physics.
+  const steeringTurnRate=fireflies?.riding||treehouse.active?Math.PI*.55:TURN_RATE;
+  const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt,steeringTurnRate):{forward:false,sprint:false,steer:0};
   if(usingPad&&festivalView.results.open&&pad.pressed.has(0))leaveOnline.click();
   const wasChoosing=!playing;
   const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
@@ -1032,8 +1035,8 @@ renderer.setAnimationLoop((time: number) => {
   const dashHeld=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&(usingPad?pad.held.has(0):usingTouch?!!touch?.jumpHeld:held('Space'));
   if(!dashHeld)character?.knightDash.chargeHold(0,false,true);
   knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'));
-  const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,Math.PI*.55*dt),-1,1):undefined;
-  if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*Math.PI*.55*dt;
+  const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
+  if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
   meadowPortal.setWorking(metaKnightPortalReady());meadowPortal.update(time*.001);
   if(character&&(cosmicArena.active||cosmicArena.loading)){
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
@@ -1042,7 +1045,8 @@ renderer.setAnimationLoop((time: number) => {
       if(pendingBoard&&!settingsOpen&&!cosmicArena.engaged){if(cosmicArena.nearExit(character)){cosmicArena.leave();return;}cosmicArena.startBattle();}
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
-      cosmicArena.update(dt,time*.001,character,{cancelDuel,dashHeld,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
+      const moveStick=settingsOpen||wheelUsed||touchBlocked?{x:0,y:0}:usingPad?{x:pad.x,y:pad.y}:usingTouch?Math.hypot(touch!.x,touch!.y)<.18?{x:0,y:0}:{x:touch!.x,y:touch!.y}:undefined;
+      cosmicArena.update(dt,time*.001,character,{cancelDuel,moveStick,dashHeld,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       const hint=cosmicArena.nearExit(character)?t('E — Вернуться на поляну'):cosmicArena.engaged?t('E — Прервать дуэль'):(!cosmicArena.battle||['won','lost','cancelled'].includes(cosmicArena.battle.stage))&&cosmicArena.nearKnight(character)?t('E — Начать дуэль'):'';
       setText(rideHint,hint.replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —'));touch?.setInteraction(hint||undefined,cosmicArena.engaged,cosmicArena.cancelProgress);
       sounds.update(dt,character,[],followCamera.azimuth);
@@ -1286,7 +1290,7 @@ renderer.setAnimationLoop((time: number) => {
    }
   }
   chat.render(network?.log??localLog,!audioPanel.hidden);
-  for(const fruit of fruits.fruits)updateVisibility(fruit.object,camera.position,!fruit.eaten,false,FRUIT_DISTANCE);
+  fruits.fruits.forEach((fruit,i)=>updateVisibility(fruit.object,camera.position,fruits.isVisible(i),false,FRUIT_DISTANCE));
   fruits.syncInstances();
   for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
   for(const npc of npcs)updateVisibility(npc.actor,camera.position);
@@ -1502,7 +1506,7 @@ function syncNetworkWorld(dt:number){
  if(network.host&&!pidgieReady&&pidgieNpc){pidgieReady=true;pidgieFearSeen=pidgieNpc.fearCount;pidgieJoySeen=pidgieNpc.state==='Joy';pidgieHelloSeen=pidgieNpc.state==='Hello';}
 
  for(const [id,a] of network.actors)if(a.ride&&r.locks[a.ride.key]===id&&appliedRides.get(id)!==a){applyRide(a);appliedRides.set(id,a);}
- r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.fruits[i].eaten=true;fruits.fruits[i].object.visible=false;if(owner===network!.id){character!.eatFruit();showFruitPickup(fruits.fruits[i].type);}else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.eatFruit();});
+ r.fruits.forEach((owner,i)=>{if(!owner||knownFruits.has(i))return;knownFruits.add(i);fruits.confirm(i,owner===network!.id?character:remotePlayers?.players.get(owner));if(owner===network!.id){character!.eatFruit();showFruitPickup(fruits.fruits[i].type);}else if(owner.startsWith('npc:')&&network!.host)npcs[Number(owner.slice(4))]?.eatFruit();});
 }
 function resourceKey(c:CharacterController){
  if(bread.holds(network?.id??'solo'))return;

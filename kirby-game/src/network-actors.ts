@@ -34,6 +34,7 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
  if(a.location==='meta-knight-arena'){c.actor.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset);c.surfaceY=0;}
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
+ if(c instanceof CharacterController)c.fruitEating.clear();
  if(c instanceof CharacterController)c.clearDuelDazedPose();
  if(c instanceof CharacterController)c.clearKnightDashPose();
  if(c instanceof CharacterController)c.clearPigeonFlightWings();

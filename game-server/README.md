@@ -181,10 +181,11 @@ local room and never mutates a production room.
 ## Publish
 
 `npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2
-(`meadow-network-29`) was deployed on 2026-10-19 with room checkpoints in Durable
-Object storage and the Meta Knight airborne combat fixes. Public `/health` and
+(`meadow-network-29`) was deployed on 2026-10-20 with the current shared fruit
+and mountain layout rules, retaining room checkpoints in Durable Object storage
+and the Meta Knight airborne combat fixes. Public `/health` and
 `/room` returned HTTP 200 with protocol version 2 after deployment.
-Worker version: `6490172c-fda3-4614-9325-91c6164c6d43`.
+Worker version: `1d5b8614-46d0-44b4-8e9b-4b71362717a5`.
 Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event

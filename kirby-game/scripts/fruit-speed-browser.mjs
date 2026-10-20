@@ -1,11 +1,12 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
+const pigeon=process.env.FRUIT_PLAYER==='pigeon';
 
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 try {
  const page=await browser.newPage({viewport:{width:1280,height:850}}),errors=[];
  page.on('pageerror',error=>errors.push(error.message));
- await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
+ await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');localStorage.setItem('kirby-pidgie-unlocked-v1','1');});
  await page.route('**/room',route=>route.fulfill({json:{players:0,occupiedVariants:[],capacity:14}}));
  await page.route('**/history/solo',route=>route.fulfill({json:{ok:true}}));
  await page.route('**/src/main.ts*',async route=>{
@@ -18,8 +19,9 @@ window.fruitCheck={fruits,bread,fountain,home,renderer,get c(){return character}
  });
  await page.goto(process.env.KIRBY_URL??'http://127.0.0.1:5174/');
  await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
- await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Фрукты');await page.locator('#start-game').click();
+ await page.locator('#new-game').click();if(pigeon)await page.locator('#variant-grid .pigeon-character').click();await page.locator('#player-name-input').fill('Фрукты');await page.locator('#start-game').click();
  await page.waitForFunction(()=>!!window.fruitCheck?.c);
+ assert.equal(await page.evaluate(()=>window.fruitCheck.c.isPigeon),pigeon);
  const result=await page.evaluate(()=>{
   const m=window.fruitCheck,c=m.c;
   // Rendering is irrelevant to these accelerated gameplay and HUD checks.
@@ -27,8 +29,8 @@ window.fruitCheck={fruits,bread,fountain,home,renderer,get c(){return character}
   m.fruits.fruits.forEach((fruit,i)=>fruit.object.position.set(500+i,0,500));
   c.resizeTo(1,true);
   const state=()=>({size:c.savedSize,speed:c.speed,bonus:c.fruitBoost.multiplier,remaining:c.fruitBoost.remaining,fruits:c.fruitsEaten});
-  const collect=index=>{m.fruits.fruits[index].object.position.copy(c.actor.position);m.step(.5);return state();};
-  const first=collect(0);m.step(9.55);const halfway=state();
+  const collect=index=>{const fruit=m.fruits.fruits[index];fruit.object.position.copy(c.actor.position);for(let i=0;i<60&&!fruit.eaten;i++)m.step(.05);if(!fruit.eaten)throw Error('Fruit was not swallowed');return state();};
+  const first=collect(0);m.step(10);const halfway=state();
   const second=collect(1);
   for(let i=2;i<=10;i++)collect(i);
   const capped=state();m.step(20);const expired=state(),hidden=document.querySelector('#fruit-speed').hidden;
@@ -52,7 +54,7 @@ window.fruitCheck={fruits,bread,fountain,home,renderer,get c(){return character}
  const beforeCarry=await page.evaluate(()=>{
   const m=window.fruitCheck,c=m.c;m.home.wake();m.step(2);c.setActivity('Idle');c.resizeTo(1,true);
   c.actor.position.set(49,0,42);c.surfaceY=0;c.swimming=false;c.yaw=0;c.actor.rotation.set(0,0,0);
-  m.bread.reset({...m.bread.state,owner:'',p:c.actor.position.toArray(),pickupAt:0,drop:undefined,offering:undefined});
+  m.bread.reset({...m.bread.state,active:true,owner:'',p:c.actor.position.toArray(),pickupAt:0,drop:undefined,offering:undefined});
   m.step(.05);
   const fruit=m.fruits.fruits[13];fruit.object.position.copy(c.actor.position);fruit.object.position.z+=3;
   return {carrying:m.bread.holds('solo'),fruits:c.fruitsEaten,z:c.actor.position.z};

@@ -16,7 +16,7 @@ CharacterController.prototype.update=function(dt,input){if(this===character)wind
  });
  await page.goto(process.env.KIRBY_URL??'http://127.0.0.1:5174/');
  await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
- await page.locator('#player-name-input').fill('Мышка');await page.locator('#new-game').click();await page.locator('#start-game').click();
+ await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Мышка');await page.locator('#start-game').click();
  await page.waitForFunction(()=>window.mouseCheck.c);
  const input=()=>page.evaluate(()=>window.mouseCheck.input);
  const locked=()=>page.waitForFunction(()=>document.pointerLockElement?.tagName==='CANVAS');

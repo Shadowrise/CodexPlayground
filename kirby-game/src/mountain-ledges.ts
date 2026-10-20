@@ -50,8 +50,10 @@ export class MountainLedges {
     });
     this.summit = new T.Mesh(this.slab(SUMMIT, 1.25, 20), material); this.summit.name = 'Mountain corner overlook';
     this.summit.position.set(SUMMIT.tangent, SUMMIT.y, SUMMIT.radial); this.summit.receiveShadow = this.summit.castShadow = true; this.group.add(this.summit);
-    this.sealNiche=new T.Mesh(this.slab(SEAL_NICHE,3.2,47),material);this.sealNiche.name='Mountain true peak safe platform';this.peak=this.sealNiche;
-    this.sealNiche.position.set(SEAL_NICHE.tangent,SEAL_NICHE.y,SEAL_NICHE.radial);this.sealNiche.receiveShadow=this.sealNiche.castShadow=true;this.group.add(this.sealNiche);
+    // Retain a queryable landing footprint; the visible surface belongs to the
+    // mountain heightfield, including its snow, normals and rounded shoulders.
+    this.sealNiche=new T.Mesh(new T.CircleGeometry(SEAL_NICHE.width/2,96).rotateX(-Math.PI/2),material);this.sealNiche.name='Mountain true peak safe platform';this.peak=this.sealNiche;
+    this.sealNiche.position.set(SEAL_NICHE.tangent,SEAL_NICHE.y,SEAL_NICHE.radial);this.sealNiche.visible=false;this.group.add(this.sealNiche);
     const start = mountainWorld(STEPS[0].tangent, mountainFace(0, STEPS[0].tangent) - 3);
     this.entry = new T.Vector3(start.x, 0, start.z);
     this.recovery=new MountainRecovery(this.entry,sound);
@@ -69,6 +71,7 @@ export class MountainLedges {
       // Continue the corner UVs and layer scale of createMountains itself.
       uv.push(world.x >= world.z ? 24 + 8 * world.z / radius : 40 - 8 * world.x / radius, (radius - MEADOW_HALF_SIZE) / 16 + (y + (origin?.y ?? 0)) / 24);
       const c = greenBase ? green.clone().lerp(rock, T.MathUtils.smoothstep(y, 0, 12)) : rock.clone();
+      c.lerp(new T.Color('#edf1f3'),T.MathUtils.smoothstep(y+(origin?.y??0),62,77));
       c.multiplyScalar(.9 + .075 * Math.sin(x * 2.7 + y * 1.8 + z + seed)); colors.push(c.r, c.g, c.b);
     }
     geometry.setAttribute('position', new T.Float32BufferAttribute(vertices, 3));
@@ -130,6 +133,7 @@ export class MountainLedges {
   private surface(p: MountainLedge, index: number, tangent: number) {
     const slide = index < STEPS.length ? this.steps[index].slide : 0;
     if (index < STEPS.length && this.steps[index].phase === 'hidden') return undefined;
+    if(p.shape==='circle')return {height:p.y,index,tangent:p.tangent,radial:p.radial,halfWidth:p.width/2,halfDepth:p.depth/2};
     if(p.seam){
       const outline=mountainLedgeOutline(p,slide),front=Math.min(...outline.map(v=>v[1])),back=Math.max(...p.seam);
       return {height:p.y,index,tangent:p.tangent,radial:(front+back)/2,halfWidth:p.width/2,halfDepth:(back-front)/2};
@@ -153,6 +157,10 @@ export class MountainLedges {
       if(pose.scale<=0||p.radial+footprint.dz<pose.radial-ledge.depth/2*pose.scale-footprint.extentZ||p.radial+footprint.dz>(ledge.seam?Math.max(...ledge.seam):pose.radial+(ledge.depth/2+(ledge.embedDepth??EMBED_DEPTH))*pose.scale)+footprint.extentZ)return [];
       const s = this.surface(ledge, i, p.tangent);
       if(!s)return [];
+      if(ledge.shape==='circle'){
+        const outline=Array.from({length:64},(_,i)=>{const angle=i*Math.PI/32;return [ledge.tangent+Math.cos(angle)*ledge.width/2,ledge.radial+Math.sin(angle)*ledge.depth/2];});
+        return this.onOutline(outline,p.tangent,p.radial,footprint)?[s]:[];
+      }
       if(ledge.seam)return this.onOutline(mountainLedgeOutline(ledge,slide),p.tangent,p.radial,footprint)?[s]:[];
       if(ledge.shape==='semicircle'){
         return this.onSemicircle(ledge,pose,s.radial+s.halfDepth,p.tangent,p.radial,footprint)?[s]:[];
@@ -280,6 +288,7 @@ export class MountainLedges {
   constrain(p: T.Vector3, size = 1) {
     if (!this.contains(p, size)) return;
     const local = mountainLocal(p.x, p.z);
+    if(p.y>=SEAL_NICHE.y-.08&&Math.hypot(local.tangent-SEAL_NICHE.tangent,local.radial-SEAL_NICHE.radial)<=SEAL_NICHE.width/2+.55*size)return;
     let face:number;
     try{face=mountainFace(Math.max(0,p.y),local.tangent);}catch{return;}
     if (mountainSurfaceHeight(p.x,p.z)>p.y-.04 && local.radial>face-.35*size) {

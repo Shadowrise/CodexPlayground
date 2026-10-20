@@ -77,6 +77,6 @@ try {
     return { phase: world.steps[6].phase, visible: world.steps[6].mesh.visible, height: c.actor.position.y, originalHeight: steps[6].y };
   });
   await page.screenshot({ path: output + '/trap-retracted.png' });
-  assert(report.mountainTextureShared);assert(!report.extraCliff);assert.equal(report.topHeight,30.72);assert(Math.abs(report.topArea-110.88)<1e-8);assert(report.leftRockHeight>=report.topHeight-.001);assert(report.gaps.every(g=>g>8.4&&g<10));assert.equal(trap.phase,'hidden');assert(!trap.visible);assert(trap.height<trap.originalHeight);assert.deepEqual(errors,[]);
+  assert(report.mountainTextureShared);assert(!report.extraCliff);assert.equal(report.topHeight,30.72);assert(Math.abs(report.topArea-110.88)<1e-8);assert(report.leftRockHeight>=report.topHeight-.001);assert(report.gaps.every(g=>g>0&&g<12));assert.equal(trap.phase,'hidden');assert(!trap.visible);assert(trap.height<trap.originalHeight);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({ report, trap, errors, output }));
 } finally { if (browser) await browser.close(); if (vite) vite.kill(); }

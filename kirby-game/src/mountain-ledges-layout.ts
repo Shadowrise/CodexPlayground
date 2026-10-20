@@ -1,5 +1,5 @@
 import { MEADOW_HALF_SIZE } from './world-bounds';
-import { mountainSurfaceHeight } from './mountain-surface';
+import { mountainSurfaceHeight,MOUNTAIN_PEAK_SITE } from './mountain-surface';
 
 export const MOUNTAIN_LEDGE_SITE = { x: MEADOW_HALF_SIZE - 8, z: MEADOW_HALF_SIZE - 8, radius: 25 };
 export const LEDGE_STAND_SECONDS = 3;
@@ -8,7 +8,7 @@ export const LEDGE_HIDDEN_SECONDS = 4;
 export const LEDGE_EXTEND_SECONDS = .9;
 export const LEDGE_RETRACT_DISTANCE = 4.6;
 export const MOUNTAIN_LEDGE_YAW = Math.PI / 4;
-export type MountainLedge = { tangent: number; radial: number; y: number; width: number; depth: number; shape?: 'semicircle'; embedDepth?:number; seam?:readonly number[]; undersideSeam?:readonly number[] };
+export type MountainLedge = { tangent: number; radial: number; y: number; width: number; depth: number; shape?: 'semicircle'|'circle'; embedDepth?:number; seam?:readonly number[]; undersideSeam?:readonly number[] };
 
 /** Crest ledges retract towards a fixed rear seam instead of crossing the ridge. */
 export function mountainLedgePose(p:MountainLedge,slide:number){
@@ -55,12 +55,12 @@ const mainSteps: MountainLedge[] = offsets.map((tangent,i)=>{
 });
 // Triple the previous half-circle's area and embed its left end in the real slope.
 export const MOUNTAIN_SUMMIT_RADIUS = Math.sqrt(12 * 4.4 * 4.2 / Math.PI);
-const summitTangent=-4,summitHeight=30.72;
+const summitTangent=-7,summitHeight=30.72;
 const summitBack=Math.max(mountainFace(summitHeight,summitTangent),mountainFace(summitHeight,summitTangent-MOUNTAIN_SUMMIT_RADIUS)+.15);
 export const MOUNTAIN_SUMMIT: MountainLedge = { tangent: summitTangent, radial: summitBack - MOUNTAIN_SUMMIT_RADIUS / 2, y: summitHeight, width: MOUNTAIN_SUMMIT_RADIUS * 2, depth: MOUNTAIN_SUMMIT_RADIUS, shape: 'semicircle' };
 // A second ascent continues above the bread overlook, following the existing
 // ridge's actual contours. Original eleven network IDs are never reordered.
-const upperTangents=[3.5,9,16.5,9.5,6,13,6.5,13,15.5,8.5,15.5,9.5,16.5,9.5,16.5,9.5,16.5,17,14.5,14.5];
+const upperTangents=[2,9,14.5,9.5,6,13,6.5,13,15.5,8.5,15.5,9.5,16.5,9.5,16.5,9.5,16.5,17,14.5,14.5];
 export const MOUNTAIN_UPPER_STEPS:readonly MountainLedge[]=upperTangents.map((tangent,i)=>{
   const y=summitHeight+(i+1)*2.56;
   // Keep the whole landing arc clear, then join every column to the actual
@@ -89,21 +89,21 @@ export function mountainOutlineContains(outline:readonly number[][],x:number,z:n
   return inside;
 }
 export const MOUNTAIN_STEPS:readonly MountainLedge[]=[...mainSteps,...MOUNTAIN_UPPER_STEPS];
-// Vertex (side1,row25,column232) is the highest rendered vertex of this corner.
-// The flat cap ends at that crest rather than reaching onto the mountain's back.
+// The quest crest is anchored at this vertex independently of mesh resolution.
+// The round landing is part of the terrain, with no separate stone slab.
 export const MOUNTAIN_PEAK_VERTEX={x:MEADOW_HALF_SIZE+45,z:(MEADOW_HALF_SIZE+45)*14/15};
-const peakLocal=mountainLocal(MOUNTAIN_PEAK_VERTEX.x,MOUNTAIN_PEAK_VERTEX.z),peakRadius=5.6;
-export const MOUNTAIN_PEAK:MountainLedge={tangent:peakLocal.tangent,radial:peakLocal.radial-peakRadius/2,y:mountainSurfaceHeight(MOUNTAIN_PEAK_VERTEX.x,MOUNTAIN_PEAK_VERTEX.z),width:peakRadius*2,depth:peakRadius,shape:'semicircle',embedDepth:0};
+const peakLocal=mountainLocal(MOUNTAIN_PEAK_SITE.x,MOUNTAIN_PEAK_SITE.z),peakRadius=MOUNTAIN_PEAK_SITE.radius;
+export const MOUNTAIN_PEAK:MountainLedge={tangent:peakLocal.tangent,radial:peakLocal.radial,y:MOUNTAIN_PEAK_SITE.y,width:peakRadius*2,depth:peakRadius*2,shape:'circle',embedDepth:0};
 /** Kept for callers which treat a permanent seal rest as another bread floor. */
 export const MOUNTAIN_SEAL_NICHE=MOUNTAIN_PEAK;
 export function isInsideMountainPeak(x:number,z:number,size=1){
   if(![x,z,size].every(Number.isFinite)||size<=0)return false;
-  const local=mountainLocal(x,z),margin=Math.min(.8,.2*size),dx=local.tangent-MOUNTAIN_PEAK.tangent,dz=local.radial-(MOUNTAIN_PEAK.radial+MOUNTAIN_PEAK.depth/2),radius=peakRadius-margin;
-  return dz<=-margin&&dx*dx+dz*dz<radius*radius;
+  const local=mountainLocal(x,z),margin=Math.min(.8,.2*size),dx=local.tangent-MOUNTAIN_PEAK.tangent,dz=local.radial-MOUNTAIN_PEAK.radial,radius=peakRadius-margin;
+  return dx*dx+dz*dz<radius*radius;
 }
 /** The permitted outer edge shrinks continuously back into the meadow on a fall. */
 export function mountainCourseEnvelope(y:number,tangent:number,size=1){
-  const margin=.35*Math.max(.3,size),minT=MOUNTAIN_SUMMIT.tangent-MOUNTAIN_SUMMIT.width/2-1+margin,maxT=Math.max(...upperTangents)+MOUNTAIN_STEP_RADIUS+1-margin;
+  const margin=.35*Math.max(.3,size),minT=MOUNTAIN_SUMMIT.tangent-MOUNTAIN_SUMMIT.width/2-1+margin,maxT=Math.max(Math.max(...upperTangents)+MOUNTAIN_STEP_RADIUS,MOUNTAIN_PEAK.tangent+peakRadius)+1-margin;
   const t=Math.max(minT,Math.min(maxT,tangent)),ground=(MEADOW_HALF_SIZE-MOUNTAIN_LEDGE_SITE.x-1.5*size)*Math.SQRT2-Math.abs(t);
   const progress=Math.pow(Math.max(0,Math.min(1,y/MOUNTAIN_PEAK.y)),.55),back=MOUNTAIN_PEAK.radial+MOUNTAIN_PEAK.depth/2-margin;
   return {tangent:t,minT,maxT,radial:ground+(back-ground)*progress};

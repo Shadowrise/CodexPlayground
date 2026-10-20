@@ -1,5 +1,6 @@
 import * as T from 'three';
 import type {CharacterController,Input} from './controller';
+import {cameraRelativeMotion} from './movement-input';
 import type {FollowCamera} from './follow-camera';
 import type {MetaKnightArenaScene} from './meta-knight-arena';
 import {META_KNIGHT_ARENA as SITE,META_KNIGHT_ANNEX,META_KNIGHT_PORTAL,arenaPortalFloor,arenaPortalCoordinates,constrainMetaKnightArena} from './meta-knight-arena-site';
@@ -16,6 +17,7 @@ import './meta-knight-arena-travel.css';
 const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
 type MaterialRestore={mesh:T.Mesh;original:T.Material|T.Material[];copies:T.Material[]};
 type ArenaArrival={x:number;z:number;yaw:number};
+type ArenaInput=Input&{cancelDuel?:string;moveStick?:{x:number;y:number}};
 /** CSM shader hooks belong to the meadow. Isolated copies use the arena's light. */
 function arenaMaterials(actor:T.Object3D){
  const restores:MaterialRestore[]=[];actor.traverse(o=>{if(!(o instanceof T.Mesh))return;
@@ -146,7 +148,7 @@ export class MetaKnightArenaTravel{
  }
  savePosition(c:CharacterController){return c===this.owner&&c.actor.userData.location?c.actor.position.clone():undefined;}
  nearExit(c:CharacterController){return this.active&&Math.abs(c.actor.position.y-arenaPortalFloor(c.actor.position.x-SITE.x,c.actor.position.z))<.7&&Math.hypot(c.actor.position.x-SITE.x-SITE.exitX,c.actor.position.z-SITE.exitZ)<Math.max(5,c.actor.scale.x+2);}
- update(dt:number,seconds:number,c:CharacterController,input:Input&{cancelDuel?:string},horizontal:number,vertical:number,dragging:boolean,paused:boolean){
+ update(dt:number,seconds:number,c:CharacterController,input:ArenaInput,horizontal:number,vertical:number,dragging:boolean,paused:boolean){
   if(!this.active)return;
   if(!paused)this.soloNow+=dt*1000;const now=this.battleOptions?.online()?this.battleOptions.now():this.soloNow,id=this.battleOptions?.id()??'solo';let battle=this.battle;
   const player=battle?.players[id],withdrawn=battle?.id===this.withdrawnBattle||!!player?.withdrawn,participating=!!player&&!withdrawn,active=knightBattleActive(battle)&&participating;
@@ -154,7 +156,12 @@ export class MetaKnightArenaTravel{
   if(active||defeated)c.beginDuel();else c.endDuel();this.battleOptions?.music?.(active);
   const stopped=paused||defeated||active&&battle?.stage==='intro';
   const previous=c.actor.position.clone();c.fruitBoost.update(paused?0:dt);
-  if(stopped){const pose=battle?.stage==='lost'||player?.hp===0?'Sitting':'Idle';if(!paused&&c.state!==pose)c.setActivity(pose);c.updateActivity(paused?0:dt);}else c.update(dt,input);this.constrainArena(c.actor.position,c.actor.scale.x);
+  let movement:Input=input;
+  if(this.engaged){
+   const direction=this.camera.getWorldDirection(new T.Vector3()),stick=input.moveStick??{x:Number(input.right)-Number(input.left),y:Number(!!input.backward)-Number(input.forward)};
+   movement={...input,...cameraRelativeMotion(stick.x,stick.y,Math.atan2(direction.x,direction.z),c.yaw,dt)};
+  }
+  if(stopped){const pose=battle?.stage==='lost'||player?.hp===0?'Sitting':'Idle';if(!paused&&c.state!==pose)c.setActivity(pose);c.updateActivity(paused?0:dt);}else c.update(dt,movement);this.constrainArena(c.actor.position,c.actor.scale.x);
   if(!stopped&&(input.attackPressed||input.attack&&!this.attackHeld)){if(this.battleOptions?.online())this.battleOptions.send('attack');else if(battle)knightAttack(battle,this.localActor(c),now);}
   if(!paused)this.attackHeld=!!input.attack;
   if(!paused&&battle&&!this.battleOptions?.online())advanceKnightBattle(battle,[this.localActor(c)],now,this.soloGodMode?id:undefined);

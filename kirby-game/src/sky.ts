@@ -1,5 +1,6 @@
 import {daylight,type Daylight} from './day-cycle';
 import * as THREE from 'three';
+import {createForestBackdrop} from './forest-backdrop';
 
 export function createSky(scene: THREE.Scene) {
   const sun = new THREE.Mesh(new THREE.SphereGeometry(19,32,20),new THREE.MeshBasicMaterial({color:'#fff3ba',fog:false,toneMapped:false,transparent:true}));
@@ -7,7 +8,17 @@ export function createSky(scene: THREE.Scene) {
   const moon=new THREE.Group();moon.name='Moon';scene.add(moon);
   moon.add(new THREE.Mesh(new THREE.SphereGeometry(13,32,20),new THREE.MeshBasicMaterial({color:'#dbe8ff',fog:false,toneMapped:false,transparent:true})));
   for(let i=0;i<12;i++){const a=i*2.399,r=2+Math.sqrt(i/12)*8,x=Math.cos(a)*r,y=Math.sin(a)*r;const crater=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshBasicMaterial({color:i%2?'#adbdd4':'#c0cfe3',fog:false,transparent:true}));crater.position.set(x,y,Math.sqrt(169-r*r));crater.scale.set(1+i%3*.5,1+i%3*.4,.18);moon.add(crater);}
-  const stars=new THREE.InstancedMesh(new THREE.SphereGeometry(1,5,4),new THREE.MeshBasicMaterial({color:'#cfddff',fog:false,transparent:true,depthWrite:false}),160);stars.name='Night stars';stars.frustumCulled=false;scene.add(stars);
+  let starSeed=177;
+  const randomStar=()=>((starSeed=Math.imul(starSeed,1664525)+1013904223|0)>>>0)/4294967296;
+  const starPositions:number[]=[],starColors:number[]=[],starTint=new THREE.Color();
+  for(let i=0;i<2200;i++){
+    const y=.015+randomStar()*.98,a=randomStar()*Math.PI*2,r=Math.sqrt(1-y*y);
+    starPositions.push(Math.cos(a)*r*900,y*900,Math.sin(a)*r*900);
+    starTint.setHSL(.56+randomStar()*.18,.12+randomStar()*.25,.58+randomStar()*.34);starColors.push(...starTint.toArray());
+  }
+  const starsGeometry=new THREE.BufferGeometry();starsGeometry.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));starsGeometry.setAttribute('color',new THREE.Float32BufferAttribute(starColors,3));
+  const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({size:1.4,sizeAttenuation:false,vertexColors:true,fog:false,toneMapped:false,transparent:true,depthWrite:false}));stars.name='Night stars';stars.frustumCulled=false;scene.add(stars);
+  const updateForest=createForestBackdrop(scene);
   const glowMaterial=new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
     uniforms:{tint:{value:new THREE.Color('#ffc259')},strength:{value:1}},
@@ -48,7 +59,6 @@ export function createSky(scene: THREE.Scene) {
   const dayColor=new THREE.Color('#fffaf0'),nightColor=new THREE.Color('#8394b5'),sunsetColor=new THREE.Color('#ffc19d');
   const topDay=new THREE.Color('#93c8ed'),topNight=new THREE.Color('#091127'),topDusk=new THREE.Color('#82669a'),horizonDay=new THREE.Color('#d8e9eb'),horizonNight=new THREE.Color('#182b4b'),horizonDusk=new THREE.Color('#ffc392');
   const orbit=new THREE.Vector3();
-  const starOffset=new THREE.Vector3();
   let elapsed=0;
   return (dt:number,camera:THREE.Camera,lighting:boolean|Daylight=false) => {
     elapsed+=dt;const light=typeof lighting==='boolean'?daylight(lighting?.75:.25):lighting;
@@ -59,6 +69,7 @@ export function createSky(scene: THREE.Scene) {
     sun.material.opacity=THREE.MathUtils.smoothstep(elevation,-.06,.1);sun.material.color.set('#fff3ba').lerp(sunsetColor,twilight);
     moon.traverse(o=>{if(o instanceof THREE.Mesh)(o.material as THREE.MeshBasicMaterial).opacity=THREE.MathUtils.smoothstep(-elevation,-.06,.1);});
     stars.material.opacity=night*.85;
+    stars.position.copy(camera.position);updateForest(camera,light);
     glowMaterial.uniforms.tint.value.copy(dayColor).lerp(nightColor,night).lerp(sunsetColor,twilight);glowMaterial.uniforms.strength.value=Math.max(sun.material.opacity,THREE.MathUtils.smoothstep(-elevation,-.06,.1))*(1-twilight*.65);
     rayMaterial.uniforms.strength.value=THREE.MathUtils.smoothstep(elevation,-.015,.18)*(1-night);
     rayMaterial.uniforms.tint.value.set('#ffe1a3').lerp(sunsetColor,twilight*.65);
@@ -69,7 +80,6 @@ export function createSky(scene: THREE.Scene) {
     // Approximate light scattered through cloud volume; no emitting lights.
     cloudMaterial.emissive.copy(cloudMaterial.color);cloudMaterial.emissiveIntensity=.1+.16*(1-night);
     dome.position.copy(camera.position);horizonMaterial.uniforms.top.value.copy(topDay).lerp(topNight,night).lerp(topDusk,twilight*.65);horizonMaterial.uniforms.horizon.value.copy(horizonDay).lerp(horizonNight,night).lerp(horizonDusk,twilight*.85);
-    if(stars.visible)for(let i=0;i<160;i++){const a=i*2.399,y=.12+(i%23)/26,r=Math.sqrt(1-y*y);starOffset.set(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(800);dummy.position.copy(camera.position).add(starOffset);dummy.scale.setScalar(.45+i%3*.25);dummy.updateMatrix();stars.setMatrixAt(i,dummy.matrix);}stars.instanceMatrix.needsUpdate=stars.visible;
     halo.position.copy(camera.position).addScaledVector(orbit,elevation>=0?830:-830);halo.quaternion.copy(camera.quaternion);
     for(let i=0;i<28;i++) {
       const x=((i*137.3+elapsed*(1.1+i%3*.18))%820)-410;

@@ -1,4 +1,4 @@
-import { Box3, BufferGeometry, CylinderGeometry, Group, InstancedMesh, Matrix4, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, Vector3 } from 'three';
+import { Box3, BufferGeometry, CylinderGeometry, Group, InstancedMesh, MathUtils, Matrix4, Mesh, MeshLambertMaterial, Object3D, SphereGeometry, Vector3 } from 'three';
 import type { CharacterController } from './controller';
 import type { KirbyNpc } from './npcs';
 import { makeStrawberry } from './strawberry';
@@ -13,9 +13,11 @@ import { makeCherry } from './cherry';
 import { makeGrapes } from './grapes';
 import { fruitLayout,type FruitObstacle } from './fruit-layout';
 import {startupTask} from './startup-tasks';
+import {FRUIT_EATING} from './fruit-eating';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
 export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean };
+type InhalingFruit={index:number;eater:CharacterController;elapsed:number;position:Vector3;rotation:Vector3;scale:Vector3;center:Vector3;start:Vector3;side:number;viewOnly:boolean;delivered:boolean};
 const sphere = new SphereGeometry(1, 16, 12);
 const materials = new Map<string, MeshLambertMaterial>();
 function material(color: string) {
@@ -75,6 +77,17 @@ export class FruitWorld {
   private readonly batches: { mesh: InstancedMesh; slots: { fruit: number; local: Matrix4; shown: boolean }[] }[] = [];
   private readonly scratch = new Matrix4();
   private readonly mists:{object:Mesh;center:Vector3;scale:Vector3}[]=[];
+  private readonly centers:Vector3[]=[];
+  private readonly radii:number[]=[];
+  private readonly inhaling=new Map<number,InhalingFruit>();
+  private readonly transformed=new Set<number>();
+  private readonly pendingClaims=new Map<number,number>();
+  private readonly target=new Vector3();
+  private readonly control=new Vector3();
+  private readonly visualCenter=new Vector3();
+  private lastPickupActor?:Object3D;
+  private readonly lastPickupPosition=new Vector3();
+  private readonly pickupVelocity=new Vector3();
   get onMap() { return this.fruits.filter(f => !f.eaten).length; }
   get eatenByNpcs() { return this.npcEaten; }
   static async create(obstacles:readonly FruitObstacle[]=[]){
@@ -94,6 +107,8 @@ export class FruitWorld {
       object.rotation.y=i*2.399;
       object.name = FRUIT_TYPES[kind]; this.group.add(object);
       this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false });
+      this.centers.push(bounds[kind].getCenter(new Vector3()));
+      const size=bounds[kind].getSize(new Vector3());this.radii.push(Math.max(size.x,size.z)/2);
     }
     this.bakeInstances();
   }
@@ -145,14 +160,15 @@ export class FruitWorld {
       let dirty = false;
       for (const slot of batch.slots) {
         const fruit = this.fruits[slot.fruit];
-        const visible = !fruit.eaten && fruit.object.visible;
-        if (visible === slot.shown) continue;
+        const visible = this.isVisible(slot.fruit) && fruit.object.visible;
+        const moving=visible&&this.inhaling.has(slot.fruit);
+        if (visible === slot.shown && !moving&&!this.transformed.has(slot.fruit)) continue;
         slot.shown = visible;
         dirty = true;
       }
       if (!dirty) continue;
       // Pack active instances instead of submitting zero-scale hidden fruit to
-      // the vertex shader and both shadow passes. Capacity/bounds stay stable.
+      // the vertex shader and both shadow passes. Only moving/changed batches upload.
       let count = 0;
       for (const slot of batch.slots) if (slot.shown) {
         batch.mesh.setMatrixAt(count++, fruitMatrix(this.fruits[slot.fruit].object, this.scratch).multiply(slot.local));
@@ -160,16 +176,94 @@ export class FruitWorld {
       batch.mesh.count = count;
       batch.mesh.visible = count > 0;
       batch.mesh.instanceMatrix.needsUpdate = true;
+      batch.mesh.computeBoundingSphere();
     }
+    this.transformed.clear();
   }
   restore(eaten:readonly boolean[],npcEaten:number) {
+    for(const flight of this.inhaling.values())this.finishInhale(flight);
+    this.inhaling.clear();this.pendingClaims.clear();
     this.fruits.forEach((fruit,i)=>{fruit.eaten=eaten[i];fruit.object.visible=!fruit.eaten;});
-    this.npcEaten=npcEaten;this.pickupAfter=new WeakMap();
+    this.npcEaten=npcEaten;this.pickupAfter=new WeakMap();this.lastPickupActor=undefined;
     this.syncInstances();
   }
   get remaining() { return this.onMap; }
+  /** Rendering and gameplay both hide swallowed fruit, including pending claims. */
+  isVisible(index:number){
+    const flight=this.inhaling.get(index);
+    return flight?flight.elapsed<FRUIT_EATING[flight.eater.fruitEating.kind].swallow:!this.fruits[index].eaten&&!this.pendingClaims.has(index);
+  }
+  private beginInhale(index:number,eater:CharacterController,viewOnly=false){
+    const object=this.fruits[index].object,center=this.centers[index].clone();
+    const start=object.localToWorld(center.clone()),dx=start.x-eater.actor.position.x,dz=start.z-eater.actor.position.z;
+    const side=dx*Math.cos(eater.yaw)-dz*Math.sin(eater.yaw)<0?-1:1;
+    const flight:InhalingFruit={index,eater,elapsed:0,position:object.position.clone(),rotation:new Vector3(object.rotation.x,object.rotation.y,object.rotation.z),scale:object.scale.clone(),center,start,side,viewOnly,delivered:false};
+    this.inhaling.set(index,flight);eater.fruitEating.apply(0,flight.start);
+  }
+  private finishInhale(flight:InhalingFruit){
+    const fruit=this.fruits[flight.index],object=fruit.object;
+    object.position.copy(flight.position);object.scale.copy(flight.scale);object.rotation.set(flight.rotation.x,flight.rotation.y,flight.rotation.z);
+    object.visible=!fruit.eaten&&!this.pendingClaims.has(flight.index);
+    flight.eater.fruitEating.clear();this.inhaling.delete(flight.index);
+    this.transformed.add(flight.index);
+  }
+  /** The room remains authoritative; other players also get a visible swallow. */
+  confirm(index:number,eater?:CharacterController){
+    if(this.fruits[index].eaten)return;
+    const claimedHere=this.pendingClaims.has(index);
+    const previous=this.inhaling.get(index);
+    if(previous&&previous.eater!==eater)this.finishInhale(previous);
+    this.pendingClaims.delete(index);this.fruits[index].eaten=true;
+    if(!claimedHere&&!this.inhaling.has(index)&&eater&&!Array.from(this.inhaling.values()).some(f=>f.eater===eater))this.beginInhale(index,eater,true);
+    this.fruits[index].object.visible=this.isVisible(index);
+  }
   update(dt: number, player: CharacterController, npcs: readonly KirbyNpc[], riding = false, playerPickupPosition?: Vector3) {
     this.time += dt;
+    const pickupPosition=playerPickupPosition??player.actor.position;
+    this.pickupVelocity.set(0,0,0);
+    if(this.lastPickupActor===player.actor&&dt>0){
+      this.pickupVelocity.copy(pickupPosition).sub(this.lastPickupPosition).divideScalar(dt);this.pickupVelocity.y=0;
+      this.pickupVelocity.clampLength(0,player.speed*2);
+    }
+    this.lastPickupPosition.copy(pickupPosition);this.lastPickupActor=player.actor;
+    let playerFruit: Fruit | undefined;
+    for(const [index,expires] of this.pendingClaims)if(this.time>=expires){this.pendingClaims.delete(index);this.fruits[index].object.visible=!this.fruits[index].eaten;}
+    for(const flight of this.inhaling.values()){
+      const {eater,index}=flight,fruit=this.fruits[index],object=fruit.object;
+      const timing=FRUIT_EATING[eater.fruitEating.kind];
+      if(!flight.viewOnly&&!flight.delivered&&(riding&&!playerPickupPosition||eater.flight.active||eater.roll.active||['Death','Roll','Jump','Fly','Dash'].includes(eater.state))){this.finishInhale(flight);continue;}
+      flight.elapsed+=dt;
+      object.localToWorld(this.visualCenter.copy(flight.center));
+      eater.fruitEating.apply(flight.elapsed,this.visualCenter);
+      eater.fruitEating.mouthPosition(this.target);
+      const u=Math.max(0,Math.min(1,(flight.elapsed-.10)/(timing.swallow-.10))),travel=u*u*(3-2*u);
+      // The final approach stays in front of the face. A side arc carries fruit
+      // from behind around the cheek instead of through the character's body.
+      const size=eater.actor.scale.x,yaw=eater.yaw;
+      const dx=flight.start.x-eater.actor.position.x,dz=flight.start.z-eater.actor.position.z;
+      const behind=1-MathUtils.smoothstep(dx*Math.sin(yaw)+dz*Math.cos(yaw),-.4*size,.4*size);
+      this.control.copy(this.target).add(new Vector3(Math.sin(yaw)*1.2*size,0,Math.cos(yaw)*1.2*size));
+      this.control.x+=Math.cos(yaw)*flight.side*1.8*size*behind;this.control.z-=Math.sin(yaw)*flight.side*1.8*size*behind;
+      this.visualCenter.copy(flight.start).multiplyScalar((1-travel)**2).addScaledVector(this.control,2*(1-travel)*travel).addScaledVector(this.target,travel*travel);
+      this.visualCenter.y+=Math.sin(Math.PI*travel)*.34*size;
+      const shrink=1-MathUtils.smoothstep(u,.27,1),stretch=Math.sin(Math.PI*u)*.20;
+      object.scale.copy(flight.scale).multiply(new Vector3(Math.max(.001,shrink*(1-stretch*.6)),Math.max(.001,shrink*(1-stretch*.35)),Math.max(.001,shrink*(1+stretch))));
+      object.rotation.set(flight.rotation.x+.12*Math.sin(Math.PI*u),flight.rotation.y+.55*travel,flight.rotation.z);
+      // Models have their origin at ground level, not at their centre. Keep the
+      // fruit's actual centre on the trajectory as it shrinks and rotates.
+      this.group.worldToLocal(this.visualCenter);
+      this.control.copy(flight.center).multiply(object.scale).applyEuler(object.rotation);
+      object.position.copy(this.visualCenter).sub(this.control);
+      object.visible=flight.elapsed<timing.swallow;
+      if(!flight.delivered&&flight.elapsed>=timing.swallow){
+        flight.delivered=true;
+        if(!flight.viewOnly){
+          if(this.claim){this.pendingClaims.set(index,this.time+3);this.claim(index,eater);}
+          else {fruit.eaten=true;eater.eatFruit();if(eater===player)playerFruit=fruit;}
+        }
+      }
+      if(flight.elapsed>=timing.duration)this.finishInhale(flight);
+    }
     for (let i=0;i<this.fruits.length;i++) {
       const fruit=this.fruits[i];
       if(fruit.eaten||!fruit.object.visible)continue;
@@ -180,20 +274,33 @@ export class FruitWorld {
       const swell=1+Math.sin(phase)*.025;
       mist.scale.set(scale.x*swell,scale.y*swell,scale.z*swell);
     }
-    let playerFruit: Fruit | undefined;
     for (const eater of [player, ...npcs]) {
       const isPlayer = eater === player;
       if ((isPlayer && riding) || ('isDown' in eater && eater.isDown)
         || ['Jump', 'Fly', 'Death', 'Roll'].includes(eater.state)
-        || this.time < (this.pickupAfter.get(eater.actor) ?? 0)) continue;
+        || this.time < (this.pickupAfter.get(eater.actor) ?? 0)
+        || isPlayer&&Array.from(this.inhaling.values()).some(f=>f.eater===player)) continue;
       let nearest: Fruit | undefined;
-      let distance = .9 * eater.actor.scale.x + .65;
-      for (const fruit of this.fruits) {
-        if (fruit.eaten) continue;
-        const d = (isPlayer && playerPickupPosition ? playerPickupPosition : eater.actor.position).distanceTo(fruit.object.position);
-        if (d < distance) { nearest = fruit; distance = d; }
+      let distance = Infinity;
+      for (let index=0;index<this.fruits.length;index++) {
+        const fruit=this.fruits[index];
+        if (fruit.eaten||this.inhaling.has(index)||this.pendingClaims.has(index)) continue;
+        const origin=isPlayer&&playerPickupPosition?playerPickupPosition:eater.actor.position;
+        const dx=fruit.object.position.x-origin.x,dz=fruit.object.position.z-origin.z;
+        const d=Math.hypot(dx,dz),size=eater.actor.scale.x;
+        const contact=.9*size+.65;
+        const radius=this.radii[index]*fruit.object.scale.x;
+        const closing=Math.max(0,(dx*this.pickupVelocity.x+dz*this.pickupVelocity.z)/(d||1));
+        // Start sooner at sprint/boost speed so the runner cannot overtake the
+        // fruit before its final approach to the mouth.
+        const reach=isPlayer?Math.max(1.9*size+radius+1.3,closing*FRUIT_EATING[player.fruitEating.kind].swallow+.9*size+radius+.5):contact;
+        const facing=dx*Math.sin(eater.yaw)+dz*Math.cos(eater.yaw);
+        if(Math.abs(fruit.object.position.y-origin.y)>1.4*size+.6)continue;
+        if(isPlayer&&d>contact&&facing<d*.15)continue;
+        if (d < reach && d < distance) { nearest = fruit; distance = d; }
       }
       if (!nearest) continue;
+      if(isPlayer&&!playerPickupPosition){this.beginInhale(this.fruits.indexOf(nearest),player);continue;}
       if(this.claim){this.claim(this.fruits.indexOf(nearest),eater);this.pickupAfter.set(eater.actor,this.time+.45);continue;}
       nearest.eaten = true;
       nearest.object.visible = false;
