@@ -419,10 +419,10 @@ celestialLighting.update(daylight(currentDayPhase()));
 updateTreeShadows(daylight(currentDayPhase()));
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
-function setupShadowMaterials() {
-  decorativeCharacters.length=0;
-  scene.traverse(o=>{if(o.name.startsWith('Permanent Kirby passenger ')||o.name==='Luigi · permanent passenger')decorativeCharacters.push(o);});
-  scene.traverse(object=>{
+function setupShadowMaterials(root:THREE.Object3D=scene) {
+  if(root===scene){decorativeCharacters.length=0;
+   scene.traverse(o=>{if(o.name.startsWith('Permanent Kirby passenger ')||o.name==='Luigi · permanent passenger')decorativeCharacters.push(o);});}
+  root.traverse(object=>{
     if(!(object instanceof THREE.Mesh))return;
     skipShadowOnlyColourPass(object);
     for(const material of Array.isArray(object.material)?object.material:[object.material]) {
@@ -780,9 +780,7 @@ function tickWildPigeons(dt:number,people:THREE.Vector3[],players:PidgiePlayer[]
   bird.fearSeen=npc.fearCount;bird.joySeen=npc.state==='Joy';bird.helloSeen=npc.state==='Hello';
  }
  if(network&&pigeonFlock){
-  const count=pigeonFlock.birds.size;
-  pigeonFlock.update(dt,roundFinished()?[]:network.room.pigeonFlock??[],network.host,players,people,constrainNpc);
-  if(count!==pigeonFlock.birds.size)setupShadowMaterials();
+  pigeonFlock.update(dt,roundFinished()?[]:network.room.pigeonFlock??[],network.host,players,people,constrainNpc,network.serverNow);
  }
 }
 let metaKnightReflections:MetaKnightReflections|undefined;
@@ -872,7 +870,7 @@ async function startGame(){
   }
   pidgieNpc=wildBirds.get('pidgie')!.npc;pidgieReady=wildBirds.get('pidgie')!.ready;
   if(network){
-   pigeonFlock=new PigeonFlock({pidgie:loadedPigeon!,snowball:loadedSnowball!},{safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:position=>{
+   pigeonFlock=new PigeonFlock({pidgie:loadedPigeon!,snowball:loadedSnowball!},{prepare:setupShadowMaterials,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:position=>{
     if(!character||cosmicArena.engaged)return;const listener=character.actor.position;
     void sounds.playPigeonEmoteAt('Fear',position.x-listener.x,position.z-listener.z,followCamera.azimuth);
    }},position=>{
@@ -1446,7 +1444,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if(treehouse.active)return result(treehouse.prompt(p),()=>treehouse.interact(c));
   if(treehouse.prompt(p)){
     if(c.flight.active)return;
-    const swing=p.x-TREEHOUSE_SITE.x<-7;
+    const swing=treehouse.networkKey(p)==='swing:0';
     return result(treehouse.prompt(p),()=>treehouse.interact(c),swing?object(treehouse.outlineSwing):region(treehouse,treehouse.group,TREEHOUSE_SITE.clone().add(new THREE.Vector3(-4,9.4,9.15)),[2.3,19.4,4.2]));
   }
   if(free&&centipedePrompt(c))return result(centipedePrompt(c)!,startCentipedeGame,object(arenaCentipede!.group.getObjectByName('Segment_0')));
@@ -1476,7 +1474,7 @@ function captureWorld():WorldState{
 }
 function applyRide(a:ActorState){
  if(!a.ride)return;const [kind,index]=a.ride.key.split(':'),i=Number(index);
- if(kind==='tree')treehouse.networkSwing(a.ride.data[0] as number);
+ if(kind==='swing')treehouse.networkSwing(a.ride.data[0] as number);
  if(kind==='cart'){const rows=coaster.networkState();rows[i]=a.ride.data as number[];coaster.networkApply(rows);}
  if(kind==='balloon'){const rows=balloons.networkState();rows[i]=a.ride.data;balloons.networkApply(rows,npcs);}
 
@@ -1527,7 +1525,7 @@ function resourceKey(c:CharacterController){
  if(home.active||home.prompt(c.actor.position,c.actor.scale.x))return 'home:0';
  if(trampoline.active||trampoline.prompt(c))return 'trampoline:0';
  const seat=benches.outlineSeat(c.actor.position);if(benches.active)return heldResource;if(seat&&(!treehouse.active||treehouse.canSit))return 'bench:'+BENCH_SEATS.indexOf(seat);
- if(treehouse.active||treehouse.prompt(c.actor.position))return 'tree:0';
+ if(treehouse.active||treehouse.prompt(c.actor.position))return treehouse.networkKey(c.actor.position);
  if(centipedePrompt(c)||watermill.prompt(millActor(c)))return;
  if(balloons.prompt(c.actor.position))return balloons.networkKey(c.actor.position);
  if(coaster.prompt(c))return coaster.networkKey(c);
@@ -1557,7 +1555,7 @@ async function interactOnline(){
 function updateNetwork(dt:number){
  if(!network||!character||!playing||roundFinished())return;
  if(!network.host){const states=npcSnapshots.sample(performance.now());if(states)npcs.forEach((n,i)=>applyActor(n,states[i],dt,true));fireflies?.syncNpcRiders(npcs,false,dt);}
- for(const [id,actor] of network.actors)if(actor.ride?.key==='tree:0'&&network.room.locks['tree:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
+ for(const [id,actor] of network.actors)if(actor.ride?.key==='swing:0'&&network.room.locks['swing:0']===id)treehouse.networkSwing(actor.ride.data[0] as number);
  const remoteCount=remotePlayers?.players.size;remotePlayers?.update(network.actors,dt,network.actorSnapshots);if(remoteCount!==remotePlayers?.players.size)setupShadowMaterials();
  for(const [id,state] of remotePlayers?.renderedStates??[]){const rider=remotePlayers?.players.get(id);if(rider&&state.ride?.key.startsWith('bug:')&&network.room.locks[state.ride.key]===id)fireflies!.syncRemoteRider(Number(state.ride.key.split(':')[1]),rider,state,dt);}
  const boatRiders=new Map<number,CharacterController>(),boatPhases=new Map<number,number>();
@@ -1567,7 +1565,7 @@ function updateNetwork(dt:number){
  if(heldResource&&!active){network.event({type:'release',key:heldResource,...(heldResource.startsWith('bug:')?{bugState:fireflies!.networkState()[Number(heldResource.split(':')[1])]}:{})});heldResource=undefined;}
  const a=actorState(character,nameInput.value,KIRBY_VARIANTS.indexOf(selected));
  if(character.actor.userData.location==='meta-knight-arena')a.location='meta-knight-arena';
- if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='boat'?boats.networkData():kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
+ if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='boat'?boats.networkData():kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='swing'?[treehouse.swing.rotation.x]:kind==='tree'?[0]:undefined;if(data)a.ride={key:heldResource,data};}
  network.tick(dt,a,captureWorld,()=>pigeonFlock?.checkpoints()??[]);
  playerHostBadge.hidden=!network.host;
  const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+achievementPoints(actor.achievements)+(actor.eventPoints??0)+(network!.room.festival?.players[id]?.bonus??0)}))];

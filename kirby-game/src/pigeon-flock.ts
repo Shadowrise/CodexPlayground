@@ -7,11 +7,13 @@ import {PIGEON_FLOCK_BATCH,type PigeonCheckpoint,type SummonedPigeon} from './pi
 import {disposeActor} from './actor-lifecycle';
 import type {NpcConstraint} from './npcs';
 import {insideMeadow} from './world-bounds';
+import {PigeonSnapshots} from './pigeon-snapshots';
 
 // Includes the animated wings: takeoff, landing and Hello need clearance too.
 export const FLOCK_RADIUS=3.2;
 const SPACING=FLOCK_RADIUS*2+.6;
-type Bird={spec:SummonedPigeon;npc:PidgieNpc;helloIn:number;helloRemaining:number;helloCount:number;departureY?:number;departed?:boolean;applied?:PigeonCheckpoint};
+type Bird={spec:SummonedPigeon;npc:PidgieNpc;helloIn:number;helloRemaining:number;helloCount:number;departureY?:number;departed?:boolean;applied?:PigeonCheckpoint;snapshots:PigeonSnapshots;slot?:number;goal?:T.Vector3;goalAt?:T.Vector3;goalNext:number};
+type FlockOptions=PidgieNpcOptions&{prepare?:(actor:T.Object3D)=>void};
 
 /** Stable expanding rings add space as the flock grows, without a bird cap. */
 export function pigeonSlot(index:number){
@@ -27,29 +29,32 @@ export class PigeonFlock{
  readonly group=new T.Group();
  readonly birds=new Map<string,Bird>();
  private cursor=0;
- constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>,private options:PidgieNpcOptions,private onHello:(position:T.Vector3)=>void=()=>{}){this.group.name='Голубиная почта Ветерка';}
+ private now=0;private pathBudget=0;
+ constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>,private options:FlockOptions,private onHello:(position:T.Vector3)=>void=()=>{}){this.group.name='Голубиная почта Ветерка';}
 
  private goal(player:PidgiePlayer,index:number,reserved:T.Vector3[]){
   for(let attempt=0;attempt<128;attempt++){
    const goal=player.position.clone().setY(0).add(pigeonSlot(index+attempt));
-   if(insideMeadow(goal,1)&&this.options.safeGround(goal.x,goal.z)&&reserved.every(p=>p.distanceTo(goal)>=SPACING-.001)){reserved.push(goal);return goal;}
+   if(insideMeadow(goal,1)&&this.options.safeGround(goal.x,goal.z)&&reserved.every(p=>p.distanceTo(goal)>=SPACING-.001)){reserved.push(goal);return {point:goal,slot:index+attempt};}
   }
  }
 
- private constraint(bird:Bird,world?:NpcConstraint):NpcConstraint{return (point,size,previous)=>{
-  if(point.y<1){world?.(point,size,previous);if(!(this.options.walkGround??this.options.safeGround)(point.x,point.z)||!insideMeadow(point,size)){point.copy(previous);return;}}
+ private constraint(bird:Bird,world?:NpcConstraint,terrain=true):NpcConstraint{return (point,size,previous)=>{
+  if(terrain&&point.y<1){world?.(point,size,previous);if(!(this.options.walkGround??this.options.safeGround)(point.x,point.z)||!insideMeadow(point,size)){point.copy(previous);return;}}
   // Test the whole movement segment, including remote interpolation, so a fast
   // pursuit or a delayed snapshot cannot pass through another bird.
+  const dx=point.x-previous.x,dy=point.y-previous.y,dz=point.z-previous.z,length=dx*dx+dy*dy+dz*dz,minimum=FLOCK_RADIUS*2,square=minimum*minimum;
   for(const other of this.birds.values()){
    if(other===bird||!other.npc.actor.visible)continue;
-   const at=other.npc.actor.position,travel=point.clone().sub(previous),length=travel.lengthSq();
-   const u=length?T.MathUtils.clamp(at.clone().sub(previous).dot(travel)/length,0,1):0;
-   const closest=previous.clone().addScaledVector(travel,u),minimum=FLOCK_RADIUS*2;
-   if(closest.distanceToSquared(at)<minimum**2-1e-6&&!(previous.distanceToSquared(at)<minimum**2&&point.distanceToSquared(at)>previous.distanceToSquared(at)+1e-6)){point.copy(previous);return;}
+   const at=other.npc.actor.position,ax=at.x-previous.x,ay=at.y-previous.y,az=at.z-previous.z;
+   const before=ax*ax+ay*ay+az*az,u=length?T.MathUtils.clamp((ax*dx+ay*dy+az*dz)/length,0,1):0;
+   const x=ax-dx*u,y=ay-dy*u,z=az-dz*u;
+   if(x*x+y*y+z*z<square-1e-6&&!(before<square&&point.distanceToSquared(at)>before+1e-6)){point.copy(previous);return;}
   }
  };}
 
- update(dt:number,specs:readonly SummonedPigeon[],host:boolean,players:readonly PidgiePlayer[],people:readonly T.Vector3[],world?:NpcConstraint){
+ update(dt:number,specs:readonly SummonedPigeon[],host:boolean,players:readonly PidgiePlayer[],people:readonly T.Vector3[],world?:NpcConstraint,now?:number){
+  this.now=now??this.now+dt*1000;this.pathBudget=2;
   const live=new Set(specs.map(s=>s.id));
   for(const [id,bird] of this.birds)if(!live.has(id)){disposeActor(bird.npc);this.birds.delete(id);}
   const slots=new Map<string,number>(),reserved:T.Vector3[]=[];
@@ -57,21 +62,26 @@ export class PigeonFlock{
    const index=slots.get(spec.playerId)??0;slots.set(spec.playerId,index+1);
    const player=players.find(p=>p.id===spec.playerId);let bird=this.birds.get(spec.id);
    if(!bird){
-    const npc=new PidgieNpc(this.templates[spec.skin],{...this.options,kind:spec.skin,seed:spec.seed,summoned:true});
-    bird={spec,npc,helloIn:1+(spec.seed%3000)/1000,helloRemaining:0,helloCount:0};
+    const npc=new PidgieNpc(this.templates[spec.skin],{...this.options,kind:spec.skin,seed:spec.seed,summoned:true,canPlanFollow:()=>this.pathBudget>0&&!!this.pathBudget--});
+    npc.model.traverse(node=>{if(node instanceof T.Mesh){node.castShadow=false;if(node instanceof T.SkinnedMesh)node.boundingSphere=new T.Sphere(new T.Vector3(0,1.2,0),6);}});
+    this.options.prepare?.(npc.actor);
+    bird={spec,npc,helloIn:1+(spec.seed%3000)/1000,helloRemaining:0,helloCount:0,snapshots:new PigeonSnapshots(),goalNext:0};
     this.birds.set(spec.id,bird);this.group.add(npc.actor);
    }
    if(spec.checkpoint&&bird.applied!==spec.checkpoint){
+    bird.snapshots.push(spec.checkpoint,this.now);
     if(!host||bird.npc.phase==='hidden'){
      const first=!bird.applied,c=spec.checkpoint;
-     bird.npc.applyNetworkState(c.bird,first);bird.helloIn=c.helloIn;bird.helloRemaining=c.helloRemaining;
+     if(first||host||spec.dismissedAt!==undefined)bird.npc.applyNetworkState(c.bird,first);
+     bird.helloIn=c.helloIn;bird.helloRemaining=c.helloRemaining;
      bird.departureY=c.departureY;bird.departed=c.departed;
      if(!first&&c.helloCount>bird.helloCount&&c.helloRemaining>0)this.onHello(bird.npc.actor.position);
      bird.helloCount=c.helloCount;
     }
     bird.applied=spec.checkpoint;
    }
-   const constrain=this.constraint(bird,world);
+   if(host&&!bird.departed&&bird.npc.phase!=='hidden')bird.npc.actor.visible=true;
+   const constrain=this.constraint(bird,host?world:undefined,host);
    if(spec.dismissedAt!==undefined){
     if(bird.departed){bird.npc.actor.visible=false;continue;}
     if(bird.departureY===undefined){
@@ -83,12 +93,18 @@ export class PigeonFlock{
     if(bird.departed)bird.npc.actor.visible=false;continue;
    }
    if(!player)continue;
-   const goal=this.goal(player,index,reserved);
    if(!host){
-    const previous=bird.npc.actor.position.clone();bird.npc.updateRemote(dt,world);
+    const previous=bird.npc.actor.position.clone(),state=bird.snapshots.sample(this.now,Math.max(280,Math.ceil(specs.length/PIGEON_FLOCK_BATCH)*100+180));
+    if(state)bird.npc.presentSummoned(state,dt);else bird.npc.actor.visible=false;
     constrain(bird.npc.actor.position,1,previous);
     bird.helloIn=Math.max(0,bird.helloIn-dt);bird.helloRemaining=Math.max(0,bird.helloRemaining-dt);continue;
    }
+   let goal=bird.goal;
+   if(!goal||this.now>=bird.goalNext&&(!bird.goalAt||bird.goalAt.distanceToSquared(player.position)>.25)){
+    const candidate=this.goal(player,bird.slot??index,reserved);
+    if(candidate){goal=bird.goal=candidate.point;bird.slot=candidate.slot;bird.goalAt=player.position.clone();bird.goalNext=this.now+400;}
+   }
+   if(goal&&bird.goalAt){goal=goal.clone().add(new T.Vector3(player.position.x-bird.goalAt.x,0,player.position.z-bird.goalAt.z));reserved.push(goal);}
    if(!goal)continue;
    if(bird.npc.phase==='hidden'){
     let origin:T.Vector3|undefined;
@@ -117,7 +133,7 @@ export class PigeonFlock{
   const birds=Array.from(this.birds.values()),result:PigeonCheckpoint[]=[];
   for(let i=0;i<Math.min(PIGEON_FLOCK_BATCH,birds.length);i++){
    const bird=birds[(this.cursor+i)%birds.length];if(!bird.npc.actor.visible&&!bird.departed)continue;
-   result.push({id:bird.spec.id,bird:bird.npc.networkState(),helloIn:bird.helloIn,helloRemaining:bird.helloRemaining,helloCount:bird.helloCount,...(bird.departureY!==undefined?{departureY:bird.departureY}:{}),...(bird.departed?{departed:true}:{})});
+   result.push({id:bird.spec.id,bird:bird.npc.networkState(),helloIn:bird.helloIn,helloRemaining:bird.helloRemaining,helloCount:bird.helloCount,at:this.now,...(bird.departureY!==undefined?{departureY:bird.departureY}:{}),...(bird.departed?{departed:true}:{})});
   }
   this.cursor=birds.length?(this.cursor+PIGEON_FLOCK_BATCH)%birds.length:0;return result;
  }

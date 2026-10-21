@@ -3,7 +3,8 @@ import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController } from './controller';
 import { MAZE_SITE, MAZE_CELL, MAZE_HALF, MAZE_ENTRY_STONES, MAZE_ENTRY_POSTS, mazeLayout, farthestMazeCell, mazeDistances } from './maze-layout';
-import { makeFruitMist } from './fruit-mist';
+import {makeCollectibleStar} from './collectible-star';
+import {makeFruitMist} from './fruit-mist';
 import {sceneryShadowBatch} from './scenery-shadows';
 import {instancedLod,roundedCoarseShape} from './instanced-lod';
 type Wall={x:number;z:number;hx:number;hz:number};
@@ -13,7 +14,7 @@ export class HedgeMaze {
   readonly layout=mazeLayout();
   readonly rewardCell=farthestMazeCell(this.layout);
   readonly rewardPosition=new T.Vector3(-30+(this.rewardCell%7)*10,0,-30+Math.floor(this.rewardCell/7)*10);
-  private star=new T.Group();
+  private star=makeCollectibleStar('#ffd35a',1.45,{color:'#ffd12a',opacity:.34});
   private aura?:T.Group;
   private sparkles?:T.InstancedMesh;
   private clock=0;
@@ -74,10 +75,7 @@ export class HedgeMaze {
     }
     const pedestal=new T.Mesh(new T.CylinderGeometry(2.1,2.4,.3,32),new T.MeshStandardMaterial({color:'#d1bd85',roughness:.8}));pedestal.position.copy(this.rewardPosition);pedestal.position.y=.15;pedestal.receiveShadow=true;root.add(pedestal);
     this.star.position.copy(this.rewardPosition);
-    const shape=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.62:1.4,x=Math.cos(a)*r,y=Math.sin(a)*r;if(i===0)shape.moveTo(x,y);else shape.lineTo(x,y);}shape.closePath();
-    const starGeometry=new T.ExtrudeGeometry(shape,{depth:.32,bevelEnabled:true,bevelSize:.12,bevelThickness:.1,bevelSegments:3,steps:1});starGeometry.center();
-    const starMesh=new T.Mesh(starGeometry,new T.MeshStandardMaterial({color:'#ffd35a',metalness:.55,roughness:.22,emissive:'#ffb52e',emissiveIntensity:.65}));this.star.add(starMesh);
-    const halo=makeFruitMist(0);halo.material=halo.material.clone();halo.material.color.set('#ffdf7c');halo.material.opacity=.45;halo.position.set(0,0,-.2);halo.scale.set(5,5,1);this.star.add(halo);root.add(this.star);
+    this.star.name='Maze golden collectible star';root.add(this.star);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#294c38';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e4c67b';ctx.lineWidth=8;ctx.strokeRect(6,6,756,180);ctx.fillStyle='#fff1bd';ctx.textAlign='center';ctx.font='bold 48px sans-serif';ctx.textBaseline='middle';drawLocalizedText(ctx,'ЗВЁЗДНЫЙ ЛАБИРИНТ',384,96);const sign=new T.Mesh(new T.PlaneGeometry(10,2.5),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,8.3,37);root.add(sign);}
     }

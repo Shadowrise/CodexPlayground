@@ -7,11 +7,11 @@ type Node={x:number;z:number;point:PidgiePoint;cost:number;gap:number;parent?:No
  * A detour may initially lead away from the player, including out of a grove.
  * Every edge obeys the same surface/collision rules as actual movement.
  */
-export function pidgieFollowPath(from:PidgiePoint,player:PidgiePoint,clear:(a:PidgiePoint,b:PidgiePoint)=>boolean,followDistance=PIDGIE_FOLLOW_DISTANCE):PidgiePoint[]{
+export function pidgieFollowPath(from:PidgiePoint,player:PidgiePoint,clear:(a:PidgiePoint,b:PidgiePoint)=>boolean,followDistance=PIDGIE_FOLLOW_DISTANCE,maxNodes=MAX_NODES):PidgiePoint[]{
  const gap=(p:PidgiePoint)=>Math.abs(Math.hypot(p[0]-player[0],p[1]-player[1])-followDistance);
  const start:Node={x:0,z:0,point:from,cost:0,gap:gap(from)},open=[start],costs=new Map<string,number>([['0,0',0]]);
  let best=start;
- for(let visited=0;open.length&&visited<MAX_NODES;visited++){
+ for(let visited=0;open.length&&visited<maxNodes;visited++){
   let index=0;for(let i=1;i<open.length;i++)if(open[i].cost+open[i].gap<open[index].cost+open[index].gap)index=i;
   const current=open.splice(index,1)[0];
   if(current.cost!==costs.get(`${current.x},${current.z}`))continue;

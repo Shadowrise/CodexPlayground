@@ -63,7 +63,9 @@ continue from the latest snapshot, including NPC health and flight state.
 Synced: players (name, colour, pose, position, orientation, size, score), NPCs,
 fruit consumption, maze-star cooldown, mill switch, carts, balloons, fireflies,
 swing angle and attraction leases. The server arbitrates fruit/star claims and
-exclusive leases. Players retain immediate local movement; remote avatars are
+exclusive leases. The treehouse ladder/deck (`tree:0`) and swing (`swing:0`)
+have separate leases, so different players can use them simultaneously. Only
+the swing passenger publishes its angle. Players retain immediate local movement; remote avatars are
 smoothed. Transport riders publish the state of their leased vehicle; the host
 incorporates it into shared snapshots. Static scenery and fruit layouts use the
 same deterministic generation on every client.
@@ -146,6 +148,14 @@ the same signed session and same-origin POST checks as history/login:
   no new periodic requests. Movement, achievements, sizes and scores are unchanged.
 
 Stale room/player actions return 409. Destructive controls ask for confirmation.
+Admin pigeon checkpoints are coalesced across the flock once per second and
+written with `storage.put(records)` in groups of up to 64 keys. Only the latest
+checkpoint per bird remains queued; a pending write prevents another flush
+from building up behind it. Failed batches remain dirty for a later retry.
+Summon RPC errors are caught inside `blockConcurrencyWhile` so a failed write
+returns an admin error without rejecting the room's critical section.
+Movement packets remain independent of persistence and are split before
+exceeding the shared 22,000-character frame budget.
 `/admin/favicon.svg` provides a Kirby-with-shield icon for admin browser tabs.
 
 The full chat is stored in the room's own SQLite table, separately from the

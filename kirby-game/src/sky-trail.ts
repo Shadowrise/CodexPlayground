@@ -4,15 +4,15 @@ import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
 import {skyGlass,mergeSkyDetails,mergeSkyMetal,SkyMovingDetails} from './sky-trail-visuals';
 import {collideSkyPlatforms} from './sky-trail-collision';
+import {makeCollectibleStar} from './collectible-star';
 import type {CharacterController} from './controller';
 import {SKY_TRAIL_SITE as SITE,SKY_PLATFORMS as PLATFORMS,SKY_CHECKPOINTS as CHECKPOINTS,SKY_COLORS as COLORS,rainbowHeight,skySurfaces,SKY_RAINBOW_START,SKY_RAINBOW_END,platformThickness} from './sky-trail-layout';
 export type SkySound='bounce'|'checkpoint'|'star'|'leaves';
-function starGeometry(){const s=new T.Shape();for(let i=0;i<10;i++){const a=Math.PI/2+i*Math.PI/5,r=i%2?.43:1;if(i)s.lineTo(Math.cos(a)*r,Math.sin(a)*r);else s.moveTo(Math.cos(a)*r,Math.sin(a)*r);}s.closePath();return new T.ExtrudeGeometry(s,{depth:.22,bevelEnabled:true,bevelSize:.07,bevelThickness:.06,bevelSegments:2,steps:1});}
 export class SkyTrail{
  readonly group=new T.Group();readonly entry=new T.Vector3(SITE.x+PLATFORMS[0].x,0,SITE.z+PLATFORMS[0].z-6);
  readonly landing=new T.Vector3(SITE.x,0,SITE.z);
  readonly lower=new T.Group();readonly upper=new T.Group();
- private leaves=new LeafPile(4.7,4.2);private star=new T.Group();private cores:T.Mesh[]=[];private moving:SkyMovingDetails;private time=0;private flags:{mesh:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;checkpoint:number}[]=[];
+ private leaves=new LeafPile(4.7,4.2);private star=makeCollectibleStar('#ffe07b',1,{color:'#ffd12a',opacity:.34});private cores:T.Mesh[]=[];private moving:SkyMovingDetails;private time=0;private flags:{mesh:T.Mesh<T.PlaneGeometry,T.MeshBasicMaterial>;checkpoint:number}[]=[];
  private fall:number|undefined;private base=0;private inCourse=false;
  private rider?:CharacterController;private travel?:{from:T.Vector3;to:T.Vector3;elapsed:number;duration:number;leaves:boolean;landed:boolean;pad:T.Vector3;trampoline:T.Group;launched:boolean};
  get active(){return !!this.rider;}
@@ -22,7 +22,7 @@ export class SkyTrail{
  }
  constructor(private sound:(kind:SkySound)=>void=()=>{}){
   this.group.name='Небесная тропа — сияющие ступени';this.group.position.set(SITE.x,0,SITE.z);
-  const cube=new T.BoxGeometry(1,1,1),edges=new T.EdgesGeometry(cube),crystal=new T.OctahedronGeometry(.5),star=starGeometry();
+  const cube=new T.BoxGeometry(1,1,1),edges=new T.EdgesGeometry(cube),crystal=new T.OctahedronGeometry(.5);
   const glowing=COLORS.map(color=>new T.MeshBasicMaterial({color}));
   const glass=COLORS.map(skyGlass),details:T.Mesh[]=[],frames:T.LineSegments[]=[];
   const ringGeometry=new T.TorusGeometry(.68,.025,5,28),beadGeometry=new T.SphereGeometry(.07,6,4);
@@ -51,8 +51,8 @@ export class SkyTrail{
   // Hollow ornaments stay outside the jump route; only the summit reward is a star.
   const ornaments=[new T.TorusGeometry(.55,.07,7,32),new T.TorusGeometry(.55,.07,7,4),new T.TorusGeometry(.55,.07,7,6)];
   for(let i=0;i<56;i++){const a=i*2.399,r=21+(i%3)*.6;const m=new T.Mesh(ornaments[i%3],glowing[i%7]);m.name='Sky Trail decorative ornament';m.position.set(Math.cos(a)*r,10+i*.63,Math.sin(a)*r);m.scale.setScalar(.85);this.group.add(m);this.cores.push(m);}
-  const summit=PLATFORMS.at(-1)!;const reward=new T.Mesh(star,new T.MeshStandardMaterial({color:'#fff08a',emissive:'#ffd12e',emissiveIntensity:1.1,metalness:.3,roughness:.15}));this.star.name='Sky Trail summit reward';this.star.add(reward);
-  const orbit=new T.Mesh(new T.TorusGeometry(1.5,.035,6,48),glowing[2]);orbit.rotation.x=Math.PI/2;this.star.add(orbit);this.star.position.set(summit.x-1,summit.y+2,summit.z);this.group.add(this.star);
+  const summit=PLATFORMS.at(-1)!;this.star.name='Sky Trail summit reward';
+  this.star.position.set(summit.x-1,summit.y+2,summit.z);this.group.add(this.star);
   this.lower.position.set(PLATFORMS[0].x-5,0,PLATFORMS[0].z);this.upper.position.set(summit.x+1,summit.y,summit.z);this.group.add(this.lower,this.upper);this.trampoline(this.lower);this.trampoline(this.upper);
   this.leaves.group.position.copy(this.landing).sub(this.group.position);this.group.add(this.leaves.group);
   const entrance=new T.Group();entrance.name='Sky Trail entrance sign';entrance.position.set(PLATFORMS[0].x,0,PLATFORMS[0].z-3.6);entrance.rotation.y=Math.PI;this.group.add(entrance);

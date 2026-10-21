@@ -51,4 +51,12 @@ test('prepared scenery restores placement, raw geometry, culling bounds, LOD and
  const groundShader={uniforms:{},vertexShader:'#include <uv_vertex>',fragmentShader:'#include <map_fragment>'} as unknown as T.WebGLProgramParametersWithUniforms;
  (ground.material as T.Material).onBeforeCompile(groundShader,{} as T.WebGLRenderer);assert(groundShader.uniforms.groundDetail.value instanceof T.DataTexture);
  assert(roots[3] instanceof T.Mesh);assert((roots[3] as T.Mesh).geometry.attributes.position.count>1000);
+ const mountainCrowns=world.getObjectByName('Mountain evergreen crowns')!;
+ assert(mountainCrowns.children.length>0);
+ for(const cell of mountainCrowns.children){
+  const lod=cell as T.LOD,near=lod.levels[0].object as T.InstancedMesh<T.BufferGeometry,T.MeshStandardMaterial>;
+  assert(near.material.map instanceof T.DataTexture,'baked mountain trees retain their needle texture');
+  assert.equal(near.material.map.name,'Detailed spruce foliage');
+  assert(near.geometry.attributes.position.count>(lod.levels[2].object as T.InstancedMesh).geometry.attributes.position.count*10);
+ }
 });

@@ -1,0 +1,35 @@
+{
+  "models": [
+    {
+      "calls": 2,
+      "triangles": 158,
+      "sprites": 1,
+      "lights": 0,
+      "geometries": 1
+    },
+    {
+      "calls": 2,
+      "triangles": 692,
+      "sprites": 0,
+      "lights": 0,
+      "geometries": 2
+    },
+    {
+      "calls": 5,
+      "triangles": 124,
+      "sprites": 4,
+      "lights": 0,
+      "geometries": 1
+    }
+  ],
+  "performance": {
+    "stars": 13,
+    "calls": 66,
+    "triangles": 1614,
+    "medianMs": 0.699999988079071,
+    "p90Ms": 0.9000000357627869,
+    "geometries": 6,
+    "programs": 4
+  },
+  "errors": []
+}

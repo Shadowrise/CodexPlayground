@@ -1,7 +1,7 @@
 import {CENTIPEDE_TIMES,CENTIPEDE_EMPTY_MS} from './centipede-event';
 import {hasChasers,applyChaseSnapshot,CHASERS} from './centipede-chasers';
 import {PlayerSnapshots} from './player-snapshots';
-import type {PigeonCheckpoint} from './pigeon-flock-state';
+import {ROOM_FRAME_LIMIT,type PigeonCheckpoint} from './pigeon-flock-state';
 import {emoteMessage} from './world-log';
 import {validFlowerIndex} from './musical-flower-site';
 import {validNumberDigit} from './number-garden-site';
@@ -112,7 +112,14 @@ export class NetworkSession{
   const knightPlayer=this.room.knightBattle?.players[this.id],sendKnight=knightBattleActive(this.room.knightBattle)&&(this.host||!!knightPlayer&&!knightPlayer.withdrawn&&knightPlayer.hp>0);
   if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
   if(!changed&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
-  this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase||sendKnight?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)}));
+  const frame={type:'frame',actor:changed||this.events.length||sendChase||sendKnight?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)};
+  const payload=JSON.stringify(frame);
+  if(payload.length<=ROOM_FRAME_LIMIT)this.socket.send(payload);
+  else {
+   // Flock growth must never disconnect the host and force a room handoff.
+   this.socket.send(JSON.stringify({...frame,pigeons:undefined}));
+   if(frame.pigeons?.length)this.socket.send(JSON.stringify({type:'frame',pigeons:frame.pigeons}));
+  }
   this.lastActor=serialized;this.chaseElapsed=0;if(sendWorld)this.worldElapsed=0;
  }
  close(){this.closed=true;clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();this.events=[];this.socket?.close(1000,'Left game');}

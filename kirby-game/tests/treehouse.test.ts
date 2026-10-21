@@ -33,6 +33,28 @@ test('swing mounts smoothly, moves with the ropes and can be left using interact
   assert(sounds.includes('creak'));house.interact(c);assert(!house.active);assert.equal(c.actor.position.y,0);assert.equal(c.actor.rotation.x,0);
 });
 
+test('ladder and swing have independent leases and remote rocking remains visible throughout a treehouse visit',async()=>{
+  const house=new Treehouse(),swingClient=new Treehouse(),climber=await character(),swinger=await character();
+  const ladder=TREEHOUSE_SITE.clone().add(new Vector3(-4,0,11)),swing=TREEHOUSE_SITE.clone().add(new Vector3(-11,0,3));
+  assert.equal(house.networkKey(new Vector3()),undefined);
+  assert.equal(house.networkKey(ladder.clone().setY(18)),undefined);
+  assert.equal(house.networkKey(ladder),'tree:0');assert.equal(house.networkKey(swing),'swing:0');
+  climber.actor.position.copy(ladder);house.interact(climber);
+  swinger.actor.position.copy(swing);swingClient.interact(swinger);
+  const sync=()=>{const angle=swingClient.swing.rotation.x;house.networkSwing(angle);assert.equal(house.swing.rotation.x,angle);};
+  for(let frame=0;frame<320;frame++){
+    house.update(1/60);swingClient.update(1/60);sync();
+    assert.equal(house.networkKey(climber.actor.position),'tree:0');
+    assert.equal(swingClient.networkKey(swinger.actor.position),'swing:0');
+    const localAngle=swingClient.swing.rotation.x;swingClient.networkSwing(-2);assert.equal(swingClient.swing.rotation.x,localAngle,'only its local passenger controls the swing');
+  }
+  assert(house.onBalcony(climber));assert(climber.achievements.has('treehouse'));assert(swinger.achievements.has('swing'));
+  house.update(1/60,idle,true);assert.equal(climber.state,'LeafDive');
+  for(let frame=0;frame<180;frame++){house.update(1/60);swingClient.update(1/60);sync();}
+  assert(!house.active);assert(swingClient.active,'the leaf jump never dismounts the other player');
+  swingClient.interact(swinger);assert(!swingClient.active);
+});
+
 test('Pidgie plants both feet on the real swing planks throughout the seated animation and rocking',async()=>{
   const bytes=await readFile(new URL('../public/models/pigeon-animated.glb',import.meta.url)),loader=new GLTFLoader();
   loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));

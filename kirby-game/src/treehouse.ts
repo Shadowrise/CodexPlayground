@@ -148,7 +148,11 @@ export class Treehouse {
     batchRigidMeshes(root,new Set([crown]));batchRigidMeshes(this.swing);
 
   }
-  networkSwing(angle:number){if(!this.rider){this.swingAngle=angle;this.swing.rotation.x=angle;}}
+  networkSwing(angle:number){if(!this.rider||this.activity!=='swing'){this.swingAngle=angle;this.swing.rotation.x=angle;}}
+  networkKey(position:T.Vector3){
+    if(!this.prompt(position))return;
+    return (this.rider?this.activity==='swing':position.x-TREEHOUSE_SITE.x<-7)?'swing:0':'tree:0';
+  }
   get outlineSwing(){return this.swing;}
   prompt(position:T.Vector3) {
     if(this.rider)return this.activity==='deck'?'E — прыгнуть в листья':this.activity==='swing'?'E — слезть с качелей':this.activity==='climb'?'Поднимаемся к домику…':'Прыжок в мягкие листья!';
@@ -161,8 +165,8 @@ export class Treehouse {
   interact(character:CharacterController) {
     if(this.rider){if(this.activity==='deck')this.dive();else if(this.activity==='swing')this.finish();return;}
     if(!this.prompt(character.actor.position) || character.flight.active)return;
+    this.activity=this.networkKey(character.actor.position)==='swing:0'?'swing':'climb';
     this.rider=character;this.elapsed=0;this.soundAfter=0;this.from.copy(character.actor.position);
-    this.activity=character.actor.position.clone().sub(TREEHOUSE_SITE).x<-7?'swing':'climb';
     character.setActivity(this.activity==='climb'?'Climb':'Swing');
   }
   private dive(){this.activity='dive';this.elapsed=0;this.from.copy(this.rider!.actor.position);this.rider!.setActivity('LeafDive');this.sound('cheer');}

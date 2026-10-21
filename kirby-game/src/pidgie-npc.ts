@@ -26,6 +26,7 @@ export type PidgieNpcOptions={
  kind?:WildPigeonId;
  /** Admin birds arrive from the sky and use the same ground pursuit. */
  summoned?:boolean;
+ canPlanFollow?:()=>boolean;
  safeGround:(x:number,z:number)=>boolean;
  /** Grounded body clearance; takeoff/landing still require safeGround. */
  walkGround?:(x:number,z:number)=>boolean;
@@ -61,7 +62,7 @@ export class PidgieNpc {
   this.mixer=new T.AnimationMixer(this.model);
   for(const name of PIDGIE_CLIPS){
    const source=template.animations.find(clip=>clip.name===name);if(!source)throw new Error(`Пиджи: отсутствует анимация ${name}`);
-   this.actions.set(name,this.mixer.clipAction(source.clone()));
+   this.actions.set(name,this.mixer.clipAction(options.summoned?source:source.clone()));
   }
   const seed=options.seed===undefined?(Math.random()*0x100000000)>>>0:options.seed>>>0;
   this.data={phase:'hidden',p:[0,0,0],yaw:0,elapsed:0,refuge:[0,0],target:[0,0],origin:[0,0],destination:[0,0],walkTimer:0,pause:0,cooldown:0,height:26,flightDuration:0,turnStart:0,turnTarget:0,clip:'Idle',clipTime:0,seed,fearCount:0};
@@ -216,10 +217,10 @@ export class PidgieNpc {
   };
   if(this.followRoutePlayer&&distance(this.followRoutePlayer,xz(player.position))>3){this.followRoute=[];this.followRetry=0;}
   while(this.followRoute.length&&distance(xz(from),this.followRoute[0])<.2)this.followRoute.shift();
-  if(this.followRoute.length&&!clear(xz(from),this.followRoute[0])){this.followRoute=[];this.followRetry=0;}
+  if(this.followRoute.length&&!clear(xz(from),this.followRoute[0])){this.followRoute=[];if(!this.options.summoned)this.followRetry=0;}
   let target=from.clone().lerp(goal,Math.min(1,3/from.distanceTo(goal)));
   if(!this.followRoute.length&&!clear(xz(from),xz(target))){
-   if(this.followRetry===0){this.followRoute=pidgieFollowPath(xz(from),xz(center),clear,followDistance);this.followRoutePlayer=xz(player.position);this.followRetry=.6;}
+   if(this.followRetry===0&&(this.options.canPlanFollow?.()??true)){this.followRoute=pidgieFollowPath(xz(from),xz(center),clear,followDistance,this.options.summoned?128:1024);this.followRoutePlayer=xz(player.position);this.followRetry=.6;}
    if(!this.followRoute.length){this.data.target=xz(from);this.animate('Idle');return;}
   }
   if(this.followRoute.length)target.set(this.followRoute[0][0],0,this.followRoute[0][1]);
@@ -421,6 +422,15 @@ export class PidgieNpc {
  }
 
  /** Remote presentation follows host checkpoints; it never starts another flee. */
+ presentSummoned(snapshot:PidgieState,dt:number){
+  const changed=this.data.clip!==snapshot.clip;this.remote=undefined;
+  this.data=copyState(snapshot);this.actor.visible=snapshot.phase!=='hidden';
+  this.actor.position.fromArray(snapshot.p);this.setYaw(snapshot.yaw);
+  this.animate(snapshot.clip,changed,snapshot.clipTime);
+  this.active!.time=snapshot.clipTime;this.active!.setEffectiveTimeScale(0);
+  this.mixer.update(Math.max(0,dt));this.active!.setEffectiveTimeScale(1);
+ }
+
  updateRemote(dt:number,constrain?:NpcConstraint){
   if(!this.remote||!Number.isFinite(dt)||dt<=0)return;
   if(this.remote.friend){

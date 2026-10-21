@@ -2,7 +2,7 @@ import {getLocale,t} from './i18n';
 import {SEAL_IDS,allSealsCollected,type SealProgress} from './meta-knight-seal-state';
 import './meta-knight-seal-hud.css';
 
-const COMPLETE_MS=1500,OPENING_MS=1100;
+const COMPLETE_MS=1500,OPENING_MS=1100,PICKUP_MS=5000,PORTAL_MS=8000,FADE_MS=650;
 type Stage='collecting'|'complete'|'opening'|'open';
 
 /** A room-wide quest display. Restored progress is shown without replaying rewards. */
@@ -15,6 +15,7 @@ export class MetaKnightSealHud {
  private count=0;
  private stage:Stage='collecting';
  private openedAt:number|undefined;
+ private noticeUntil:number|undefined;
  private ready=false;
  private signature='';
  constructor(){
@@ -33,12 +34,12 @@ export class MetaKnightSealHud {
   // Other quest cards and the phone sidebar follow the actual panel height,
   // including wrapped translations and the portal reveal.
   new ResizeObserver(()=>{
-   if(!this.element.hidden)document.body.style.setProperty('--seal-hud-bottom',`${Math.ceil(this.element.getBoundingClientRect().bottom)+12}px`);
+   if(!this.element.hidden)document.body.style.setProperty('--seal-hud-bottom',`${this.element.offsetTop+this.element.offsetHeight+12}px`);
   }).observe(this.element);
  }
  reset(progress:SealProgress,ready=allSealsCollected(progress)){
   this.count=SEAL_IDS.filter(id=>progress.collected[id]).length;this.ready=ready;
-  this.openedAt=undefined;this.stage=ready?'open':'collecting';this.signature='';this.element.hidden=true;
+  this.openedAt=this.noticeUntil=undefined;this.stage=ready?'open':'collecting';this.signature='';this.element.hidden=true;
   this.slots.forEach((slot,i)=>{slot.classList.toggle('filled',i<this.count);slot.classList.remove('seal-arrive');});
  }
  update(progress:SealProgress,ready:boolean,now:number,visible:boolean){
@@ -50,13 +51,19 @@ export class MetaKnightSealHud {
    else if(i>=count)slot.classList.remove('seal-arrive');
   });
   this.count=count;
+  const portalOpened=ready&&!this.ready;
+  if(gained||portalOpened)this.noticeUntil=now+(ready?PORTAL_MS:PICKUP_MS);
+  if(count===0&&!ready)this.noticeUntil=undefined;
   // The solo /portal override can open a portal with badges still missing.
-  if(ready&&!this.ready)this.openedAt=now-(count===SEAL_IDS.length?0:COMPLETE_MS);
+  if(portalOpened)this.openedAt=now-(count===SEAL_IDS.length?0:COMPLETE_MS);
   if(!ready)this.openedAt=undefined;
   this.ready=ready;
   const elapsed=this.openedAt===undefined?Infinity:now-this.openedAt;
   this.stage=!ready?'collecting':elapsed<COMPLETE_MS?'complete':elapsed<COMPLETE_MS+OPENING_MS?'opening':'open';
-  this.element.hidden=!visible;
+  const active=this.noticeUntil!==undefined&&now<this.noticeUntil+FADE_MS;
+  this.element.hidden=!visible||!active;
+  const visibility=active?(now<this.noticeUntil!?'showing':'leaving'):'hidden';
+  if(this.element.dataset.visibility!==visibility)this.element.dataset.visibility=visibility;
   const signature=[getLocale(),count,this.stage].join(':');
   if(signature!==this.signature){
    this.signature=signature;this.element.dataset.stage=this.stage;

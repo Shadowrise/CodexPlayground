@@ -1,5 +1,8 @@
 #meta-knight-seal-hud{position:fixed;z-index:26;top:18px;left:50%;transform:translateX(-50%);box-sizing:border-box;width:min(460px,calc(100vw - 32px));padding:14px 24px 16px;overflow:hidden;isolation:isolate;border:1px solid #a8a2df99;border-radius:24px;background:radial-gradient(ellipse at 50% 0,#7360ad40,transparent 75%),linear-gradient(135deg,#24253bf5,#171b30f5);box-shadow:0 8px 32px #10132250,inset 0 1px #e3d8ff1c;color:#f3ecff;text-align:center;pointer-events:none;}
 #meta-knight-seal-hud[hidden]{display:none;}
+#meta-knight-seal-hud{opacity:1;translate:0 0;transition:opacity .65s ease,translate .65s ease;}
+#meta-knight-seal-hud[data-visibility=leaving]{opacity:0;translate:0 -12px;}
+@starting-style{#meta-knight-seal-hud[data-visibility=showing]{opacity:0;translate:0 -12px;}}
 .seal-hud-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .seal-hud-heading strong{font-size:16px;font-weight:800;letter-spacing:.1px;}
 .seal-hud-heading>span{padding:3px 10px;border-radius:20px;background:#c0b3ff14;color:#cfc3ed;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
@@ -38,4 +41,4 @@ body:has(#meta-knight-seal-hud:not([hidden])) :is(#mill-quest-hud,#flower-game-h
 .touch-ui .seal-hud-slot{width:62px;height:62px;}
 .touch-ui .seal-hud-slot img{width:58px;height:58px;}
 @media(max-height:500px){.touch-ui #meta-knight-seal-hud{top:max(8px,env(safe-area-inset-top));width:310px;padding:8px 14px;}.touch-ui .seal-hud-slots{gap:18px;margin:5px 0;}.touch-ui .seal-hud-slot{width:46px;height:46px;}.touch-ui .seal-hud-slot img{width:44px;height:44px;}.touch-ui .seal-hud-portal{position:absolute;right:17px;top:50px;width:30px;height:30px;margin:0;}.touch-ui #meta-knight-seal-hud:is([data-stage=opening],[data-stage=open]) .seal-hud-message{font-size:12px;}}
-@media(prefers-reduced-motion:reduce){#meta-knight-seal-hud *,#meta-knight-seal-hud::after{animation:none!important;}}
+@media(prefers-reduced-motion:reduce){#meta-knight-seal-hud[data-visibility]{translate:none;transition:opacity .65s ease;}#meta-knight-seal-hud *,#meta-knight-seal-hud::after{animation:none!important;}}

@@ -1,0 +1,53 @@
+{
+  "models": [
+    {
+      "calls": 2,
+      "triangles": 2780,
+      "sprites": 0,
+      "lights": 0,
+      "geometries": 2
+    },
+    {
+      "calls": 2,
+      "triangles": 2780,
+      "sprites": 0,
+      "lights": 0,
+      "geometries": 2
+    },
+    {
+      "calls": 2,
+      "triangles": 2780,
+      "sprites": 0,
+      "lights": 0,
+      "geometries": 2
+    }
+  ],
+  "performance": {
+    "stars": 13,
+    "calls": 27,
+    "triangles": 36142,
+    "medianMs": 0.7000000476837158,
+    "p90Ms": 1.199999988079071,
+    "geometries": 4,
+    "programs": 3
+  },
+  "before": {
+    "stars": 13,
+    "calls": 66,
+    "triangles": 1614,
+    "medianMs": 0.699999988079071,
+    "p90Ms": 0.9000000357627869,
+    "geometries": 6,
+    "programs": 4
+  },
+  "game": {
+    "mazePickup": true,
+    "skyPickup": true,
+    "starfall": {
+      "visible": 9,
+      "sprites": 0,
+      "lights": 0
+    }
+  },
+  "errors": []
+}

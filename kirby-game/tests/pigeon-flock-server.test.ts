@@ -21,9 +21,15 @@ test('admin pigeons accumulate independently of pranks, validate host checkpoint
   }
   const host=new Socket('host'),guest=new Socket('target'),sockets=[host,guest],store=new Map<string,any>(),pending:Promise<unknown>[]=[];
   let ready=Promise.resolve();
-  const ctx={waitUntil(p:Promise<unknown>){pending.push(p);},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();ready=p;return p;},getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp(){return null;},storage:{sql:roomSql(),async get(key:string){return structuredClone(store.get(key));},async put(key:string,v:any){store.set(key,structuredClone(v));},async delete(key:string){store.delete(key);},async list({prefix}:{prefix:string}){return new Map(Array.from(store).filter(([key])=>key.startsWith(prefix)));},async deleteAll(){store.clear();},async deleteAlarm(){}}};
+  const ctx={waitUntil(p:Promise<unknown>){pending.push(p);},blockConcurrencyWhile(fn:()=>Promise<any>){const p=fn();ready=p;return p;},getWebSockets:()=>sockets,setWebSocketAutoResponse(){},getWebSocketAutoResponseTimestamp(){return null;},storage:{sql:roomSql(),async get(key:string){return structuredClone(store.get(key));},async put(key:string|Record<string,unknown>,v?:any){if(typeof key==='string')store.set(key,structuredClone(v));else for(const [k,value] of Object.entries(key))store.set(k,structuredClone(value));},async delete(key:string){store.delete(key);},async list({prefix}:{prefix:string}){return new Map(Array.from(store).filter(([key])=>key.startsWith(prefix)));},async deleteAll(){store.clear();},async deleteAlarm(){}}};
   let room=new GameRoom(ctx,{});await ready;
   room.room={id:'room',host:'host',epoch:Date.now(),fruits:Array(70).fill(null),starAt:0,mill:false,locks:{}};
+  const put=ctx.storage.put,logError=console.error;
+  try{
+   console.error=()=>{};ctx.storage.put=async()=>{throw Error('temporary disk failure');};
+   assert.equal((await room.adminPigeon('room','target')).ok,false,'storage rejection is handled inside the DO critical section');
+   assert.equal(host.readyState,1);assert.equal(guest.readyState,1);assert.equal(room.room.pigeonFlock?.length??0,0);
+  }finally{ctx.storage.put=put;console.error=logError;}
   assert.equal((await room.adminPigeon('stale','target')).ok,false);assert.equal((await room.adminPigeon('room','missing')).ok,false);
   assert.equal((await room.adminPrank('room','target','gift')).ok,true);
   for(let i=0;i<300;i++)assert.equal((await room.adminPigeon('room','target')).ok,true);
@@ -33,6 +39,25 @@ test('admin pigeons accumulate independently of pranks, validate host checkpoint
   room.webSocketMessage(guest,JSON.stringify({type:'frame',pigeons:[checkpoint]}));assert.equal(bird.checkpoint,undefined);
   room.webSocketMessage(host,JSON.stringify({type:'frame',pigeons:[{...checkpoint,bird:{...checkpoint.bird,seed:1}}]}));assert.equal(bird.checkpoint,undefined);
   room.webSocketMessage(host,JSON.stringify({type:'frame',pigeons:[checkpoint]}));assert.deepEqual(bird.checkpoint,checkpoint);assert(guest.messages.some(m=>m.type==='frame'&&m.pigeons?.[0]?.id===bird.id));
+  await Promise.all(pending);
+  let bulkWrites=0;ctx.storage.put=async(key,v)=>{if(typeof key!=='string'){bulkWrites++;assert(Object.keys(key).length<=64);}await put(key,v);};
+  const clock=Date.now;let now=clock();Date.now=()=>now;
+  try{
+   const flock=room.room.pigeonFlock;
+   for(let frame=0;frame<15;frame++){
+    now+=50;const records=flock.slice(frame*16,(frame+1)*16).map((b:any)=>({...checkpoint,id:b.id,bird:{...checkpoint.bird,seed:b.seed}}));
+    room.webSocketMessage(host,JSON.stringify({type:'frame',pigeons:records}));
+   }
+   assert.equal(bulkWrites,0,'intermediate frames only coalesce dirty snapshots');
+   room.flushPigeons(true);await Promise.all(pending);
+   assert.equal(bulkWrites,4,'240 dirty birds use four bulk writes');
+   const stored=store.get('pigeon:room:'+flock[200].id);assert.equal(stored.checkpoint.id,flock[200].id);
+   // A failed batch stays dirty and retries, without closing any socket.
+   console.error=()=>{};ctx.storage.put=async()=>{throw Error('temporary batch failure');};
+   room.pigeonDirty.set(bird.id,bird);room.flushPigeons(true);await Promise.all(pending);
+   assert(room.pigeonDirty.has(bird.id));assert.equal(host.readyState,1);assert.equal(guest.readyState,1);
+   ctx.storage.put=put;room.flushPigeons(true);await Promise.all(pending);assert.equal(room.pigeonDirty.size,0);
+  }finally{Date.now=clock;ctx.storage.put=put;console.error=logError;}
   await Promise.all(pending);assert.equal(store.get('room-state').pigeonFlock,undefined,'the flock cannot overflow the room storage value');
   room=new GameRoom(ctx,{});await ready;assert.equal(room.room.pigeonFlock.length,300);assert.deepEqual(room.room.pigeonFlock[0].checkpoint,checkpoint);
   assert.equal((await room.adminClearPigeons('stale')).ok,false);assert.equal(room.room.pigeonFlock.length,300);

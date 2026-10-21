@@ -3,16 +3,15 @@ import * as T from 'three';
 import {STAR_COUNT,STAR_INTERVAL,STAR_LIFE,STAR_LIMIT,CELEBRATE_MS,RESULTS_MS,starValue,starfallPhase,starfallAwards,type StarfallState} from './starfall';
 import {KIRBY_VARIANTS,styleVariant} from './variants';
 import {sceneryClearance} from './landmarks';
+import {makeCollectibleStar} from './collectible-star';
 const COLORS=['#ff668f','#ffc640','#63ed95','#52dfff','#9d83ff','#ff87eb','#ff974d'];
 function texture(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d')!,g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'#ffffff');g.addColorStop(.14,'#ffffffe0');g.addColorStop(.4,'#ffffff40');g.addColorStop(1,'#ffffff00');x.fillStyle=g;x.fillRect(0,0,64,64);return new T.CanvasTexture(c);}
-function starGeometry(){const shape=new T.Shape();for(let i=0;i<10;i++){const a=i*Math.PI/5+Math.PI/2,r=i%2?.43:1;const x=Math.cos(a)*r,y=Math.sin(a)*r;if(i)shape.lineTo(x,y);else shape.moveTo(x,y);}shape.closePath();const g=new T.ExtrudeGeometry(shape,{depth:.22,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.09,bevelThickness:.09});g.translate(0,0,-.11);return g;}
 export class StarfallView {
  readonly group=new T.Group();
  readonly hud=document.createElement('div');readonly results=document.createElement('dialog');
  private stars=new Map<number,{group:T.Group;origin:T.Vector3;claimed:boolean}>();
- private geometry=starGeometry();private glow=texture();private materials=COLORS.map(color=>new T.MeshStandardMaterial({color,metalness:.35,roughness:.13,emissive:color,emissiveIntensity:.55}));
+ private glow=texture();
  private glowMaterials=COLORS.map(color=>new T.SpriteMaterial({map:this.glow,color,transparent:true,opacity:.55,depthWrite:false,blending:T.AdditiveBlending}));
- private white=new T.SpriteMaterial({map:this.glow,depthWrite:false,blending:T.AdditiveBlending});
  private finale=new T.Group();private phase='';private resultKey='';private initialized=false;private center=new T.Vector3();
  constructor(private pickup:()=>void,private cheer:()=>void,leave:()=>void){
   this.hud.id='starfall-hud';this.hud.className='event-hud';this.hud.hidden=true;this.hud.setAttribute('role','status');document.body.append(this.hud);
@@ -32,9 +31,7 @@ export class StarfallView {
   this.phase=this.resultKey='';this.initialized=false;this.finale.visible=false;
  }
  private spawn(index:number,p:T.Vector3,obstacles:readonly {x:number;z:number}[]){
-  const g=new T.Group(),color=index%7,body=new T.Mesh(this.geometry,this.materials[color]);g.add(body);
-  const halo=new T.Sprite(this.glowMaterials[color]);halo.scale.setScalar(3.7);g.add(halo);
-  for(let j=0;j<3;j++){const spark=new T.Sprite(this.white);spark.position.set(Math.cos(j*2.1)*.8,Math.sin(j*2.1)*.8,.3);spark.scale.set(.14,.55,1);g.add(spark);}
+  const g=makeCollectibleStar(COLORS[index%7]);g.name=`Personal falling star ${index}`;
   const origin=p.clone();let found=false;
   for(let j=0;j<80;j++){const a=index*2.399+j*1.71,r=6+(j%12)*2,x=T.MathUtils.clamp(p.x+Math.cos(a)*r,-208,208),z=T.MathUtils.clamp(p.z+Math.sin(a)*r,-208,208);if(sceneryClearance(x,z,2)&&obstacles.every(o=>Math.hypot(o.x-x,o.z-z)>5)){origin.set(x,0,z);found=true;break;}}
   if(!found)origin.y=Math.max(0,p.y);
