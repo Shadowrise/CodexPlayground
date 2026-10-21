@@ -12,11 +12,12 @@ import { makePear } from './pear';
 import { makeCherry } from './cherry';
 import { makeGrapes } from './grapes';
 import { fruitLayout,type FruitObstacle } from './fruit-layout';
+import {shadowParts,type ShadowPart} from './prepared-shadows';
 import {startupTask} from './startup-tasks';
 import {FRUIT_EATING} from './fruit-eating';
 
 export const FRUIT_TYPES = ['Яблоко', 'Клубника', 'Арбуз', 'Груша', 'Апельсин', 'Банан', 'Виноград', 'Ананас', 'Персик', 'Вишня'] as const;
-export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean };
+export type Fruit = { type: typeof FRUIT_TYPES[number]; object: Group; eaten: boolean; shadow?:ShadowPart[] };
 type InhalingFruit={index:number;eater:CharacterController;elapsed:number;position:Vector3;rotation:Vector3;scale:Vector3;center:Vector3;start:Vector3;side:number;viewOnly:boolean;delivered:boolean};
 const sphere = new SphereGeometry(1, 16, 12);
 const materials = new Map<string, MeshLambertMaterial>();
@@ -106,7 +107,7 @@ export class FruitWorld {
       const position=positions[i];object.position.set(position.x,-.012,position.z);
       object.rotation.y=i*2.399;
       object.name = FRUIT_TYPES[kind]; this.group.add(object);
-      this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false });
+      this.fruits.push({ type: FRUIT_TYPES[kind], object, eaten: false, shadow:shadowParts(object) });
       this.centers.push(bounds[kind].getCenter(new Vector3()));
       const size=bounds[kind].getSize(new Vector3());this.radii.push(Math.max(size.x,size.z)/2);
     }

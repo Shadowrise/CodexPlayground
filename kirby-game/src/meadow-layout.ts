@@ -2,7 +2,7 @@ import {BRIDGES,flatGround as dryGround} from './pond-layout';
 import {LANDMARKS,POND_SCALE} from './landmark-sites';
 import {BALLOON_SITES} from './balloon-sites';
 import {HOME_SITE} from './home-site';
-import {MAZE_SITE,MAZE_HALF,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from './maze-layout';
+import {MAZE_SITE,MAZE_HALF,MAZE_ENTRY_POSTS} from './maze-layout';
 import {roundMeadowPath} from './meadow-path';
 import {BOSS_ARENA} from './boss-arena-site';
 import {META_KNIGHT_PORTAL,META_KNIGHT_PORTAL_APPROACH} from './meta-knight-arena-site';
@@ -64,7 +64,6 @@ export class MeadowLayout {
    if(Math.abs(x-HOME_SITE.x)<7.5&&z>HOME_SITE.z-6.8&&z<HOME_SITE.z+5.2)return true;
    if(Math.abs(x-MAZE_SITE.x)<MAZE_HALF+2.6&&Math.abs(z-MAZE_SITE.z)<MAZE_HALF+2.6)return true;
    // Reserve the complete strip and soft rim around the entrance ornaments.
-   if(MAZE_ENTRY_STONES.some(p=>Math.hypot(x-MAZE_SITE.x-p.x,z-MAZE_SITE.z-p.z)<4.1))return true;
    if(MAZE_ENTRY_POSTS.some(p=>Math.abs(x-MAZE_SITE.x-p.x)<4.25&&Math.abs(z-MAZE_SITE.z-p.z)<4.25))return true;
    // Keep sack mats beside the path, including after tree clearings reroute it.
    if(MILL_BAGS.some(p=>Math.hypot(x-p[0],z-p[2])<3.4))return true;

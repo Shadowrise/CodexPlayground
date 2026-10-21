@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {createVeinedLeafSurface} from './shrub-model';
+import {woodlandBarkMaterial} from './tree-bark';
 
 export type TreeKind='birch'|'orchard'|'autumn'|'oak';
 export type TreeDetail='near'|'middle'|'far';
@@ -13,19 +14,21 @@ const up=new T.Vector3(0,1,0);
  * All joins are measured from the rendered branch polyline, including at LOD. */
 class GeometryWriter {
  positions:number[]=[];colors:number[]=[];uvs:number[]=[];indices:number[]=[];
+ private seams:[number,number][]=[];
  vertex(p:T.Vector3,c:T.Color,shade=1,u=0,v=0){const i=this.positions.length/3;this.positions.push(p.x,p.y,p.z);this.colors.push(c.r*shade,c.g*shade,c.b*shade);this.uvs.push(u,v);return i;}
- tube(points:T.Vector3[],radius:number,endRadius:number,color:T.Color,sides:number){
+ tube(points:T.Vector3[],radius:number,endRadius:number,color:T.Color,sides:number,root=false){
   const first=this.positions.length/3;let length=0;
   for(let i=0;i<points.length;i++){
    if(i)length+=points[i].distanceTo(points[i-1]);
    const direction=points[Math.min(points.length-1,i+1)].clone().sub(points[Math.max(0,i-1)]).normalize();
    const side=new T.Vector3(0,0,1).cross(direction).normalize();if(side.lengthSq()<.01)side.set(1,0,0);
-   const normal=direction.clone().cross(side).normalize(),r=T.MathUtils.lerp(radius,endRadius,i/(points.length-1));
-   for(let j=0;j<=sides;j++){const a=j/sides*Math.PI*2;this.vertex(points[i].clone().addScaledVector(side,Math.cos(a)*r).addScaledVector(normal,Math.sin(a)*r),color,.93+.07*Math.cos(a),j/sides,length*.45);}
+   const normal=direction.clone().cross(side).normalize(),t=i/(points.length-1),taper=T.MathUtils.lerp(radius,endRadius,t);
+   for(let j=0;j<=sides;j++){const a=j/sides*Math.PI*2,flare=root?(.4+.12*Math.cos(a*3+.7))*Math.exp(-t*18):0,r=taper*(1+flare+.035*Math.sin(a*3+t*11)+.018*Math.cos(a*5-t*8));this.vertex(points[i].clone().addScaledVector(side,Math.cos(a)*r).addScaledVector(normal,Math.sin(a)*r),color,.93+.07*Math.cos(a),j/sides*Math.max(1,Math.round(radius*1.8)),length*.24);}
+   this.seams.push([first+i*(sides+1),first+i*(sides+1)+sides]);
   }
   for(let i=0;i<points.length-1;i++)for(let j=0;j<sides;j++){const a=first+i*(sides+1)+j,b=a+1,c=a+sides+1,d=c+1;this.indices.push(a,b,c,b,d,c);}
  }
- geometry(){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(this.positions,3));g.setAttribute('color',new T.Float32BufferAttribute(this.colors,3));g.setAttribute('uv',new T.Float32BufferAttribute(this.uvs,2));g.setIndex(this.indices);g.computeVertexNormals();g.computeBoundingBox();g.computeBoundingSphere();return g;}
+ geometry(){const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(this.positions,3));g.setAttribute('color',new T.Float32BufferAttribute(this.colors,3));g.setAttribute('uv',new T.Float32BufferAttribute(this.uvs,2));g.setIndex(this.indices);g.computeVertexNormals();const normals=g.attributes.normal,n=new T.Vector3(),other=new T.Vector3();for(const [a,b] of this.seams){n.fromBufferAttribute(normals,a).add(other.fromBufferAttribute(normals,b)).normalize();normals.setXYZ(a,n.x,n.y,n.z);normals.setXYZ(b,n.x,n.y,n.z);}g.computeBoundingBox();g.computeBoundingSphere();return g;}
 }
 export function treeBranchPoint(branch:TreeBranch,t:number){const u=T.MathUtils.clamp(t,0,1)*(branch.points.length-1),i=Math.min(branch.points.length-2,Math.floor(u));return branch.points[i].clone().lerp(branch.points[i+1],u-i);}
 
@@ -38,7 +41,7 @@ export function createBroadleafTree(kind:TreeKind,variation=0,detail:TreeDetail=
  const bark=new T.Color(birch?'#ddd9c8':oak?'#85644b':'#896a4b'),twigBark=new T.Color(birch?'#817262':'#816449');
  const segments=detail==='near'?5:detail==='middle'?3:2,sides=detail==='near'?(oak?6:5):detail==='middle'?4:3;
  const addBranch=(points:T.Vector3[],radius:number,parent=-1,anchor?:T.Vector3,draw=true)=>{
-  const id=branches.length;branches.push({points,radius,parent,anchor});if(draw)wood.tube(points,radius,radius*.2,parent<=0?bark:twigBark,parent<0?(detail==='near'?12:6):parent>0?(oak?Math.min(sides,4):3):sides);
+  const id=branches.length;branches.push({points,radius,parent,anchor});if(draw)wood.tube(points,radius,radius*.2,parent<=0?bark:twigBark,parent<0?(detail==='near'?12:6):parent>0?(oak?Math.min(sides,4):3):sides,parent<0);
   if(parent<=0&&radius>(oak?.25:.06)){
    const coarse=parent<0?[points[0],points[3],points[6],points[8],points.at(-1)!]:[points[0],points[Math.floor(points.length/2)],points.at(-1)!];
    shadow.tube(coarse,radius,radius*.2,bark,4);
@@ -118,18 +121,10 @@ export function createBroadleafTree(kind:TreeKind,variation=0,detail:TreeDetail=
  return result;
 }
 
-const woodMaterials=new Map<boolean,T.MeshLambertMaterial>();
-export function treeWoodMaterial(birch=false){
- if(woodMaterials.has(birch))return woodMaterials.get(birch)!;
- const width=128,height=256,data=new Uint8Array(width*height*4);
- for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-  const a=x/width*Math.PI*2,v=y/height,grain=Math.sin(a*19+.5*Math.sin(v*Math.PI*4+a*3));
-  let c=birch?245+5*grain:208+22*grain-24*Math.pow(Math.max(0,Math.cos(a*31+Math.sin(v*Math.PI*6)*.4)),10);
-  if(birch){const row=Math.floor(y/27),dy=(y%27)/27,mark=(Math.sin(a*(3+row%3)+row*3.2)+Math.sin(a*9+row))*.5;if(dy>.42&&dy<.53&&mark>.36)c=75;}
-  const i=(y*width+x)*4;data[i]=data[i+1]=data[i+2]=T.MathUtils.clamp(c,0,255);data[i+3]=255;
- }
- const map=new T.DataTexture(data,width,height);map.wrapS=map.wrapT=T.RepeatWrapping;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;map.anisotropy=4;map.needsUpdate=true;
- const material=new T.MeshLambertMaterial({vertexColors:true,map});woodMaterials.set(birch,material);return material;
+export function treeWoodMaterial(_birch=false){
+ // Species colours live on the vertices; every living trunk shares the oak's
+ // irregular plate texture instead of generating another striped map.
+ return woodlandBarkMaterial();
 }
 let leafMaterial:T.MeshLambertMaterial|undefined,fruitMaterial:T.MeshLambertMaterial|undefined;
 export function treeLeafMaterial(){

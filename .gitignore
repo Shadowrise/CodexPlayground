@@ -4,6 +4,8 @@ dist-*/
 .vercel/
 .wrangler/
 .cache/
+__pycache__/
+*.py[cod]
 # Replaced by the authored SVG icon.
 kirby-game/public/icons/pigeon.png
 .env

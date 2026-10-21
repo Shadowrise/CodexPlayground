@@ -1,0 +1,108 @@
+{
+  "inventory": {
+    "calls": 28,
+    "triangles": 110139,
+    "lights": 0
+  },
+  "views": {
+    "whole-tree": {
+      "calls": 28,
+      "triangles": 106541,
+      "medianMs": 1.100000023841858,
+      "p90Ms": 1.5
+    },
+    "cabin": {
+      "calls": 27,
+      "triangles": 73541,
+      "medianMs": 1,
+      "p90Ms": 1.4000000357627869
+    },
+    "interior": {
+      "calls": 24,
+      "triangles": 71097,
+      "medianMs": 0.800000011920929,
+      "p90Ms": 1
+    },
+    "swing": {
+      "calls": 15,
+      "triangles": 59136,
+      "medianMs": 0.800000011920929,
+      "p90Ms": 1.300000011920929
+    },
+    "branch": {
+      "calls": 16,
+      "triangles": 67792,
+      "medianMs": 0.6000000238418579,
+      "p90Ms": 0.800000011920929
+    },
+    "trunk": {
+      "calls": 12,
+      "triangles": 56692,
+      "medianMs": 0.5999999642372131,
+      "p90Ms": 0.699999988079071
+    }
+  },
+  "paired": {
+    "whole-tree": {
+      "before": {
+        "medianMs": 0.6000000238418579,
+        "p90Ms": 0.7000000476837158,
+        "calls": 23,
+        "triangles": 153778
+      },
+      "after": {
+        "medianMs": 0.7999999523162842,
+        "p90Ms": 0.800000011920929,
+        "calls": 41,
+        "triangles": 154125
+      },
+      "control": {
+        "medianMs": 0.5,
+        "p90Ms": 0.6000000238418579,
+        "calls": 23,
+        "triangles": 153778
+      }
+    },
+    "cabin": {
+      "before": {
+        "medianMs": 0.5,
+        "p90Ms": 0.6000000238418579,
+        "calls": 22,
+        "triangles": 120778
+      },
+      "after": {
+        "medianMs": 0.699999988079071,
+        "p90Ms": 0.8999999761581421,
+        "calls": 40,
+        "triangles": 121125
+      },
+      "control": {
+        "medianMs": 0.5,
+        "p90Ms": 0.699999988079071,
+        "calls": 22,
+        "triangles": 120778
+      }
+    },
+    "branch": {
+      "before": {
+        "medianMs": 0.5,
+        "p90Ms": 0.5,
+        "calls": 17,
+        "triangles": 117004
+      },
+      "after": {
+        "medianMs": 0.5,
+        "p90Ms": 0.6000000238418579,
+        "calls": 29,
+        "triangles": 115376
+      },
+      "control": {
+        "medianMs": 0.40000003576278687,
+        "p90Ms": 0.5,
+        "calls": 17,
+        "triangles": 117004
+      }
+    }
+  },
+  "errors": []
+}

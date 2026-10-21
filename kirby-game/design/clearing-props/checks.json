@@ -1,0 +1,161 @@
+{
+  "views": {
+    "home": {
+      "calls": 30,
+      "triangles": 50888,
+      "medianMs": 2.099999964237213,
+      "p90Ms": 2.300000011920929
+    },
+    "interior": {
+      "calls": 30,
+      "triangles": 53252,
+      "medianMs": 2,
+      "p90Ms": 2.399999976158142
+    },
+    "maze-entrance": {
+      "calls": 32,
+      "triangles": 775138,
+      "medianMs": 2.399999976158142,
+      "p90Ms": 2.899999976158142
+    },
+    "maze-stones": {
+      "calls": 26,
+      "triangles": 774437,
+      "medianMs": 2.299999952316284,
+      "p90Ms": 3
+    },
+    "ruins": {
+      "calls": 15,
+      "triangles": 65688,
+      "medianMs": 1.5999999642372131,
+      "p90Ms": 1.9000000357627869
+    },
+    "picnic": {
+      "calls": 32,
+      "triangles": 63278,
+      "medianMs": 1.899999976158142,
+      "p90Ms": 2.5
+    }
+  },
+  "errors": [],
+  "paired": {
+    "home": {
+      "before": {
+        "medianMs": 2.099999964237213,
+        "p90Ms": 2.800000011920929,
+        "calls": 24,
+        "triangles": 52556
+      },
+      "after": {
+        "medianMs": 1.899999976158142,
+        "p90Ms": 2.200000047683716,
+        "calls": 39,
+        "triangles": 75128
+      },
+      "control": {
+        "medianMs": 1.5,
+        "p90Ms": 1.7999999523162842,
+        "calls": 24,
+        "triangles": 52556
+      }
+    },
+    "maze": {
+      "before": {
+        "medianMs": 1.5,
+        "p90Ms": 1.699999988079071,
+        "calls": 32,
+        "triangles": 773174
+      },
+      "after": {
+        "medianMs": 2,
+        "p90Ms": 2.5,
+        "calls": 41,
+        "triangles": 784886
+      },
+      "control": {
+        "medianMs": 1.699999988079071,
+        "p90Ms": 2.400000035762787,
+        "calls": 32,
+        "triangles": 773174
+      }
+    },
+    "ruins": {
+      "before": {
+        "medianMs": 1.5,
+        "p90Ms": 2,
+        "calls": 21,
+        "triangles": 61348
+      },
+      "after": {
+        "medianMs": 1.399999976158142,
+        "p90Ms": 1.699999988079071,
+        "calls": 20,
+        "triangles": 72832
+      },
+      "control": {
+        "medianMs": 1.399999976158142,
+        "p90Ms": 1.800000011920929,
+        "calls": 21,
+        "triangles": 61348
+      }
+    },
+    "picnic": {
+      "before": {
+        "medianMs": 1.800000011920929,
+        "p90Ms": 2.5,
+        "calls": 40,
+        "triangles": 65114
+      },
+      "after": {
+        "medianMs": 1.7000000476837158,
+        "p90Ms": 2.099999964237213,
+        "calls": 44,
+        "triangles": 73334
+      },
+      "control": {
+        "medianMs": 1.7000000476837158,
+        "p90Ms": 2.199999988079071,
+        "calls": 40,
+        "triangles": 65114
+      }
+    }
+  },
+  "before": {
+    "home": {
+      "calls": 19,
+      "triangles": 37800,
+      "medianMs": 1.2000000476837158,
+      "p90Ms": 1.699999988079071
+    },
+    "interior": {
+      "calls": 19,
+      "triangles": 40164,
+      "medianMs": 1.0999999642372131,
+      "p90Ms": 1.300000011920929
+    },
+    "maze-entrance": {
+      "calls": 27,
+      "triangles": 770726,
+      "medianMs": 1.199999988079071,
+      "p90Ms": 1.399999976158142
+    },
+    "maze-stones": {
+      "calls": 21,
+      "triangles": 770025,
+      "medianMs": 1,
+      "p90Ms": 1.199999988079071
+    },
+    "ruins": {
+      "calls": 15,
+      "triangles": 58392,
+      "medianMs": 0.7999999523162842,
+      "p90Ms": 1
+    },
+    "picnic": {
+      "calls": 28,
+      "triangles": 56490,
+      "medianMs": 1,
+      "p90Ms": 1.4000000357627869
+    }
+  }
+}

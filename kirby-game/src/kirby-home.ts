@@ -1,7 +1,7 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {batchRigidMeshes} from './rigid-batch';
 import {DogHouse} from './dog-house';
-import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
+import {makeHomeModel} from './home-model';
 import {BedQuilt,BED_REST,BED_MATTRESS_Y,BED_COVER_FOLD,BED_PIGEON_REST,BED_PIGEON_COVER_FOLD,BED_META_KNIGHT_REST,BED_META_KNIGHT_COVER_FOLD,type BedQuiltProfile} from './bed-quilt';
 import {fitRider,restoreRider,riderFit} from './rider-size';
 import { awardFirst } from './score';
@@ -36,42 +36,9 @@ export class KirbyHome {
   get active(){return !!this.sleeper;}
   constructor(){
     this.group.name='Kirby home and bed';this.group.position.set(HOME_SITE.x,0,HOME_SITE.z);
-    const box=new T.BoxGeometry(1,1,1),ball=new T.SphereGeometry(1,20,12),materials=new Map<string,T.MeshStandardMaterial>();
-    const part=(color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,round=false,parent=this.group)=>{if(!materials.has(color))materials.set(color,new T.MeshStandardMaterial({color,roughness:.85}));const mesh=new T.Mesh(round?ball:box,materials.get(color));mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;};
-    part('#a38d72',0,.1,0,11,.2,10);
-    for(let i=0;i<24;i++)part(i%2?'#c89d68':'#b98b57',-4.8+i*.42,.26,0,.39,.12,8.7);
-    part('#efd8b1',0,2.7,-4.2,10,5.3,.28);
-    for(const x of [-5,5]){part('#efd8b1',x,2.7,-.5,.28,5.3,7.5);for(const z of [-4.2,3.2])part('#976848',x,2.7,z,.3,5.5,.3);}
-    part('#a4734d',0,5.4,3.25,10.4,.3,.3);
-    this.group.add(this.roof);
-    this.roof.name='Kirby home tiled roof';
-    for(const side of [-1,1]){
-      const backing=part('#a4734d',side*2.75,6.54,-.465,6.27,.08,9.22,false,this.roof);
-      backing.rotation.z=-side*Math.atan2(.27,.55);
-    }
-    for(const side of [-1,1])for(let row=0;row<10;row++)for(let col=0;col<18;col++){
-      const tile=part(['#b9516b','#c7687d','#a94764'][(col+row)%3],side*(row+.5)*.55,7.9-row*.27,-4.8+col*.51,roofTileLength(.55,.27,.15,row===0?.55:undefined),.15,roofTileSpan(.51),false,this.roof);tile.rotation.z=-side*roofTilePitch(.55,.27);
-    }
-    part('#e7bb81',0,8,-.3,.28,.25,9.6,false,this.roof);
-    for(const x of [-3,3]){
-      const pane=new T.Mesh(box,this.windows);pane.position.set(x,3.2,-4.02);pane.scale.set(1.55,1.6,.08);this.group.add(pane);
-      for(const side of [-1,1])part('#8b6a4c',x+side*.84,3.2,-3.96,.12,1.9,.15);
-      part('#8b6a4c',x,3.2,-3.94,.07,1.7,.15);part('#8b6a4c',x,3.2,-3.94,1.7,.08,.15);
-      part('#ad7456',x,2.23,-3.75,2,.25,.5);
-      for(let j=0;j<7;j++)part(j%2?'#e9adbd':'#e4c354',x-.65+j*.22,2.48,-3.75,.16,.2,.16,true);
-    }
-    // Bed, quilt seams, pillow and rounded wooden posts.
-    part('#865d41',0,.48,-.6,3.7,.45,4.6);part('#f5e7ce',0,.83,-.6,3.5,.4,4.4);
-    const pillow=part('#fff5df',0,1.23,-1.8,1.35,.2,.57,true);pillow.name='Bed pillow';
-    for(const x of [-1.8,1.8])for(const z of [-2.9,1.7]){part('#9c704b',x,.8,z,.14,1.6,.14);part('#d3b376',x,1.65,z,.15,.15,.15,true);}
-    part('#966b48',0,1.25,-2.9,3.8,.7,.15);part('#c892a4',0,.34,3,4,.04,1.6);
-    part('#b58a58',3.1,.85,-1.8,1.25,1.15,1);part('#f3d590',3.1,1.65,-1.8,.35,.55,.35,true);
-    for(let i=0;i<7;i++)part('#c5b593',0,.08,5+i*.7,3.2,.16,.57);
+    this.group.add(makeHomeModel(this.windows,this.roof));
     if(typeof document!=='undefined'){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');if(ctx){ctx.fillStyle='#704f49';ctx.fillRect(0,0,512,128);ctx.fillStyle='#fff0c4';ctx.textAlign='center';ctx.font='bold 45px sans-serif';drawLocalizedText(ctx,'ДОМИК КИРБИ',256,78);const sign=new T.Mesh(new T.PlaneGeometry(4.6,1.15),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,4.7,3.44);this.group.add(sign);}}
-    // Merge repeated decoration into a small number of draws.
-    for(const parent of [this.group,this.roof]){const batches=new Map<string,T.Mesh[]>();for(const o of [...parent.children])if(o instanceof T.Mesh && o.material instanceof T.MeshStandardMaterial){o.updateMatrix();const key=o.geometry.uuid+o.material.uuid;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(o);}for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((m,i)=>{mesh.setMatrixAt(i,m.matrix);parent.remove(m);});mesh.castShadow=mesh.receiveShadow=true;mesh.computeBoundingSphere();parent.add(mesh);}}
-    batchRigidMeshes(this.group,new Set(this.group.children.filter(o=>o instanceof T.Mesh&&(o.material===this.windows||(!Array.isArray(o.material)&&'color' in o.material&&(o.material as T.MeshStandardMaterial).color.getHexString()==='fff5df')))));
-    batchRigidMeshes(this.roof);batchRigidMeshes(this.dogHouse);
+    batchRigidMeshes(this.dogHouse);
     this.group.add(this.quilt);
     this.group.add(this.dogHouse);
   }

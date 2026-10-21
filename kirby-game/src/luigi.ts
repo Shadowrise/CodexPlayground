@@ -17,6 +17,7 @@ export function updateLuigiIdle(model:T.Group,dt:number) {
 /** Seated, fully modelled passenger; face and clothing details are geometry. */
 export function makeLuigi() {
   const g=new T.Group();g.name='Luigi · permanent passenger';
+  g.userData.characterShadow=true;
   const mats=new Map<string,T.MeshStandardMaterial>();
   const sphere=new T.SphereGeometry(1,28,20);
   const mat=(c:string)=>{if(!mats.has(c))mats.set(c,new T.MeshStandardMaterial({color:c,roughness:c==='#154ca2'?.8:.57}));return mats.get(c)!;};

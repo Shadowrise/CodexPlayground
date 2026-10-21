@@ -11,7 +11,7 @@ import {fileURLToPath} from 'node:url';
 
 const base=process.env.GAME_URL??'http://127.0.0.1:5178',output=new URL('../node_modules/.cache/pigeon-flock/',import.meta.url);
 await mkdir(output,{recursive:true});
-const real=process.argv.includes('--real-worker'),stress=process.argv.includes('--stress');let worker;
+const real=process.argv.includes('--real-worker'),stress=process.argv.includes('--stress'),birdCount=Number(process.env.FLOCK_BIRDS??20);let worker;
 if(real){
  const {unstable_dev}=await import('../../game-server/node_modules/wrangler/wrangler-dist/cli.js');
  const config=JSON.parse(await readFile(new URL('../../game-server/wrangler.jsonc',import.meta.url),'utf8'));
@@ -46,6 +46,7 @@ const flockUpdate=PigeonFlock.prototype.update;PigeonFlock.prototype.update=func
 `;
 async function game(id,variant){
  const context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',e=>errors.push(String(e)));
+ page.on('console',m=>{if(m.type()==='error'&&/THREE\.|WebGL|Shader Error/.test(m.text()))errors.push(m.text());});
  await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1')});
  await page.addInitScript(()=>{window.flockWire={closed:[],largest:0};const Native=window.WebSocket;window.WebSocket=class extends Native{constructor(...args){super(...args);this.addEventListener('close',e=>flockWire.closed.push({code:e.code,reason:e.reason}));}send(data){if(typeof data==='string')flockWire.largest=Math.max(flockWire.largest,data.length);super.send(data);}};});
  if(!real)for(const endpoint of ['room','players','history/solo','history/solo/**'])await page.route('**/'+endpoint,r=>r.fulfill({json:room.info()}));
@@ -66,11 +67,12 @@ try{
  const admin=await browser.newPage({viewport:{width:1500,height:900}});admin.on('pageerror',e=>errors.push(String(e)));
  if(!real)await admin.route('**/admin**',async route=>{const req=route.request(),response=await historyRoutes(new Request(req.url(),{method:req.method(),headers:await req.allHeaders(),body:req.method()==='POST'?req.postData():undefined}),env);await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:await response.text()});});
  await admin.goto((real?workerUrl:base)+'/admin');await admin.locator('#password').fill(env.ADMIN_PASSWORD);await admin.locator('#login-form button').click();await admin.locator('#online-tab').click();await admin.getByRole('button',{name:'Прислать голубя: target',exact:true}).waitFor();
- for(let i=0;i<12;i++){await admin.getByRole('button',{name:'Прислать голубя: target',exact:true}).click();await admin.locator('#online-message').filter({hasText:'Голубь уже летит'}).waitFor();}
+ for(let i=0;i<birdCount;i++){await admin.getByRole('button',{name:'Прислать голубя: target',exact:true}).click();await admin.locator('#online-message').filter({hasText:'Голубь уже летит'}).waitFor();}
  await admin.screenshot({path:new URL('admin.png',output).pathname.slice(1)});
- await host.waitForFunction(()=>flockQA.flock.birds.size===12);await host.evaluate(()=>flockQA.advance(25));
- await guest.waitForFunction(()=>flockQA.flock.birds.size===12);
+ await host.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);await host.evaluate(()=>flockQA.advance(25));
+ await guest.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);
  await host.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.phase==='follow'),undefined,{timeout:20000});
+ await guest.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.phase==='follow'),undefined,{timeout:20000});
  const summary=await host.evaluate(()=>flockQA.summary());assert(summary.min>=FLOCK_RADIUS*2-.01);assert.equal(new Set(summary.skins).size,2);
  const png=await guest.evaluate(()=>flockQA.capture());await writeFile(new URL('landed.png',output),Buffer.from(png.split(',')[1],'base64'));
  await host.evaluate(()=>flockQA.advance(12));assert((await host.evaluate(()=>flockQA.summary())).hello>0);
@@ -81,19 +83,19 @@ try{
   await guest.waitForTimeout(12000);
   performanceReport=await guest.evaluate(()=>{clearInterval(flockQA.motion);flockQA.watch=false;const stat=values=>{values.sort((a,b)=>a-b);return {mean:values.reduce((a,b)=>a+b,0)/values.length,p95:values[Math.floor(values.length*.95)],max:values.at(-1),count:values.length}};return {cpu:stat(flockQA.cpu),frames:stat(flockQA.frames),steps:stat(flockQA.steps),wire:flockWire};});
   assert.equal(performanceReport.wire.closed.length,0,'a guest pursuit must not disconnect');assert(performanceReport.wire.largest<=22000);
-  assert.equal((await host.evaluate(()=>flockQA.summary())).count,12);assert.equal((await guest.evaluate(()=>flockQA.summary())).count,12);
+  assert.equal((await host.evaluate(()=>flockQA.summary())).count,birdCount);assert.equal((await guest.evaluate(()=>flockQA.summary())).count,birdCount);
   console.log('Guest real movement',performanceReport);
  }
  await guest.evaluate(()=>flockQA.teleport(flockQA.player.actor.position.x+20,flockQA.player.actor.position.z));await host.waitForTimeout(500);await host.evaluate(()=>flockQA.advance(15));
  assert((await host.evaluate(()=>flockQA.summary())).min>=FLOCK_RADIUS*2-.01);
- await host.close();if(!real&&sockets[0].readyState===1)await room.webSocketClose(sockets[0]);await guest.waitForFunction(()=>flockQA.session.host);await guest.evaluate(()=>flockQA.advance(8));assert.equal((await guest.evaluate(()=>flockQA.summary())).count,12);
- const late=await game('late',2);await late.waitForFunction(()=>flockQA.flock.birds.size===12);assert((await late.evaluate(()=>flockQA.summary())).min>=FLOCK_RADIUS*2-.01);
+ await host.close();if(!real&&sockets[0].readyState===1)await room.webSocketClose(sockets[0]);await guest.waitForFunction(()=>flockQA.session.host);await guest.evaluate(()=>flockQA.advance(8));assert.equal((await guest.evaluate(()=>flockQA.summary())).count,birdCount);
+ const late=await game('late',2);await late.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);assert((await late.evaluate(()=>flockQA.summary())).min>=FLOCK_RADIUS*2-.01);
  await admin.getByRole('button',{name:'Разогнать всех голубей',exact:true}).click();
  await guest.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.state==='Fear'));
  const fear=await guest.evaluate(()=>flockQA.capture());await writeFile(new URL('scared.png',output),Buffer.from(fear.split(',')[1],'base64'));
  await guest.evaluate(()=>flockQA.advance(4));const flight=await guest.evaluate(()=>flockQA.capture());await writeFile(new URL('scattering.png',output),Buffer.from(flight.split(',')[1],'base64'));
  await guest.evaluate(()=>flockQA.advance(16));await guest.waitForFunction(()=>flockQA.flock.birds.size===0);await late.waitForFunction(()=>flockQA.flock.birds.size===0);
  if(!real){assert.equal(room.room.pigeonFlock.length,0);assert(!Array.from(stored.keys()).some(k=>k.startsWith('pigeon:')));}
- assert.deepEqual(errors,[]);await writeFile(new URL(stress?'stability-checks.json':'checks.json',output),JSON.stringify({host:summary,remote,performanceReport,scattered:true,errors},null,2));console.log('PASS admin button, 12 shared pigeons, both skins, landing, greetings, collision clearance, host handoff, late join and scared departure');
+ assert.deepEqual(errors,[]);await writeFile(new URL(stress?'stability-checks.json':'checks.json',output),JSON.stringify({host:summary,remote,performanceReport,scattered:true,errors},null,2));console.log('PASS admin button, '+birdCount+' shared pigeons, both skins, landing, greetings, collision clearance, host handoff, late join and scared departure');
 }catch(error){for(const context of browser.contexts())for(const page of context.pages())try{console.log('DIAGNOSTIC',await page.evaluate(()=>({wire:window.flockWire,session:window.flockQA?.session?.host,flock:window.flockQA?.flock?Array.from(flockQA.flock.birds.values(),b=>({id:b.spec.id,phase:b.npc.phase,departed:b.departed,departureY:b.departureY,p:b.npc.actor.position.toArray(),seed:b.npc.networkState().seed,follow:b.npc.networkState().followId})):null})));}catch{}throw error;
 }finally{await browser.close();await dev?.close();await worker?.stop();}

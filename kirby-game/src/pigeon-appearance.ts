@@ -5,6 +5,7 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 export function clonePigeon(template:Object3D){
  const model=cloneSkeleton(template),materials=new Map<Material,Material>();
  model.userData.character='pigeon';
+ model.userData.characterShadow=true;
  model.traverse(node=>{
   if(!(node instanceof Mesh))return;
   const own=(source:Material)=>{let material=materials.get(source);if(!material){material=source.clone();materials.set(source,material);}return material;};

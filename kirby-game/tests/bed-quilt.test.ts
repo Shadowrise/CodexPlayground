@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFile} from 'node:fs/promises';
-import {AnimationMixer,Box3,BufferAttribute,InstancedMesh,Mesh,SkinnedMesh,Vector3} from 'three';
+import {AnimationMixer,Box3,BufferAttribute,Mesh,SkinnedMesh,Vector3} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {BedQuilt,BED_REST,BED_MATTRESS_Y,BED_PIGEON_COVER_FOLD,BED_PIGEON_REST} from '../src/bed-quilt';
 import {KirbyHome} from '../src/kirby-home';
@@ -69,7 +69,7 @@ test('quilt clears the entire mattress top and pillow fits inside the bed',()=>{
  const home=new KirbyHome(),quilt=home.group.getObjectByName('Soft blue bed quilt') as BedQuilt;
  const p=quilt.geometry.getAttribute('position');
  for(let i=0;i<p.count;i++)if(Math.abs(p.getX(i))<=1.75){assert(p.getY(i)>1.1);assert(p.getZ(i)<1.6);}
- const pillow=home.group.children.find(o=>o instanceof InstancedMesh&&!Array.isArray(o.material)&&'color' in o.material&&o.material.color.getHexString()==='fff5df')!;
+ const pillow=home.group.getObjectByName('Bed pillow');
  assert(pillow);const size=new Box3().setFromObject(pillow).getSize(new Vector3());assert(size.x<3.5);assert(size.x>2);
  assert(p.count<700);assert(!quilt.castShadow);
  assert(p instanceof BufferAttribute);const version=p.version;quilt.setPose(0,0);assert.equal(p.version,version,'Idle blanket does not update geometry every frame');

@@ -1,0 +1,112 @@
+{
+  "updated_date": "2026-10-21",
+  "baseline_revision": 3,
+  "main_melody_pitch_edits": [],
+  "selected_intro": {
+    "option": 3,
+    "title": "Перекличка флейты и гитары",
+    "source": "make_intro_options.py",
+    "duration_seconds": 9.6,
+    "status": "chosen_by_user"
+  },
+  "selected_ending": {
+    "option": 2,
+    "title": "Перекличка, как во вступлении",
+    "source": "make_ending_options.py",
+    "status": "chosen_by_user"
+  },
+  "energetic_section": {
+    "start_seconds": 86.4,
+    "piano_lead_until_seconds": 96.0,
+    "end_seconds": 105.6,
+    "instruments": [
+      "Grand piano, gradually quieter from 1:36",
+      "Nylon guitar, gradually quieter from 1:36",
+      "Acoustic drums",
+      "Featured warm pad from 1:36"
+    ],
+    "main_melody_pitch_edits": [],
+    "status": "approved_by_user_installed_in_game",
+    "revision": 5,
+    "piano_chord_volume_cc7": 76,
+    "drum_groove": "Kick, snare, light closed hi-hats, short transition fill",
+    "end_volume_fade": false,
+    "featured_pad_seconds": [
+      96,
+      105.6
+    ],
+    "chord_backing_from_96": "Prominent pad plus gradually fading piano and guitar",
+    "piano_fade_seconds": [
+      96,
+      105.6
+    ],
+    "piano_fade_target_db": -12,
+    "piano_fade_expression_start_end": [
+      106,
+      53
+    ],
+    "piano_tails_preserved": true,
+    "piano_notes_after_96": 54
+  },
+  "full_arrangement": {
+    "renderer": "add_synth_pad.py",
+    "acoustic_base_renderer": "assemble_selected.py",
+    "acoustic_base_artifact": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/meadow-day-piano-fade-base",
+    "audio_path": "C:/repos/codex-playground/kirby-game/public/audio/meadow-day.wav",
+    "midi_path": "C:/repos/codex-playground/kirby-game/design/music/meadow-day-acoustic/approved/meadow-day.mid",
+    "duration_seconds": 118.4,
+    "status": "approved_by_user_installed_in_game",
+    "approved_review_artifact": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/meadow-day-piano-fade"
+  },
+  "synth_pad": {
+    "source": "add_synth_pad.py",
+    "character": "Clearly audible warm pad, open four-note voicings, richer midrange, no detuning",
+    "start_seconds": 28.8,
+    "end_seconds": 115.2,
+    "follows_chord_changes": true,
+    "active_rms_dbfs": -20.9,
+    "lead_ducking_db": -0.54,
+    "status": "approved_by_user_installed_in_game",
+    "revision": 3,
+    "featured_seconds": [
+      96,
+      105.6
+    ],
+    "featured_rms_dbfs": -17.21,
+    "featured_gain_increase_db": 6.51
+  },
+  "notes": "Original revision-3 melody, intro 3 and ending 2. Sparse drums without shaker at 0:48-1:07.2. Latest user choice: keep piano AND pad; restore the fast chord part and gradually lower it from 1:36 to 1:45.6 instead of abruptly cutting it. Restore 54 piano notes and 61 guitar doubling notes, with smooth expression reduction 106 to 53 (approximately 12 dB). Keep the prominent pad, flute melody, bass and drums at their established levels. Preserve natural instrumental and reverb tails and the chosen ending.",
+  "light_beat_section": {
+    "start_seconds": 48,
+    "end_seconds": 67.2,
+    "instruments": [
+      "Soft kick",
+      "Cross-stick"
+    ],
+    "character": "Sparse individual drum hits; remove shaker only and preserve all approved hits",
+    "status": "approved_by_user_installed_in_game",
+    "revision": 2,
+    "hits": 32,
+    "shaker_removed": true
+  },
+  "game_installation": {
+    "date": "2026-10-21",
+    "track_id": "meadow-day",
+    "playlist_position": 1,
+    "audio": "public/audio/meadow-day.wav",
+    "midi": "design/music/meadow-day-acoustic/approved/meadow-day.mid",
+    "license": "public/audio/meadow-day-LICENSE.txt",
+    "sha256": "07a09541692e0fc9dafe76e85656592876f7073af2a46c8626e48495622d2cca",
+    "duration_seconds": 118.4,
+    "sample_rate": 44100,
+    "channels": 2,
+    "bits": 16,
+    "cache_revision": "acoustic-20261021",
+    "exact_approved_audio_preserved": true,
+    "validation": {
+      "music_tests": "2 passed",
+      "production_build": "passed",
+      "public_and_dist_audio_match_approved_sha256": true
+    }
+  }
+}

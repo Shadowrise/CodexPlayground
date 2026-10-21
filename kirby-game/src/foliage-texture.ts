@@ -1,10 +1,29 @@
 import * as T from 'three';
+import {NEEDLE_SIZE,NEEDLE_PALETTE,NEEDLE_PIXELS} from './generated/spruce-needle-image';
 
 export type FoliageKind='broadleaf'|'birch'|'spruce';
+const shared=new Map<string,T.DataTexture>();
 /** Opaque seamless detail: existing crown geometry and instancing stay intact. */
 export function createFoliageTexture(kind:FoliageKind,size=512){
+  const key=kind+size,existing=shared.get(key);if(existing)return existing;
   const data=new Uint8Array(size*size*4);
-  let seed=kind==='spruce'?511:kind==='birch'?917:1321;
+  if(kind==='spruce'){
+    const packed=atob(NEEDLE_PIXELS);
+    // Original instance colours and the old tile's linear brightness are kept.
+    // Only the neutral needle pattern changes, without a yellow/green tint or
+    // the sRGB conversion that would otherwise alter the original appearance.
+    const counts=new Uint32Array(16),lights=NEEDLE_PALETTE.map(c=>.2126*c[0]+.7152*c[1]+.0722*c[2]);
+    for(let i=0;i<packed.length;i++){const byte=packed.charCodeAt(i);counts[byte>>4]++;counts[byte&15]++;}
+    const pixels=NEEDLE_SIZE*NEEDLE_SIZE,mean=lights.reduce((sum,v,i)=>sum+v*counts[i],0)/pixels;
+    const deviation=Math.sqrt(lights.reduce((sum,v,i)=>sum+(v-mean)**2*counts[i],0)/pixels);
+    // Measured from the original 512px procedural spruce tile.
+    const shades=lights.map(v=>Math.round(T.MathUtils.clamp(163.55779266357422+(v-mean)*26.073666488266237/deviation,0,255)));
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++){
+      const source=Math.floor(y*NEEDLE_SIZE/size)*NEEDLE_SIZE+Math.floor(x*NEEDLE_SIZE/size),byte=packed.charCodeAt(source>>1),shade=shades[source%2?byte&15:byte>>4],i=(y*size+x)*4;data[i]=data[i+1]=data[i+2]=shade;data[i+3]=255;
+    }
+    const map=new T.DataTexture(data,size,size);map.name='Detailed spruce foliage';map.wrapS=map.wrapT=T.RepeatWrapping;map.repeat.set(2,1);map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.generateMipmaps=true;map.anisotropy=4;map.userData.photographicNeedles=true;map.needsUpdate=true;shared.set(key,map);return map;
+  }
+  let seed=kind==='birch'?917:1321;
   const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
   for(let i=0;i<size*size;i++){const v=160+Math.round(random()*12);data.set([v,v,v,255],i*4);}
   const pixel=(x:number,y:number,value:number,alpha=1)=>{
@@ -19,19 +38,7 @@ export function createFoliageTexture(kind:FoliageKind,size=512){
       if(a>0)pixel(x,y,value,a);
     }
   };
-  if(kind==='spruce'){
-    for(let i=0;i<180;i++){
-      const x=random()*size,y=random()*size,a=-Math.PI/2+(random()-.5)*1.2,length=28+random()*42;
-      const c=Math.cos(a),s=Math.sin(a);
-      stroke(x,y,x+c*length,y+s*length,1.1,190);
-      for(let j=0;j<11;j++)for(const side of [-1,1]){
-        const t=(j+1)/12,baseX=x+c*length*t,baseY=y+s*length*t;
-        const n=(9+random()*11)*(1-t*.45),tipX=baseX+c*n*.6-s*n*side,tipY=baseY+s*n*.6+c*n*side;
-        stroke(baseX+1,baseY+1,tipX+1,tipY+1,1.3,119);
-        stroke(baseX,baseY,tipX,tipY,.65,201+random()*48);
-      }
-    }
-  }else{
+  {
     const birch=kind==='birch';
     for(let i=0;i<(birch?340:230);i++){
       const x=random()*size,y=random()*size,a=random()*Math.PI*2,c=Math.cos(a),s=Math.sin(a);
@@ -54,5 +61,5 @@ export function createFoliageTexture(kind:FoliageKind,size=512){
   const texture=new T.DataTexture(data,size,size);texture.name=`Detailed ${kind} foliage`;
   texture.wrapS=texture.wrapT=T.RepeatWrapping;texture.repeat.set(2,1);
   texture.magFilter=T.LinearFilter;texture.minFilter=T.LinearMipmapLinearFilter;texture.generateMipmaps=true;texture.anisotropy=2;texture.needsUpdate=true;
-  return texture;
+  shared.set(key,texture);return texture;
 }

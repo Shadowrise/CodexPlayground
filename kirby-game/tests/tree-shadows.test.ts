@@ -50,7 +50,7 @@ test('sun/moon updates only shared uniforms and stay within conservative culling
  updateTreeShadows(daylight(.75));assert.equal(material.opacity,.74*.8);
 });
 
-test('spruce shadows follow the actual tiered conifer silhouette rather than the broadleaf crown',()=>{
+test('spruce shadows follow the actual conifer silhouette rather than the broadleaf crown',()=>{
  const texture=createTreeShadowTexture('spruce'),birch=createTreeShadowTexture(),p=texture.userData.projection;
  const size=texture.image.width,data=texture.image.data as Uint8Array;
  assert.equal(p.kind,'spruce');assert(p.aspect>birch.userData.projection.aspect*1.2,'conifers have a tall narrow outline');

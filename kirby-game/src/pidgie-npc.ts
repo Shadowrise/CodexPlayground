@@ -26,6 +26,8 @@ export type PidgieNpcOptions={
  kind?:WildPigeonId;
  /** Admin birds arrive from the sky and use the same ground pursuit. */
  summoned?:boolean;
+ /** Flock GPU batches own the visible rig; this actor only keeps its clock. */
+ clockOnly?:boolean;
  canPlanFollow?:()=>boolean;
  safeGround:(x:number,z:number)=>boolean;
  /** Grounded body clearance; takeoff/landing still require safeGround. */
@@ -55,14 +57,15 @@ export class PidgieNpc {
  get state(){return this.data.clip;}
  get phase(){return this.data.phase;}
  get fearCount(){return this.data.fearCount;}
+ get clipTime(){return this.active?.time??0;}
 
  constructor(template:Pick<GLTF,'scene'|'animations'>,options:PidgieNpcOptions){
-  this.options=options;this.model=clonePigeon(template.scene);
+  this.options=options;this.model=options.clockOnly?new T.Group():clonePigeon(template.scene);
   this.actor.name=`Дикий ${wildPigeonName(options.kind??'pidgie')}`;this.actor.userData.elusivePidgie=true;this.actor.userData.wildPigeon=options.kind??'pidgie';this.actor.add(this.model);
   this.mixer=new T.AnimationMixer(this.model);
   for(const name of PIDGIE_CLIPS){
    const source=template.animations.find(clip=>clip.name===name);if(!source)throw new Error(`Пиджи: отсутствует анимация ${name}`);
-   this.actions.set(name,this.mixer.clipAction(options.summoned?source:source.clone()));
+   this.actions.set(name,this.mixer.clipAction(options.clockOnly?new T.AnimationClip(name,source.duration,[]):options.summoned?source:source.clone()));
   }
   const seed=options.seed===undefined?(Math.random()*0x100000000)>>>0:options.seed>>>0;
   this.data={phase:'hidden',p:[0,0,0],yaw:0,elapsed:0,refuge:[0,0],target:[0,0],origin:[0,0],destination:[0,0],walkTimer:0,pause:0,cooldown:0,height:26,flightDuration:0,turnStart:0,turnTarget:0,clip:'Idle',clipTime:0,seed,fearCount:0};
@@ -326,10 +329,20 @@ export class PidgieNpc {
 
  /** Only the solo game or current room host calls the decision-making update. */
  startArrival(origin:T.Vector3,goal:T.Vector3,height:number){
+  this.remote=undefined;this.data.flightFloor=undefined;
   this.actor.visible=true;this.actor.position.copy(origin).setY(height);
   this.data.origin=xz(origin);this.data.destination=xz(goal);this.data.height=height;
   this.data.flightDuration=Math.max(2.5,origin.distanceTo(goal)/18);this.data.phase='fly';this.data.elapsed=0;
   this.animate('Fly',true);this.syncPosition();
+ }
+
+ /** A blocked approach starts again from the actual position, without snapping. */
+ retryArrival(goal:T.Vector3){
+  const from=this.actor.position;
+  this.data.origin=xz(from);this.data.destination=xz(goal);this.data.flightFloor=from.y;
+  this.data.height=Math.min(240,Math.max(12,from.y,this.options.flightHeight?.(from,goal)??26));
+  this.data.flightDuration=Math.max(1,Math.hypot(from.x-goal.x,from.z-goal.z)/14);
+  this.data.phase='takeoff';this.data.elapsed=0;this.animate('Fly');this.syncPosition();
  }
 
  /** Shared bread pursuit, with a separate reserved place for each summoned bird. */
@@ -337,10 +350,13 @@ export class PidgieNpc {
   if(this.remote){this.data=copyState(this.networkState());this.actor.position.fromArray(this.data.p);this.setYaw(this.data.yaw);this.remote=undefined;}
   for(let remaining=dt;remaining>1e-8;){
    const step=Math.min(STEP,remaining);remaining-=step;
-   if(this.data.phase==='fly'||this.data.phase==='landing'){
+   if(this.data.phase==='takeoff'||this.data.phase==='fly'||this.data.phase==='landing'){
     this.data.elapsed+=step;this.data.destination=xz(goal);
     const from=this.actor.position.clone(),point=from.clone();
-    if(this.data.phase==='fly'){
+    if(this.data.phase==='takeoff'){
+     point.y=T.MathUtils.lerp(this.data.flightFloor??from.y,this.data.height,smooth(this.data.elapsed/1.2));
+     if(this.data.elapsed>=1.2){this.data.phase='fly';this.data.elapsed=0;}
+    }else if(this.data.phase==='fly'){
      const u=smooth(this.data.elapsed/this.data.flightDuration);
      point.set(T.MathUtils.lerp(this.data.origin[0],goal.x,u),this.data.height,T.MathUtils.lerp(this.data.origin[1],goal.z,u));
      if(u>=1){this.data.phase='landing';this.data.elapsed=0;}

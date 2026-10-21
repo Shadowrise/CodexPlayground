@@ -8,12 +8,13 @@ import {disposeActor} from './actor-lifecycle';
 import type {NpcConstraint} from './npcs';
 import {insideMeadow} from './world-bounds';
 import {PigeonSnapshots} from './pigeon-snapshots';
+import {PigeonCrowd} from './pigeon-crowd';
 
 // Includes the animated wings: takeoff, landing and Hello need clearance too.
 export const FLOCK_RADIUS=3.2;
 const SPACING=FLOCK_RADIUS*2+.6;
-type Bird={spec:SummonedPigeon;npc:PidgieNpc;helloIn:number;helloRemaining:number;helloCount:number;departureY?:number;departed?:boolean;applied?:PigeonCheckpoint;snapshots:PigeonSnapshots;slot?:number;goal?:T.Vector3;goalAt?:T.Vector3;goalNext:number};
-type FlockOptions=PidgieNpcOptions&{prepare?:(actor:T.Object3D)=>void};
+type Bird={spec:SummonedPigeon;npc:PidgieNpc;helloIn:number;helloRemaining:number;helloCount:number;departureY?:number;departed?:boolean;applied?:PigeonCheckpoint;snapshots:PigeonSnapshots;slot?:number;goal?:T.Vector3;goalAt?:T.Vector3;goalNext:number;stalled:number};
+type FlockOptions=PidgieNpcOptions&{prepare?:(actor:T.Object3D)=>void;renderMode?:'individual'|'instanced'};
 
 /** Stable expanding rings add space as the flock grows, without a bird cap. */
 export function pigeonSlot(index:number){
@@ -30,12 +31,24 @@ export class PigeonFlock{
  readonly birds=new Map<string,Bird>();
  private cursor=0;
  private now=0;private pathBudget=0;
- constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>,private options:FlockOptions,private onHello:(position:T.Vector3)=>void=()=>{}){this.group.name='Голубиная почта Ветерка';}
+ private crowds=new Map<'pidgie'|'snowball',PigeonCrowd>();
+ constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>,private options:FlockOptions,private onHello:(position:T.Vector3)=>void=()=>{}){
+  this.group.name='Голубиная почта Ветерка';
+  if(options.renderMode!=='individual')for(const skin of ['pidgie','snowball'] as const)this.crowds.set(skin,new PigeonCrowd(templates[skin],options.prepare));
+ }
 
- private goal(player:PidgiePlayer,index:number,reserved:T.Vector3[]){
+ private landingClear(point:T.Vector3,bird:Bird,world?:NpcConstraint){
+  if(!insideMeadow(point,1)||!this.options.safeGround(point.x,point.z))return false;
+  const constrained=point.clone();world?.(constrained,1,point.clone().setY(1));
+  if(constrained.distanceToSquared(point)>.0001)return false;
+  if(bird.npc.phase!=='follow')for(const other of this.birds.values())if(other!==bird&&other.npc.actor.visible&&other.npc.actor.position.y<FLOCK_RADIUS*2&&other.npc.actor.position.distanceTo(point)<SPACING-.001)return false;
+  return true;
+ }
+
+ private goal(player:PidgiePlayer,index:number,reserved:T.Vector3[],bird:Bird,world?:NpcConstraint){
   for(let attempt=0;attempt<128;attempt++){
    const goal=player.position.clone().setY(0).add(pigeonSlot(index+attempt));
-   if(insideMeadow(goal,1)&&this.options.safeGround(goal.x,goal.z)&&reserved.every(p=>p.distanceTo(goal)>=SPACING-.001)){reserved.push(goal);return {point:goal,slot:index+attempt};}
+   if(this.landingClear(goal,bird,world)&&reserved.every(p=>p.distanceTo(goal)>=SPACING-.001))return {point:goal,slot:index+attempt};
   }
  }
 
@@ -62,10 +75,10 @@ export class PigeonFlock{
    const index=slots.get(spec.playerId)??0;slots.set(spec.playerId,index+1);
    const player=players.find(p=>p.id===spec.playerId);let bird=this.birds.get(spec.id);
    if(!bird){
-    const npc=new PidgieNpc(this.templates[spec.skin],{...this.options,kind:spec.skin,seed:spec.seed,summoned:true,canPlanFollow:()=>this.pathBudget>0&&!!this.pathBudget--});
+    const npc=new PidgieNpc(this.templates[spec.skin],{...this.options,clockOnly:this.crowds.size>0,kind:spec.skin,seed:spec.seed,summoned:true,canPlanFollow:()=>this.pathBudget>0&&!!this.pathBudget--});
     npc.model.traverse(node=>{if(node instanceof T.Mesh){node.castShadow=false;if(node instanceof T.SkinnedMesh)node.boundingSphere=new T.Sphere(new T.Vector3(0,1.2,0),6);}});
-    this.options.prepare?.(npc.actor);
-    bird={spec,npc,helloIn:1+(spec.seed%3000)/1000,helloRemaining:0,helloCount:0,snapshots:new PigeonSnapshots(),goalNext:0};
+    if(!this.crowds.size)this.options.prepare?.(npc.actor);
+    bird={spec,npc,helloIn:1+(spec.seed%3000)/1000,helloRemaining:0,helloCount:0,snapshots:new PigeonSnapshots(),goalNext:0,stalled:0};
     this.birds.set(spec.id,bird);this.group.add(npc.actor);
    }
    if(spec.checkpoint&&bird.applied!==spec.checkpoint){
@@ -100,9 +113,11 @@ export class PigeonFlock{
     bird.helloIn=Math.max(0,bird.helloIn-dt);bird.helloRemaining=Math.max(0,bird.helloRemaining-dt);continue;
    }
    let goal=bird.goal;
-   if(!goal||this.now>=bird.goalNext&&(!bird.goalAt||bird.goalAt.distanceToSquared(player.position)>.25)){
-    const candidate=this.goal(player,bird.slot??index,reserved);
+   const retry=bird.stalled>=1.5;
+   if(!goal||retry||this.now>=bird.goalNext&&(!bird.goalAt||bird.goalAt.distanceToSquared(player.position)>.25)){
+    const candidate=this.goal(player,retry?(bird.slot??index)+1:bird.slot??index,reserved,bird,world);
     if(candidate){goal=bird.goal=candidate.point;bird.slot=candidate.slot;bird.goalAt=player.position.clone();bird.goalNext=this.now+400;}
+    if(retry&&candidate){bird.npc.retryArrival(goal!);bird.stalled=0;}
    }
    if(goal&&bird.goalAt){goal=goal.clone().add(new T.Vector3(player.position.x-bird.goalAt.x,0,player.position.z-bird.goalAt.z));reserved.push(goal);}
    if(!goal)continue;
@@ -124,7 +139,15 @@ export class PigeonFlock{
      bird.npc.updateHello(dt,true);this.onHello(bird.npc.actor.position);continue;
     }
    }
+   const before=bird.npc.actor.position.clone();
    bird.npc.updateSummoned(dt,player,goal,people,constrain);
+   const arriving=bird.npc.phase==='fly'||bird.npc.phase==='landing';
+   bird.stalled=arriving&&bird.npc.actor.position.distanceToSquared(before)<dt*dt*.04?bird.stalled+dt:0;
+  }
+  for(const [skin,crowd] of this.crowds){
+   crowd.begin(specs.filter(s=>s.skin===skin).length);
+   for(const bird of this.birds.values())if(bird.spec.skin===skin)crowd.add(bird.npc);
+   crowd.end();if(specs.length&&crowd.group.parent!==this.group)this.group.add(crowd.group);else if(!specs.length)crowd.group.removeFromParent();
   }
  }
 
@@ -137,5 +160,6 @@ export class PigeonFlock{
   }
   this.cursor=birds.length?(this.cursor+PIGEON_FLOCK_BATCH)%birds.length:0;return result;
  }
- clear(){for(const bird of this.birds.values())disposeActor(bird.npc);this.birds.clear();this.cursor=0;}
+ clear(){for(const bird of this.birds.values())disposeActor(bird.npc);this.birds.clear();this.cursor=0;for(const crowd of this.crowds.values()){crowd.clear();crowd.group.removeFromParent();}}
+ dispose(){this.clear();for(const crowd of this.crowds.values())crowd.dispose();}
 }

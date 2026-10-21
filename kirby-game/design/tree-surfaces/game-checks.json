@@ -1,0 +1,110 @@
+{
+  "views": {
+    "spruce": {
+      "before": {
+        "calls": 298,
+        "triangles": 3139219,
+        "medianMs": 17,
+        "p90Ms": 20
+      },
+      "after": {
+        "calls": 307,
+        "triangles": 3133067,
+        "medianMs": 18.399999976158142,
+        "p90Ms": 21.400000035762787
+      },
+      "control": {
+        "calls": 298,
+        "triangles": 3139219,
+        "medianMs": 15.899999976158142,
+        "p90Ms": 17.5
+      }
+    },
+    "birch": {
+      "before": {
+        "calls": 244,
+        "triangles": 2301746,
+        "medianMs": 15.600000023841858,
+        "p90Ms": 17
+      },
+      "after": {
+        "calls": 253,
+        "triangles": 2301626,
+        "medianMs": 16.19999998807907,
+        "p90Ms": 17.700000047683716
+      },
+      "control": {
+        "calls": 244,
+        "triangles": 2301746,
+        "medianMs": 15.199999988079071,
+        "p90Ms": 17.599999964237213
+      }
+    },
+    "orchard": {
+      "before": {
+        "calls": 995,
+        "triangles": 6239274,
+        "medianMs": 25.399999976158142,
+        "p90Ms": 27.799999952316284
+      },
+      "after": {
+        "calls": 1026,
+        "triangles": 6241294,
+        "medianMs": 26.19999998807907,
+        "p90Ms": 28.899999976158142
+      },
+      "control": {
+        "calls": 995,
+        "triangles": 6239274,
+        "medianMs": 25.299999952316284,
+        "p90Ms": 26.899999976158142
+      }
+    },
+    "autumn": {
+      "before": {
+        "calls": 1150,
+        "triangles": 5994059,
+        "medianMs": 25.19999998807907,
+        "p90Ms": 27.80000001192093
+      },
+      "after": {
+        "calls": 1185,
+        "triangles": 5997119,
+        "medianMs": 26.30000001192093,
+        "p90Ms": 29.5
+      },
+      "control": {
+        "calls": 1150,
+        "triangles": 5994059,
+        "medianMs": 25.80000001192093,
+        "p90Ms": 28.5
+      }
+    },
+    "mountain": {
+      "before": {
+        "calls": 133,
+        "triangles": 2194342,
+        "medianMs": 14.299999952316284,
+        "p90Ms": 17.69999998807907
+      },
+      "after": {
+        "calls": 135,
+        "triangles": 2194592,
+        "medianMs": 14.600000023841858,
+        "p90Ms": 16.30000001192093
+      },
+      "control": {
+        "calls": 133,
+        "triangles": 2194342,
+        "medianMs": 14.099999964237213,
+        "p90Ms": 15
+      }
+    }
+  },
+  "errors": [],
+  "inventory": {
+    "forest": 2150,
+    "mountain": 5676,
+    "placementUnchanged": true
+  }
+}

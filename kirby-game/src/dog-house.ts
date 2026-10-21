@@ -47,6 +47,7 @@ export class DogHouse extends T.Group {
       mesh.castShadow=mesh.receiveShadow=true;this.add(mesh);
     }
     this.dogSeat.name='Shiba porch seat';this.add(this.dogSeat);
+    this.dogSeat.userData.characterShadow=true;
   }
   /** Call with the licensed asset once supplied; preserve its original textures. */
   placeDog(model:T.Object3D){

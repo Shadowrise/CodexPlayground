@@ -16,6 +16,7 @@ export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: G
   if (!source) throw new Error(knight?'Модель Meta Knight ещё не загрузилась':white?'Модель Снежка ещё не загрузилась':'Модель Пиджи ещё не загрузилась');
   if(!knight)return {model:clonePigeon(source.scene),clips:source.animations,character:'pigeon'};
   const model = cloneSkeleton(source.scene);
+  model.userData.characterShadow=true;
   const character='meta-knight';
   model.userData.character = character;
   const materials = new Map<Material, Material>();

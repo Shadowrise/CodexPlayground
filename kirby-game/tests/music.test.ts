@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { BackgroundMusic, MUSIC_TRACKS } from '../src/music';
 import { readFileSync } from 'node:fs';
 
-test('all fifteen stereo tracks exist, main is triple length, audio has headroom', () => {
+test('all fifteen stereo tracks exist, main uses the approved full arrangement, audio has headroom', () => {
   assert.equal(MUSIC_TRACKS.length,15);
   for (const [index, [file]] of MUSIC_TRACKS.entries()) {
     const wav = readFileSync(new URL(`../public/audio/${file}.wav`, import.meta.url));
@@ -11,7 +11,11 @@ test('all fifteen stereo tracks exist, main is triple length, audio has headroom
     assert.equal(wav.readUInt16LE(22), 2);
     const duration = wav.readUInt32LE(40) / wav.readUInt32LE(28);
     assert(duration > 100 && duration < 130);
-    if (index === 0) assert(Math.abs(duration - 38.4 * 3) < .001);
+    if (index === 0) {
+      assert(Math.abs(duration - 118.4) < .001);
+      assert.equal(wav.readUInt32LE(24), 44100);
+      assert.equal(wav.readUInt16LE(34), 16);
+    }
     let peak = 0;
     for (let i = 44; i < wav.length; i += 2) peak = Math.max(peak, Math.abs(wav.readInt16LE(i)));
     assert(peak > 10000 && peak < 30000);
@@ -50,6 +54,9 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     assert(first >= 0);assert(label.textContent.includes('/ 15 ·'));
     for (let i = 0; i < MUSIC_TRACKS.length; i++) {
       assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
+      if (MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0] === 'meadow-day') {
+        assert(audio!.src.endsWith('?v=acoustic-20261021'), 'load the approved arrangement instead of cached legacy audio');
+      }
       audio!.dispatchEvent(new Event('ended'));
     }
     assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[first][0]}.wav`));

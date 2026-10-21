@@ -3,8 +3,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {MEADOW_HALF_SIZE as H,MOUNTAIN_WIDTH as W} from './world-bounds';
 import {mountainSurfaceHeight as surface} from './mountain-surface';
 import {MOUNTAIN_LEDGE_SITE,MOUNTAIN_PEAK,MOUNTAIN_SUMMIT,MOUNTAIN_STEPS,mountainLocal} from './mountain-ledges-layout';
-import {spruceGeometries,spruceParts} from './spruce-shape';
-import {createFoliageTexture} from './foliage-texture';
+import {spruceGeometries,spruceParts,spruceNeedleMaterial,spruceBarkMaterial} from './spruce-shape';
 import {instancedLod,type InstanceLodPart} from './instanced-lod';
 
 /** Reserve the whole ascent, including room for jumps and the orbiting camera. */
@@ -39,7 +38,7 @@ export function createMountainWoodland(){
   const shape=mergeGeometries(pieces)!;pieces.forEach(p=>p.dispose());return shape;
  };
  const bark=new T.CylinderGeometry(.07,.13,1.5,6);bark.translate(0,.75,0);
- const leafMaterial=new T.MeshStandardMaterial({roughness:1,map:createFoliageTexture('spruce')}),barkMaterial=new T.MeshStandardMaterial({roughness:1});
+ const leafMaterial=spruceNeedleMaterial(),barkMaterial=spruceBarkMaterial();
  let seed=1783;
  const random=()=>((seed=Math.imul(seed,1664525)+1013904223|0)>>>0)/4294967296;
  const leaves:InstanceLodPart[]=[],trunks:InstanceLodPart[]=[],pose=new T.Object3D(),barkColor=new T.Color('#655645');

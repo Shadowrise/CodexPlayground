@@ -24,6 +24,8 @@ export type PidgieState = {
  cooldown:number;
  height:number;
  flightDuration:number;
+ /** Starting altitude of a summoned bird's retry takeoff. */
+ flightFloor?:number;
  turnStart:number;
  turnTarget:number;
  clip:PidgieClip;
@@ -49,6 +51,7 @@ export function validPidgieState(value:unknown):value is PidgieState {
  if((s.followId!==undefined&&!followId)||(s.followSpeed!==undefined&&!finite(s.followSpeed,0,PIDGIE_FOLLOW_MAX_SPEED)))return false;
  if((s.phase==='follow'||s.phase==='greet')&&(!followId||s.followSpeed===undefined))return false;
  if(s.friend!==undefined&&!validBreadOffering(s.friend))return false;
+ if(s.flightFloor!==undefined&&!finite(s.flightFloor,0,256))return false;
  if(['joy','toBread','feast'].includes(s.phase as string)&&!s.friend)return false;
  return PIDGIE_PHASES.includes(s.phase as PidgiePhase)
   &&PIDGIE_CLIPS.includes(s.clip as PidgieClip)

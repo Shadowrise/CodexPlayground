@@ -1,9 +1,8 @@
 import {createBroadleafTree,treeWoodMaterial,treeLeafMaterial,treeFruitMaterial,type TreeKind} from './broadleaf-tree';
 import {treeShadows} from './tree-shadows';
-import {spruceGeometries,spruceParts} from './spruce-shape';
+import {spruceGeometries,spruceParts,spruceNeedleMaterial,spruceBarkMaterial} from './spruce-shape';
 import {batchScenery} from './scenery-batch';
 import { createCoasterCurve } from './coaster';
-import { createFoliageTexture } from './foliage-texture';
 import { createGroundMaterial } from './ground-texture';
 import { meadowGeometry,MEADOW_Y } from './pond-layout';
 import {BIOME_STYLE} from './biome-style';
@@ -96,9 +95,9 @@ export function createForest() {
   forest.userData.baseTreeCount=baseTrees-clearedBaseTrees.length;forest.userData.groves=groves.groves;forest.userData.trailGroves=groves.trailGroves;
   forest.userData.meadowLayout=layout;
   const woodShadow=new THREE.CylinderGeometry(.7,1,1,6);
-  // Conifers retain their exact geometry, palette, transforms and detail ranges.
+  // Original conifer shapes, per-part colours and distance levels are retained.
   for(const [kind,instances] of batches){
-    const material=new THREE.MeshStandardMaterial({roughness:1,map:kind==='needles'?createFoliageTexture('spruce'):null});
+    const material=kind==='wood'?spruceBarkMaterial():spruceNeedleMaterial();
     const middle=kind==='wood'?woodShadow:new THREE.ConeGeometry(1,1,8,2),far=kind==='wood'?woodShadow:new THREE.ConeGeometry(1,1,6);
     forest.add(forestInstances('Decorative forest '+kind,geometries[kind],material,instances,{middle,far,middleDistance:kind==='wood'?48:64,farDistance:kind==='wood'?120:160,middleDetail:kind==='wood'?1:0,farDetail:0},true));
   }

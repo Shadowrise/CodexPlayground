@@ -1,4 +1,6 @@
 import * as T from 'three';
+import {createFoliageTexture} from './foliage-texture';
+import {woodlandBarkMaterial} from './tree-bark';
 
 /** Shared conifer shape for the visible forest and its once-baked silhouette. */
 export function spruceGeometries(){
@@ -27,3 +29,8 @@ export function spruceParts(){
  }
  return parts;
 }
+
+let needleMaterial:T.MeshStandardMaterial|undefined;
+export function spruceNeedleMaterial(){return needleMaterial??=new T.MeshStandardMaterial({roughness:1,map:createFoliageTexture('spruce')});}
+let barkMaterial:T.MeshStandardMaterial|undefined;
+export function spruceBarkMaterial(){return barkMaterial??=new T.MeshStandardMaterial({roughness:1,map:woodlandBarkMaterial().map});}

@@ -1,10 +1,6 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
-import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
-import {createBroadleafTree,treeWoodMaterial,treeLeafMaterial,createTreeBough,treeBranchPoint} from './broadleaf-tree';
-import {treeShadows} from './tree-shadows';
 import { LeafPile } from './leaf-pile';
-import {batchRigidMeshes} from './rigid-batch';
-import {makeOakBench} from './bench-model';
+import {makeTreehouseModel} from './treehouse-model';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
@@ -18,7 +14,7 @@ const DECK=TREEHOUSE_DECK_HEIGHT/TREEHOUSE_HEIGHT_SCALE;
 const SWING_SEAT_Y=-5.7,SWING_SEAT_THICKNESS=.18;
 const idle={forward:false,left:false,right:false};
 
-/** A hand-built oak lookout; static repeated details share instanced geometry. */
+/** A crafted oak lookout with static batched details and one moving swing. */
 export class Treehouse {
   readonly group=new T.Group();
   readonly swing=new T.Group();
@@ -35,118 +31,14 @@ export class Treehouse {
   onBalcony(character:CharacterController){return this.rider===character&&this.activity==='deck';}
   constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
     const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
-    const geo={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,16,10),pole:new T.CylinderGeometry(1,1,1,12),leaf:new T.SphereGeometry(1,6,4)};
-    let raised=false;
-    const mats=new Map<string,T.MeshStandardMaterial>();
-    const part=(parent:T.Group,kind:keyof typeof geo,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>{
-      if(!mats.has(color))mats.set(color,new T.MeshStandardMaterial({color,roughness:.85}));
-      const mesh=new T.Mesh(geo[kind],mats.get(color));mesh.position.set(x,y+(raised&&parent===root?9:0),z);mesh.scale.set(sx,sy,sz);mesh.rotation.set(rx,ry,rz);parent.add(mesh);return mesh;
-    };
-    const box=(color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>part(root,'box',color,x,y,z,sx,sy,sz,rx,ry,rz);
-    const beam=(a:number[],b:number[],radius:number,color:string,parent=root)=>{
-      const start=new T.Vector3(...a),end=new T.Vector3(...b),delta=end.clone().sub(start);
-      const p=part(parent,'pole',color,...start.clone().add(end).multiplyScalar(.5).toArray(),radius,delta.length(),radius);
-      p.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),delta.normalize());return p;
-    };
-    // The oak's connected skeleton uses the same attached-leaf construction as
-    // the smaller trees. Its trunk leans away from the cabin and has no roots.
-    const oak=createBroadleafTree('oak');
-    const trunk=new T.Mesh(oak.wood,treeWoodMaterial());trunk.name='Textured oak trunk';trunk.position.z=-6;trunk.receiveShadow=true;root.add(trunk);
-    const crown=new T.Mesh(oak.leaves,treeLeafMaterial().clone());crown.material.color.set('#518245');
-    crown.name='Oak leaf canopy';crown.position.z=-6;crown.castShadow=crown.receiveShadow=false;root.add(crown);
-    root.add(treeShadows([new T.Matrix4().compose(new T.Vector3(0,.018,-6),new T.Quaternion(),new T.Vector3(10,1,10))]));
-    raised=true;
-    // Wide plank deck, underfloor joists, diagonal braces and brass nail heads.
-    for(let i=0;i<30;i++){
-      const x=-5.8+i*.4;box(i%3?'#b68a50':'#c79b60',x,DECK-.13,2, .37,.26,12);
-      for(const z of [-3.6,1.8,7.6])part(root,'ball','#675044',x,DECK+.006,z,.036,.016,.036);
-    }
-    for(const x of [-5,0,5]){box('#684b32',x,8.55,2,.3,.55,12.4);beam([x,8.5,6],[0,4,-6],.18,'#805c37');}
-    for(const x of [-6,6])for(let i=0;i<13;i++){
-      box('#86633e',x,9.8,-4+i, .12,1.6,.12);
-      if(i<12)box('#c99d62',x,10.65,-3.5+i,.22,.18,1.1);
-    }
-    for(const z of [-4,8])for(let i=0;i<13;i++){
-      const x=-6+i;if(z===8 && (x===-4 || x===-3))continue;
-      box('#86633e',x,9.8,z,.12,1.6,.12);
-      if(x<6 && !(z===8 && (x===-5 || x===-4)))box('#c99d62',x+.5,10.65,z,1.1,.18,.22);
-    }
-    // Open-front cabin, teal shutters, overlapping moss-green roof shingles.
-    for(let i=0;i<15;i++){
-      const y=9.3+i*.23;box(i%3?'#bd874c':'#d5a15d',0,y,-3.1,7,.21,.18);
-      for(const x of [-3.5,3.5])box('#b58149',x,y,-1.4,.18,.21,3.5);
-    }
-    for(const x of [-3.5,3.5])for(const z of [-3.15,.4])box('#664830',x,11,z,.24,4,.24);
-    box('#755137',0,12.8,.4,7.3,.3,.25);
-    for(const side of [-1,1])box('#664830',side*1.935,13.48,-1.555,4.5,.08,4.72,0,0,-side*Math.atan2(.22,.43));
-    for(const side of [-1,1])for(let row=0;row<9;row++)for(let col=0;col<12;col++){
-      box(['#386653','#49755b','#567c5b'][(row+col)%3],side*(row+.5)*.43,14.5-row*.22,-3.7+col*.39,roofTileLength(.43,.22,.12,row===0?.43:undefined),.12,roofTileSpan(.39),0,0,-side*roofTilePitch(.43,.22));
-    }
-    beam([0,14.62,-4],[0,14.62,1],.13,'#bb995e');
-    for(const x of [-2.1,2.1]){
-      box('#345f69',x,11.3,-2.97,1.3,1.6,.08);
-      box('#e4c792',x,11.3,-2.88,.07,1.65,.08);box('#e4c792',x,11.3,-2.88,1.4,.07,.08);
-      for(const s of [-1,1])for(let j=0;j<5;j++)box('#377c73',x+s*.91,10.65+j*.3,-2.83,.4,.25,.13);
-      box('#8b5835',x,10.3,-2.5,1.75,.3,.5);
-      for(let j=0;j<7;j++)part(root,'ball',j%2?'#edbb50':'#e89bb9',x-.6+j*.2,10.62,-2.5,.15,.18,.15);
-    }
-    // Bench, telescope, rug, lanterns and little hanging pennants.
-    box('#668775',1,9.03,2,3,.04,2);
-    const bench=makeOakBench(2.5,.72);bench.name='Oak lookout bench';bench.position.set(-2,TREEHOUSE_DECK_HEIGHT,1.36);root.add(bench);
-    beam([4,9,5],[4,10.3,5],.07,'#595a4c');
-    for(let i=0;i<3;i++){const a=i*2.094;beam([4,9.9,5],[4+Math.cos(a)*.7,9,5+Math.sin(a)*.7],.045,'#71573a');}
-    beam([4,10.4,4.6],[4,10.8,5.9],.19,'#c6a254');
-    for(const x of [-5.5,5.5]){beam([x,10.7,7],[x,11.5,7],.025,'#473c33');box('#edd79a',x,11.15,7,.3,.45,.3);box('#645340',x,11.4,7,.4,.06,.4);}
-    for(let i=0;i<15;i++){
-      const x=-3.4+i*.48,y=12.65-.35*Math.sin(i/14*Math.PI);
-      beam([x,y,.6],[x+.48,12.65-.35*Math.sin((i+1)/14*Math.PI),.6],.015,'#d5c396');
-      box(['#d98169','#e8c86d','#689d9a'][i%3],x,y-.17,.6,.23,.3,.035,0,0,.18);
-    }
-    raised=false;
-    const ladderStart=root.children.length;
-    // Longer ladder, with normal rung spacing and thickness.
-    for(const x of [-4.9,-3.1])beam([x,0,11],[x,18.8,7.3],.11,'#8c6238');
-    for(let i=0;i<50;i++){
-      const y=.3+i*.37,z=11-y*3.7/18.8;
-      beam([-4.95,y,z],[-3.05,y,z],.095,'#c29a60');
-      for(const x of [-4.9,-3.1])for(let j=0;j<3;j++)box('#d7c493',x,y-.05+j*.05,z,.25,.024,.25);
-    }
-    for(const p of root.children.slice(ladderStart))p.userData.noShadow=true;
-    const ladderShadow=new T.Mesh(new T.BoxGeometry(2.1,Math.hypot(18.8,3.7),.22),new T.MeshBasicMaterial({colorWrite:false,depthWrite:false}));
-    ladderShadow.name='Stable ladder shadow';ladderShadow.position.set(-4,9.4,9.15);
-    ladderShadow.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(0,18.8,-3.7).normalize());
-    ladderShadow.castShadow=true;root.add(ladderShadow);
-    // Branch-mounted rope swing, with a broad rounded wooden seat.
-    // Route the supporting bough around the cabin, then across both rope anchors.
-    const swingRoot=treeBranchPoint(oak.branches[0],26/oak.branches[0].points.at(-1)!.y).add(new T.Vector3(0,0,-6));
-    const boughPoints=new T.CatmullRomCurve3([swingRoot,new T.Vector3(-5.3,24,-6),new T.Vector3(-8.1,17,-4.8),new T.Vector3(-9,9.2,1),new T.Vector3(-9,7.9,3)]).getPoints(28);
-    // The last horizontal part passes through both collars exactly.
-    boughPoints.push(new T.Vector3(-9.55,7.9,3),new T.Vector3(-12.45,7.9,3),new T.Vector3(-13,7.9,3));
-    const swingBough=new T.Mesh(createTreeBough(boughPoints,.55,.4),treeWoodMaterial());swingBough.name='Curved oak swing bough';swingBough.receiveShadow=true;root.add(swingBough);
-    for(const x of [-12.45,-9.55]){
-      const collar=new T.Mesh(new T.TorusGeometry(.44,.055,8,24),new T.MeshStandardMaterial({color:'#655b43',roughness:.6}));
-      collar.position.set(x,7.9,3);collar.rotation.y=Math.PI/2;root.add(collar);
-      beam([x,7.43,3],[x,7.56,3],.065,'#655b43');
-    }
-    this.swing.position.set(-11,7.5,3);root.add(this.swing);
-    for(const x of [-1.45,1.45])beam([x,0,0],[x,-5.7,0],.043,'#d2ba83',this.swing);
-    for(let i=0;i<5;i++)part(this.swing,'box','#b78b53',0,SWING_SEAT_Y,-.65+i*.32,3.3,SWING_SEAT_THICKNESS,.28);
-    for(const x of [-1.45,1.45])part(this.swing,'ball','#dec997',x,-5.68,0,.12,.12,.12);
-    this.leafPile.group.position.set(8,0,13);
-    root.add(this.leafPile.group);
-    for(let i=0;i<16;i++)part(root,'ball','#adab91',-4+Math.sin(i*.7)*.3,.045,12+i*.42,.85,.07,.3);
+    this.swing.name='Prepared swing source';
+    root.add(makeTreehouseModel(this.swing));
+    this.leafPile.group.position.set(8,0,13);root.add(this.leafPile.group);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');
       if(ctx){ctx.fillStyle='#365f51';ctx.fillRect(0,0,768,192);ctx.strokeStyle='#e8c58a';ctx.lineWidth=10;ctx.strokeRect(8,8,752,176);ctx.textAlign='center';ctx.fillStyle='#fff1cb';ctx.font='bold 62px sans-serif';ctx.textBaseline='middle';drawLocalizedText(ctx,'ДОМИК НА ДЕРЕВЕ',384,96);
-        const sign=new T.Mesh(new T.PlaneGeometry(6.4,1.6),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,20.45,.65);root.add(sign);}
+        const sign=new T.Mesh(new T.PlaneGeometry(3.58,.64),new T.MeshBasicMaterial({map:localizedCanvasTexture(canvas)}));sign.position.set(0,22.1,.65);root.add(sign);}
     }
-    for(const parent of [root,this.swing]){
-      const batches=new Map<string,T.Mesh[]>();
-      for(const p of [...parent.children])if(p instanceof T.Mesh && p.material instanceof T.MeshStandardMaterial && p!==crown){p.updateMatrix();const key=p.geometry.uuid+p.material.uuid+!!p.userData.noShadow;if(!batches.has(key))batches.set(key,[]);batches.get(key)!.push(p);}
-      for(const list of batches.values()){const mesh=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>{mesh.setMatrixAt(i,p.matrix);parent.remove(p);});mesh.castShadow=mesh.receiveShadow=!list[0].userData.noShadow;mesh.computeBoundingSphere();parent.add(mesh);}
-    }
-    batchRigidMeshes(root,new Set([crown]));batchRigidMeshes(this.swing);
-
   }
   networkSwing(angle:number){if(!this.rider||this.activity!=='swing'){this.swingAngle=angle;this.swing.rotation.x=angle;}}
   networkKey(position:T.Vector3){

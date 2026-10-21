@@ -93,6 +93,26 @@ test('large arrivals and delayed remote presentation keep bird bodies apart',()=
  host.clear();remote.clear();
 });
 
+test('twenty arrivals avoid world obstacles that the ground mask does not know about',()=>{
+ player.position.set(0,0,0);const flock=create(),birds=specs(20);
+ const world=(point:T.Vector3,_size:number,previous:T.Vector3)=>{if(point.y<1&&Math.hypot(point.x,point.z)<20)point.copy(previous);};
+ for(let i=0;i<800;i++){flock.update(.05,birds,true,[player],[],world);clearance(flock);}
+ for(const bird of flock.birds.values()){assert.equal(bird.npc.phase,'follow',bird.spec.id);assert(bird.npc.actor.position.length()>=20);}
+ flock.dispose();
+});
+
+test('an obstructed cached approach retries and lands even while its player stands still',()=>{
+ player.position.set(0,0,0);const flock=create(),birds=specs(20);let obstacle:T.Vector3|undefined;
+ const world=(point:T.Vector3,_size:number,previous:T.Vector3)=>{if(obstacle&&point.y<1&&Math.hypot(point.x-obstacle.x,point.z-obstacle.z)<6)point.copy(previous);};
+ for(let i=0;i<1400;i++){
+  flock.update(.05,birds,true,[player],[],world);clearance(flock);
+  const first=flock.birds.get(birds[0].id)!;
+  if(!obstacle&&first.npc.phase==='landing'&&first.npc.actor.position.y<10)obstacle=first.goal!.clone();
+ }
+ assert(obstacle);for(const bird of flock.birds.values())assert.equal(bird.npc.phase,'follow',bird.spec.id);
+ flock.dispose();
+});
+
 test('dismissal plays Fear once, scatters into the sky, then hides only far from the player without intersections',()=>{
  player.position.set(0,0,0);let scares=0;
  const flock=new PigeonFlock({pidgie,snowball},{safeGround:()=>true,onScare:()=>scares++}),birds=specs(24);

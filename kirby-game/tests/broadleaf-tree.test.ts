@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Vector3,LinearMipmapLinearFilter} from 'three';
 import {createBroadleafTree,treeLeafMaterial,treeWoodMaterial,type TreeBranch} from '../src/broadleaf-tree';
 import {createVeinedLeafSurface} from '../src/shrub-model';
+import {greatOakBark} from '../src/great-oak';
 
 function distanceToShoot(point:Vector3,branch:TreeBranch){
  let closest=Infinity;
@@ -46,5 +47,5 @@ test('cropped leaders finish inside a leafy dome with upward growing shoots, var
 });
 test('bark and vein textures are small, opaque, mipmapped and shared across the forest',()=>{
  const leaves=treeLeafMaterial();assert.equal(leaves.map,createVeinedLeafSurface());assert(!leaves.transparent);assert.equal(leaves.userData.leafLightTransmission,.32);
- for(const birch of [true,false]){const wood=treeWoodMaterial(birch);assert.equal(wood,treeWoodMaterial(birch));const map=wood.map!;assert(map.image.width*map.image.height<=32768);assert(map.generateMipmaps);assert.equal(map.minFilter,LinearMipmapLinearFilter);assert(map.image.data.every((v:number,i:number)=>i%4!==3||v===255));}
+ for(const birch of [true,false]){const wood=treeWoodMaterial(birch);assert.equal(wood.map,greatOakBark().map);const map=wood.map!;assert(map.image.width*map.image.height<=131072);assert(map.generateMipmaps);assert.equal(map.minFilter,LinearMipmapLinearFilter);assert(map.image.data.every((v:number,i:number)=>i%4!==3||v===255));}
 });

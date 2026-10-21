@@ -8,6 +8,9 @@ import {configureSceneryBatching} from './scenery-batch';
 import {StaticWorldMatrices} from './static-world';
 import {skipShadowOnlyColourPass} from './scenery-shadows';
 import {updateTreeShadows} from './tree-shadows';
+import {WorldShadows} from './world-shadows';
+import {restrictShadowCasters} from './prepared-shadows';
+import {GroundShadowPass} from './ground-shadow-pass';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
@@ -43,6 +46,7 @@ import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './s
 import {NpcSnapshots} from './npc-snapshots';
 import {PidgieNpc,type PidgiePlayer} from './pidgie-npc';
 import {PigeonFlock} from './pigeon-flock';
+import {pigeonPalette} from './pigeon-crowd';
 import type {PidgieState} from './pidgie-state';
 import {WILD_PIGEONS,pigeonFriendAchievement,type WildPigeonId} from './wild-pigeons';
 import {isPigeonVariant} from './variant-palette';
@@ -390,7 +394,7 @@ scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
 const RENDER_PIXEL_RATIO = 1.25;
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true, powerPreference: 'high-performance' });
 configureSceneryBatching(renderer.extensions.has('WEBGL_multi_draw'));
 renderer.setPixelRatio(RENDER_PIXEL_RATIO);
 renderer.setSize(innerWidth, innerHeight);
@@ -420,6 +424,7 @@ updateTreeShadows(daylight(currentDayPhase()));
 const shadowMaterials=new WeakSet<THREE.Material>();
 const decorativeCharacters:THREE.Object3D[]=[];
 function setupShadowMaterials(root:THREE.Object3D=scene) {
+  if(root===scene)preparedShadows.prepare();else restrictShadowCasters(root);
   if(root===scene){decorativeCharacters.length=0;
    scene.traverse(o=>{if(o.name.startsWith('Permanent Kirby passenger ')||o.name==='Luigi · permanent passenger')decorativeCharacters.push(o);});}
   root.traverse(object=>{
@@ -603,7 +608,11 @@ scene.getObjectByName('Meadow grass')?.traverse(object=>{
  object.instanceMatrix.needsUpdate=true;
 });
 scene.add(fruits.group);
+const preparedShadows=new WorldShadows(scene,coaster);
+preparedShadows.prepareFruits(fruits.fruits);
+preparedShadows.grass.visible=new URLSearchParams(location.search).get('grassShadows')!=='0';
 setupShadowMaterials();
+const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
 
 const keys = new Set<string>();
@@ -796,15 +805,16 @@ async function loadCharacter() {
     coaster.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     boats.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     watermill.bakery.setBreadModel(breadModel.scene.clone(true));bread.setModel(breadModel.scene);
-    arenaCentipede=new ArenaCentipede(centipedeModel);scene.add(arenaCentipede.group);
+    arenaCentipede=new ArenaCentipede(centipedeModel);arenaCentipede.group.userData.characterShadow=true;scene.add(arenaCentipede.group);
     await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);
     await startupTask();
-    fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
+    fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
     loadedSnowball = snowballModel;
     loadedMetaKnight = metaKnightModel;
+    pigeonPalette(pigeonModel);await startupTask();pigeonPalette(snowballModel);await startupTask();
   } catch (error) {
     console.error(error);
     selectionMessage.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');selectionMessage.hidden=false;
@@ -948,7 +958,7 @@ function returnToMenu(){
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
   for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
   for(const bird of wildBirds.values())disposeActor(bird.npc);wildBirds.clear();pidgieNpc=undefined;pidgieReady=false;
-  pigeonFlock?.clear();pigeonFlock?.group.removeFromParent();pigeonFlock=undefined;
+  pigeonFlock?.dispose();pigeonFlock?.group.removeFromParent();pigeonFlock=undefined;
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
@@ -1277,6 +1287,7 @@ renderer.setAnimationLoop((time: number) => {
   watermill.update(dt,watermill.quest.owner===(network?.id??'solo')?character?.actor:remotePlayers?.players.get(watermill.quest.owner)?.actor);
   const breadActors=new Map<string,THREE.Object3D>();if(character)breadActors.set(network?.id??'solo',character.actor);for(const [id,c] of remotePlayers?.players??[])breadActors.set(id,c.actor);
   bread.update(network?.serverNow??Date.now(),breadActors);
+  for(const loaf of bread.loaves)preparedShadows.prepareBread(loaf);
   checkCharacterUnlock();
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
@@ -1305,6 +1316,7 @@ renderer.setAnimationLoop((time: number) => {
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
   const profileRender=sceneProfiler?performance.now():0;
   const firstRenderStart=firstSceneFrame?performance.now():0;
+  preparedShadows.update(lightTime,camera.position);
   renderer.render(scene, camera);
   if(firstSceneFrame){performance.measure('kirby-first-frame',{start:firstRenderStart,end:performance.now()});firstSceneFrame=false;}
   sceneProfiler?.frame(profileRender-profileStart,performance.now()-profileRender);

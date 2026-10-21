@@ -1,0 +1,10 @@
+{
+  "sleep": {
+    "started": true,
+    "covered": true,
+    "woke": true
+  },
+  "ruins": 4,
+  "picnics": 4,
+  "errors": []
+}

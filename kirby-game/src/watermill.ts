@@ -164,12 +164,8 @@ export class Watermill {
     for(let i=0;i<7;i++)box('#987345',16.32+i*.225,2.5,3.32,.2,2.66,.12);
     for(const y of [1.6,3.25])box('#35474b',17,y,3.41,1.5,.1,.07);
     part(root,'ring','#c5a568',17.48,2.42,3.44,.13,.13,.13);
-    // Steps, planked approach and pegs are below the doorway.
+    // Keep the doorway steps; the approach follows the meadow's ground path.
     for(let i=0;i<3;i++)box('#a5a18b',17,.18+i*.26,4.6-i*.43,2.8,.35,.65);
-    for(let i=0;i<22;i++) {
-      box(i%3?'#b19360':'#9c7a4e',17,.09,5.2+i*.57,3.1,.16,.51);
-      for(const x of [15.7,18.3])part(root,'cylinder','#66503a',x,.185,5.2+i*.57,.026,.025,.026);
-    }
     // Overshot waterwheel: twin oak rims, iron tires, radial spokes and scoops.
     this.wheel.position.set(10.8,3.65,-1);root.add(this.wheel);
     for(const x of [-.8,.8]) {

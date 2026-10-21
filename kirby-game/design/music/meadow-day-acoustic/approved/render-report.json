@@ -1,0 +1,55 @@
+{
+  "title": "День на поляне — тёплый синтезаторный пэд",
+  "baseline_revision": 3,
+  "selected_intro": 3,
+  "selected_ending": 2,
+  "main_melody_and_existing_instruments_preserved": true,
+  "existing_notes_verified": 1076,
+  "pad_start_seconds": 28.8,
+  "pad_end_seconds": 115.2,
+  "duration_seconds": 118.4,
+  "pad_voice_notes": 112,
+  "pad_revision": 3,
+  "featured_pad_section_seconds": [
+    96.0,
+    105.6
+  ],
+  "featured_pad_gain_increase_db": 6.51,
+  "featured_pad_rms_dbfs": -17.21,
+  "pad_character": "Clearly audible warm synth chord bed, open four-note voicings, richer midrange, no detuning",
+  "ducking_during_lead_db": -0.54,
+  "pad_active_rms_dbfs": -20.9,
+  "mix_rms_dbfs": -15.51,
+  "peak_dbfs": -2.05,
+  "additional_peak_control_max_db": 2.57,
+  "clipped_samples": 0,
+  "audio_before_28_8_seconds_preserved": true,
+  "midi_pad_preset": "GM Pad 2 (Warm), program 89; approximate editing timbre",
+  "exact_pad_audio_stem": "warm-pad-stem.wav",
+  "energy_revision": 5,
+  "piano_fade_seconds": [
+    96,
+    105.6
+  ],
+  "piano_fade_expression_start_end": [
+    106,
+    53
+  ],
+  "monotonic_expression_steps": {
+    "10": 54,
+    "12": 54
+  },
+  "restored_piano_notes_after_96": 54,
+  "restored_fading_guitar_notes": 61,
+  "all_original_energetic_notes_preserved": true,
+  "pad_stem_byte_identical": true,
+  "whole_mix_fade": false,
+  "natural_piano_and_guitar_tails_preserved": true,
+  "existing_midi_tracks_preserved": 13,
+  "preview_source_seconds": [
+    93.6,
+    110.4
+  ],
+  "energy_rms_96_to_100_8_dbfs": -12.42,
+  "energy_rms_100_8_to_105_6_dbfs": -12.88
+}

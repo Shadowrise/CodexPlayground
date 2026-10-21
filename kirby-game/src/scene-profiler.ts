@@ -82,17 +82,19 @@ export class SceneProfiler{
    }},
    group('Вся Небесная тропа',all.filter(o=>o.name.startsWith('Небесная тропа'))),
    group('Звезда на вершине',all.filter(o=>o.name==='Sky Trail summit reward')),
-   {name:'Подробные тени листьев лабиринта (сравнение)',apply:()=>{
-    const foliage=all.filter(o=>o.name==='Detailed maze foliage'),shadows=all.filter(o=>o.name==='Stable hedge shadows');
-    const states=foliage.map(o=>[o,o.castShadow] as const),restore=this.hide(shadows);
-    foliage.forEach(o=>o.castShadow=true);
+   {name:'Подробные тени кирпичей лабиринта (сравнение)',apply:()=>{
+    const bricks=all.filter(o=>o instanceof T.InstancedMesh&&['Maze brick faces','Maze rounded brick ends','Maze coping stones','Maze recessed mortar','Maze rounded footing'].includes(o.name)),shadows=all.filter(o=>o.name==='Stable masonry shadows');
+    const states=bricks.map(o=>[o,o.castShadow] as const),restore=this.hide(shadows);
+    bricks.forEach(o=>o.castShadow=true);
     return ()=>{restore();states.forEach(([o,cast])=>o.castShadow=cast);};
    }},
-   noCasting('Тени лабиринта',all.filter(o=>o.name==='Hedge maze and golden star')),
+   noCasting('Тени лабиринта',all.filter(o=>o.name==='Stone maze and golden star')),
    group('Кучки листьев',all.filter(o=>o.name==='Layered autumn leaves')),
    group('Лес без земли',all.filter(o=>o.name==='Four woodland biomes').flatMap(o=>o.children.filter(c=>c.name!=='Biome ground'))),
    group('Кроны лиственных деревьев',all.filter(o=>/^Decorative forest (leaves|birchLeaves)/.test(o.name))),
    group('Трава',all.filter(o=>o.name==='Meadow grass')),
+   group('Заготовленные тени травы',all.filter(o=>o.name==='Prepared grass shadows')),
+   group('Все заготовленные тени окружения',all.filter(o=>o.name==='Prepared scenery shadows')),
    group('Точечные источники света',all.filter(o=>o instanceof T.PointLight)),
    group('Солнечные лучи и ореол',all.filter(o=>o.name==='Soft sun rays'||o.name==='Soft sunlight halo')),
    noCasting('Тени леса',all.filter(o=>o.name==='Four woodland biomes')),

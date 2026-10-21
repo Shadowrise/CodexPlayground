@@ -4,6 +4,7 @@ import {CELESTIAL_MAX_HEIGHT} from './day-cycle';
 import {spatialInstances} from './spatial-instances';
 import {createBroadleafTree} from './broadleaf-tree';
 import {spruceGeometries,spruceParts} from './spruce-shape';
+import {GROUND_SHADOW_OPACITY,groundShadowOpacity} from './ground-shadow-style';
 
 const direction={value:new T.Vector2(0,1)},stretch={value:1};
 let material:T.MeshBasicMaterial|undefined,geometry:T.BufferGeometry|undefined;
@@ -84,7 +85,7 @@ function shadowMaterial(){
  map.userData.projections=masks.map(m=>m.userData.projection);map.userData.atlas={size,padding,tile};
  projectionAspects=map.userData.projections.map((p:{aspect:number})=>p.aspect);spruceHalfWidth=map.userData.projections[1].halfWidth;
  masks.forEach(m=>m.dispose());
- material=new T.MeshBasicMaterial({color:'black',map,transparent:true,opacity:.64*.8,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+ material=new T.MeshBasicMaterial({color:'black',map,transparent:true,opacity:GROUND_SHADOW_OPACITY,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
  return restoreTreeShadowMaterial(material);
 }
 
@@ -136,5 +137,5 @@ export function updateTreeShadows(time:Daylight){
  stretch.value=.85+.7*(1-Math.abs(time.sunDirection[1])/CELESTIAL_MAX_HEIGHT);
  // Original near-normal calibration softened by 20% for both day and night.
  // Night needs a denser overlay because the reflected sky light is weaker.
- if(material)material.opacity=(.64+.10*time.night)*.8*time.shadowStrength;
+ if(material)material.opacity=groundShadowOpacity(time);
 }

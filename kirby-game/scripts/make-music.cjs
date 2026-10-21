@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-// Seven original arrangements, each with three evolving 16-bar sections.
+// Legacy synth arrangements. Preserve the approved acoustic first track.
 const tracks = [
   ['meadow-day', 100, 0, 391], ['citrus-walk', 108, 2, 721],
   ['mint-breeze', 92, -2, 1193], ['berry-dance', 114, 5, 2027],
@@ -8,6 +8,12 @@ const tracks = [
   ['firefly-waltz', 90, -3, 6121],
 ];
 for (const [trackIndex, [name, bpm, transpose, initialSeed]] of tracks.entries()) {
+if (name === 'meadow-day') {
+  const approved = path.resolve(__dirname, '../public/audio/meadow-day.wav');
+  if (!fs.existsSync(approved)) throw new Error('Restore the approved meadow-day.wav from Git; its editable score is in design/music/meadow-day-acoustic/approved.');
+  console.log(JSON.stringify({file: approved, source: 'approved acoustic arrangement; preserved'}));
+  continue;
+}
 const rate = 22050, beat = 60 / bpm, bars = 48, duration = bars * 4 * beat;
 const length = Math.round(rate * duration);
 const left = new Float32Array(length), right = new Float32Array(length);

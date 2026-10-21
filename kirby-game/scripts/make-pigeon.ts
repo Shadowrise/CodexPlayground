@@ -8,16 +8,17 @@ Object.assign(globalThis,{FileReader:class{
   readAsArrayBuffer(blob:Blob){void blob.arrayBuffer().then(result=>{this.result=result;this.onloadend?.();});}
   readAsDataURL(blob:Blob){void blob.arrayBuffer().then(result=>{this.result=`data:${blob.type};base64,${Buffer.from(result).toString('base64')}`;this.onloadend?.();});}
 }});
-const rgba=await readFile(new URL('../node_modules/.cache/pigeon/paint-atlas.rgba',import.meta.url));
-const {root,clips,paintMaterials}=createPigeon({width:2048,height:2048,pixels:new Uint8Array(rgba)});
+// Enable texture-backed vertex colours without decoding the authored PNG in Node.
+// UVs are normalized; this placeholder is removed before exporting the geometry.
+const {root,clips,paintMaterials}=createPigeon({width:1,height:1,pixels:new Uint8Array([255,255,255,255])});
 // The offline exporter has no browser canvas. Export UVs, then embed the exact
-// source DataTexture as PNG using the same GLB buffer, without external files.
+// authored feather PNG using the same GLB buffer, without external files.
 const maps=paintMaterials.map(m=>m.map);paintMaterials.forEach(m=>{m.map=null;});
 const raw=Buffer.from(await new GLTFExporter().parseAsync(root,{binary:true,animations:clips,onlyVisible:false}) as ArrayBuffer);paintMaterials.forEach((m,i)=>{m.map=maps[i];});
 const jsonLength=raw.readUInt32LE(12),gltf=JSON.parse(raw.subarray(20,20+jsonLength).toString()),oldBin=raw.subarray(28+jsonLength);
-const png=await readFile(new URL('../design/pigeon/pigeon-paint-atlas.png',import.meta.url));
+const png=await readFile(new URL('../design/pigeon/pigeon-feather-atlas.png',import.meta.url));
 const view=gltf.bufferViews.length;gltf.bufferViews.push({buffer:0,byteOffset:oldBin.length,byteLength:png.length});
-gltf.images=[{bufferView:view,mimeType:'image/png',name:'Unified gouache and graphite paint'}];gltf.samplers=[{magFilter:9729,minFilter:9987,wrapS:33071,wrapT:33071}];gltf.textures=[{sampler:0,source:0}];
+gltf.images=[{bufferView:view,mimeType:'image/png',name:'Pidgie layered grey-blue feathers and green-lilac collar'}];gltf.samplers=[{magFilter:9729,minFilter:9987,wrapS:33071,wrapT:33071}];gltf.textures=[{sampler:0,source:0}];
 for(const material of paintMaterials){const mat=gltf.materials.find((m:{name:string})=>m.name===material.name);if(!mat)throw Error('Paint material missing');mat.pbrMetallicRoughness.baseColorTexture={index:0};}
 const binary=Buffer.concat([oldBin,png,Buffer.alloc((4-png.length%4)%4)]);gltf.buffers[0].byteLength=binary.length;
 let json=Buffer.from(JSON.stringify(gltf));json=Buffer.concat([json,Buffer.alloc((4-json.length%4)%4,32)]);

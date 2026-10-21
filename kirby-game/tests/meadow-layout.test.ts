@@ -5,7 +5,7 @@ import {createForest} from '../src/forest';
 import {MeadowLayout,onMeadowBridge,meadowPathHalfWidth} from '../src/meadow-layout';
 import {BANK_RINGS,flatGround as dryGround,WATER_Y,BRIDGES} from '../src/pond-layout';
 import {Ponds} from '../src/ponds';
-import {MAZE_SITE,MAZE_ENTRY_STONES,MAZE_ENTRY_POSTS} from '../src/maze-layout';
+import {MAZE_SITE,MAZE_ENTRY_POSTS} from '../src/maze-layout';
 import {roundMeadowPath} from '../src/meadow-path';
 import {MILL_BAGS} from '../src/mill-quest';
 import {META_KNIGHT_PORTAL_APPROACH} from '../src/meta-knight-arena-site';
@@ -26,8 +26,8 @@ test('shared trails reach entrances and keep full clearance from trunks and wate
  assert.equal(map.image.data.length,512*512*4);assert.equal((floor.material as any).transparent,false);
  assert(map.image.data.some((value:number,index:number)=>index%4===3&&value<100),'wear uses the existing map');
  for(const [x,,z] of MILL_BAGS)assert(layout.trailDistance(x,z)>1.2,'the full sack mat stays on the grass beside the path');
- for(const p of [...MAZE_ENTRY_STONES,...MAZE_ENTRY_POSTS]){
-  const radius='color' in p ? .2 : .65;
+ for(const p of MAZE_ENTRY_POSTS){
+  const radius=.65;
   assert(layout.trailDistance(MAZE_SITE.x+p.x,MAZE_SITE.z+p.z)>radius+1.4,'maze entrance decorations remain beside the complete path and its soft rim');
  }
  for(const path of layout.paths)for(let i=1;i<path.points.length-1;i++){

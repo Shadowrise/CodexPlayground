@@ -1,0 +1,125 @@
+{
+  "views": {
+    "gallery": {
+      "before": {
+        "calls": 86,
+        "triangles": 23018,
+        "medianMs": 0.699999988079071,
+        "p90Ms": 0.800000011920929
+      },
+      "after": {
+        "calls": 86,
+        "triangles": 23018,
+        "medianMs": 0.699999988079071,
+        "p90Ms": 0.800000011920929
+      },
+      "control": {
+        "calls": 86,
+        "triangles": 23018,
+        "medianMs": 0.5999999642372131,
+        "p90Ms": 0.699999988079071
+      }
+    },
+    "spruce": {
+      "before": {
+        "calls": 81,
+        "triangles": 9866,
+        "medianMs": 0.5999999642372131,
+        "p90Ms": 0.6000000238418579
+      },
+      "after": {
+        "calls": 81,
+        "triangles": 9866,
+        "medianMs": 0.5999999642372131,
+        "p90Ms": 0.699999988079071
+      },
+      "control": {
+        "calls": 81,
+        "triangles": 9866,
+        "medianMs": 0.5,
+        "p90Ms": 0.6000000238418579
+      }
+    },
+    "needles": {
+      "before": {
+        "calls": 76,
+        "triangles": 9578,
+        "medianMs": 0.5,
+        "p90Ms": 0.699999988079071
+      },
+      "after": {
+        "calls": 76,
+        "triangles": 9578,
+        "medianMs": 0.5,
+        "p90Ms": 0.699999988079071
+      },
+      "control": {
+        "calls": 76,
+        "triangles": 9578,
+        "medianMs": 0.5,
+        "p90Ms": 0.6000000238418579
+      }
+    },
+    "birch-bark": {
+      "before": {
+        "calls": 18,
+        "triangles": 6518,
+        "medianMs": 0.30000001192092896,
+        "p90Ms": 0.40000003576278687
+      },
+      "after": {
+        "calls": 18,
+        "triangles": 6518,
+        "medianMs": 0.30000001192092896,
+        "p90Ms": 0.5999999642372131
+      },
+      "control": {
+        "calls": 18,
+        "triangles": 6518,
+        "medianMs": 0.30000001192092896,
+        "p90Ms": 0.40000003576278687
+      }
+    },
+    "orchard-bark": {
+      "before": {
+        "calls": 7,
+        "triangles": 13190,
+        "medianMs": 0.20000004768371582,
+        "p90Ms": 0.30000001192092896
+      },
+      "after": {
+        "calls": 7,
+        "triangles": 13190,
+        "medianMs": 0.30000001192092896,
+        "p90Ms": 0.40000003576278687
+      },
+      "control": {
+        "calls": 7,
+        "triangles": 13190,
+        "medianMs": 0.30000001192092896,
+        "p90Ms": 0.40000003576278687
+      }
+    },
+    "autumn-bark": {
+      "before": {
+        "calls": 8,
+        "triangles": 18698,
+        "medianMs": 0.20000004768371582,
+        "p90Ms": 0.40000003576278687
+      },
+      "after": {
+        "calls": 8,
+        "triangles": 18698,
+        "medianMs": 0.19999998807907104,
+        "p90Ms": 0.30000001192092896
+      },
+      "control": {
+        "calls": 8,
+        "triangles": 18698,
+        "medianMs": 0.19999998807907104,
+        "p90Ms": 0.30000001192092896
+      }
+    }
+  },
+  "errors": []
+}

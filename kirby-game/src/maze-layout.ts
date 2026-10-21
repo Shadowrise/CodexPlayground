@@ -1,9 +1,6 @@
 export const MAZE_SITE={x:-94,z:94,radius:54};
 export const MAZE_CELLS=7,MAZE_CELL=10,MAZE_HALF=35;
 // Shared by the entrance model and the baked trail's obstacle clearance.
-export const MAZE_ENTRY_STONES=Array.from({length:40},(_,i)=>({
- x:(i%2?-1:1)*(6+(i%5)*.6),z:37+Math.floor(i/5)*.5,color:i%3?'#e1bd54':'#cf87a6',
-}));
 export const MAZE_ENTRY_POSTS=[-5,5].map(x=>({x,z:37}));
 export function mazeDistances(walls:boolean[][]){
   const distances=Array(walls.length).fill(-1) as number[],queue=[45];distances[45]=0;

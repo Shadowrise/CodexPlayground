@@ -46,7 +46,9 @@ export function makeCoasterDepot(){
 
  // The top surfaces exactly match the shared walking heights; narrow seams add depth.
  const floor=group('Oak platform and dressed stone foundation');
- box(floor,'#908873','stone',0,.245,0,24,.49,10,.07);
+ // Recess the solid core behind the side/front cladding. Its old 24m outer
+ // faces coincided with the facing stones on both sides and flickered.
+ box(floor,'#908873','stone',0,.245,.1,23.56,.49,9.8,.07);
  for(let row=0;row<2;row++)for(let i=0;i<12;i++){
   const x=-11+(i+(row%2)*.45)*2;if(x>11.7)continue;
   box(floor,['#aaa08b','#b5aa93','#a69c86'][(i+row)%3],'stone',x,.15+row*.23,-4.91,1.94,.205,.19,.035);

@@ -18,6 +18,11 @@ export const MUSIC_TRACKS = [
   ['accordion-stroll', 'Лёгкий аккордеон'],
 ] as const;
 
+const MUSIC_ASSET_REVISIONS: Partial<Record<typeof MUSIC_TRACKS[number][0], string>> = {
+  'meadow-day': 'acoustic-20261021',
+  'button-swing': '2',
+};
+
 /** Sequential tracks, starting at a random position each session. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
@@ -111,7 +116,9 @@ export class BackgroundMusic {
   private loadTrack() {
     this.playRequest++;
     this.audio.pause();
-    this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${MUSIC_TRACKS[this.track][0]}.wav${MUSIC_TRACKS[this.track][0]==='button-swing'?'?v=2':''}`;
+    const file = MUSIC_TRACKS[this.track][0];
+    const revision = MUSIC_ASSET_REVISIONS[file];
+    this.audio.src = `${import.meta.env?.BASE_URL ?? '/'}audio/${file}.wav${revision ? `?v=${revision}` : ''}`;
     this.audio.loop = false;
     this.updateTrackLabel();
   }

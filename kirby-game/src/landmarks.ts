@@ -20,12 +20,22 @@ import {createRockGeometry,createRockMaterial} from './rock-model';
 import {createReedGeometry,createWaterLilyGeometry,createWaterPlantMaterial} from './water-plants';
 import {biomeAt} from './forest';
 import {makeOakBench} from './bench-model';
+import {makePicnic,makeRuins} from './clearing-models';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
 import { WATER_Y, deckHeight, BRIDGES, riverClearance, outsideRivers, pondOutline, flatGround as dryGround } from './pond-layout';
 import {outsideBoatRoute} from './boat-route';
 export const rockHasGround=dryGround;
+/** Shared by the visible flower and its baked silhouette. */
+export function landmarkFlowerParts(h=.64){
+ const pieces:{kind:'pole'|'ball';color?:string;position:number[];scale:number[];rotation:number[]}[]=[
+  {kind:'pole',color:'#477447',position:[0,h/2,0],scale:[.025,h,.025],rotation:[0,0,0]},
+  {kind:'ball',color:'#639b47',position:[.12,h*.5,0],scale:[.18,.045,.09],rotation:[0,.4,.4]},
+ ];
+ for(let j=0;j<5;j++){const b=j*Math.PI*2/5;pieces.push({kind:'ball',position:[Math.cos(b)*.15,h,Math.sin(b)*.15],scale:[.13,.06,.09],rotation:[0,-b,0]});}
+ pieces.push({kind:'ball',color:'#e5aa35',position:[0,h+.025,0],scale:[.085,.06,.085],rotation:[0,0,0]});return pieces;
+}
 // Retain the original clearing so moving the sack does not reseed mature trees
 // and their connecting paths elsewhere on the meadow.
 const millBagClearings=[...MILL_BAGS,[76,0,61] as const,[68,0,54] as const];
@@ -112,10 +122,7 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
       const p=place(g,cx+Math.cos(a)*r,cz+Math.sin(a)*r,.32,'flower');if(!p)continue;
       const {x,z}=p;
       const h=.4+(i%5)*.12;
-      put(g,'pole','#477447',x,h/2,z,.025,h,.025);
-      put(g,'ball','#639b47',x+.12,h*.5,z,.18,.045,.09,0,.4,.4);
-      for(let j=0;j<5;j++) {const b=j*Math.PI*2/5;put(g,'ball',['#fff4dc','#9f91d9','#f5ce53'][i%3],x+Math.cos(b)*.15,h,z+Math.sin(b)*.15,.13,.06,.09,0,-b);}
-      put(g,'ball','#e5aa35',x,h+.025,z,.085,.06,.085);
+      for(const part of landmarkFlowerParts(h)){const [px,py,pz]=part.position,[sx,sy,sz]=part.scale,[rx,ry,rz]=part.rotation;put(g,part.kind,part.color??['#fff4dc','#9f91d9','#f5ce53'][i%3],x+px,py,z+pz,sx,sy,sz,rx,ry,rz);}
     }
   }
   function bench(g:T.Group,x:number,z:number) {
@@ -176,20 +183,12 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
       if(p){
         // Blanket and basket move together; the interactive benches retain
         // their shared seat coordinates and the path's actual destinations.
-        for(let i=0;i<8;i++)for(let j=0;j<6;j++)put(g,'box',(i+j)%2?'#fff0da':'#c97773',p.x+(i-3.5)*.6,.025,p.z+(j-2.5)*.6,.6,.045,.6);
-        put(g,'box','#aa7945',p.x+1,.48,p.z+.7,1.1,.8,.75);
-        for(let i=0;i<5;i++)put(g,'box','#d0a46b',p.x+1,.16+i*.15,p.z+.7,1.16,.05,.79);
-        put(g,'ring','#8f623b',p.x+1,1.04,p.z+.7,.5,.48,.4);
-        for(let i=0;i<3;i++)put(g,'ball',['#d4573e','#e5a836','#8eaa47'][i],p.x+.7+i*.27,.94,p.z+.7,.2,.19,.2);
+        const lunch=makePicnic();lunch.position.set(p.x,0,p.z);g.add(lunch);
       }
       bench(g,0,4);bench(g,-5,-2);flowers(g,5,-5,32);
     } else {
-      const stone='#a3a48d';
-      for(const x of [-3,3])for(let j=0;j<5;j++)put(g,'box',stone,x,.48+j*.91,0,1.3,.85,1.5,0,j%2*.03);
-      for(let j=0;j<11;j++) {const a=j*Math.PI/10;put(g,'box',stone,Math.cos(a)*3,4.15+Math.sin(a)*3,0,.96,.9,1.5,0,0,a-Math.PI/2);}
-      for(const x of [-6,6]) {put(g,'box',stone,x,.18,3,2,.36,2);put(g,'pole',stone,x,1.35,3,.55,2.4,.55);put(g,'box',stone,x,2.6,3,1.5,.3,1.5);}
+      g.add(makeRuins());
       for(let i=0;i<6;i++)rock(g,Math.sin(i*2)*7,4+Math.cos(i*2)*3,.45);
-      for(let i=0;i<26;i++)put(g,'ball','#487947',-3+Math.sin(i*.7)*.5,.3+i*.19,-.84,.25,.19,.07,0,0,i);
       flowers(g,6,-4,30);
     }
   }
@@ -210,7 +209,7 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     if(!batches.has(key)){const material=source.clone();material.color.set(0xffffff);batches.set(key,{geometry:o.geometry,material,matrices:[],colors:[]});}
     batches.get(key)!.matrices.push(o.matrixWorld.clone());
     batches.get(key)!.colors.push(o.userData.tint?new T.Color(o.userData.tint):source.color.clone());
-    const shadow=shadowGeometry.get(o.geometry)??(o.userData.landmarkBench?o.geometry:undefined);
+    const shadow=shadowGeometry.get(o.geometry)??(o.userData.landmarkBench||(o.userData.craftedProp&&['stone','oak','wicker'].includes(source.userData.craftedFinish))?o.geometry:undefined);
     if(shadow){if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).getSize(shadowSize);
       // Petals and water ripples are smaller than a useful shadow-map texel.
       if(Math.max(shadowSize.x,shadowSize.y,shadowSize.z)>=.6){if(!shadowBatches.has(shadow))shadowBatches.set(shadow,[]);shadowBatches.get(shadow)!.push(o.matrixWorld.clone());}

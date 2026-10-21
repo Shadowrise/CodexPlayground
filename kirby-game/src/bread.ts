@@ -26,6 +26,7 @@ export class BreadWorld{
  private scratch=new T.Vector3();
  private extraWorlds:BreadWorld[]=[];
  private modelTemplate?:T.Object3D;
+ get loaves():T.Object3D[]{return [this.loaf,...this.extraWorlds.flatMap(world=>world.loaves)];}
  constructor(){
   this.group.name='Fresh bakery bread';this.loaf.name='Carryable white bread slice';this.aura.name='Golden bread aura';this.group.add(this.loaf,this.aura);
   this.mist=softMist(softMistMaterial('#f2c653',.4));this.mist.name='Golden bread volume mist';this.aura.add(this.mist);
@@ -37,7 +38,7 @@ export class BreadWorld{
   this.modelTemplate=source.clone(true);
   const bounds=new T.Box3().setFromObject(source),center=bounds.getCenter(new T.Vector3()),size=bounds.getSize(new T.Vector3()),factor=1.55/size.y;
   const normalized=new T.Group();normalized.name='Textured Tiny Treats bread';source.position.sub(center);normalized.add(source);normalized.scale.setScalar(factor);
-  source.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=o.receiveShadow=true;});
+  source.traverse(o=>{if(o instanceof T.Mesh){o.castShadow=false;o.receiveShadow=true;}});
   this.halfThickness=size.z*factor/2;this.loaf.clear();this.loaf.add(normalized);
  }
  reset(state?:BreadState){this.state=normalizeBread(state?structuredClone(state):undefined);}

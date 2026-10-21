@@ -510,7 +510,9 @@ test('exported pigeon GLB preserves the shared paint atlas, skeleton and all nat
  const jsonLength=data.readUInt32LE(12),metadata=JSON.parse(data.subarray(20,20+jsonLength).toString());
  assert.equal(metadata.images.length,1);assert.equal(metadata.images[0].mimeType,'image/png');
  const view=metadata.bufferViews[metadata.images[0].bufferView],png=data.subarray(28+jsonLength+view.byteOffset,28+jsonLength+view.byteOffset+view.byteLength);
- assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);assert.equal(png.readUInt32BE(16),2048);assert.equal(png.readUInt32BE(20),2048);
+ const atlas=await readFile(new URL('../design/pigeon/pigeon-feather-atlas.png',import.meta.url));
+ assert.deepEqual(png,atlas,'GLB must embed the authored feather texture');
+ assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);assert.equal(png.readUInt32BE(16),png.readUInt32BE(20));
  assert(metadata.materials.every((material:{pbrMetallicRoughness:{baseColorTexture?:{index:number}}})=>material.pbrMetallicRoughness.baseColorTexture?.index===0),'every material must share the unified paint atlas');
  // Node has no image bitmap/DOM; verify the embedded image above, then load
  // actual geometry/skin/clips with a texture placeholder. Browser QA also

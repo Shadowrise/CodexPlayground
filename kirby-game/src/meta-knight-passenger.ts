@@ -26,6 +26,7 @@ export function makeSeatedMetaKnight(template:T.Object3D,clips:readonly T.Animat
  const clip=clips.find(c=>c.name==='Sitting');
  if(!clip)throw new Error('Meta Knight needs the Sitting animation');
  const model=template.clone(true);model.name='Meta Knight · permanent passenger';
+ model.userData.characterShadow=true;
  const mixer=new T.AnimationMixer(model);mixer.clipAction(clip).play();mixer.update(0);
  return {model,mixer};
 }

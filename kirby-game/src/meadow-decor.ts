@@ -16,8 +16,8 @@ import {createReedGeometry,createWaterPlantMaterial} from './water-plants';
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE,outsideMusicalFlowers,outsideMusicalFlowerClearing} from './musical-flower-site';
 import {outsideNumberGarden} from './number-garden-site';
 
-type Kind='flowers'|'mushrooms'|'stump'|'bush'|'fern'|'reeds';
-export type DecorSite={x:number;z:number;radius:number;kind:Kind;biome:Biome};
+export type Kind='flowers'|'mushrooms'|'stump'|'bush'|'fern'|'reeds';
+export type DecorSite={x:number;z:number;radius:number;kind:Kind;biome:Biome;variant?:number;yaw?:number};
 const leaf=new T.BufferGeometry();
 leaf.setAttribute('position',new T.Float32BufferAttribute([0,0,-.5,-.35,.015,0,0,.08,0,.35,.015,0,0,0,.5],3));
 leaf.setIndex([0,1,2,1,4,2,4,3,2,3,0,2]);leaf.computeVertexNormals();
@@ -27,7 +27,7 @@ const trunk=new T.CylinderGeometry(.82,1,1,10),disk=new T.CylinderGeometry(1,1,.
 const ring=new T.RingGeometry(.96,1,24);ring.rotateX(-Math.PI/2);
 const crack=new T.BoxGeometry(1,1,1);
 
-function prototype(kind:Kind,biome:Biome,variant:number){
+export function createMeadowPlantGeometry(kind:Kind,biome:Biome,variant:number){
  const palette=PALETTES[biome],parts:T.BufferGeometry[]=[],object=new T.Object3D();let seed=197+variant*113;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const add=(geometry:T.BufferGeometry,color:string,x:number,y:number,z:number,sx:number,sy:number,sz:number,rx=0,ry=0,rz=0)=>{
@@ -95,7 +95,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
   if(kind==='bush')return biome==='orchard'?388:288;
   if(kind==='reeds')return 228; // Former tuft weight keeps seeded placement unchanged.
   const key=kind+biome+variant;
-  if(!prototypes.has(key))prototypes.set(key,prototype(kind,biome,variant));
+  if(!prototypes.has(key))prototypes.set(key,createMeadowPlantGeometry(kind,biome,variant));
   return prototypes.get(key)!.attributes.position.count/3;
  };
  const treeIndex=new MeadowIndex(12,trees),plantIndex=new MeadowIndex<DecorSite>(8);
@@ -129,7 +129,7 @@ export function createMeadowDecor(trees:readonly MeadowTree[],layout=new MeadowL
    const copy=prototypes.get(key)!.clone();copy.applyMatrix4(dummy.matrix);
    const cell=`${Math.floor(x/48)},${Math.floor(z/48)}`;if(!cells.has(cell))cells.set(cell,[]);cells.get(cell)!.push(copy);
   }
-  const site={x,z,radius,kind,biome};sites.push(site);plantIndex.add(site);
+  const site={x,z,radius,kind,biome,variant,yaw:dummy.rotation.y};sites.push(site);plantIndex.add(site);
  };
  const density=(x:number,z:number)=>.5+.24*Math.sin(x*.046+1.6*Math.sin(z*.026))+.22*Math.cos(z*.054+1.3*Math.sin(x*.033));
  // First cover every open part of the meadow. Jittered cells prevent random

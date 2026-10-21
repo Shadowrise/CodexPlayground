@@ -1,5 +1,14 @@
 # Third-party assets
 
+## Meadow Day background music
+
+- Game file: `public/audio/meadow-day.wav` — the approved acoustic arrangement of the original project melody, 118.4 seconds, stereo 44.1 kHz PCM 16-bit.
+- Sampled flute, nylon guitar, acoustic bass, piano and drums: **GeneralUser GS v2.0.3**, S. Christian Collins, rendered with FluidSynth 2.6.1.
+- Sound bank source: https://schristiancollins.com/generaluser and https://github.com/mrbumpy409/GeneralUser-GS.
+- Bank license v2.0: copy in `public/audio/meadow-day-LICENSE.txt`. The sound bank itself is not distributed with the game.
+- Original arrangement, synthesized warm pad and mixing: `design/music/meadow-day-acoustic/`. Approved MIDI and score: `design/music/meadow-day-acoustic/approved/`.
+- Selected intro 3, ending 2, sparse middle drums without shaker, and a gradual piano fade under the pad from 1:36. Installed on 2026-10-21.
+
 ## Musical flower bells
 
 - Game file: `public/audio/flower-bells.wav` — seven notes, one cached download.
@@ -73,3 +82,9 @@ commercial projects. Attribution is kept here for provenance.
 - The crystal assault adds original layered crystal bells, an ascending constellation arpeggio and an airy spiral cue. Phase-three music eases to 110% tempo while preserving pitch and the existing mute/volume controls.
 - The crystal shield adds original resonant glass, pressure-wave sweeps and a layered crystal-shattering chime; synthesized in the same sound palette without external samples. Dome, segmented/full pressure waves, violet crystal flares and rubble are procedural Three.js geometry and shaders.
 - Both the music and combat sounds use synthesis without third-party recordings or samples.
+
+## Spruce needle surface
+
+- Original texture generated for this project with the built-in imagegen tool on 2026-10-21.
+- Source and exact prompt: `design/tree-surfaces/spruce-needles-source.png` and `design/tree-surfaces/needle-prompt.md`.
+- `scripts/pack-spruce-needles.mjs` exports the shared opaque 512×512 game tile as compact indexed pixels in `src/generated/spruce-needle-image.ts`.
