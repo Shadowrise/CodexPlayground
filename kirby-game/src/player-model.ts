@@ -7,14 +7,14 @@ import {clonePigeon} from './pigeon-appearance';
 export type PlayerModel = {model: Object3D; clips: AnimationClip[]; character: 'kirby' | 'pigeon' | 'meta-knight'};
 
 /** Native characters keep their original rig, geometry and authored materials. */
-export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: GLTF, npc = false, metaKnight?: GLTF): PlayerModel {
+export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: GLTF, npc = false, metaKnight?: GLTF,snowball?:GLTF): PlayerModel {
   const knight=variant[0]==='Meta Knight';
   if (!isPigeonVariant(variant[0])&&!knight) {
     return {model: cloneVariant(kirby.scene, variant, npc), clips: kirby.animations, character: 'kirby'};
   }
-  const source=knight?metaKnight:pigeon;
-  if (!source) throw new Error(knight?'Модель Meta Knight ещё не загрузилась':'Модель Пиджи ещё не загрузилась');
-  if(!knight)return {model:clonePigeon(source.scene,variant[0]==='Снежок'),clips:source.animations,character:'pigeon'};
+  const white=variant[0]==='Снежок',source=knight?metaKnight:white?snowball:pigeon;
+  if (!source) throw new Error(knight?'Модель Meta Knight ещё не загрузилась':white?'Модель Снежка ещё не загрузилась':'Модель Пиджи ещё не загрузилась');
+  if(!knight)return {model:clonePigeon(source.scene),clips:source.animations,character:'pigeon'};
   const model = cloneSkeleton(source.scene);
   const character='meta-knight';
   model.userData.character = character;

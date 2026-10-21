@@ -19,7 +19,7 @@ export class NumberGardenView {
   if(this.heard!==soundKey){this.heard=soundKey;if(nearby&&audible&&now-q.stageAt<500){if(q.stage==='error')this.feedback('wrong');else if(q.stage==='celebrate')this.feedback('finish');else if(q.cursor>0)this.feedback('correct');}}
   this.hud.hidden=!visible||(!nearby&&!q.players.includes(id));if(this.hud.hidden)return;
   const seconds=q.emptySince===undefined?0:Math.max(0,Math.ceil((q.emptySince+NUMBER_EMPTY_MS-now)/1000));
-  const message=seconds?t('Вернись к циферкам! Испытание сбросится через {0} с.',[seconds]):t(q.stage==='celebrate'?'Все примеры решены! +10 очков.':q.stage==='error'?'Не та цифра! Попробуй этот пример ещё раз.':q.stage==='round'?'Верно! Следующий пример…':'Реши пример. Нажимай цифры ответа слева направо.');
+  const message=seconds?t('Вернись к циферкам! Испытание сбросится через {0} с.',[seconds]):t(q.stage==='celebrate'?'Все примеры решены! +12 очков.':q.stage==='error'?'Не та цифра! Попробуй этот пример ещё раз.':q.stage==='round'?'Верно! Следующий пример…':'Реши пример. Нажимай цифры ответа слева направо.');
   const signature=JSON.stringify([getLocale(),q.startedAt,q.round,q.cursor,q.stage,q.wrongDigit,message]);if(signature===this.signature)return;this.signature=signature;
   this.title.textContent=t(q.stage==='celebrate'?'Звонкие циферки · Готово!':'Звонкие циферки · Раунд {0}/{1}',[q.round,NUMBER_ROUNDS]);this.message.textContent=message;
   const problem=q.problems[q.round-1],answer=numberAnswer(problem);this.equation.replaceChildren(document.createTextNode(`${problem.left} ${problem.operator} ${problem.right} = `));

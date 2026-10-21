@@ -5,7 +5,7 @@ export type ActiveScoreAction=typeof SCORE_ACTIONS[number];
 export type ScoreAction=ActiveScoreAction|'swim'|'mill'|'trampoline'|'pidgieFriend'|'snowballFriend';
 export type ScoredActor={fruitsEaten:number;achievements:Set<ScoreAction>;bonusPoints?:number;eventPoints?:number};
 export function awardFirst(actor:ScoredActor,action:ActiveScoreAction){if(actor.achievements.has(action))return false;actor.achievements.add(action);return true;}
-export function achievementPoints(actions:Iterable<string>){let total=0;for(const action of actions)total+=action==='pidgieFriend'||action==='snowballFriend'||action==='numbers'?10:action==='millQuest'||action==='flowers'?6:3;return total;}
+export function achievementPoints(actions:Iterable<string>){let total=0;for(const action of actions)total+=action==='numbers'?12:action==='pidgieFriend'||action==='snowballFriend'?10:action==='millQuest'||action==='flowers'?6:3;return total;}
 export function scoreOf(actor:ScoredActor){return actor.fruitsEaten+achievementPoints(actor.achievements)+(actor.bonusPoints??0)+(actor.eventPoints??0);}
 /** Equal scores share a place; only strictly higher scores outrank a player. */
 export function placeOf(actor:ScoredActor,actors:ScoredActor[]){return 1+actors.filter(other=>scoreOf(other)>scoreOf(actor)).length;}

@@ -7,7 +7,7 @@ try{
  await page.addInitScript(()=>localStorage.setItem('kirby-language-v1','ru'));
  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+'\nwindow.bossFix={get c(){return character},get q(){return currentCentipede()},get model(){return arenaCentipede},view:centipedeView,scene,renderer,camera,shadows,followCamera,boatTime,set day(v){dayStart=Date.now();dayStartPhase=v}};'});});
  await page.goto(process.env.GAME_URL||'http://127.0.0.1:5174/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
- await page.locator('#player-name-input').fill('Друг');await page.locator('#new-game').click();await page.locator('#start-game').click();
+ await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Друг');await page.locator('#start-game').click();
  await page.waitForFunction(()=>window.bossFix.c);
  const approach=()=>page.evaluate(()=>{const t=window.bossFix,head=t.model.startTrail(t.boatTime()).at(-1);t.c.setActivity('Idle');t.c.actor.position.set(head[0]+3,0,head[1]);t.day=.25;});
  await approach();await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Поиграть'));
@@ -16,10 +16,10 @@ try{
  await page.evaluate(()=>{const t=window.bossFix;t.q.stageAt=Date.now();t.c.actor.position.set(140,0,-45);t.c.yaw=.5;t.followCamera.reset(t.c.yaw);});
  await page.waitForTimeout(250);await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-day-lane.png'});
  const hud=await page.locator('#centipede-event-hud').boundingBox();assert(Math.abs(hud.x+hud.width/2-720)<1);
- assert((await page.locator('#centipede-event-hud').innerText()).includes('голубой дорожки'));
+ assert((await page.locator('#centipede-event-hud').innerText()).includes('жёлтой дорожки'));
  await page.evaluate(()=>{const t=window.bossFix;t.day=.75;t.q.stageAt=Date.now();});
  await page.waitForTimeout(250);await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-night-lane.png'});
- assert(await page.evaluate(()=>{const lane=window.bossFix.view.group.children[0],colour=lane.geometry.getAttribute('color'),opacity=lane.material.opacity;return lane.visible&&opacity>.5&&opacity<.7&&colour.getZ(1)>colour.getX(1)&&!lane.material.toneMapped;}));
+ assert(await page.evaluate(()=>{const lane=window.bossFix.view.group.children[0],u=lane.material.uniforms;return lane.visible&&lane.geometry.getAttribute('uv')&&u.progress.value>0&&u.progress.value<1&&u.attack.value===0&&!lane.material.toneMapped;}));
  await page.evaluate(()=>{const t=window.bossFix;t.day=.25;t.q.stageAt=Date.now()-1900;});await page.waitForFunction(()=>window.bossFix.q.stage==='charge');
  await page.evaluate(()=>{window.bossFix.q.stageAt=Date.now()-6100;});await page.waitForFunction(()=>window.bossFix.q.stage==='balls');
  await page.evaluate(async()=>{const t=window.bossFix,{centipedeSegments}=await import('/src/centipede-event.ts'),head=centipedeSegments(t.q,Date.now()+700)[0];t.c.setActivity('Idle');t.c.actor.position.set(head.x+Math.sin(head.yaw)*7,0,head.z+Math.cos(head.yaw)*7);t.c.yaw=head.yaw+Math.PI;t.followCamera.reset(t.c.yaw);});

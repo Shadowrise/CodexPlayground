@@ -24,6 +24,8 @@ const copyState=(s:PidgieState):PidgieState=>({...s,p:[...s.p],refuge:[...s.refu
 export type PidgiePlayer={id:string;position:T.Vector3;hasBread:boolean;isPigeon?:boolean;points?:number};
 export type PidgieNpcOptions={
  kind?:WildPigeonId;
+ /** Admin birds arrive from the sky and use the same ground pursuit. */
+ summoned?:boolean;
  safeGround:(x:number,z:number)=>boolean;
  /** Grounded body clearance; takeoff/landing still require safeGround. */
  walkGround?:(x:number,z:number)=>boolean;
@@ -54,7 +56,7 @@ export class PidgieNpc {
  get fearCount(){return this.data.fearCount;}
 
  constructor(template:Pick<GLTF,'scene'|'animations'>,options:PidgieNpcOptions){
-  this.options=options;this.model=clonePigeon(template.scene,options.kind==='snowball');
+  this.options=options;this.model=clonePigeon(template.scene);
   this.actor.name=`Дикий ${wildPigeonName(options.kind??'pidgie')}`;this.actor.userData.elusivePidgie=true;this.actor.userData.wildPigeon=options.kind??'pidgie';this.actor.add(this.model);
   this.mixer=new T.AnimationMixer(this.model);
   for(const name of PIDGIE_CLIPS){
@@ -63,7 +65,7 @@ export class PidgieNpc {
   }
   const seed=options.seed===undefined?(Math.random()*0x100000000)>>>0:options.seed>>>0;
   this.data={phase:'hidden',p:[0,0,0],yaw:0,elapsed:0,refuge:[0,0],target:[0,0],origin:[0,0],destination:[0,0],walkTimer:0,pause:0,cooldown:0,height:26,flightDuration:0,turnStart:0,turnTarget:0,clip:'Idle',clipTime:0,seed,fearCount:0};
-  this.actor.visible=false;this.animate('Idle',true);this.spawn(options.people??[]);
+  this.actor.visible=false;this.animate('Idle',true);if(!options.summoned)this.spawn(options.people??[]);
  }
 
  private random(){this.data.seed=(Math.imul(this.data.seed,1664525)+1013904223)>>>0;return this.data.seed/0x100000000;}
@@ -175,7 +177,7 @@ export class PidgieNpc {
   if(distance(xz(this.actor.position),this.data.target)<.3||this.data.walkTimer<=0)this.rest();
  }
 
- private follow(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint){
+ private follow(dt:number,people:readonly T.Vector3[],players:readonly PidgiePlayer[],constrain?:NpcConstraint,goalPoint?:T.Vector3){
   this.followRetry=Math.max(0,this.followRetry-dt);
   const player=players.find(player=>player.id===this.data.followId);
   const greeting=this.data.phase==='greet';
@@ -185,7 +187,7 @@ export class PidgieNpc {
    delete this.data.followId;delete this.data.followSpeed;this.data.phase='wander';
    this.data.refuge=xz(this.actor.position);this.data.target=[...this.data.refuge];this.data.pause=.6;this.data.walkTimer=0;this.animate('Idle');return;
   }
-  const from=this.actor.position,dx=from.x-player.position.x,dz=from.z-player.position.z,d=Math.hypot(dx,dz),gap=d-PIDGIE_FOLLOW_DISTANCE;
+  const from=this.actor.position,center=goalPoint??player.position,followDistance=goalPoint?0:PIDGIE_FOLLOW_DISTANCE,dx=from.x-center.x,dz=from.z-center.z,d=Math.hypot(dx,dz),gap=d-followDistance;
   this.data.followSpeed=0;
   const facePlayer=()=>this.setYaw(this.data.yaw+wrap(this.heading(xz(player.position))-this.data.yaw)*Math.min(1,8*dt));
   const stand=()=>this.animate(greeting&&this.data.clip==='Hello'&&this.active!.time<PIGEON_CLIP_BY_NAME.Hello.duration-1e-8?'Hello':'Idle');
@@ -199,7 +201,7 @@ export class PidgieNpc {
   this.data.elapsed=Math.min(PIDGIE_FOLLOW_REACTION_SECONDS,this.data.elapsed+dt);
   if(this.data.elapsed<PIDGIE_FOLLOW_REACTION_SECONDS-1e-8){this.data.target=xz(from);facePlayer();stand();return;}
   const away=d>1e-6?new T.Vector3(dx/d,0,dz/d):new T.Vector3(Math.sin(this.data.yaw),0,Math.cos(this.data.yaw));
-  const goal=player.position.clone().setY(0).addScaledVector(away,PIDGIE_FOLLOW_DISTANCE);
+  const goal=center.clone().setY(0).addScaledVector(away,followDistance);
   const clear=(a:PidgiePoint,b:PidgiePoint)=>{
    let previous=new T.Vector3(a[0],0,a[1]);const count=Math.max(1,Math.ceil(distance(a,b)/.35));
    for(let i=1;i<=count;i++){
@@ -217,7 +219,7 @@ export class PidgieNpc {
   if(this.followRoute.length&&!clear(xz(from),this.followRoute[0])){this.followRoute=[];this.followRetry=0;}
   let target=from.clone().lerp(goal,Math.min(1,3/from.distanceTo(goal)));
   if(!this.followRoute.length&&!clear(xz(from),xz(target))){
-   if(this.followRetry===0){this.followRoute=pidgieFollowPath(xz(from),xz(player.position),clear);this.followRoutePlayer=xz(player.position);this.followRetry=.6;}
+   if(this.followRetry===0){this.followRoute=pidgieFollowPath(xz(from),xz(center),clear,followDistance);this.followRoutePlayer=xz(player.position);this.followRetry=.6;}
    if(!this.followRoute.length){this.data.target=xz(from);this.animate('Idle');return;}
   }
   if(this.followRoute.length)target.set(this.followRoute[0][0],0,this.followRoute[0][1]);
@@ -322,6 +324,70 @@ export class PidgieNpc {
  }
 
  /** Only the solo game or current room host calls the decision-making update. */
+ startArrival(origin:T.Vector3,goal:T.Vector3,height:number){
+  this.actor.visible=true;this.actor.position.copy(origin).setY(height);
+  this.data.origin=xz(origin);this.data.destination=xz(goal);this.data.height=height;
+  this.data.flightDuration=Math.max(2.5,origin.distanceTo(goal)/18);this.data.phase='fly';this.data.elapsed=0;
+  this.animate('Fly',true);this.syncPosition();
+ }
+
+ /** Shared bread pursuit, with a separate reserved place for each summoned bird. */
+ updateSummoned(dt:number,player:PidgiePlayer,goal:T.Vector3,people:readonly T.Vector3[],constrain?:NpcConstraint){
+  if(this.remote){this.data=copyState(this.networkState());this.actor.position.fromArray(this.data.p);this.setYaw(this.data.yaw);this.remote=undefined;}
+  for(let remaining=dt;remaining>1e-8;){
+   const step=Math.min(STEP,remaining);remaining-=step;
+   if(this.data.phase==='fly'||this.data.phase==='landing'){
+    this.data.elapsed+=step;this.data.destination=xz(goal);
+    const from=this.actor.position.clone(),point=from.clone();
+    if(this.data.phase==='fly'){
+     const u=smooth(this.data.elapsed/this.data.flightDuration);
+     point.set(T.MathUtils.lerp(this.data.origin[0],goal.x,u),this.data.height,T.MathUtils.lerp(this.data.origin[1],goal.z,u));
+     if(u>=1){this.data.phase='landing';this.data.elapsed=0;}
+    }else {
+     const u=smooth(this.data.elapsed/this.verticalDuration());
+     const travel=new T.Vector3(goal.x-from.x,0,goal.z-from.z),distance=travel.length();point.addScaledVector(travel.normalize(),Math.min(distance,18*step));point.y=this.data.height*(1-u);
+    }
+    constrain?.(point,this.actor.scale.x,from);
+    if(this.data.phase==='landing'&&point.y===0&&Math.hypot(point.x-goal.x,point.z-goal.z)<.5&&this.safe(xz(point))){this.data.phase='follow';this.data.elapsed=0;this.data.followId=player.id;this.data.followSpeed=0;}
+    this.actor.position.copy(point);this.setYaw(this.heading(xz(player.position)));this.animate('Fly');
+    if(this.data.phase==='follow')this.animate('Idle');
+   }else this.follow(step,people,[{...player,hasBread:true}],constrain,goal);
+   this.mixer.update(step);this.syncPosition();
+  }
+ }
+
+ updateHello(dt:number,start=false){
+  if(this.remote){this.data=copyState(this.networkState());this.remote=undefined;}
+  this.data.followSpeed=0;
+  this.animate('Hello',start);this.mixer.update(dt);this.syncPosition();
+ }
+
+ startDeparture(destination:T.Vector3,height=26){
+  this.remote=undefined;this.data.origin=xz(this.actor.position);this.data.destination=xz(destination);
+  this.data.height=Math.min(240,Math.max(height,this.actor.position.y+16));this.data.flightDuration=6;
+  this.data.phase='fear';this.data.elapsed=0;this.animate('Fear',true);this.syncPosition();return this.actor.position.y;
+ }
+
+ updateDeparture(dt:number,originY:number,constrain?:NpcConstraint){
+  if(this.remote){this.data=copyState(this.networkState());this.remote=undefined;}
+  for(let remaining=dt;remaining>1e-8;){
+   const step=Math.min(STEP,remaining);remaining-=step;this.data.elapsed+=step;
+   const from=this.actor.position.clone(),point=from.clone();
+   const heading=Math.atan2(this.data.destination[0]-this.data.origin[0],this.data.destination[1]-this.data.origin[1]);
+   if(this.data.phase==='fear'){
+    if(this.data.elapsed>=PIGEON_CLIP_BY_NAME.Fear.duration/1.15){this.data.phase='takeoff';this.data.elapsed=0;this.animate('Fly');}
+   }else if(this.data.phase==='takeoff'){
+    point.y=T.MathUtils.lerp(originY,this.data.height,smooth(this.data.elapsed/1.8));
+    this.setYaw(this.data.yaw+wrap(heading-this.data.yaw)*Math.min(1,step*5));
+    if(this.data.elapsed>=1.8){this.data.phase='fly';this.data.elapsed=0;}
+   }else if(this.data.phase==='fly'){
+    point.x+=Math.sin(heading)*20*step;point.z+=Math.cos(heading)*20*step;point.y=this.data.height;this.setYaw(heading);
+   }
+   constrain?.(point,this.actor.scale.x,from);this.actor.position.copy(point);this.mixer.update(step);this.syncPosition();
+  }
+  return this.data.phase==='fly'&&Math.hypot(this.actor.position.x-this.data.origin[0],this.actor.position.z-this.data.origin[1])>=100;
+ }
+
  update(dt:number,people:readonly T.Vector3[],constrain?:NpcConstraint,players:readonly PidgiePlayer[]=[]){
   if(!Number.isFinite(dt)||dt<=0)return;
   if(this.remote){

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type {Daylight} from './day-cycle';
 
-/** A distant, continuous panorama. Its trees are one mesh and never cast shadows. */
+/** A distant panorama, painted back to front without lighting or shadow maps. */
 export function createForestBackdrop(scene:THREE.Scene){
  const positions:number[]=[],depths:number[]=[];
  let seed=731;
@@ -50,8 +50,11 @@ export function createForestBackdrop(scene:THREE.Scene){
  const nearDay=new THREE.Color('#326954'),farDay=new THREE.Color('#9bb7ac');
  const nearNight=new THREE.Color('#071724'),farNight=new THREE.Color('#1c344b');
  const nearDusk=new THREE.Color('#40534c'),farDusk=new THREE.Color('#ac9a99');
+ // Use the transparent queue for painter order, while keeping every pixel opaque.
+ // A single pass preserves triangle order even for overlapping double-sided crowns.
  const material=new THREE.ShaderMaterial({
-  side:THREE.DoubleSide,fog:false,uniforms:{nearColor:{value:nearDay.clone()},farColor:{value:farDay.clone()}},
+  side:THREE.DoubleSide,fog:false,transparent:true,depthWrite:false,blending:THREE.NoBlending,forceSinglePass:true,
+  uniforms:{nearColor:{value:nearDay.clone()},farColor:{value:farDay.clone()}},
   vertexShader:'attribute float forestDepth;varying float vDepth;void main(){vDepth=forestDepth;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:`uniform vec3 nearColor;uniform vec3 farColor;varying float vDepth;
    void main(){gl_FragColor=vec4(mix(nearColor,farColor,clamp(vDepth,0.,1.))*(1.+min(vDepth,0.)*.6),1.);
@@ -60,6 +63,9 @@ export function createForestBackdrop(scene:THREE.Scene){
    }`,
  });
  const forest=new THREE.Mesh(geometry,material);forest.name='Distant forest panorama';forest.frustumCulled=false;scene.add(forest);
+ // Crowns overlap in the same plane. A fixed painter order avoids depth fights;
+ // foreground depth still hides the panorama, and sky bodies render behind it.
+ forest.renderOrder=-10;forest.castShadow=forest.receiveShadow=false;
  return (camera:THREE.Camera,time:Daylight)=>{
   // Keep the horizon below an elevated camera instead of lifting the forest with it.
   forest.position.set(camera.position.x,0,camera.position.z);

@@ -3,11 +3,12 @@ import * as THREE from 'three';
 import {createForestBackdrop} from './forest-backdrop';
 
 export function createSky(scene: THREE.Scene) {
-  const sun = new THREE.Mesh(new THREE.SphereGeometry(19,32,20),new THREE.MeshBasicMaterial({color:'#fff3ba',fog:false,toneMapped:false,transparent:true}));
-  sun.name='Sun disc'; scene.add(sun);
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(19,32,20),new THREE.MeshBasicMaterial({color:'#fff3ba',fog:false,toneMapped:false,transparent:true,depthWrite:false}));
+  sun.name='Sun disc';sun.renderOrder=-12; scene.add(sun);
   const moon=new THREE.Group();moon.name='Moon';scene.add(moon);
-  moon.add(new THREE.Mesh(new THREE.SphereGeometry(13,32,20),new THREE.MeshBasicMaterial({color:'#dbe8ff',fog:false,toneMapped:false,transparent:true})));
-  for(let i=0;i<12;i++){const a=i*2.399,r=2+Math.sqrt(i/12)*8,x=Math.cos(a)*r,y=Math.sin(a)*r;const crater=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshBasicMaterial({color:i%2?'#adbdd4':'#c0cfe3',fog:false,transparent:true}));crater.position.set(x,y,Math.sqrt(169-r*r));crater.scale.set(1+i%3*.5,1+i%3*.4,.18);moon.add(crater);}
+  moon.add(new THREE.Mesh(new THREE.SphereGeometry(13,32,20),new THREE.MeshBasicMaterial({color:'#dbe8ff',fog:false,toneMapped:false,transparent:true,depthWrite:false})));
+  for(let i=0;i<12;i++){const a=i*2.399,r=2+Math.sqrt(i/12)*8,x=Math.cos(a)*r,y=Math.sin(a)*r;const crater=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshBasicMaterial({color:i%2?'#adbdd4':'#c0cfe3',fog:false,transparent:true,depthWrite:false}));crater.position.set(x,y,Math.sqrt(169-r*r));crater.scale.set(1+i%3*.5,1+i%3*.4,.18);moon.add(crater);}
+  moon.traverse(o=>{if(o instanceof THREE.Mesh)o.renderOrder=-12;});
   let starSeed=177;
   const randomStar=()=>((starSeed=Math.imul(starSeed,1664525)+1013904223|0)>>>0)/4294967296;
   const starPositions:number[]=[],starColors:number[]=[],starTint=new THREE.Color();
@@ -17,7 +18,7 @@ export function createSky(scene: THREE.Scene) {
     starTint.setHSL(.56+randomStar()*.18,.12+randomStar()*.25,.58+randomStar()*.34);starColors.push(...starTint.toArray());
   }
   const starsGeometry=new THREE.BufferGeometry();starsGeometry.setAttribute('position',new THREE.Float32BufferAttribute(starPositions,3));starsGeometry.setAttribute('color',new THREE.Float32BufferAttribute(starColors,3));
-  const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({size:1.4,sizeAttenuation:false,vertexColors:true,fog:false,toneMapped:false,transparent:true,depthWrite:false}));stars.name='Night stars';stars.frustumCulled=false;scene.add(stars);
+  const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({size:1.4,sizeAttenuation:false,vertexColors:true,fog:false,toneMapped:false,transparent:true,depthWrite:false}));stars.name='Night stars';stars.renderOrder=-13;stars.frustumCulled=false;scene.add(stars);
   const updateForest=createForestBackdrop(scene);
   const glowMaterial=new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
@@ -25,7 +26,7 @@ export function createSky(scene: THREE.Scene) {
     vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
     fragmentShader:'varying vec2 vUv; uniform vec3 tint; uniform float strength; void main(){float r=length(vUv-.5)*2.;float a=pow(max(0.,1.-r),3.)*.38;gl_FragColor=vec4(tint,a*strength);}',
   });
-  const halo=new THREE.Mesh(new THREE.PlaneGeometry(110,110),glowMaterial);halo.name='Soft sunlight halo';scene.add(halo);
+  const halo=new THREE.Mesh(new THREE.PlaneGeometry(110,110),glowMaterial);halo.name='Soft sunlight halo';halo.renderOrder=-11;scene.add(halo);
   // One depth-tested billboard: foreground scenery hides the rays without a postprocess pass.
   const rayMaterial=new THREE.ShaderMaterial({
     transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,
@@ -48,7 +49,7 @@ export function createSky(scene: THREE.Scene) {
       }`,
   });
   const rays=new THREE.Mesh(new THREE.PlaneGeometry(460,460),rayMaterial);
-  rays.name='Soft sun rays';scene.add(rays);
+  rays.name='Soft sun rays';rays.renderOrder=-11;scene.add(rays);
   const cloudMaterial=new THREE.MeshStandardMaterial({color:'#fffaf0',roughness:1,fog:true});
   const geometry=new THREE.SphereGeometry(1,12,8);
   const clouds=new THREE.InstancedMesh(geometry,cloudMaterial,28*7);

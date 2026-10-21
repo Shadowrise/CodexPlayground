@@ -8,6 +8,7 @@ import {BUILD,validWorld,type ActorState} from '../src/network-protocol';
 import {META_KNIGHT_SEAL_SITES} from '../src/meta-knight-seal-sites';
 import {SEAL_IDS,newSealProgress,validSealProgress,type SealId} from '../src/meta-knight-seal-state';
 import {newMillQuest} from '../src/mill-quest';
+import {META_KNIGHT_PORTAL_MESSAGE} from '../src/world-log';
 
 test('actual room owns raced seal claims, refuses forged or unavailable pickups, and preserves shared progress across reload, joins and host migration',async()=>{
   const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
@@ -88,6 +89,8 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     assert.deepEqual(first.collected.maze,{by:aid,at:claimedAt});assert.equal(claimedAt,now-80);
     assert.equal(a.messages.filter(m=>m.type==='room').length,before+1,'only the successful claim broadcasts changed room state');
     assert(b.messages.some(m=>m.type==='room'&&m.room.sealProgress?.collected.maze?.by===aid));
+    const sealLogs=(socket:Socket)=>socket.messages.filter(m=>m.type==='log'&&m.entry.text.includes('подобрал значок Метакнайта.'));
+    for(const socket of [a,b])assert.deepEqual(sealLogs(socket).map(m=>m.entry.text),['Искатель подобрал значок Метакнайта. Собрано 1 из 3.'],'accepted claims broadcast once to every player using the server-owned name');
     const late=await join('Поздний',2);assert.deepEqual(late.messages.find(m=>m.type==='welcome').room.sealProgress,first);
 
     // One player may collect every remaining seal; there is no distinct-player gate.
@@ -95,6 +98,11 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     room.room.locks['tree:0']=aid;
     send(a,actor('treehouse'),[{type:'seal',id:'treehouse'}]);delete room.room.locks['tree:0'];
     const complete=structuredClone(room.room.sealProgress);
+    for(const socket of [a,b]){
+      assert.deepEqual(sealLogs(socket).map(m=>m.entry.text),[1,2,3].map(n=>`Искатель подобрал значок Метакнайта. Собрано ${n} из 3.`));
+      const portal=socket.messages.filter(m=>m.type==='log'&&m.entry.text===META_KNIGHT_PORTAL_MESSAGE);
+      assert.equal(portal.length,1);assert(socket.messages.indexOf(sealLogs(socket).at(-1))<socket.messages.indexOf(portal[0]),'portal announcement follows the third pickup');
+    }
     assert(validSealProgress(complete));assert.equal(Object.keys(complete.collected).length,3);
     for(const id of SEAL_IDS)assert.equal(complete.collected[id]!.by,aid);
     assert.equal(a.data.actor.variant,0);assert.equal(a.data.actor.achievements.length,0,'collecting does not unlock a character or award an unrelated task');
@@ -109,7 +117,9 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     room=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();assert.deepEqual(room.room.sealProgress,complete,'hibernated legacy room migrates the old third seal without changing its collector');
     const returned=await join('Искатель',3),welcome=returned.messages.find(m=>m.type==='welcome');
     assert.equal(welcome.playerId,aid);assert.equal(welcome.room.id,roomId);assert.deepEqual(welcome.room.sealProgress,complete);
+    assert.equal(welcome.room.log.filter((entry:any)=>entry.text===META_KNIGHT_PORTAL_MESSAGE).length,1,'late joins recover the portal announcement from room history');
     send(returned,actor('maze'),[{type:'seal',id:'maze'}]);assert.deepEqual(room.room.sealProgress,complete,'rejoining cannot recollect a seal');
+    assert.equal(sealLogs(returned).length,0,'rejected duplicate claims do not replay chat events');
     await room.webSocketClose(b);await room.webSocketClose(late);await room.webSocketClose(returned);
     const fresh=await join('Новая игра',0);assert.notEqual(fresh.messages.find(m=>m.type==='welcome').room.id,roomId);
     assert.deepEqual(fresh.messages.find(m=>m.type==='welcome').room.sealProgress,newSealProgress(),'a genuinely new room starts a new hunt');

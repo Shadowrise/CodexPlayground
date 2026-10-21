@@ -1,7 +1,7 @@
 import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,knightArenaSide,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
 import {constrainKnightShield} from '../../kirby-game/src/meta-knight-shield';
 import {META_KNIGHT_ARENA,constrainMetaKnightArena} from '../../kirby-game/src/meta-knight-arena-site';
-import {metaKnightVictoryLog} from '../../kirby-game/src/world-log';
+import {metaKnightVictoryLog,metaKnightSealLogs} from '../../kirby-game/src/world-log';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,millWorking,millCarrying,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
@@ -19,6 +19,7 @@ import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-nam
 import {sanitizeDevice,deviceInfo,type DeviceInfo} from '../../kirby-game/src/history-types';
 import {SCORE_ACTIONS,achievementPoints} from '../../kirby-game/src/score';
 import {isPrankKind,makePrank,PRANKS} from '../../kirby-game/src/pranks';
+import {PIGEON_FLOCK_BATCH,validPigeonCheckpoint,type PigeonCheckpoint,type SummonedPigeon} from '../../kirby-game/src/pigeon-flock-state';
 import {historyRoutes} from './admin';
 import {initRoomChat,writeRoomChat,roomChatPage,type ChatCursor} from './room-chat';
 import {initHistory,writeVisits,historyPage,type Visit,type HistoryFilter} from './history-store';
@@ -50,6 +51,7 @@ export class GameRoom extends DurableObject<Env>{
    const [saved,battle,event,flowers,numbers]=await Promise.all([ctx.storage.get<RoomState>('room-state'),ctx.storage.get<KnightBattle>('knight-battle'),ctx.storage.get<CentipedeEvent>('centipede-event'),ctx.storage.get<FlowerGame>('flower-game'),ctx.storage.get<NumberGame>('number-game')]);
    if(saved&&(!this.room||this.room.id===saved.id)&&this.players().some(s=>{const a=s.deserializeAttachment() as Attachment;return !a.session||a.session===saved.id;}))this.room=saved;
    this.restoreSeals();
+   if(this.room&&ctx.storage.list){const birds=await ctx.storage.list<SummonedPigeon>({prefix:`pigeon:${this.room.id}:`});if(birds.size)this.room.pigeonFlock=Array.from(birds.values()).sort((a,b)=>a.order-b.order);}
    if(this.room&&battle){this.room.knightBattle=battle;this.knightSaved=battle.revision;}
    if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}
    if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}
@@ -84,6 +86,21 @@ export class GameRoom extends DurableObject<Env>{
   r.pranks=(r.pranks??[]).filter(p=>p.endsAt>now&&this.players().some(s=>(s.deserializeAttachment() as Attachment).id===p.playerId));
   if(r.pranks.some(p=>p.playerId===playerId))return {ok:false,error:'У этого игрока ещё идёт розыгрыш. Подожди немного.'};
   r.pranks.push(makePrank(playerId,kind,now,a.actor.p,a.actor.s));this.log(a,PRANKS[kind].text);this.changed();return {ok:true};
+ });}
+ adminPigeon(roomId:string,playerId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room;if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  if(r.festival?.results)return {ok:false,error:'Игра уже завершена.'};
+  const a=this.players().map(s=>s.deserializeAttachment() as Attachment).find(a=>a.id===playerId);
+  if(!a?.actor)return {ok:false,error:'Игрок отключился или ещё загружается.'};
+  const flock=r.pigeonFlock??=[],bird:SummonedPigeon={id:crypto.randomUUID(),playerId,skin:Math.random()<.5?'pidgie':'snowball',seed:(Math.random()*0x100000000)>>>0,order:(flock.at(-1)?.order??-1)+1};
+  await this.ctx.storage.put(`pigeon:${r.id}:${bird.id}`,bird);
+  (r.pigeonFlock??=[]).push(bird);this.log(a,'получил голубиную почту от Ветерка.');this.changed();return {ok:true};
+ });}
+ adminClearPigeons(roomId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room;if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
+  const birds=r.pigeonFlock??[],now=Date.now();
+  await Promise.all(birds.map(bird=>{bird.dismissedAt??=now;return this.ctx.storage.put(`pigeon:${r.id}:${bird.id}`,bird);}));
+  this.changed();return {ok:true};
  });}
  adminResize(roomId:string,playerId:string,delta:unknown){return this.ctx.blockConcurrencyWhile(async()=>{
   const r=this.room;if(!r||r.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
@@ -128,7 +145,7 @@ export class GameRoom extends DurableObject<Env>{
  private startFestival(now:number,initiator:string){
   const r=this.room;if(!r||r.festival)return;
   r.festival=createStarfall(now,initiator);
-  for(const peer of this.players()){const a=peer.deserializeAttachment() as Attachment;const actor=a.actor;r.festival.players[a.id]={name:a.name??actor?.name??'Кирби',variant:a.variant,base:(actor?.fruits??0)+achievementPoints(actor?.achievements??[])+(actor?.eventPoints??0),fruits:actor?.fruits??0,size:actor?.progress?.size??actor?.s??1,bonus:0,collected:[]};}
+  for(const peer of this.players()){const a=peer.deserializeAttachment() as Attachment;const actor=a.actor;r.festival.players[a.id]={name:a.name??actor?.name??'Кирби',variant:a.variant,base:(actor?.fruits??0)+achievementPoints(actor?.achievements??[])+(actor?.eventPoints??0),fruits:actor?.fruits??0,size:actor?.progress?.size??actor?.s??1,bonus:0,collected:[],numbersCompleted:actor?.achievements.includes('numbers')??false};}
  }
  private millActor(a:Attachment):MillActor|undefined{
   const c=a.actor;if(!c)return;const q=c.q;
@@ -253,7 +270,7 @@ export class GameRoom extends DurableObject<Env>{
   // A world plus quests/chat can exceed the socket's 16KiB structured-clone
   // limit. Store room checkpoints independently so persistence cannot interrupt
   // broadcasts as the room grows. Encounter writes retain their own cadence.
-  this.ctx.waitUntil(this.ctx.storage.put('room-state',{...this.room,knightBattle:undefined,centipede:undefined,flowerGame:undefined,numberGame:undefined}));
+  this.ctx.waitUntil(this.ctx.storage.put('room-state',{...this.room,pigeonFlock:undefined,knightBattle:undefined,centipede:undefined,flowerGame:undefined,numberGame:undefined}));
   if(this.room.knightBattle&&this.room.knightBattle.revision!==this.knightSaved){this.knightSaved=this.room.knightBattle.revision;this.ctx.waitUntil(this.ctx.storage.put('knight-battle',this.room.knightBattle));}
   const boss=JSON.stringify(this.room.centipede?{...this.room.centipede,chasers:undefined}:null);
   if(boss!==this.bossSaved){this.bossSaved=boss;this.ctx.waitUntil(this.room.centipede?this.ctx.storage.put('centipede-event',this.room.centipede):this.ctx.storage.delete('centipede-event'));}
@@ -310,7 +327,16 @@ export class GameRoom extends DurableObject<Env>{
   this.accountHistory(a,now);
   if(now-(a.window??0)>1000){a.window=now;a.count=0;}a.count=(a.count??0)+1;if(a.count>30){socket.close(1008,'Message rate exceeded');return;}a.lastFrame=now;a.seen=now;
   const oldKnightPoint=a.actor?.location==='meta-knight-arena'?[a.actor.p[0]-META_KNIGHT_ARENA.x,a.actor.p[1],a.actor.p[2]] as [number,number,number]:undefined;
-  let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined;
+  let actor:ActorState|undefined,world:WorldState|undefined,reportedSize:number|undefined,pigeons:PigeonCheckpoint[]|undefined,flockChanged=false;
+  if(a.id===r.host&&Array.isArray(m.pigeons)&&m.pigeons.length<=PIGEON_FLOCK_BATCH){
+   const birds=new Map(r.pigeonFlock?.map(b=>[b.id,b]));pigeons=[];
+   for(const c of m.pigeons)if(validPigeonCheckpoint(c)){
+    const bird=birds.get(c.id);if(!bird||c.bird.seed!==bird.seed||c.bird.friend||c.bird.followId&&c.bird.followId!==bird.playerId)continue;
+    if(c.departed&&bird.dismissedAt!==undefined){r.pigeonFlock=r.pigeonFlock!.filter(b=>b.id!==bird.id);birds.delete(bird.id);this.ctx.waitUntil(this.ctx.storage.delete(`pigeon:${r.id}:${bird.id}`));flockChanged=true;continue;}
+    if((c.departureY!==undefined||c.departed)&&bird.dismissedAt===undefined)continue;
+    bird.checkpoint=c;pigeons.push(c);this.ctx.waitUntil(this.ctx.storage.put(`pigeon:${r.id}:${bird.id}`,bird));
+   }
+  }
   if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(actor?.location==='meta-knight-arena'){
    const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
@@ -333,7 +359,10 @@ export class GameRoom extends DurableObject<Env>{
    if(!e||typeof e!=='object')continue;
    if(e.type==='seal'){
     const actor=this.sealActor(a,e.id),old=r.sealProgress??newSealProgress();
-    if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){r.sealProgress=next;changed=true;}}
+    if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){
+     r.sealProgress=next;changed=true;
+     for(const entry of metaKnightSealLogs(a.name??a.actor!.name,Object.keys(next.collected).length))this.logEntry(entry);
+    }}
    }
    else if(e.type==='knight'&&a.actor?.location==='meta-knight-arena'){
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
@@ -413,18 +442,18 @@ export class GameRoom extends DurableObject<Env>{
    this.startFestival(now,a.actor.name);changed=true;
    void this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt));
   }
-  if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;}
+  if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;p.numbersCompleted=a.actor.achievements.includes('numbers');}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
   if(this.advanceKnight(now,a))changed=true;
   delete a.room;socket.serializeAttachment(a);
-  if(changed)this.changed();else if(world||r.festival||flowersChanged||numbersChanged)this.persist();
+  if(changed||flockChanged)this.changed();else if(world||r.festival||flowersChanged||numbersChanged)this.persist();
   if(flowersChanged)this.broadcast({type:'flower-game',game:r.flowerGame});
   if(numbersChanged)this.broadcast({type:'number-game',game:r.numberGame});
   const chasers=r.centipede&&now-this.chaseSentAt>=CHASERS.snapshotMs?chaseSnapshot(r.centipede):undefined;
   if(chasers)this.chaseSentAt=now;
   // Include the sender only when a compact chase update is due. No new timer,
   // HTTP request or full-room broadcast for ordinary ball movement.
-  if(actor||world||chasers)this.broadcast({type:'frame',id:a.id,actor,world,chasers},chasers?undefined:socket);
+  if(actor||world||chasers||pigeons?.length)this.broadcast({type:'frame',id:a.id,actor,world,chasers,pigeons},chasers?undefined:socket);
  }
  private remove(socket:WebSocket,status:Visit['status']='left'){return this.ctx.blockConcurrencyWhile(()=>this.removePlayer(socket,status));}
  private async removePlayer(socket:WebSocket,status:Visit['status'],reason='Disconnected'){
@@ -436,6 +465,7 @@ export class GameRoom extends DurableObject<Env>{
   const remaining=this.players().filter(s=>s!==socket);
   if(!remaining.length){this.room=undefined;await this.ctx.storage.deleteAlarm();await this.ctx.storage.deleteAll();return;}
   const r=this.room;if(!r)return;
+  if(r.pigeonFlock){for(const bird of r.pigeonFlock)if(bird.playerId===a.id)this.ctx.waitUntil(this.ctx.storage.delete(`pigeon:${r.id}:${bird.id}`));r.pigeonFlock=r.pigeonFlock.filter(b=>b.playerId!==a.id);}
   if(a.actor){
    const actor=structuredClone(a.actor);actor.s=actor.progress?.size??actor.s;
    actor.p[1]=actor.ride?0:actor.progress?.ground??0;actor.state='Idle';actor.pose=[];delete actor.ride;delete actor.fit;

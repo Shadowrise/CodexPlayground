@@ -23,16 +23,20 @@ test('room starts once, survives host departure, freezes rewards and expires wit
  b.data.actor.s=.4;b.data.actor.progress={size:.3,checkpoint:0,ground:0};
  room.webSocketMessage(a,JSON.stringify({type:'frame',actor:{...actor(0),achievements:SCORE_ACTIONS}}));
  const f=room.room.festival;assert(f);assert.equal(alarm,now+30000);assert.equal(Object.keys(f.players).length,2);assert.equal(f.players.b.size,.3);
+ assert.equal(f.players.a.numbersCompleted,true);assert.equal(f.players.b.numbersCompleted,false);
  now=f.startsAt+3000;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:0},{type:'festival-star',index:0}]}));assert.equal(f.players.b.bonus,1);
  await room.webSocketClose(a);assert.equal(room.room.host,'b');assert.equal(room.room.festival.startsAt,f.startsAt);
  assert.equal(visits[0].status,'left');assert.equal(visits[0].completed,false);assert.equal(visits[0].tasksDone,SCORE_ACTIONS.length);assert.equal(visits[0].tasksTotal,SCORE_ACTIONS.length);assert.equal(visits[0].activeMs,23000);
  // Visual fitting for a ride cannot earn Tiny Tot. Logical size during resize can.
- now=f.endsAt-1000;room.webSocketMessage(b,JSON.stringify({type:'frame',actor:{...actor(1),fit:.3,progress:{size:1,checkpoint:0,ground:0}}}));
+ now=f.endsAt-1000;room.webSocketMessage(b,JSON.stringify({type:'frame',actor:{...actor(1),achievements:['numbers'],fit:.3,progress:{size:1,checkpoint:0,ground:0}}}));
  assert.equal(f.players.b.size,1);
+ assert.equal(f.players.b.numbersCompleted,false,'a forged achievement cannot earn the nomination');
  now=f.endsAt-100;room.webSocketMessage(b,JSON.stringify({type:'frame',actor:{...actor(1),s:.4,progress:{size:.3,checkpoint:0,ground:0}}}));
  assert.equal(f.players.b.size,.3);
  now=f.endsAt;room.webSocketMessage(b,JSON.stringify({type:'frame',events:[]}));assert(f.results);assert(b.messages.some(m=>m.type==='room'&&m.room.festival?.results));const results=JSON.stringify(f.results);
  assert(starfallAwards(f.results,f.initiator).get('b')?.includes('Малявка'));
+ assert(starfallAwards(f.results,f.initiator).get('a')?.includes('Математик'));
+ assert(!starfallAwards(f.results,f.initiator).get('b')?.includes('Математик'));
  const completed=visits.find(v=>v.playerId==='b');assert.equal(completed.status,'finished');assert.equal(completed.completed,true);assert.equal(completed.score,1);assert.equal(completed.place,2);assert.equal(completed.endedAt,f.endsAt);
  room.webSocketMessage(b,JSON.stringify({type:'frame',events:[{type:'festival-star',index:3}]}));assert.equal(JSON.stringify(f.results),results);
  now=f.endsAt+RESULTS_MS;await room.alarm();assert.equal(b.readyState,3);assert.equal(room.room,undefined);assert(cleared);assert.equal(alarm,0);

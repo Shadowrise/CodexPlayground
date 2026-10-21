@@ -1,7 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {chatText,emoteMessage,EMOTE_MESSAGES,pidgieScareLog,pidgieInterestLog,pidgieFriendLog} from '../src/world-log';
+import {chatText,emoteMessage,EMOTE_MESSAGES,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightSealLogs,META_KNIGHT_PORTAL_MESSAGE} from '../src/world-log';
 import {EMOTES,PIGEON_EMOTES} from '../src/emotes';
+
+test('seal announcements preserve literal names, shared counts and announce the portal once on completion',()=>{
+ const first=metaKnightSealLogs('Радуга $& {1}',1);
+ assert.equal(first.length,1);assert.equal(first[0].text,'Радуга $& {1} подобрал значок Метакнайта. Собрано 1 из 3.');
+ const last=metaKnightSealLogs('Сосед',3);
+ assert.deepEqual(last.map(e=>e.text),['Сосед подобрал значок Метакнайта. Собрано 3 из 3.',META_KNIGHT_PORTAL_MESSAGE]);
+ assert([...first,...last].every(e=>e.name===''&&!e.chat));assert.notEqual(first[0].id,last[0].id);
+});
 
 test('feeding announcement preserves the player name and names the new friendship',()=>{
  const entry=pidgieFriendLog('Радуга $&');assert.equal(entry.text,'Радуга $& угостил дикого Пиджи хлебушком, теперь Пиджи его лучший друг.');assert.equal(entry.name,'');assert.equal(entry.chat,false);

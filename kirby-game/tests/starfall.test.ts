@@ -13,7 +13,7 @@ test('Biggest muncher depends only on fruit count, including tied shrunk and adm
 test('all sixteen adventures are required, without retired lake or maze trampoline actions',()=>{assert.equal(SCORE_ACTIONS.length,16);assert(!SCORE_ACTIONS.some(id=>String(id)==='trampoline'));assert(allTasks(SCORE_ACTIONS));assert(allTasks([...SCORE_ACTIONS,'trampoline']));assert(!allTasks([...SCORE_ACTIONS.filter(a=>a!=='fountain'),'swim']));for(const missing of SCORE_ACTIONS)assert(!allTasks(SCORE_ACTIONS.filter(a=>a!==missing)));});
 test('one shared timeline covers countdown, collection, celebration and results',()=>{const s=createStarfall(100,'Кирби');assert.equal(starfallPhase(s,100),'countdown');assert.equal(starfallPhase(s,100+PREPARE_MS),'collect');assert.equal(starfallPhase(s,100+PREPARE_MS+COLLECT_MS),'celebrate');assert.equal(starfallPhase(s,s.endsAt+CELEBRATE_MS),'done');});
 test('stars are personal, duplicate safe, time limited, with a strict 30 point cap',()=>{const s=createStarfall(0,'Кирби');s.players.a=player();s.players.b=player();assert(!collectStar(s,'a',0,0));assert(!collectStar(s,'unknown',0,s.startsAt+3000));assert(!collectStar(s,'a',NaN,s.startsAt+3000));assert(collectStar(s,'a',0,s.startsAt+3000));assert(collectStar(s,'b',0,s.startsAt+3000));assert(!collectStar(s,'a',0,s.startsAt+3000));assert(!collectStar(s,'a',4,s.startsAt+3000));for(let i=1;i<60;i++)collectStar(s,'a',i,s.startsAt+i*STAR_INTERVAL+3000);assert.equal(s.players.a.bonus,30);assert.equal(s.players.b.bonus,1);assert(!collectStar(s,'b',59,s.endsAt));assert(validStarfall(s));});
-test('results freeze exactly once and bonus does not change fruit count or size',()=>{const s=createStarfall(0,'Кирби');s.players.a=player();s.players.b={...player(),base:40};collectStar(s,'a',4,s.startsAt+4*STAR_INTERVAL+3000);assert.equal(s.players.a.bonus,3);assert(!finishStarfall(s,s.endsAt-1));assert(finishStarfall(s,s.endsAt));assert.equal(s.results?.[0].id,'b');assert.equal(s.results?.[1].points,39);s.players.b.base=0;assert(!finishStarfall(s,s.endsAt+1));assert.equal(s.results?.[0].points,40);assert.equal(scoreOf({fruitsEaten:4,achievements:new Set(SCORE_ACTIONS),bonusPoints:3}),SCORE_ACTIONS.length*3+20);assert.equal(s.players.a.fruits,4);assert.equal(s.players.a.size,1.4);});
+test('results freeze exactly once and bonus does not change fruit count or size',()=>{const s=createStarfall(0,'Кирби');s.players.a=player();s.players.b={...player(),base:40};collectStar(s,'a',4,s.startsAt+4*STAR_INTERVAL+3000);assert.equal(s.players.a.bonus,3);assert(!finishStarfall(s,s.endsAt-1));assert(finishStarfall(s,s.endsAt));assert.equal(s.results?.[0].id,'b');assert.equal(s.results?.[1].points,39);s.players.b.base=0;assert(!finishStarfall(s,s.endsAt+1));assert.equal(s.results?.[0].points,40);assert.equal(scoreOf({fruitsEaten:4,achievements:new Set(SCORE_ACTIONS),bonusPoints:3}),SCORE_ACTIONS.length*3+22);assert.equal(s.players.a.fruits,4);assert.equal(s.players.a.size,1.4);});
 
 test('collection continues after the score cap without awarding more points',()=>{
  const s=createStarfall(0,'Кирби');s.players.a={...player(),bonus:30};
@@ -46,4 +46,20 @@ test('Tiny Tot depends on size at the finish, not earlier shrinking or changes a
  const awards=starfallAwards(s.results!,s.initiator);
  assert(!awards.get('regrown')?.includes('Малявка'));assert(awards.get('tiny')?.includes('Малявка'));
  assert.equal(starfallAwards([],s.initiator).size,0);
+});
+
+test('Mathematician rewards every human who solved the numbers and freezes with the results',()=>{
+ const s=createStarfall(0,'Кирби');
+ s.players.a={...player(),numbersCompleted:true};s.players.b={...player(),numbersCompleted:true};
+ s.players.spectator={...player(),numbersCompleted:false};s.players.legacy=player();
+ s.players.npc={...player(),numbersCompleted:true};
+ assert(validStarfall(s));assert.equal(starfallAwards(s.results??[],s.initiator).size,0);
+ finishStarfall(s,s.endsAt);const results=JSON.stringify(s.results);
+ s.players.a.numbersCompleted=false;s.players.spectator.numbersCompleted=true;
+ const awards=starfallAwards(s.results!,s.initiator);
+ for(const id of ['a','b'])assert(awards.get(id)?.includes('Математик'));
+ for(const id of ['spectator','legacy'])assert(!awards.get(id)?.includes('Математик'));
+ assert(!awards.has('npc'));assert.equal(JSON.stringify(s.results),results);
+ assert(s.results!.every(r=>r.points===player().base),'the nomination adds no extra points');
+ assert(!validStarfall({...s,players:{bad:{...player(),numbersCompleted:'yes'}}}));
 });

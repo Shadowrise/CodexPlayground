@@ -2,7 +2,13 @@ import {test,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {detectLocale,initializeLocale,getLocale,setLocale,t,LANGUAGE_KEY,onLocaleChange} from '../src/i18n';
 import {translations} from '../src/i18n-catalog';
-import {pidgieScareLog,pidgieInterestLog,pidgieFriendLog} from '../src/world-log';
+import {pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightSealLogs} from '../src/world-log';
+
+test('shared badge and portal announcements translate and preserve collector names',()=>{
+ const entries=metaKnightSealLogs('Радуга $&',3);
+ setLocale('en');assert.equal(t(entries[0].text),'Радуга $& collected a Meta Knight badge. Collected 3 of 3.');assert.equal(t(entries[1].text),'All 3 Meta Knight badges collected. The portal to the cosmic arena is open!');
+ setLocale('bg');assert.equal(t(entries[0].text),'Радуга $& взе значка на Мета Найт. Събрани са 3 от 3.');assert.equal(t('Значки Метакнайта'),'Значки на Мета Найт');
+});
 
 test('Pidgie friendship announcement translates while preserving the player name',()=>{
  const {text}=pidgieFriendLog('Радуга');setLocale('en');assert.equal(t(text),'Радуга gave wild Pidgie some bread. Pidgie is now their best friend.');setLocale('ru');
@@ -44,6 +50,14 @@ test('display templates translate nested labels and keep player names verbatim',
 });
 test('Tiny Tot nomination is localized in all supported languages',()=>{
  for(const [language,label] of [['ru','Малявка'],['en','Tiny tot'],['bg','Мъниче']] as const){setLocale(language);assert.equal(t('Малявка'),label);}
+});
+
+test('number reward and Mathematician nomination are localized in all supported languages',()=>{
+ for(const [language,label,message] of [
+  ['ru','Математик','Все примеры решены! +12 очков.'],
+  ['en','Mathematician','All problems solved! +12 points.'],
+  ['bg','Математик','Всички задачи са решени! +12 точки.'],
+ ] as const){setLocale(language);assert.equal(t('Математик'),label);assert.equal(t('Все примеры решены! +12 очков.'),message);}
 });
 
 test('Pidgie bread hint translates as a system message without translating the player name',()=>{

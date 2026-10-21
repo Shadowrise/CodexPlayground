@@ -1,12 +1,13 @@
 import * as T from 'three';
 import {centipedeBalls,CENTIPEDE_BALLS as B,type CentipedeEvent} from './centipede-event';
 import {roundedBallWarning} from './centipede-warning-geometry';
+import {attackRibbonMaterial,updateAttackRibbon} from './attack-ribbon-material';
 import {CHASERS,ChasePlayback,hasChasers} from './centipede-chasers';
 
 const COLOURS=['#ff1469','#ff8b0d','#ffe128','#03b856','#168cff','#8742ff','#f62cc1'];
 /** Sneeze fans and pursuing balls share one instanced draw; no lights/shadows. */
 export class CentipedeBallsView{
- readonly group=new T.Group();readonly balls:T.InstancedMesh;readonly warnings:T.InstancedMesh;
+ readonly group=new T.Group();readonly balls:T.InstancedMesh;readonly warnings:T.InstancedMesh<T.ShapeGeometry,T.ShaderMaterial>;
  private matrix=new T.Matrix4();private position=new T.Vector3();private rotation=new T.Quaternion();private scale=new T.Vector3();
  private euler=new T.Euler();private colours=COLOURS.map(c=>new T.Color(c));
  private chasePlayback=new ChasePlayback();
@@ -27,7 +28,8 @@ export class CentipedeBallsView{
   };
   material.customProgramCacheKey=()=> 'centipede-striped-ball-v2';
   this.balls=new T.InstancedMesh(geometry,material,B.waves*B.perWave+CHASERS.count);
-  this.warnings=new T.InstancedMesh(roundedBallWarning(),new T.MeshBasicMaterial({transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide}),B.perWave);
+  const warningGeometry=roundedBallWarning(),warningMaterial=attackRibbonMaterial(.325);warningMaterial.uniforms.span.value=warningGeometry.userData.span;Object.assign(warningMaterial,{polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
+  this.warnings=new T.InstancedMesh(warningGeometry,warningMaterial,B.perWave);this.warnings.renderOrder=2;
   this.group.name='Топотушка — прыгучие шарики';this.balls.name='Разноцветные полосатые шарики';this.warnings.name='Дорожки перед волной шариков';
   for(const mesh of [this.balls,this.warnings]){mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;mesh.count=0;}
   this.group.add(this.balls,this.warnings);this.group.visible=false;
@@ -44,7 +46,7 @@ export class CentipedeBallsView{
    }else {
     this.position.set(b.x+b.dx*6,.105,b.z+b.dz*6);this.euler.set(-Math.PI/2,0,Math.atan2(b.dx,b.dz));this.rotation.setFromEuler(this.euler);
     this.scale.setScalar(1);this.matrix.compose(this.position,this.rotation,this.scale);
-    this.warnings.setMatrixAt(preview,this.matrix);this.warnings.setColorAt(preview++,colour);
+    this.warnings.setMatrixAt(preview++,this.matrix);updateAttackRibbon(this.warnings.material,1+b.age/B.launch,false,now);
    }
   }
   const chasers=this.chasePlayback.sample(q!,now,delay),state=q!.chasers;

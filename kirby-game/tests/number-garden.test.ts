@@ -34,14 +34,14 @@ test('answers are entered left to right, mistakes cross only the failing slot an
  q=advanceNumberGame(q,numberDeadline(q))!;assert.equal(q.cursor,0);assert.equal(q.stage,'answer');assert.deepEqual(q.problems,examples);
  assert.equal(startNumberGame(q,actor(),2000),q,'start cannot replace an active challenge');
 });
-test('six complete answers include zeros and repeated digits, and award ten points once',()=>{
+test('six complete answers include zeros and repeated digits, and award twelve points once',()=>{
  let q={...startNumberGame(undefined,actor(),100)!,problems:examples},now=100;
  for(let round=1;round<=6;round++){
   assert.equal(q.round,round);
   for(const char of numberAnswer(q.problems[round-1])){now+=250;q=pressNumberGame(q,Number(char),near(Number(char)),now)!;assert(validNumberGame(q));}
   if(round<6){assert.equal(q.stage,'round');assert.deepEqual(q.winners,[]);now=numberDeadline(q);q=advanceNumberGame(q,now)!;}else assert.equal(q.stage,'celebrate');
  }
- assert.deepEqual(q.winners,['a']);const a={fruitsEaten:0,achievements:new Set<ScoreAction>()};assert(awardFirst(a,'numbers'));assert.equal(scoreOf(a),10);assert(!awardFirst(a,'numbers'));assert.equal(achievementPoints(a.achievements),10);
+ assert.deepEqual(q.winners,['a']);const a={fruitsEaten:0,achievements:new Set<ScoreAction>()};assert(awardFirst(a,'numbers'));assert.equal(scoreOf(a),12);assert(!awardFirst(a,'numbers'));assert.equal(achievementPoints(a.achievements),12);
  assert.equal(advanceNumberGame(q,numberDeadline(q)),undefined);
  const zero={...startNumberGame(undefined,actor(),100)!,round:3,problems:[...examples.slice(0,2),{left:20,right:20,operator:'+' as const},...examples.slice(3)]};
  const prefix=pressNumberGame(zero,4,near(4),350)!;assert.equal(pressNumberGame(prefix,0,near(0),600)?.stage,'round','zero remains available in answers to two-digit problems');

@@ -28,7 +28,7 @@ test('actual Worker shares six rounds, protects rewards, persists progress and r
    for(const char of numberAnswer(room.room.numberGame.problems[round-1]))press((round+i++)%2?a:b,Number(char));
    if(round<6){assert.equal(room.room.numberGame.stage,'round');now=numberDeadline(room.room.numberGame);frame(a);}
   }
-  assert.equal(room.room.numberGame.stage,'celebrate');for(const s of [a,b]){assert.equal(achievementPoints(s.data.actor.achievements),10);assert.equal(s.messages.filter(m=>m.type==='number-complete').length,1);}
+  assert.equal(room.room.numberGame.stage,'celebrate');for(const s of [a,b]){assert.equal(achievementPoints(s.data.actor.achievements),12);assert.equal(s.messages.filter(m=>m.type==='number-complete').length,1);}
   assert(storage.has('number-game'));assert(!a.data.room,'progress stored outside the WebSocket attachment');
   const snapshot=structuredClone(a.data.actor);snapshot.achievements=[];frame(a,[],snapshot);assert(a.data.actor.achievements.includes('numbers'));
   assert(a.messages.filter(m=>m.type==='number-game').every(m=>JSON.stringify(m).length<1800));

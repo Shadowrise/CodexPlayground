@@ -1,6 +1,5 @@
-import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import {fitRider,restoreRider} from './rider-size';
-import { DEPOT_PLATFORM, DEPOT_STEPS } from './depot-floor';
+import {makeCoasterDepot} from './coaster-depot';
 import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
@@ -87,13 +86,12 @@ export class Coaster {
     // The closed spline uses one-sided numerical tangents at its seam.
     this.frames[this.sampleCount].copy(this.frames[0]);
     const colors=new Map<string,T.MeshStandardMaterial>();
-    const box=new T.BoxGeometry(1,1,1),pole=new T.CylinderGeometry(1,1,1,8);
+    const box=new T.BoxGeometry(1,1,1);
     const material=(c:string)=>{if(!colors.has(c))colors.set(c,new T.MeshStandardMaterial({color:c,roughness:.65,metalness:c==='#becbd0'?.7:.15}));return colors.get(c)!;};
     const parts:T.Mesh[]=[];
     const add=(geometry:T.BufferGeometry,color:string,pos:T.Vector3,scale:T.Vector3,q=new T.Quaternion(),castShadow=true)=>{
       const m=new T.Mesh(geometry,material(color));m.position.copy(pos);m.scale.copy(scale);m.quaternion.copy(q);m.updateMatrix();m.castShadow=castShadow;parts.push(m);return m;
     };
-    const beam=(a:T.Vector3,b:T.Vector3,r:number,c:string)=>add(pole,c,a.clone().add(b).multiplyScalar(.5),new T.Vector3(r,a.distanceTo(b),r),new T.Quaternion().setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize()));
     for(const offset of [-1.2,1.2]) {
       const points=Array.from({length:this.sampleCount+1},(_,i)=>this.curve.getPointAt(i/this.sampleCount).add(new T.Vector3(offset,0,0).applyQuaternion(this.frames[i])));
       const rail=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points,true),2400,.13,6,true),material('#becbd0'));rail.name='Detailed coaster rail';rail.castShadow=false;this.group.add(rail);
@@ -115,26 +113,7 @@ export class Coaster {
     shadowGeometry.setIndex(indices);shadowGeometry.computeVertexNormals();shadowGeometry.computeBoundingSphere();
     const trackShadow=new T.Mesh(shadowGeometry,new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:T.DoubleSide}));
     trackShadow.name='Stable continuous coaster shadow';trackShadow.castShadow=true;this.group.add(trackShadow);
-    // Open boarding platform: no canopy obscures the rider or follow camera.
-    for(const surface of [DEPOT_PLATFORM,...DEPOT_STEPS])add(box,surface===DEPOT_PLATFORM?'#b9a582':'#a7987c',new T.Vector3(surface.x,surface.height/2,surface.z),new T.Vector3(surface.width,surface.height,surface.depth));
-    for(const x of [-11,-5,5,11]) {
-      for(const z of [220,225])if(Math.abs(x)>6)beam(new T.Vector3(x,.7,z),new T.Vector3(x,1.8,z),.07,'#d6cba6');
-    }
-    for(const x of [-10,10])beam(new T.Vector3(x,.7,228),new T.Vector3(x,20,228),.2,'#355f69');
-    add(box,'#efbd54',new T.Vector3(0,18,228),new T.Vector3(26,6.5,.55));
-    if(typeof document!=='undefined') {
-      const canvas=document.createElement('canvas');canvas.width=1536;canvas.height=384;
-      const ctx=canvas.getContext('2d')!;
-      ctx.fillStyle='#224956';ctx.fillRect(0,0,1536,384);
-      ctx.strokeStyle='#ffce66';ctx.lineWidth=16;ctx.strokeRect(15,15,1506,354);
-      ctx.textAlign='center';ctx.fillStyle='#fff4d3';ctx.font='bold 150px sans-serif';drawLocalizedText(ctx,'ДЕПО',768,190);
-      ctx.font='bold 58px sans-serif';ctx.fillStyle='#ffce66';drawLocalizedText(ctx,'АМЕРИКАНСКИЕ ГОРКИ',768,292);
-      const texture=localizedCanvasTexture(canvas);texture.colorSpace=T.SRGBColorSpace;
-      const sign=new T.Mesh(new T.PlaneGeometry(25.5,6.1),new T.MeshBasicMaterial({map:texture,side:T.DoubleSide}));
-      sign.name='Depot sign';sign.position.set(0,18,227.7);sign.rotation.y=Math.PI;this.group.add(sign);
-      const back=sign.clone();back.position.z=228.3;back.rotation.y=0;this.group.add(back);
-    }
-    for(const x of [-8,8])add(box,'#d1a15b',new T.Vector3(x,1.15,222),new T.Vector3(4,.25,1));
+    this.group.add(makeCoasterDepot());
     const batches=new Map<string,T.Mesh[]>();
     for(const m of parts){const k=m.geometry.uuid+(m.material as T.Material).uuid+m.castShadow;if(!batches.has(k))batches.set(k,[]);batches.get(k)!.push(m);}
     for(const list of batches.values()){const m=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>m.setMatrixAt(i,p.matrix));m.castShadow=list[0].castShadow;m.receiveShadow=list[0].castShadow;m.name=m.castShadow?'Coaster structure':'Detailed coaster ties';this.group.add(m);}

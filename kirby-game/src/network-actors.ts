@@ -12,6 +12,7 @@ import {createPlayerModel} from './player-model';
 import type {KirbyNpc} from './npcs';
 import type {ActorState} from './network-protocol';
 import {validAchievements} from './score';
+import {PlayerNameplate} from './player-nameplate';
 const round=(v:number)=>Math.round(v*1000)/1000;
 function poseNodes(c:CharacterController|KirbyNpc){
  // Preserve the protocol's five slots for both rigs: root, arms/wings, feet.
@@ -68,19 +69,24 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
 export class RemotePlayers{
  readonly players=new Map<string,CharacterController>();
  readonly renderedStates=new Map<string,ActorState>();
- constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF,private metaKnight?:GLTF,private onMetaKnight?:(model:T.Object3D)=>void){}
- clear(){for(const c of this.players.values()){c.setActivity('Idle');disposeActor(c);}this.players.clear();this.renderedStates.clear();}
+ private readonly nameplates=new Map<string,PlayerNameplate>();
+ constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF,private metaKnight?:GLTF,private onMetaKnight?:(model:T.Object3D)=>void,private snowball?:GLTF){}
+ private remove(id:string){this.nameplates.get(id)?.dispose();this.nameplates.delete(id);const c=this.players.get(id);if(c){c.setActivity('Idle');disposeActor(c);}this.players.delete(id);}
+ clear(){for(const id of this.players.keys())this.remove(id);this.renderedStates.clear();}
  update(actors:Map<string,ActorState>,dt:number,snapshots?:Map<string,PlayerSnapshots>){
   const now=performance.now();
-  for(const [id,c] of this.players)if(!actors.has(id)){c.setActivity('Idle');disposeActor(c);this.players.delete(id);this.renderedStates.delete(id);}
+  for(const id of this.players.keys())if(!actors.has(id)){this.remove(id);this.renderedStates.delete(id);}
   for(const [id,latest] of actors){const a=snapshots?.get(id)?.sample(now)??latest;this.renderedStates.set(id,a);let c=this.players.get(id);
-   if(c&&c.actor.userData.variant!==a.variant){c.setActivity('Idle');disposeActor(c);this.players.delete(id);c=undefined;}
+   if(c&&c.actor.userData.variant!==a.variant){this.remove(id);c=undefined;}
    const variant=KIRBY_VARIANTS[a.variant]??KIRBY_VARIANTS[0];
    // An optional model may still be loading; keep the state for a later frame.
    if(isPigeonVariant(variant[0])&&!this.pigeon)continue;
+   if(variant[0]==='Снежок'&&!this.snowball)continue;
    if(variant[0]==='Meta Knight'&&!this.metaKnight)continue;
-   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
+   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight,this.snowball);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;
+    if(typeof document!=='undefined')this.nameplates.set(id,new PlayerNameplate(c.actor,rig.model));
+    c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 
-  }applyActor(c,a,dt,!!snapshots||fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}
+  }this.nameplates.get(id)?.set(latest.name,variant[1]);applyActor(c,a,dt,!!snapshots||fresh);c.actor.getObjectByName('Rainbow swim ring')!.visible=a.state==='Swim';}
  }
 }

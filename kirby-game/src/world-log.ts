@@ -7,6 +7,14 @@ export const EMOTE_MESSAGES={
  Peck:'наклоняется и деловито клюёт землю.'
 } as const;
 export type LogEntry={id:string;name:string;variant:number;text:string;chat:boolean};
+export const META_KNIGHT_SEAL_MESSAGE='{0} подобрал значок Метакнайта. Собрано {1} из 3.';
+export const META_KNIGHT_PORTAL_MESSAGE='Все 3 значка Метакнайта собраны. Портал на космическую арену открыт!';
+/** Shared by solo and the authoritative room; one announcement per accepted claim. */
+export function metaKnightSealLogs(playerName:string,count:number):LogEntry[]{
+ const texts=[META_KNIGHT_SEAL_MESSAGE.replace(/\{([01])\}/g,(_,index)=>index==='0'?playerName:String(count))];
+ if(count===3)texts.push(META_KNIGHT_PORTAL_MESSAGE);
+ return texts.map(text=>({id:crypto.randomUUID(),name:'',variant:-1,text,chat:false}));
+}
 export const META_KNIGHT_VICTORY_MESSAGE='Метакнайт с уважением смотрит на {0}.';
 export function metaKnightVictoryLog(playerName:string):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:META_KNIGHT_VICTORY_MESSAGE.replace('{0}',()=>playerName),chat:false};}
 export const PIDGIE_SCARE_MESSAGE='Дикий Пиджи окинул {0} голодным взглядом. Хлебушка не заметил, испугался и улетел на другую полянку.';

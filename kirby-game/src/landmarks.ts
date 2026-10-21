@@ -19,6 +19,7 @@ import {MEADOW_HALF_SIZE} from './world-bounds';
 import {createRockGeometry,createRockMaterial} from './rock-model';
 import {createReedGeometry,createWaterLilyGeometry,createWaterPlantMaterial} from './water-plants';
 import {biomeAt} from './forest';
+import {makeOakBench} from './bench-model';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
@@ -118,10 +119,8 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     }
   }
   function bench(g:T.Group,x:number,z:number) {
-    for(let i=0;i<3;i++) put(g,'box','#a57a50',x,1.0,z+(i-1)*.25,3,.14,.22);
-    for(const side of [-1,1]) put(g,'box','#6e513b',x+side, .48,z,.2,.95,.65);
-    put(g,'box','#ad8458',x,1.65,z+.48,3,.4,.12);
-    for(const side of [-1,1]) put(g,'box','#6e513b',x+side,1.15,z+.48,.13,1.4,.13);
+    const seat=makeOakBench(3,1.07);seat.position.set(x,0,z);seat.rotation.y=Math.PI;
+    seat.traverse(o=>{if(o instanceof T.Mesh)o.userData.landmarkBench=true;});g.add(seat);
   }
   for(const site of BRIDGES){const g=new T.Group();g.position.set(site.x,0,site.z);g.rotation.y=site.yaw;g.scale.set(POND_SCALE,1,POND_SCALE);root.add(g);
       for(let i=0;i<50;i++) {
@@ -211,8 +210,8 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
     if(!batches.has(key)){const material=source.clone();material.color.set(0xffffff);batches.set(key,{geometry:o.geometry,material,matrices:[],colors:[]});}
     batches.get(key)!.matrices.push(o.matrixWorld.clone());
     batches.get(key)!.colors.push(o.userData.tint?new T.Color(o.userData.tint):source.color.clone());
-    const shadow=shadowGeometry.get(o.geometry);
-    if(shadow){o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).getSize(shadowSize);
+    const shadow=shadowGeometry.get(o.geometry)??(o.userData.landmarkBench?o.geometry:undefined);
+    if(shadow){if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();o.geometry.boundingBox!.clone().applyMatrix4(o.matrixWorld).getSize(shadowSize);
       // Petals and water ripples are smaller than a useful shadow-map texel.
       if(Math.max(shadowSize.x,shadowSize.y,shadowSize.z)>=.6){if(!shadowBatches.has(shadow))shadowBatches.set(shadow,[]);shadowBatches.get(shadow)!.push(o.matrixWorld.clone());}
     }

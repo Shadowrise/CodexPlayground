@@ -1,13 +1,17 @@
 import { awardFirst } from './score';
 import { MathUtils, Vector3 } from 'three';
 import type { CharacterController } from './controller';
-import { LANDMARKS } from './landmarks';
+import { LANDMARKS } from './landmark-sites';
 import { TREEHOUSE_SITE, TREEHOUSE_HEIGHT_SCALE } from './treehouse';
+import {DEPOT_PLATFORM,DEPOT_BENCHES} from './depot-floor';
+import {OAK_BENCH_WIDTH,OAK_BENCH_SEAT_HEIGHT} from './bench-model';
 
-export type BenchSeat={position:Vector3;yaw:number;floor:number};
+export type BenchSeat={position:Vector3;yaw:number;floor:number;width:number;kind:'picnic'|'treehouse'|'depot'};
 export const BENCH_SEATS:BenchSeat[]=[
-  ...LANDMARKS.filter(site=>site.kind===4).flatMap(site=>[[0,4],[-5,-2]].map(([x,z])=>({position:new Vector3(site.x+x,1.07,site.z+z),yaw:Math.PI,floor:0}))),
-  {position:TREEHOUSE_SITE.clone().add(new Vector3(-2,9*TREEHOUSE_HEIGHT_SCALE+.72,1.36)),yaw:0,floor:9*TREEHOUSE_HEIGHT_SCALE},
+  ...LANDMARKS.filter(site=>site.kind===4).flatMap(site=>[[0,4],[-5,-2]].map(([x,z])=>({position:new Vector3(site.x+x,1.07,site.z+z),yaw:Math.PI,floor:0,width:3,kind:'picnic' as const}))),
+  {position:TREEHOUSE_SITE.clone().add(new Vector3(-2,9*TREEHOUSE_HEIGHT_SCALE+.72,1.36)),yaw:0,floor:9*TREEHOUSE_HEIGHT_SCALE,width:2.5,kind:'treehouse'},
+  // Append new seats so existing multiplayer lock IDs remain stable.
+  ...DEPOT_BENCHES.map(p=>({position:new Vector3(p.x,DEPOT_PLATFORM.height+OAK_BENCH_SEAT_HEIGHT,p.z),yaw:0,floor:DEPOT_PLATFORM.height,width:OAK_BENCH_WIDTH,kind:'depot' as const})),
 ];
 
 export class Benches {

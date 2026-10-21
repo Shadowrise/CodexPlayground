@@ -5,6 +5,7 @@ import { BIOME_TERRAIN } from './biome-style';
 import { MEADOW_HALF_SIZE,MOUNTAIN_WIDTH, constrainToMeadow } from './world-bounds';
 import { mountainSurfaceHeight } from './mountain-surface';
 import {MountainRecovery,type MountainSound} from './mountain-recovery';
+import {createMountainLedgeShade} from './mountain-ledge-shade';
 import { standingFootprint, footprintOverlapsRect } from './standing-footprint';
 import {
   MOUNTAIN_LEDGE_SITE as SITE, MOUNTAIN_LEDGE_YAW as YAW, MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT,
@@ -17,7 +18,7 @@ type Phase = 'ready' | 'retracting' | 'hidden' | 'extending';
 const PHASES: Phase[] = ['ready', 'retracting', 'hidden', 'extending'];
 const durations = { ready: 0, retracting: LEDGE_RETRACT_SECONDS, hidden: LEDGE_HIDDEN_SECONDS, extending: LEDGE_EXTEND_SECONDS };
 const EMBED_DEPTH = 5;
-type Step = { mesh: T.Mesh; phase: Phase; elapsed: number; standing: number; slide: number };
+type Step = { mesh: T.Mesh; shade:ReturnType<typeof createMountainLedgeShade>; phase: Phase; elapsed: number; standing: number; slide: number };
 
 /** Individual ledges attach to the existing mountain slope; no extra cliff mesh. */
 export class MountainLedges {
@@ -45,11 +46,12 @@ export class MountainLedges {
     STEPS.forEach((p, i) => {
       const mesh = new T.Mesh(this.slab(p, .78, i), material);
       mesh.name = 'Retracting mountain step ' + (i + 1); mesh.position.set(p.tangent, p.y, p.radial);
-      mesh.receiveShadow = mesh.castShadow = true; this.group.add(mesh);
-      this.steps.push({ mesh, phase: 'ready', elapsed: 0, standing: 0, slide: 0 });
+      mesh.receiveShadow = mesh.castShadow = false; this.group.add(mesh);
+      const shade=createMountainLedgeShade(p,.78);mesh.add(shade);
+      this.steps.push({ mesh,shade, phase: 'ready', elapsed: 0, standing: 0, slide: 0 });
     });
     this.summit = new T.Mesh(this.slab(SUMMIT, 1.25, 20), material); this.summit.name = 'Mountain corner overlook';
-    this.summit.position.set(SUMMIT.tangent, SUMMIT.y, SUMMIT.radial); this.summit.receiveShadow = this.summit.castShadow = true; this.group.add(this.summit);
+    this.summit.position.set(SUMMIT.tangent, SUMMIT.y, SUMMIT.radial); this.summit.receiveShadow = this.summit.castShadow = false;this.summit.add(createMountainLedgeShade(SUMMIT,1.25)); this.group.add(this.summit);
     // Retain a queryable landing footprint; the visible surface belongs to the
     // mountain heightfield, including its snow, normals and rounded shoulders.
     this.sealNiche=new T.Mesh(new T.CircleGeometry(SEAL_NICHE.width/2,96).rotateX(-Math.PI/2),material);this.sealNiche.name='Mountain true peak safe platform';this.peak=this.sealNiche;
@@ -237,6 +239,7 @@ export class MountainLedges {
     const ease = (t: number) => t * t * (3 - 2 * t);
     step.slide = LEDGE_RETRACT_DISTANCE * (step.phase === 'retracting' ? ease(step.elapsed / LEDGE_RETRACT_SECONDS) : step.phase === 'hidden' ? 1 : step.phase === 'extending' ? 1 - ease(step.elapsed / LEDGE_EXTEND_SECONDS) : 0);
     const pose=mountainLedgePose(STEPS[i],step.slide);
+    step.shade.material.opacity=.18*pose.scale;
     step.mesh.position.z = pose.radial;
     const fitted=step.mesh.geometry.userData.retraction;
     if(fitted){

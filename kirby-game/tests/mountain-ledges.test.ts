@@ -129,6 +129,11 @@ test('the visible rock next to the uneven mountain supports feet while standing 
 test('steps attach to the rounded slope and the enlarged semicircular summit connects to the left rock', async () => {
   const map = createMountainTexture(), world = new MountainLedges(new MeshStandardMaterial({ map, vertexColors: true }));
   assert.equal((world.summit.material as MeshStandardMaterial).map, map);
+  for(const step of world.steps){
+    assert(!step.mesh.castShadow&&!step.mesh.receiveShadow,'ledges do not project celestial shadows through the mountain');
+    assert(step.shade.material.opacity>0&&step.shade.material.opacity<=.2,'contact shading stays faint');
+    assert(!step.shade.castShadow&&!step.shade.receiveShadow&&!step.shade.material.depthWrite);
+  }
   assert(STEPS.every(p => p.width < SUMMIT.width && p.depth < SUMMIT.depth));
   assert(STEPS.every(p=>p.shape==='semicircle'&&Math.abs(p.width/2-p.depth)<1e-8));
   assert(!world.group.getObjectByName('Mountain corner rock buttress'));

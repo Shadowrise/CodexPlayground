@@ -4,6 +4,7 @@ import {createBroadleafTree,treeWoodMaterial,treeLeafMaterial,createTreeBough,tr
 import {treeShadows} from './tree-shadows';
 import { LeafPile } from './leaf-pile';
 import {batchRigidMeshes} from './rigid-batch';
+import {makeOakBench} from './bench-model';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
@@ -91,8 +92,7 @@ export class Treehouse {
     }
     // Bench, telescope, rug, lanterns and little hanging pennants.
     box('#668775',1,9.03,2,3,.04,2);
-    for(let j=0;j<4;j++)box('#be935d',-2,9.65,1+j*.24,2.5,.14,.2);
-    for(const x of [-2.9,-1.1])box('#795434',x,9.3,1.4,.16,.6,.9);
+    const bench=makeOakBench(2.5,.72);bench.name='Oak lookout bench';bench.position.set(-2,TREEHOUSE_DECK_HEIGHT,1.36);root.add(bench);
     beam([4,9,5],[4,10.3,5],.07,'#595a4c');
     for(let i=0;i<3;i++){const a=i*2.094;beam([4,9.9,5],[4+Math.cos(a)*.7,9,5+Math.sin(a)*.7],.045,'#71573a');}
     beam([4,10.4,4.6],[4,10.8,5.9],.19,'#c6a254');

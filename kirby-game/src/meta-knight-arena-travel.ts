@@ -6,6 +6,7 @@ import type {MetaKnightArenaScene} from './meta-knight-arena';
 import {META_KNIGHT_ARENA as SITE,META_KNIGHT_ANNEX,META_KNIGHT_PORTAL,arenaPortalFloor,arenaPortalCoordinates,constrainMetaKnightArena} from './meta-knight-arena-site';
 import {t} from './i18n';
 import {disposeActor} from './actor-lifecycle';
+import {arenaMaterials} from './meta-knight-arena-materials';
 import {MetaKnightBattleView} from './meta-knight-battle-view';
 import {KNIGHT,startKnightBattle,advanceKnightBattle,setKnightPhase,knightAttack,knightPosition,cancelKnightBattle,knightBattleActive,knightArenaSide,type KnightBattle,type KnightActor} from './meta-knight-battle';
 import type {KnightSound} from './meta-knight-sounds';
@@ -15,17 +16,8 @@ import {crossLines,ricochetCurve,ricochetIndex} from './meta-knight-star-assault
 import './meta-knight-arena-travel.css';
 
 const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
-type MaterialRestore={mesh:T.Mesh;original:T.Material|T.Material[];copies:T.Material[]};
 type ArenaArrival={x:number;z:number;yaw:number};
 type ArenaInput=Input&{cancelDuel?:string;moveStick?:{x:number;y:number}};
-/** CSM shader hooks belong to the meadow. Isolated copies use the arena's light. */
-function arenaMaterials(actor:T.Object3D){
- const restores:MaterialRestore[]=[];actor.traverse(o=>{if(!(o instanceof T.Mesh))return;
-  const originals=Array.isArray(o.material)?o.material:[o.material];const copies=originals.map(m=>{const copy=m.clone();copy.onBeforeCompile=T.Material.prototype.onBeforeCompile;copy.customProgramCacheKey=T.Material.prototype.customProgramCacheKey;if(copy instanceof T.MeshStandardMaterial)copy.envMap=null;copy.needsUpdate=true;return copy;});
-  restores.push({mesh:o,original:o.material,copies});o.material=Array.isArray(o.material)?copies:copies[0];
- });return ()=>{for(const {mesh,original,copies} of restores){mesh.material=original;copies.forEach(m=>m.dispose());}};
-}
-
 export class MetaKnightArenaTravel{
  readonly camera=new T.PerspectiveCamera(55,1,.25,1400);
  readonly overlay=document.createElement('div');

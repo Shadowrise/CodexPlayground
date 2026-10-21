@@ -7,7 +7,7 @@ import {resolve} from 'node:path';
 const url=process.env.GAME_URL??'http://127.0.0.1:5184/';
 const output=resolve(process.env.SEAL_QUEST_OUTPUT??fileURLToPath(new URL('../node_modules/.cache/meta-knight-seal-quest/',import.meta.url)));
 await mkdir(output,{recursive:true});
-const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--disable-background-timer-throttling','--disable-renderer-backgrounding']});
 const report={locations:[],pickups:[],rejections:{},saveLoad:{},mobile:{},online:null,errors:[]};
 
 async function prepare(context,online=false){
@@ -31,19 +31,25 @@ async function prepare(context,online=false){
  });
  context.on('page',page=>{page.on('pageerror',error=>report.errors.push(error.message));page.on('console',message=>{if(message.type()==='error')report.errors.push(message.text());});});
 }
-async function open(context){const page=await context.newPage();await page.goto(url);await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});await page.waitForFunction(()=>window.sealQuestTest&&!document.querySelector('#start-game')?.disabled,null,{timeout:120000});return page;}
+async function open(context){const page=await context.newPage();await page.goto(url);await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});await page.waitForFunction(()=>window.sealQuestTest&&!document.querySelector('#start-game')?.disabled,null,{timeout:120000});await page.evaluate(()=>{sealQuestTest.stages=[];new MutationObserver(()=>{const hud=document.querySelector('#meta-knight-seal-hud');sealQuestTest.stages.push({stage:hud.dataset.stage,at:performance.now(),filled:hud.querySelectorAll('.filled').length});}).observe(document.querySelector('#meta-knight-seal-hud'),{attributes:true,attributeFilter:['data-stage']});});return page;}
 async function start(page,{load=false,online=false,name='Искатель печатей'}={}){
- await page.locator(load?'#load-game':online?'#network-join':'#new-game').click();if(!load){await page.locator('#player-name-input').fill(name);await page.locator('#start-game').click();}await page.waitForFunction(()=>sealQuestTest.playing&&sealQuestTest.c);assert.equal(await page.locator('#meta-knight-seal-hud').count(),0,'seal progress must not create a permanent HUD panel');
+ await page.locator(load?'#load-game':online?'#network-join':'#new-game').click();if(!load){await page.locator('#player-name-input').fill(name);await page.locator('#start-game').click();}await page.waitForFunction(()=>sealQuestTest.playing&&sealQuestTest.c);await page.locator('#meta-knight-seal-hud').waitFor({state:'visible'});
 }
 async function exit(page){await page.locator('#settings-toggle').click();await page.locator('#exit-to-menu').click();await page.locator('#startup-menu').waitFor({state:'visible',timeout:120000});}
-async function count(page,expected){await page.waitForFunction(n=>Object.keys(sealQuestTest.progress.collected).length===n,expected);assert.equal(await page.locator('#meta-knight-seal-hud').count(),0);}
-function noticeText(expected,locale='ru'){return expected===3?{ru:'✦ Все три печати найдены',en:'✦ All three seals found',bg:'✦ И трите печата са намерени'}[locale]:{ru:`✦ Печать Meta Knight · ${expected}/3`,en:`✦ Meta Knight seal · ${expected}/3`,bg:`✦ Печат на Meta Knight · ${expected}/3`}[locale];}
-async function notice(page,expected,locale='ru'){
- await page.waitForFunction(text=>{const message=document.querySelector('#combat-message');return !message.hidden&&message.textContent===text;},noticeText(expected,locale),{timeout:10000});
- const position=await page.locator('#combat-message').evaluate(element=>({left:element.style.left,top:element.style.top}));assert(position.left&&position.top,'pickup notice follows the collector above their head');
+async function count(page,expected){await page.waitForFunction(n=>Object.keys(sealQuestTest.progress.collected).length===n&&document.querySelectorAll('#meta-knight-seal-hud .filled').length===n,expected);assert.equal(await page.locator('.seal-hud-slot').count(),3);assert.equal(await page.locator('.seal-hud-heading>span').textContent(),`${expected} / 3`);}
+async function notice(page,expected){
+ await page.locator('#meta-knight-seal-hud').waitFor({state:'visible'});await count(page,expected);await noNotice(page);
+ if(expected===3)assert(await page.evaluate(()=>sealQuestTest.stages.some(s=>s.stage==='complete'&&s.filled===3)),'all three badges are visible before opening');
 }
-async function noNotice(page){assert.equal(await page.locator('#combat-message').evaluate(element=>!element.hidden&&element.textContent.startsWith('✦')),false,'loaded and late-join seal progress must not replay a pickup notice');}
-async function noticeExpires(page){await page.locator('#combat-message').waitFor({state:'hidden',timeout:10000});const position=await page.locator('#combat-message').evaluate(element=>({left:element.style.left,top:element.style.top}));assert.deepEqual(position,{left:'',top:''},'expired notice must restore ordinary game message positioning');}
+async function completion(page){
+ await page.waitForFunction(()=>document.querySelector('#meta-knight-seal-hud').dataset.stage==='open',null,{timeout:10000});
+ const stages=await page.evaluate(()=>sealQuestTest.stages.filter(s=>s.filled===3));
+ assert.deepEqual(stages.slice(-3).map(s=>s.stage),['complete','opening','open']);assert(stages.at(-1).at-stages.at(-3).at>=2500,'completed badges are held before the animated portal reveal');
+ assert.equal(await page.locator('.seal-hud-message').textContent(),'Портал на космическую арену открыт!');
+ await noNotice(page);return stages;
+}
+async function noNotice(page){assert.equal(await page.locator('#combat-message').evaluate(element=>element.classList.contains('seal-pickup-message')||!element.hidden&&/печать|значок|три печати/i.test(element.textContent)),false,'seal pickups never create an overhead notice');}
+async function noticeExpires(page){await noNotice(page);assert(await page.locator('#meta-knight-seal-hud').isVisible(),'the shared badge panel remains visible');}
 async function pick(page,id,expected){
  if(id==='treehouse'){
   assert(await page.evaluate(()=>sealQuestTest.enterTreehouse()),'pickup must follow a real ladder climb into deck activity');
@@ -55,17 +61,14 @@ async function pick(page,id,expected){
 }
 async function box(locator){const r=await locator.boundingBox();assert(r);return r;}
 async function raisedNotice(page){
- const measured=await page.locator('#combat-message').evaluate(element=>{
-  const q=sealQuestTest,point=q.c.actor.position.clone();point.y+=2.2*q.c.actor.scale.x;point.project(q.camera);
-  const bounds=element.getBoundingClientRect(),anchorY=parseFloat(element.style.top);
-  return {box:{x:bounds.x,y:bounds.y,width:bounds.width,height:bounds.height},anchorY,projectedAnchorY:(1-point.y)*innerHeight/2,gap:anchorY-bounds.bottom};
- });assert(Math.abs(measured.anchorY-measured.projectedAnchorY)<1.5,'pickup notice must retain the real projected character anchor');assert(Math.abs(measured.gap-56)<.1,'pickup notice bottom must sit 56 screen pixels above its original projected anchor');return measured;
+ const measured=await box(page.locator('#meta-knight-seal-hud'));
+ assert(measured.y>=0&&measured.y<160&&measured.width>=300,'badge panel is large and at the top of the screen');return measured;
 }
 
 async function verifyNotice(){
  const context=await browser.newContext({viewport:{width:1280,height:900}});
  try{
-  await prepare(context);const page=await open(context);await start(page);
+  await prepare(context);const page=await open(context);await start(page);await count(page,0);await page.screenshot({path:resolve(output,'seal-panel-empty-desktop.png')});
   await page.evaluate(()=>{const q=sealQuestTest;q.setDay();q.move('maze',[-2.5,0,0]);q.followCamera.reset(q.c.yaw);q.followCamera.orbit(0,160);});await page.waitForTimeout(1200);await count(page,0);
   await page.keyboard.down('KeyS');try{await page.waitForFunction(()=>!!sealQuestTest.progress.collected.maze,null,{timeout:10000});}finally{await page.keyboard.up('KeyS');}
   await count(page,1);await notice(page,1);report.pickups.push({id:'maze',count:1});report.desktop=await raisedNotice(page);await page.screenshot({path:resolve(output,'seal-pickup-desktop-raised.png')});await noticeExpires(page);report.noticeExpired=true;
@@ -79,9 +82,14 @@ async function verifyPhone(){
   await prepare(context);const page=await open(context);await start(page);
   await page.evaluate(()=>sealQuestTest.setDay());assert(await page.evaluate(()=>sealQuestTest.enterTreehouse()));await page.waitForTimeout(1200);await count(page,0);
   await page.evaluate(()=>{sealQuestTest.c.actor.position.x=136;});await count(page,1);await notice(page,1);report.pickups.push({id:'treehouse',count:1});
-  const message=await box(page.locator('#combat-message'));assert(message.x>=0&&message.y>=0&&message.x+message.width<=390&&message.y+message.height<=844,'phone overhead pickup notice stays inside the viewport');assert(message.height<=64,'phone pickup notice must remain a compact one- or two-line message');
-  const stacking=await page.locator('#combat-message').evaluate(element=>{const rect=element.getBoundingClientRect(),sidebar=document.querySelector('.right-hud'),overlapsPanel=[...sidebar.querySelectorAll(':scope > .panel')].some(panel=>{const other=panel.getBoundingClientRect();return rect.left<other.right&&rect.right>other.left&&rect.top<other.bottom&&rect.bottom>other.top;});return {messageZ:Number(getComputedStyle(element).zIndex)||0,sidebarZ:Number(getComputedStyle(sidebar).zIndex)||0,overlapsPanel};});
-  report.mobile={message,raised:await raisedNotice(page),stacking};await page.screenshot({path:resolve(output,'seal-pickup-phone-390.png')});assert(!stacking.overlapsPanel||stacking.messageZ>stacking.sidebarZ,'raised phone pickup notice must remain visible above an intersecting sidebar panel');await noticeExpires(page);
+  const message=await box(page.locator('#meta-knight-seal-hud'));assert(message.x>=0&&message.y>=0&&message.x+message.width<=390&&message.y+message.height<=844,'phone badge panel stays inside the viewport');
+  const sidebar=await box(page.locator('.right-hud'));assert(sidebar.y>=message.y+message.height,'phone sidebar follows the panel without overlap');
+  report.mobile={message,raised:await raisedNotice(page)};await page.screenshot({path:resolve(output,'seal-pickup-phone-390.png')});await noticeExpires(page);
+  await page.emulateMedia({reducedMotion:'reduce'});await pick(page,'maze',2);await pick(page,'mountain',3);report.mobile.stages=await completion(page);
+  await page.screenshot({path:resolve(output,'seal-portal-open-phone.png')});
+  await page.setViewportSize({width:844,height:390});await page.waitForTimeout(300);
+  const landscape=await box(page.locator('#meta-knight-seal-hud'));assert(landscape.x>=0&&landscape.y>=0&&landscape.x+landscape.width<=844&&landscape.y+landscape.height<200);report.mobile.landscape=landscape;
+  await page.screenshot({path:resolve(output,'seal-portal-open-phone-landscape.png')});
  }finally{await context.close();}
 }
 
@@ -93,6 +101,7 @@ async function verifyOnline(){
   const contributors=[];
   for(const [page,id] of [[host,'maze'],[guest,'mountain']]){
    await page.bringToFront();const player=await page.evaluate(()=>sealQuestTest.network.id);await page.evaluate(id=>sealQuestTest.move(id),id);await page.waitForFunction(id=>!!sealQuestTest.progress.collected[id],id);await notice(page,contributors.length+1);contributors.push({id,by:player});
+   for(const observer of [host,guest]){await count(observer,contributors.length);assert(await observer.locator('#meta-knight-seal-hud').isVisible());}
   }
   await host.bringToFront();await count(host,2);await guest.bringToFront();await count(guest,2);
   const shared=await guest.evaluate(()=>sealQuestTest.progress.collected);for(const claim of contributors)assert.equal(shared[claim.id].by,claim.by);assert.notEqual(contributors[0].by,contributors[1].by,'different players contribute to the same counter');
@@ -105,9 +114,17 @@ async function verifyOnline(){
   await notice(guest,3);assert(await guest.evaluate(()=>sealQuestTest.treehouse.onBalcony(sealQuestTest.c)),'online pickup must occur while walking the real balcony');
   const treehouseClaim=await guest.evaluate(()=>sealQuestTest.progress.collected.treehouse);assert.equal(treehouseClaim.by,contributors[1].by);contributors.push({id:'treehouse',by:treehouseClaim.by});
   await count(guest,3);await host.bringToFront();await count(host,3);await guest.bringToFront();
+  const stages=await completion(guest);await completion(host);
+  for(const observer of [host,guest]){
+   const messages=await observer.locator('.chat-messages p').allTextContents();
+   assert.equal(messages.filter(text=>text==='Печати · Первый подобрал значок Метакнайта. Собрано 1 из 3.').length,1);
+   for(const n of [2,3])assert.equal(messages.filter(text=>text===`Печати · Второй подобрал значок Метакнайта. Собрано ${n} из 3.`).length,1);
+   assert.equal(messages.filter(text=>text==='Все 3 значка Метакнайта собраны. Портал на космическую арену открыт!').length,1);
+  }
   await guest.screenshot({path:resolve(output,'seal-shared-pickup-online.png')});
   const late=await enter('Печати · Третий');await count(late,3);await noNotice(late);for(const {id} of contributors)assert.equal(await late.evaluate(id=>{const i=sealQuestTest.sites.findIndex(s=>s.id===id);return sealQuestTest.seals[i].active;},id),false);
-  report.online={sharedPickups:contributors,counters:[3,3,3],treehouseLease:true,treehouseWalk:true,lateJoin:true};
+  assert.equal(await late.locator('#meta-knight-seal-hud').getAttribute('data-stage'),'open');assert.equal(await late.locator('.seal-arrive').count(),0);
+  report.online={sharedPickups:contributors,counters:[3,3,3],treehouseLease:true,treehouseWalk:true,lateJoin:true,stages,sharedChat:true};
  }finally{await Promise.all(contexts.map(context=>context.close()));}
 }
 
@@ -159,11 +176,17 @@ try{
  await page.evaluate(()=>{sealQuestTest.move('mountain',[0,2,0]);sealQuestTest.c.flight.press();});await page.waitForTimeout(350);await count(page,0);report.rejections.airborne=true;
  await page.evaluate(()=>{const q=sealQuestTest;q.c.setActivity('Idle');q.c.actor.position.set(0,0,0);q.c.surfaceY=0;});
  await pick(page,'maze',1);await page.screenshot({path:resolve(output,'seal-first-pickup.png')});await noticeExpires(page);report.noticeExpired=true;
- for(const locale of ['en','bg']){const text=await page.evaluate(async locale=>{const i18n=await import('/src/i18n.ts');i18n.setLocale(locale);return [i18n.t('✦ Печать Meta Knight · {0}/3',[1]),i18n.t('✦ Все три печати найдены')];},locale);assert.deepEqual(text,[noticeText(1,locale),noticeText(3,locale)]);}await page.evaluate(async()=>{(await import('/src/i18n.ts')).setLocale('ru');});
+ for(const locale of ['en','bg']){await page.evaluate(async locale=>{(await import('/src/i18n.ts')).setLocale(locale);},locale);await page.waitForFunction(text=>document.querySelector('.seal-hud-heading strong').textContent===text,locale==='en'?'Meta Knight badges':'Значки на Мета Найт');}await page.evaluate(async()=>{(await import('/src/i18n.ts')).setLocale('ru');});
  await page.locator('#settings-toggle').click();await page.locator('#save-game').click();report.saveLoad.saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')).seals);assert(report.saveLoad.saved.collected.maze);await page.locator('#exit-to-menu').click();await page.locator('#startup-menu').waitFor({state:'visible',timeout:120000});
  await start(page,{load:true});await count(page,1);await noNotice(page);assert.equal(await page.evaluate(()=>sealQuestTest.seals[0].active),false);report.saveLoad.loaded=true;
- await pick(page,'mountain',2);await pick(page,'treehouse',3);await page.screenshot({path:resolve(output,'seal-all-three.png')});
+ await pick(page,'mountain',2);await pick(page,'treehouse',3);await page.screenshot({path:resolve(output,'seal-all-three.png')});report.stages=await completion(page);await page.screenshot({path:resolve(output,'seal-portal-open-desktop.png')});
  await exit(page);await start(page);await count(page,0);assert(await page.evaluate(()=>sealQuestTest.seals.every(seal=>seal.active)));report.saveLoad.newGameReset=true;
+ // The solo override opens the portal without claiming that missing badges exist.
+ await page.keyboard.press('Enter');await page.locator('#chat-input').fill('/portal 1');await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>document.querySelector('#meta-knight-seal-hud').dataset.stage==='opening');await count(page,0);
+ await page.waitForFunction(()=>document.querySelector('#meta-knight-seal-hud').dataset.stage==='open');
+ await page.keyboard.press('Enter');await page.locator('#chat-input').fill('/portal 0');await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>document.querySelector('#meta-knight-seal-hud').dataset.stage==='collecting');report.saveLoad.portalOverride=true;
 
  await context.close();
  await verifyPhone();

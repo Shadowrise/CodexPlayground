@@ -18,6 +18,7 @@ import {MillQuestHud} from './mill-quest-hud';
 import {BreadWorld} from './bread';
 import {clearPigeonCarryPoses} from './pigeon-carry';
 import {MetaKnightSeal} from './meta-knight-seal';
+import {MetaKnightSealHud} from './meta-knight-seal-hud';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
 import {createMetaKnightPortal} from './meta-knight-portal';
@@ -41,6 +42,7 @@ import {StarfallView} from './starfall-view';
 import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './starfall';
 import {NpcSnapshots} from './npc-snapshots';
 import {PidgieNpc,type PidgiePlayer} from './pidgie-npc';
+import {PigeonFlock} from './pigeon-flock';
 import type {PidgieState} from './pidgie-state';
 import {WILD_PIGEONS,pigeonFriendAchievement,type WildPigeonId} from './wild-pigeons';
 import {isPigeonVariant} from './variant-palette';
@@ -48,7 +50,7 @@ import {MeadowIndex} from './meadow-index';
 import {sceneryClearance} from './landmarks';
 import {flatGround} from './pond-layout';
 import {MeadowChat} from './chat';
-import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightVictoryLog,type LogEntry} from './world-log';
+import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightVictoryLog,metaKnightSealLogs,type LogEntry} from './world-log';
 import {updateVisibility,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
@@ -129,13 +131,7 @@ const npcFruitValue = document.querySelector<HTMLElement>('#npc-fruits')!;
 const playerPlace=document.querySelector<HTMLElement>('#player-place')!;
 const npcPlace=document.querySelector<HTMLElement>('#npc-place')!;
 const combatMessage=document.querySelector<HTMLElement>('#combat-message')!;
-let sealNoticeOwner:string|undefined;
-const sealNoticePoint=new THREE.Vector3();
-function clearSealNotice(){
- sealNoticeOwner=undefined;combatMessage.classList.remove('seal-pickup-message');
- combatMessage.style.removeProperty('left');combatMessage.style.removeProperty('top');
-}
-function setText(element:HTMLElement,value:string){if(element===combatMessage&&sealNoticeOwner!==undefined)clearSealNotice();value=t(value);if(element.textContent!==value)element.textContent=value;}
+function setText(element:HTMLElement,value:string){value=t(value);if(element.textContent!==value)element.textContent=value;}
 const playerStatsRow=document.querySelector<HTMLElement>('#player-avatar')!;
 const playerHostBadge=createHostBadge();playerHostBadge.id='player-host-badge';playerHostBadge.hidden=true;playerStatsRow.append(playerHostBadge);
 const npcStatsRow=document.querySelector<HTMLElement>('.npc-avatar')!;
@@ -191,6 +187,7 @@ let playing = false;
 let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
 let loadedPigeon: GLTF | undefined;
+let loadedSnowball: GLTF | undefined;
 let loadedMetaKnight: GLTF | undefined;
 let startupComplete=false;
 let firstSceneFrame=true;
@@ -474,7 +471,8 @@ const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
  seal.group.position.set(site.x,site.y,site.z);seal.group.rotation.y=site.yaw;
  scene.add(seal.group);return seal;
 });
-let sealProgress:SealProgress=newSealProgress(),lastSealRequest=0,seenSealCount=0;
+let sealProgress:SealProgress=newSealProgress(),lastSealRequest=0;
+const sealHud=new MetaKnightSealHud();
 let soloPortalOverride:boolean|undefined;
 function metaKnightPortalReady(){return playing&&(network?allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
 const initialCarts=coaster.networkState();
@@ -764,6 +762,7 @@ let pidgieNpc:PidgieNpc|undefined;
 let pidgieReady=false;
 type WildBird={npc:PidgieNpc;ready:boolean;fearSeen:number;joySeen:boolean;helloSeen:boolean};
 const wildBirds=new Map<WildPigeonId,WildBird>();
+let pigeonFlock:PigeonFlock|undefined;
 
 function tickWildPigeons(dt:number,people:THREE.Vector3[],players:PidgiePlayer[],withSound=false){
  for(const [id,bird] of wildBirds){
@@ -780,6 +779,11 @@ function tickWildPigeons(dt:number,people:THREE.Vector3[],players:PidgiePlayer[]
   }
   bird.fearSeen=npc.fearCount;bird.joySeen=npc.state==='Joy';bird.helloSeen=npc.state==='Hello';
  }
+ if(network&&pigeonFlock){
+  const count=pigeonFlock.birds.size;
+  pigeonFlock.update(dt,roundFinished()?[]:network.room.pigeonFlock??[],network.host,players,people,constrainNpc);
+  if(count!==pigeonFlock.birds.size)setupShadowMaterials();
+ }
 }
 let metaKnightReflections:MetaKnightReflections|undefined;
 
@@ -787,7 +791,7 @@ async function loadCharacter() {
   try {
     const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
     for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
-    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel]=models;
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel,snowballModel]=models;
     metaKnightReflections=createMetaKnightReflections(renderer,metaKnightModel.scene);
     for(const seal of seals)metaKnightReflections.add(seal.model);
     metaKnightReflections.update(daylight(currentDayPhase()));
@@ -801,6 +805,7 @@ async function loadCharacter() {
     fireflies=new NightFireflies(bugModel);scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
+    loadedSnowball = snowballModel;
     loadedMetaKnight = metaKnightModel;
   } catch (error) {
     console.error(error);
@@ -826,6 +831,7 @@ async function startGame(){
   if(networkIntent){
     startButton.disabled=true;startButton.textContent=t('Подключаемся…');
     const session=joiningSession=new NetworkSession();
+    session.onPigeonsCleared=()=>pigeonFlock?.clear();
     try{
       await session.connect(serverUrl,KIRBY_VARIANTS.indexOf(selected),nameInput.value,historyDevice());
       if(generation!==selectionGeneration){session.close();return;}
@@ -838,7 +844,7 @@ async function startGame(){
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
   coaster.addKirbyPassengers(template,animations,network?KIRBY_VARIANTS[0]:selected);
   boats.addPassengers(template,animations);
-  const playerModel=createPlayerModel(loadedModel,selected,loadedPigeon,false,loadedMetaKnight);
+  const playerModel=createPlayerModel(loadedModel,selected,loadedPigeon,false,loadedMetaKnight,loadedSnowball);
   if(playerModel.character==='meta-knight')metaKnightReflections?.add(playerModel.model);
   character = new CharacterController(playerModel.model, playerModel.clips);
   character.actor.name='Игрок';
@@ -849,7 +855,7 @@ async function startGame(){
   const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
   soloPortalOverride=pendingSave?.portal?.override;
-  lastSealRequest=0;seenSealCount=Object.keys(sealProgress.collected).length;clearSealNotice();
+  lastSealRequest=0;sealHud.reset(sealProgress,network?allSealsCollected(sealProgress):soloPortalOverride??allSealsCollected(sealProgress));
   bread.reset(pendingSave?.bread);lastBreadRequest=0;watermill.setQuest(pendingSave?.millQuest?restoreMillQuest(pendingSave.millQuest,Date.parse(pendingSave.savedAt),Date.now()):newMillQuest(),Date.now());
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
   mountainLedges.resetPlayer();
@@ -860,11 +866,20 @@ async function startGame(){
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
   for(const id of WILD_PIGEONS){
-   const npc=new PidgieNpc(loadedPigeon!,{kind:id,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare',id),onInterest:person=>logPidgieReaction(person,'pidgie-interest',id),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p)),...Array.from(wildBirds.values(),b=>b.npc.actor.position)]});
+   const npc=new PidgieNpc(id==='snowball'?loadedSnowball!:loadedPigeon!,{kind:id,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare',id),onInterest:person=>logPidgieReaction(person,'pidgie-interest',id),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p)),...Array.from(wildBirds.values(),b=>b.npc.actor.position)]});
    const checkpoint=network?.world?.[id]??savedBirds[id];if(checkpoint)npc.applyNetworkState(checkpoint,true);
    wildBirds.set(id,{npc,ready:!network||network.host||!!network.world?.[id],fearSeen:npc.fearCount,joySeen:npc.state==='Joy',helloSeen:npc.state==='Hello'});
   }
   pidgieNpc=wildBirds.get('pidgie')!.npc;pidgieReady=wildBirds.get('pidgie')!.ready;
+  if(network){
+   pigeonFlock=new PigeonFlock({pidgie:loadedPigeon!,snowball:loadedSnowball!},{safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:position=>{
+    if(!character||cosmicArena.engaged)return;const listener=character.actor.position;
+    void sounds.playPigeonEmoteAt('Fear',position.x-listener.x,position.z-listener.z,followCamera.azimuth);
+   }},position=>{
+    if(!character||cosmicArena.engaged)return;const listener=character.actor.position;
+    void sounds.playPigeonEmoteAt('Hello',position.x-listener.x,position.z-listener.z,followCamera.azimuth);
+   });scene.add(pigeonFlock.group);
+  }
   viewScale=character.actor.scale.x;
   cameraTarget.set(character.actor.position.x,.9*viewScale,character.actor.position.z);
   followCamera.reset(character.yaw);
@@ -879,7 +894,7 @@ async function startGame(){
   styleVariant(document.querySelector<HTMLElement>('#player-avatar')!,selected);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
-    remotePlayers=new RemotePlayers(scene,loadedModel,loadedPigeon,loadedMetaKnight,model=>metaKnightReflections?.add(model));saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
+    remotePlayers=new RemotePlayers(scene,loadedModel,loadedPigeon,loadedMetaKnight,model=>metaKnightReflections?.add(model),loadedSnowball);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{tutorial.cancel();if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
@@ -935,11 +950,12 @@ function returnToMenu(){
   if(character){character.setActivity('Idle');disposeActor(character);}character=undefined;
   for(const npc of npcs)disposeActor(npc);npcs=[];npcSwimming.reset();remotePlayers?.clear();remotePlayers=undefined;
   for(const bird of wildBirds.values())disposeActor(bird.npc);wildBirds.clear();pidgieNpc=undefined;pidgieReady=false;
+  pigeonFlock?.clear();pigeonFlock?.group.removeFromParent();pigeonFlock=undefined;
   npcSnapshots.clear();npcSnapshotHost='';worldRevision=-1;knownFruits.clear();heldResource=undefined;acquiring=false;lastStarRequest=0;appliedRides.clear();rosterSignature='';
   for(const row of remoteStatRows.values())row.remove();remoteStatRows.clear();playerHostBadge.hidden=true;
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
   fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());bread.reset();lastBreadRequest=0;balloonSeed=6173;
-  sealProgress=newSealProgress();lastSealRequest=0;seenSealCount=0;clearSealNotice();
+  sealProgress=newSealProgress();lastSealRequest=0;sealHud.reset(sealProgress);
   soloPortalOverride=undefined;
   soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
@@ -962,7 +978,7 @@ function festivalTick(){
  network?.finishFestivalIfDue();
  if(!network&&!character.festival&&allTasks(character.achievements)&&currentFlowerGame()?.stage!=='celebrate'&&currentNumberGame()?.stage!=='celebrate')character.festival=createStarfall(now,nameInput.value);
  const f=network?.room.festival??character.festival;if(!f)return;
- if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements)+character.eventPoints;p.fruits=character.fruitsEaten;p.size=character.savedSize;finishStarfall(f,now);}
+ if(!network){const p=f.players.solo??={name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),base:0,fruits:0,size:1,bonus:0,collected:[]};p.base=character.fruitsEaten+achievementPoints(character.achievements)+character.eventPoints;p.fruits=character.fruitsEaten;p.size=character.savedSize;p.numbersCompleted=character.achievements.has('numbers');finishStarfall(f,now);}
  character.bonusPoints=f.players[id]?.bonus??0;
  festivalView.update(f,id,now,character.actor.position,character.actor.scale.x,camera,!!network,scene.getObjectByName('Four woodland biomes')?.userData.treePositions??[],index=>{if(network)network.event({type:'festival-star',index});else {collectStar(f,id,index,now);character!.bonusPoints=f.players[id].bonus;}});
  if(network&&now>=f.endsAt){tutorial.cancel();chat.close();keys.clear();pendingBoard=pendingJump=pendingAttack=false;pendingEmote=undefined;stopDragging();interactionOutline.update(undefined);rideHint.textContent='';sounds.updateRide(false,coaster.rideMotion);if(now>=f.endsAt+RESULTS_MS)leaveOnline.click();}
@@ -1056,6 +1072,8 @@ renderer.setAnimationLoop((time: number) => {
   knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'));
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
+  if(network?.room.sealProgress)sealProgress=network.room.sealProgress;
+  if(sealHud.update(sealProgress,metaKnightPortalReady(),time,playing&&!settingsOpen&&!cosmicArena.loading&&!cosmicArena.engaged&&!roundFinished()))sounds.playTaskComplete();
   meadowPortal.setWorking(metaKnightPortalReady());meadowPortal.update(time*.001);
   if(character&&(cosmicArena.active||cosmicArena.loading)){
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
@@ -1139,7 +1157,13 @@ renderer.setAnimationLoop((time: number) => {
     if(nearbySeal&&(!network||breadNow-lastSealRequest>500)){
      lastSealRequest=breadNow;
      if(network)network.event({type:'seal',id:nearbySeal.id});
-     else sealProgress=collectSeal(sealProgress,nearbySeal.id,sealCollector,breadNow);
+     else{
+      const next=collectSeal(sealProgress,nearbySeal.id,sealCollector,breadNow);
+      if(next!==sealProgress){
+       sealProgress=next;localLog.push(...metaKnightSealLogs(nameInput.value,Object.keys(next.collected).length));
+       if(localLog.length>10)localLog.splice(0,localLog.length-10);
+      }
+     }
     }
     const availableInteraction=resolveInteraction(character);
     const candidate=network?resourceKey(character):undefined;
@@ -1247,14 +1271,6 @@ renderer.setAnimationLoop((time: number) => {
   fountain.update(dt,lightTime.day,camera);
   musicalFlowers.update(performance.now()/1000,camera);
   numberGarden.update(performance.now()/1000,advanceNumberGame(currentNumberGame(),network?.serverNow??Date.now()),camera);
-  if(network?.room.sealProgress)sealProgress=network.room.sealProgress;
-  const foundSeals=Object.keys(sealProgress.collected).length;
-  if(playing&&foundSeals>seenSealCount){
-   let latest:{by:string;at:number}|undefined;
-   for(const entry of Object.values(sealProgress.collected))if(entry&&(!latest||entry.at>=latest.at))latest=entry;
-   if(latest)showSealPickup(latest.by,foundSeals);
-  }
-  seenSealCount=foundSeals;
   seals.forEach((seal,index)=>{seal.active=!sealProgress.collected[META_KNIGHT_SEAL_SITES[index].id];seal.update(time/1000,camera.position);});
   sealLocations.update(camera.position);
   updateNetwork(dt);
@@ -1279,17 +1295,6 @@ renderer.setAnimationLoop((time: number) => {
   if(!flowerGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
   numberGameView.update(numberGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden&&flowerGameView.hud.hidden,playing&&!roundFinished());
   if(!numberGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
-  if(sealNoticeOwner!==undefined){
-   if(hitMessageRemaining<=0||!playing||roundFinished()){clearSealNotice();combatMessage.hidden=true;}
-   else{
-    const collector=sealNoticeOwner===(network?.id??'solo')?character:remotePlayers?.players.get(sealNoticeOwner);
-    if(collector){
-     sealNoticePoint.copy(collector.actor.position);sealNoticePoint.y+=2.2*collector.actor.scale.x;sealNoticePoint.project(camera);
-     combatMessage.style.left=`${(sealNoticePoint.x+1)*innerWidth/2}px`;combatMessage.style.top=`${(1-sealNoticePoint.y)*innerHeight/2}px`;
-     if(settingsOpen||sealNoticePoint.z< -1||sealNoticePoint.z>1||Math.abs(sealNoticePoint.x)>1||Math.abs(sealNoticePoint.y)>1)combatMessage.hidden=true;
-    }else combatMessage.hidden=true;
-   }
-  }
   chat.render(network?.log??localLog,!audioPanel.hidden);
   fruits.fruits.forEach((fruit,i)=>updateVisibility(fruit.object,camera.position,fruits.isVisible(i),false,FRUIT_DISTANCE));
   fruits.syncInstances();
@@ -1434,7 +1439,8 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
   if((!treehouse.active || treehouse.canSit) && benches.prompt(p)){
     if(c.flight.active)return;
     const seat=benches.outlineSeat(p)!;
-    return result(benches.prompt(p),()=>benches.interact(c),region(seat,seat.floor>0?treehouse.group:scene,seat.position,[3.6,2.2,1.6]));
+    const root=seat.kind==='treehouse'?treehouse.group:seat.kind==='depot'?coaster.group.getObjectByName(seat.position.x<0?'West oak waiting bench':'East oak waiting bench')!:scene;
+    return result(benches.prompt(p),()=>benches.interact(c),region(seat,root,seat.position.clone().add(new THREE.Vector3(0,.2,0)),[seat.width+.2,3.2,1.8]));
   }
   if(treehouse.active)return result(treehouse.prompt(p),()=>treehouse.interact(c));
   if(treehouse.prompt(p)){
@@ -1481,12 +1487,6 @@ function constrainNpc(position:THREE.Vector3,size:number,previous:THREE.Vector3)
 function showFruitPickup(type:string){
  setText(combatMessage,`${type} съеден! Скорость от фруктов ${Math.round(character!.fruitBoost.multiplier*100)}% · 20 с`);
  hitMessageRemaining=2.5;
-}
-function showSealPickup(by:string,count:number){
- const collector=by===(network?.id??'solo')?character:remotePlayers?.players.get(by);
- if(!collector||!character||collector.actor.position.distanceToSquared(character.actor.position)>40**2)return;
- clearSealNotice();combatMessage.textContent=t(count===3?'✦ Все три печати найдены':'✦ Печать Meta Knight · {0}/3',[count]);
- sealNoticeOwner=by;combatMessage.classList.add('seal-pickup-message');combatMessage.hidden=false;hitMessageRemaining=2.5;sounds.playTaskComplete();
 }
 function syncNetworkWorld(dt:number){
  if(!network||!character)return;
@@ -1567,7 +1567,7 @@ function updateNetwork(dt:number){
  const a=actorState(character,nameInput.value,KIRBY_VARIANTS.indexOf(selected));
  if(character.actor.userData.location==='meta-knight-arena')a.location='meta-knight-arena';
  if(heldResource){const [kind,index]=heldResource.split(':'),i=Number(index);const data=kind==='boat'?boats.networkData():kind==='cart'?coaster.networkState()[i]:kind==='balloon'?balloons.networkState()[i]:kind==='bug'?fireflies!.networkState()[i]:kind==='tree'?[treehouse.swing.rotation.x]:undefined;if(data)a.ride={key:heldResource,data};}
- network.tick(dt,a,captureWorld);
+ network.tick(dt,a,captureWorld,()=>pigeonFlock?.checkpoints()??[]);
  playerHostBadge.hidden=!network.host;
  const entries=[{id:network.id,actor:a,points:scoreOf(character)},...Array.from(network.actors,([id,actor])=>({id,actor,points:actor.fruits+achievementPoints(actor.achievements)+(actor.eventPoints??0)+(network!.room.festival?.players[id]?.bonus??0)}))];
  const teamPoints=npcs.reduce((sum,n)=>sum+scoreOf(n),0);

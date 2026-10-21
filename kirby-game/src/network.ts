@@ -1,6 +1,7 @@
 import {CENTIPEDE_TIMES,CENTIPEDE_EMPTY_MS} from './centipede-event';
 import {hasChasers,applyChaseSnapshot,CHASERS} from './centipede-chasers';
 import {PlayerSnapshots} from './player-snapshots';
+import type {PigeonCheckpoint} from './pigeon-flock-state';
 import {emoteMessage} from './world-log';
 import {validFlowerIndex} from './musical-flower-site';
 import {validNumberDigit} from './number-garden-site';
@@ -19,6 +20,7 @@ export class NetworkSession{
  get serverNow(){return Date.now()+this.clockOffset;}
  id='';peerCount=1;room!:RoomState;resume?:ActorState;actors=new Map<string,ActorState>();world?:WorldState;revision=0;
  onEmote?:(emote:PlayerEmote,id:string)=>void;
+ onPigeonsCleared?:()=>void;
  onFlowerNote?:(index:number)=>void;
  onFlowerComplete?:()=>void;
  onKnightVictory?:()=>void;
@@ -43,6 +45,11 @@ export class NetworkSession{
  }
  get host(){return this.room?.host===this.id;}
  private readRoom(room:RoomState){return {...room,sealProgress:normalizeSealProgress(room.sealProgress)??newSealProgress()};}
+ private receivePigeons(checkpoints?:PigeonCheckpoint[]){
+  if(!checkpoints)return;
+  const flock=new Map(this.room.pigeonFlock?.map(b=>[b.id,b]));
+  for(const c of checkpoints){const bird=flock.get(c.id);if(bird)bird.checkpoint=c;}
+ }
  async connect(base:string,variant:number,name:string,device?:DeviceInfo){return new Promise<void>((resolve,reject)=>{
   const url=new URL(base);url.protocol=url.protocol==='https:'?'wss:':'ws:';url.pathname='/ws';url.searchParams.set('build',BUILD);url.searchParams.set('variant',String(variant));url.searchParams.set('name',name);
   if(device)url.searchParams.set('device',JSON.stringify(device));
@@ -62,8 +69,8 @@ export class NetworkSession{
    else if(m.type==='log'){this.log=[...this.log,m.entry].slice(-10);}
    else if(m.type==='presence'){if(m.count>this.peerCount){this.worldElapsed=2;this.lastActor='';}this.peerCount=m.count;}
    else if(m.type==='error'){clearTimeout(timeout);if(this.id){this.close();this.onDisconnect?.(m.message);}reject(Error(m.message));}
-   else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.receiveActor(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}if(m.chasers)applyChaseSnapshot(this.room.centipede,m.chasers);}
-   else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=this.readRoom(m.room);this.centipedeStartPending=false;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
+   else if(m.type==='frame'){if(m.actor&&m.id!==this.id)this.receiveActor(m.id,m.actor);if(m.world){this.world=m.world;this.revision++;}this.receivePigeons(m.pigeons);if(m.chasers)applyChaseSnapshot(this.room.centipede,m.chasers);}
+   else if(m.type==='room'){const changed=this.room.host!==m.room.host;this.room=this.readRoom(m.room);if(!this.room.pigeonFlock?.length)this.onPigeonsCleared?.();this.centipedeStartPending=false;if(changed&&m.room.world){this.world=m.room.world;this.revision++;}}
    else if(m.type==='left'){this.actors.delete(m.id);this.actorSnapshots.delete(m.id);}
    else if(m.type==='hit')this.onHit?.(m.actor,m.target);
    else if(m.type==='star')this.onStar?.();
@@ -84,7 +91,7 @@ export class NetworkSession{
   this.events.push(event);if(event.type==='visible')setTimeout(()=>{if(this.socket?.readyState===WebSocket.OPEN&&this.events.length)this.socket.send(JSON.stringify({type:'frame',events:this.events.splice(0,16)}));},150);
  }
  acquire(key:string){return new Promise<boolean>(resolve=>{if(this.locks.has(key)){resolve(false);return;}const timer=setTimeout(()=>{this.locks.delete(key);this.event({type:'release',key});resolve(false);},5000);this.locks.set(key,ok=>{clearTimeout(timer);resolve(ok);});this.event({type:'lock',key});});}
- tick(dt:number,actor:ActorState,world:()=>WorldState){
+ tick(dt:number,actor:ActorState,world:()=>WorldState,pigeons?:()=>PigeonCheckpoint[]){
   this.elapsed+=dt;this.worldElapsed+=dt;this.chaseElapsed+=dt;if(this.elapsed<.1||this.socket?.readyState!==WebSocket.OPEN||this.socket.bufferedAmount>64000)return;
   this.elapsed=0;const boss=this.room?.centipede,deadline=boss?.emptySince===undefined?boss?boss.stageAt+CENTIPEDE_TIMES[boss.stage]:Infinity:boss.emptySince+CENTIPEDE_EMPTY_MS;
   if(this.host&&boss&&this.serverNow>=deadline){const key=`${boss.startedAt}:${boss.stageAt}:${boss.stage}:${boss.emptySince}`;if(this.centipedeStep!==key){this.centipedeStep=key;this.events.push({type:'centipede-step'});}}
@@ -98,9 +105,10 @@ export class NetworkSession{
   // Only the host wakes an idle pursuit; stationary guests need no extra
   // messages. Multiplayer already supplies the host world at this cadence.
   const sendChase=this.host&&hasChasers(boss)&&this.chaseElapsed>=CHASERS.snapshotMs/1000;
-  if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase)return;
-  if(!changed&&!sendWorld&&!this.events.length&&!sendChase)return;
-  this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase?actor:undefined,world:sendWorld?world():undefined,events:this.events.splice(0,16)}));
+  const sendPigeons=this.host&&!!this.room.pigeonFlock?.length&&!!pigeons;
+  if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons)return;
+  if(!changed&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons)return;
+  this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)}));
   this.lastActor=serialized;this.chaseElapsed=0;if(sendWorld)this.worldElapsed=0;
  }
  close(){this.closed=true;clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();this.events=[];this.socket?.close(1000,'Left game');}

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 
 const game=fileURLToPath(new URL('../',import.meta.url)),output=fileURLToPath(new URL('../node_modules/.cache/snowball/',import.meta.url));
 const base=process.env.GAME_URL??'http://127.0.0.1:5199';let vite,browser;
+const arenaOnly=process.argv.includes('--arena-only')||process.argv.includes('--texture-only');
 try{
  await mkdir(output,{recursive:true});
  if(!process.env.GAME_URL){
@@ -21,22 +22,25 @@ try{
  await page.routeWebSocket('**',()=>{});
  await page.route('**/room',route=>route.fulfill({json:{players:0,occupiedVariants:[],capacity:14}}));
  await page.route('**/history/solo',route=>route.fulfill({json:{ok:true}}));
- await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
+ await page.addInitScript(arena=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');if(arena)localStorage.setItem('kirby-snowball-unlocked-v1','1');},arenaOnly);
  await page.route('**/src/main.ts*',async route=>{
   const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`
 let snowUnlockSounds=0;const snowUnlockSound=sounds.playCharacterUnlock.bind(sounds);sounds.playCharacterUnlock=()=>{snowUnlockSounds++;snowUnlockSound();};
-window.snowQA={get c(){return character},get playing(){return playing},get selected(){return selected},get birds(){return wildBirds},get unlockSounds(){return snowUnlockSounds},get log(){return localLog},set online(value){networkIntent=value},bread,resolveInteraction,sendBread,returnToMenu,captureWorld,pidgieSafeGround,pidgieSafeWalk,renderer,scene,camera,followCamera,cameraTarget,mountainLedges,progress:characterUnlocks,get model(){return loadedModel},get pigeon(){return loadedPigeon},createPlayerModel,KIRBY_VARIANTS};`});
+window.snowQA={get c(){return character},get playing(){return playing},get selected(){return selected},get birds(){return wildBirds},get unlockSounds(){return snowUnlockSounds},get log(){return localLog},set online(value){networkIntent=value},chat,travel:cosmicArena,portal:meadowPortal,bread,resolveInteraction,sendBread,returnToMenu,captureWorld,pidgieSafeGround,pidgieSafeWalk,renderer,scene,camera,followCamera,cameraTarget,mountainLedges,progress:characterUnlocks,get model(){return loadedModel},get pigeon(){return loadedPigeon},get snowball(){return loadedSnowball},createPlayerModel:(model,variant,pigeon)=>createPlayerModel(model,variant,pigeon,false,loadedMetaKnight,loadedSnowball),KIRBY_VARIANTS};`});
  });
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
  console.log('Game loaded');
  await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Пекарь');
  const snow=page.locator('#variant-grid .snowball-character');
+ if(arenaOnly){await snow.click();}else{
  assert.equal(await snow.getAttribute('aria-disabled'),'true');await snow.click({force:true});
  assert.match(await page.locator('#locked-character-tooltip').innerText(),/Снежка хлебушком/);
  assert.equal(await page.evaluate(()=>snowQA.selected[0]),'Классический');
  await page.screenshot({path:output+'/snowball-locked.png'});
- await page.locator('#variant-grid .variant-button').first().click();await page.locator('#start-game').click();
+ await page.locator('#variant-grid .variant-button').first().click();
+ }
+ await page.locator('#start-game').click();
  await page.waitForFunction(()=>snowQA.playing&&snowQA.birds.size===2);
  if(process.argv.includes('--unlock-command-only')){
   const achievements=await page.evaluate(()=>[...snowQA.c.achievements]);
@@ -56,6 +60,52 @@ window.snowQA={get c(){return character},get playing(){return playing},get selec
   await page.evaluate(()=>snowQA.returnToMenu());await page.reload();await page.waitForFunction(()=>document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
   await page.locator('#new-game').click();assert.equal(await snow.getAttribute('aria-disabled'),'false');await snow.click();assert.equal(await page.evaluate(()=>snowQA.selected[0]),'Снежок');
   assert.deepEqual(errors,[]);console.log('PASS: /unlock snowball suggestions, online gating, one announcement, independent persisted unlock and selectable character after reload');
+ }else if(arenaOnly){
+  await page.evaluate(()=>{
+   const w=snowQA;w.originalMaterials=new Map();w.c.actor.traverse(o=>{if(o.isMesh)w.originalMaterials.set(o,o.material);});w.chat.show();
+  });
+  await page.locator('#chat-input').fill('/portal 1');await page.keyboard.press('Enter');
+  await page.evaluate(()=>{const w=snowQA,p=w.portal.group.position;w.c.setActivity('Idle');w.c.actor.position.set(p.x,0,p.z);});
+  await page.waitForFunction(()=>snowQA.travel.active,undefined,{timeout:90000});
+  const result=await page.evaluate(async()=>{
+   const w=snowQA,T=await import('/node_modules/.vite/deps/three.js');w.renderer.setAnimationLoop(null);
+   const photo=new T.PerspectiveCamera(30,1280/850,.1,1500),p=w.c.actor.position;
+   w.c.actor.rotation.y=.4;photo.position.copy(p).add(new T.Vector3(7,4,11));photo.lookAt(p.clone().add(new T.Vector3(0,1.3,0)));w.renderer.render(w.travel.scene,photo);
+   w.arenaPhoto=photo;
+   w.paintPrograms=actor=>{
+    const paints=new Set();let native=0;
+    actor.traverse(o=>{if(o.isMesh)for(const material of Array.isArray(o.material)?o.material:[o.material]){
+     const programs=w.renderer.properties.get(material).programs;
+     for(const program of programs?.values()??[]){const source=w.renderer.getContext().getShaderSource(program.fragmentShader);if(source?.includes('snowballInk'))throw Error('Unexpected Snowball recolouring shader');if(material.userData.characterTexture==='snowball'&&material.map?.image)paints.add('snowball');native++;}
+    }});return {paints:[...paints].sort(),native};
+   };
+   return w.paintPrograms(w.c.actor);
+  });
+  assert.deepEqual(result.paints,['snowball']);
+  await page.screenshot({path:output+'/snowball-arena.png'});
+  const remote=await page.evaluate(async()=>{
+   const w=snowQA,guests=[];
+   for(const [name,x] of [['Снежок',-4],['Пиджи',4]]){
+    const rig=w.createPlayerModel(w.model,w.KIRBY_VARIANTS.find(v=>v[0]===name),w.pigeon),guest=new w.c.constructor(rig.model,rig.clips),originals=new Map();
+    guest.actor.traverse(o=>{if(o.isMesh)originals.set(o,o.material);});guest.actor.position.copy(w.c.actor.position);guest.actor.position.x+=x;guest.actor.userData.location='meta-knight-arena';guests.push({name,guest,originals});
+   }
+   w.travel.routeRemotes(guests.map(v=>[v.name,v.guest]));await w.renderer.compileAsync(w.travel.scene,w.arenaPhoto);w.renderer.render(w.travel.scene,w.arenaPhoto);
+   const paints=guests.map(v=>[v.name,w.paintPrograms(v.guest.actor).paints]);w.travel.leave();
+   const restored=[...w.originalMaterials,...guests.flatMap(v=>[...v.originals])].every(([mesh,material])=>mesh.material===material);
+   await w.travel.enter(w.c);w.renderer.render(w.travel.scene,w.arenaPhoto);const repeat=w.paintPrograms(w.c.actor);w.travel.leave();
+   return {paints,restored,repeat,restoredAgain:[...w.originalMaterials].every(([mesh,material])=>mesh.material===material)};
+  });
+  assert.deepEqual(remote.paints,[['Снежок',['snowball']],['Пиджи',[]]]);assert(remote.restored&&remote.restoredAgain);assert.deepEqual(remote.repeat.paints,['snowball']);
+  await page.evaluate(async()=>{
+   const w=snowQA,T=await import('/node_modules/.vite/deps/three.js'),scene=new T.Scene();scene.background=new T.Color('#cee2ef');
+   scene.add(new T.HemisphereLight('#ffffff','#8b9fa9',2.3));const light=new T.DirectionalLight('#fff2dd',3.3);light.position.set(4,8,6);scene.add(light);
+   const ground=new T.Mesh(new T.PlaneGeometry(80,80),new T.MeshStandardMaterial({color:'#b4c6c7',roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.01;scene.add(ground);
+   for(const [name,x] of [['Пиджи',-1.8],['Снежок',1.8]]){const rig=w.createPlayerModel(w.model,w.KIRBY_VARIANTS.find(v=>v[0]===name),w.pigeon);rig.model.position.x=x;rig.model.rotation.y=.4;scene.add(rig.model);}
+   const camera=new T.PerspectiveCamera(30,1280/850,.1,100);camera.position.set(8,4.5,12);camera.lookAt(0,1.25,0);
+   document.body.replaceChildren(w.renderer.domElement);w.renderer.setSize(1280,850);w.renderer.setPixelRatio(1);w.renderer.render(scene,camera);
+  });
+  await page.screenshot({path:output+'/pigeons-textured.png'});
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS: Snowball keeps its own native feather atlas through portal entry, remote routing, exit and re-entry',local:result,remote,output}));
  }else{
  const world=await page.evaluate(async()=>{const {validWorld}=await import('/src/network-protocol.ts'),w=snowQA.captureWorld();return {valid:validWorld(w),bytes:JSON.stringify(w).length,keys:Object.keys(w)};});
  assert(world.valid,JSON.stringify(world));assert(world.keys.includes('snowball'));

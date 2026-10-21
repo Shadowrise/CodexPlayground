@@ -68,10 +68,12 @@ export class PrankEffects{
    const distance=(event.kind==='gift'?e.group.position:target.actor.position).distanceTo(listener);e.group.visible=distance<100;if(distance>=100)continue;
    const gain=Math.max(0,1-distance/38),remaining=(event.endsAt-now)/1000;
    if(event.kind==='hiccup'){
-    const phase=t%2,pulse=Math.exp(-phase*13)*Math.sin(Math.min(1,phase/.18)*Math.PI),root=target.root;
+    const phase=t%2,pulse=Math.exp(-phase*13)*Math.sin(Math.min(1,phase/.18)*Math.PI),root=target.root,beak=root.getObjectByName('Beak');
     this.restores.push({root,p:root.position.clone(),s:root.scale.clone()});root.position.y+=pulse*.12;root.scale.multiply(new T.Vector3(1+pulse*.07,1-pulse*.055,1+pulse*.07));
     e.group.position.copy(target.actor.position);e.group.quaternion.copy(target.actor.quaternion);e.group.scale.copy(target.actor.scale);
-    for(let i=0;i<12;i++){const b=e.parts[i],age=phase-i*.065;b.visible=age>=0&&age<1.75;if(!b.visible)continue;const radius=(.1+(i%4)*.037)*Math.min(1,age*8)*smooth(Math.min(remaining,1.75-age)*4);b.scale.setScalar(radius);b.position.set(Math.sin(i*2.4+age)*(.18+age*.42),1.18+age*(.75+(i%3)*.12),.92+age*.45);b.rotation.z=age*.3+i;}
+    // The pigeon mouth is at the tip of its animated beak, above Kirby's mouth height.
+    if(beak)beak.localToWorld(e.group.position.set(0,-.04,.52));
+    for(let i=0;i<12;i++){const b=e.parts[i],age=phase-i*.065;b.visible=age>=0&&age<1.75;if(!b.visible)continue;const radius=(.1+(i%4)*.037)*Math.min(1,age*8)*smooth(Math.min(remaining,1.75-age)*4);b.scale.setScalar(radius);b.position.set(Math.sin(i*2.4+age)*((beak?0:.18)+age*.42),(beak?0:1.18)+age*(.75+(i%3)*.12),(beak?0:.92)+age*.45);b.rotation.z=age*.3+i;}
     const beat=Math.floor(t/2);if(beat>e.lastSound){e.lastSound=beat;if(phase<.2)this.sound('hiccup',gain*.55);}
    }else if(event.kind==='rainbow'){
     const pos=target.actor.position,s=target.actor.scale.x;

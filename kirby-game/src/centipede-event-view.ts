@@ -5,6 +5,7 @@ import {CentipedeBallsView} from './centipede-balls-view';
 import {CentipedeChallengesView} from './centipede-challenges-view';
 import {CentipedeTargetCue} from './centipede-target-cue';
 import {roundedRunWarning} from './centipede-warning-geometry';
+import {attackRibbonMaterial,updateAttackRibbon} from './attack-ribbon-material';
 import {BOSS_ARENA as A} from './boss-arena-site';
 import {chargePoint,centipedeTail,centipedePhase,centipedePhaseHits,centipedeTarget,centipedeRoot,centipedeWaves,CENTIPEDE_TIMES,CENTIPEDE_BALLS,CENTIPEDE_EMPTY_MS,type CentipedeEvent,type CentipedeStage} from './centipede-event';
 
@@ -15,7 +16,7 @@ export class CentipedeEventView{
  // The arena inlay already has a depth bias. Give its warning a stronger bias
  // so the centre emblem cannot occlude it at grazing angles; keep depth testing
  // enabled so the marker still sits underneath the boss and characters.
- private lane=new T.Mesh(new T.BufferGeometry(),new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:.6,depthWrite:false,side:T.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4}));
+ private lane=new T.Mesh(new T.BufferGeometry(),attackRibbonMaterial(1.55));
  private targetCue=new CentipedeTargetCue();
  private confetti=new T.InstancedMesh(new T.OctahedronGeometry(.13),new T.MeshBasicMaterial(),32);
  private fireworks=new CentipedeFireworks();
@@ -26,6 +27,7 @@ export class CentipedeEventView{
  private cue='';private path='';private text='';
  constructor(private sound:(stage:CentipedeStage,volume:number)=>void){
   this.group.name='Топотушка — подсказки игры';this.group.visible=false;
+  this.lane.name='Topotushka run and wheel countdown lane';this.lane.renderOrder=2;Object.assign(this.lane.material,{polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-4});
   this.confetti.instanceMatrix.setUsage(T.DynamicDrawUsage);this.confetti.frustumCulled=false;
   for(let i=0;i<32;i++)this.confetti.setColorAt(i,new T.Color().setHSL(i/32,.85,.6));
   this.group.add(this.lane,this.targetCue.group,this.confetti,this.fireworks.mesh,this.balls.group,this.challenges.group);
@@ -47,7 +49,7 @@ export class CentipedeEventView{
   const resting=Math.max(0,Math.ceil((CENTIPEDE_TIMES.rest-(now-q.stageAt))/1000));
   const hints:Record<CentipedeStage,string>={
    invite:'Уступай дорогу Топотушке. После её чихания толкни золотой бубенчик на хвосте.',
-   warning:'Сейчас будет рывок! Отойди от голубой дорожки или взлети.',
+   warning:'Сейчас будет рывок! Отойди от жёлтой дорожки или взлети.',
    charge:'Уклоняйся! После рывка Топотушка выпустит прыгучие шарики.',
    balls:'Апчхи! Обходи шарики или перелетай через них. Скоро можно толкнуть бубенчик на хвосте!',
    exhausted:`Топотушка переводит дух. Толкни золотой бубенчик на хвосте: ${pushKey}`,
@@ -60,7 +62,7 @@ export class CentipedeEventView{
    bell:'Бум! Барабанчик прозвучал. Готовься к следующему испытанию!',
    rise:`Топотушка снова сворачивается. Отталкивай мячики: ${pushKey} · Затем перелетай кольца!`,
    curl:'Финальное испытание! Топотушка превращается в большое колесо.',
-   wheelWarning:'Колесо сейчас покатится! Отойди от голубой дорожки и уклоняйся от мячиков.',
+   wheelWarning:'Колесо сейчас покатится! Отойди от жёлтой дорожки и уклоняйся от мячиков.',
    wheelRoll:'Уступай дорогу колесу, перелетай кольца и отталкивай мячики. Потом понадобится радужный мяч.',
    dizzy:`Колесо устало! Подойди к радужному мячу, повернись к Топотушке и толкни: ${pushKey}`,
    ballShot:'Отличный толчок! Радужный мяч летит к Топотушке.',
@@ -73,11 +75,12 @@ export class CentipedeEventView{
   const text=`${getLocale()}:${centipedePhase(q)}:${q.hits}:${q.stage}:${pushKey}:${q.stage==='rest'?resting:''}:${empty}`;
   if(this.text!==text){this.text=text;this.title.textContent=t(empty===undefined?q.stage==='celebrate'?'Испытания пройдены!':q.stage==='rest'?'Топотушка отдыхает':`Фаза ${centipedePhase(q)}/3 · ${centipedePhaseHits(q)}/3 точных толчков`:'Арена опустела');this.message.textContent=empty===undefined?t(hints[q.stage]):t('Вернитесь на арену! Игра сбросится через {0} с.',[empty]);}
   this.lane.visible=['warning','charge','wheelWarning','wheelRoll'].includes(q.stage);
-  const pathKey=`${q.startedAt}:${q.cycle}`;
+  const pathKey=`${q.startedAt}:${q.cycle}:${centipedePhase(q)}`;
   if(this.lane.visible&&this.path!==pathKey){
    this.path=pathKey;this.lane.geometry.dispose();this.lane.geometry=roundedRunWarning(u=>chargePoint(q,u),centipedePhase(q)===3?2.65:1.35);
+   this.lane.material.uniforms.width.value=centipedePhase(q)===3?2.85:1.55;this.lane.material.uniforms.span.value=this.lane.geometry.userData.span;
   }
-  this.lane.material.opacity=q.stage==='warning'||q.stage==='wheelWarning'?.6+.025*Math.sin(now*.006):.46;
+  if(this.lane.visible){const active=q.stage==='charge'||q.stage==='wheelRoll';updateAttackRibbon(this.lane.material,active?1:(now-q.stageAt)/CENTIPEDE_TIMES[q.stage],active,now);}
   this.targetCue.group.visible=['exhausted','back','dizzy'].includes(q.stage);
   if(this.targetCue.group.visible)this.targetCue.update(targetPosition??centipedeTarget(q),now,camera,q.stage==='dizzy',(now-q.stageAt)/CENTIPEDE_TIMES[q.stage]);
   this.confetti.visible=['tickle','bell','wheelHit','celebrate'].includes(q.stage);

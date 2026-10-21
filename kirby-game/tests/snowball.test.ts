@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {Group,Mesh,Scene,Texture,Vector3} from 'three';
+import {Group,Mesh,Scene,Texture,Vector3,type BufferAttribute} from 'three';
 import {GLTFLoader,type GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {PidgieNpc} from '../src/pidgie-npc';
 import {KIRBY_VARIANTS,isPigeonVariant} from '../src/variant-palette';
@@ -19,27 +19,51 @@ import {lockedCharacterHint} from '../src/locked-character-tooltip';
 const bytes=await readFile(new URL('../public/models/pigeon-animated.glb',import.meta.url)),loader=new GLTFLoader();
 loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
 const pigeon=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+const snowBytes=await readFile(new URL('../public/models/snowball-animated.glb',import.meta.url));
+const snowball=await loader.parseAsync(snowBytes.buffer.slice(snowBytes.byteOffset,snowBytes.byteOffset+snowBytes.byteLength),'');
 const snowVariant=KIRBY_VARIANTS.find(v=>v[0]==='Снежок')!;
 const kirby={scene:new Group(),animations:[]} as unknown as GLTF;
-const create=(kind:'pidgie'|'snowball')=>new PidgieNpc(pigeon,{kind,seed:131,safeGround:()=>true});
+const create=(kind:'pidgie'|'snowball')=>new PidgieNpc(kind==='snowball'?snowball:pigeon,{kind,seed:131,safeGround:()=>true});
 
 test('Snowball appends a native pigeon selection and remote model without moving saved IDs',()=>{
  assert.equal(KIRBY_VARIANTS[17][0],'Пиджи');assert.equal(KIRBY_VARIANTS[18][0],'Meta Knight');assert.equal(KIRBY_VARIANTS.indexOf(snowVariant),19);
  assert.equal(remainingVariants(snowVariant).length,14);
- const rig=createPlayerModel(kirby,snowVariant,pigeon),native=createPlayerModel(kirby,KIRBY_VARIANTS[17],pigeon);
- assert.equal(rig.character,'pigeon');assert.equal(rig.clips,pigeon.animations);
+ const rig=createPlayerModel(kirby,snowVariant,pigeon,false,undefined,snowball),native=createPlayerModel(kirby,KIRBY_VARIANTS[17],pigeon);
+ assert.equal(rig.character,'pigeon');assert.equal(rig.clips,snowball.animations);
+ assert.throws(()=>createPlayerModel(kirby,snowVariant,pigeon),/Снежка/);
+ assert.deepEqual(snowball.animations.map(c=>[c.name,c.duration]),pigeon.animations.map(c=>[c.name,c.duration]));
  const c=new CharacterController(rig.model,rig.clips);assert(c.isPigeon);
  const state=actorState(c,'Снежок',19);assert(validActor(state));
- const remote=new RemotePlayers(new Scene(),kirby,pigeon);remote.update(new Map([['snow',state]]),.05);
+ const remote=new RemotePlayers(new Scene(),kirby,pigeon,undefined,undefined,snowball);remote.update(new Map([['snow',state]]),.05);
  assert(remote.players.get('snow')?.isPigeon);
  const own=new Set<unknown>(),source=new Set<unknown>();
  rig.model.traverse(n=>{if(n instanceof Mesh)own.add(n.material);});native.model.traverse(n=>{if(n instanceof Mesh)source.add(n.material);});
  assert([...own].every(m=>!source.has(m)));
  for(const root of [rig.model,remote.players.get('snow')!.actor,create('snowball').model]){
-  const paints=new Set<string>();root.traverse(n=>{if(n instanceof Mesh)for(const m of Array.isArray(n.material)?n.material:[n.material])if(m.userData.snowballPaint)paints.add(m.userData.snowballPaint);});
-  assert.deepEqual(paints,new Set(['body','feathers','beak']));
+  const paints=new Set<string>();root.traverse(n=>{if(n instanceof Mesh)for(const m of Array.isArray(n.material)?n.material:[n.material])if(m.userData.characterTexture)paints.add(m.userData.characterTexture);});
+  assert.deepEqual(paints,new Set(['snowball']));
  }
  native.model.traverse(n=>{if(n instanceof Mesh)for(const m of Array.isArray(n.material)?n.material:[n.material])assert(!m.userData.snowballPaint);});
+});
+
+test('Snowball embeds its own atlas and native matte materials without changing the authored pigeon geometry',async()=>{
+ const length=snowBytes.readUInt32LE(12),json=JSON.parse(snowBytes.subarray(20,20+length).toString()),view=json.bufferViews[json.images[0].bufferView];
+ const atlas=await readFile(new URL('../design/snowball/snowball-paint-atlas.png',import.meta.url));
+ assert.deepEqual(snowBytes.subarray(28+length+view.byteOffset,28+length+view.byteOffset+view.byteLength),atlas);
+ snowball.scene.traverse(node=>{
+  if(!(node instanceof Mesh))return;
+  const original=pigeon.scene.getObjectByName(node.name) as Mesh;assert(original);
+  for(const attribute of ['position','normal','uv','skinIndex','skinWeight']){
+   const actual=node.geometry.getAttribute(attribute) as BufferAttribute,expected=original.geometry.getAttribute(attribute);
+   if(expected)assert.deepEqual(actual.array,expected.array,`${node.name} / ${attribute}`);
+  }
+  for(const material of Array.isArray(node.material)?node.material:[node.material]){
+   assert.equal(material.userData.characterTexture,'snowball');assert(!material.customProgramCacheKey().includes('snowball-'));
+   if(material.name!=='Warm ivory eyes')assert.equal(material.roughness,.97);
+  }
+ });
+ const beak=snowball.scene.getObjectByName('Lower_beak_sculpt_paint') as Mesh,color=beak.geometry.getAttribute('color');
+ assert(color.getX(0)>color.getY(0)*1.5,'native vertex paint keeps the beak pink');
 });
 
 test('both wild pigeons greet either pigeon player, retain bread priority, and fear other characters',()=>{
