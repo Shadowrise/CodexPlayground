@@ -24,7 +24,7 @@ export class PlayerNameplate {
   this.texture.colorSpace=SRGBColorSpace;
   this.texture.minFilter=LinearFilter;this.texture.generateMipmaps=false;
   this.sprite=new Sprite(new SpriteMaterial({map:this.texture,depthWrite:false,sizeAttenuation:false,toneMapped:false,fog:false}));
-  this.sprite.name='Remote player nickname';this.sprite.center.set(.5,0);
+  this.sprite.name='Remote player nickname';this.sprite.center.set(.5,0);this.sprite.renderOrder=20;
   this.sprite.frustumCulled=false;
   this.sprite.onBeforeRender=(renderer,_scene,camera)=>{
    this.updateAnchor();

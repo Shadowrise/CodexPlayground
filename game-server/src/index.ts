@@ -1,5 +1,6 @@
 import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,knightArenaSide,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
 import {constrainKnightShield} from '../../kirby-game/src/meta-knight-shield';
+import {constrainKnightBody} from '../../kirby-game/src/meta-knight-body';
 import {META_KNIGHT_ARENA,constrainMetaKnightArena} from '../../kirby-game/src/meta-knight-arena-site';
 import {metaKnightVictoryLog,metaKnightSealLogs} from '../../kirby-game/src/world-log';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
@@ -340,7 +341,7 @@ export class GameRoom extends DurableObject<Env>{
   if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(actor?.location==='meta-knight-arena'){
    const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
-   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
+   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    for(const id of WILD_PIGEONS){const offering=breadOffering(r.bread,id);if(offering&&next[id])next[id]=beginPidgieFeeding(next[id]!,offering);}

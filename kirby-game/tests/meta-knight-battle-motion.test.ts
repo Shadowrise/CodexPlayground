@@ -69,6 +69,16 @@ test('crescent release has a large actual sword swing before the projectile appe
  assert(ready.distanceTo(hit)>8);assert(Math.abs(hit.y-ready.y)<.001,'the cut stays horizontal');assert(Math.abs(hit.y-KNIGHT.projectileHeight)<.001);assert(Math.abs(hit.x)<.03,'the blade crosses the target heading at release');assert(node('Left_foot_pivot').position.y<.4);
 });
 
+test('animated crescent emitter remains on the authoritative launch ray while the projectile separates',async()=>{
+ const {c,node,s,motion}=await fixture(),blade=node('Galaxia');s.pattern='crescent';s.height=KNIGHT.hoverHeight;s.from=[17,KNIGHT.hoverHeight,-13];
+ for(const yaw of [0,.7,Math.PI,-2.2])for(const elapsed of [220,236,260,300,340,380]){
+  motion.clear();c.actor.position.fromArray(s.from);c.actor.rotation.y=s.yaw=yaw;c.setActivity('Fly');c.updateActivity(elapsed/1000);
+  Object.assign(s,{stage:'shot',since:2000,until:4800});motion.apply(s,elapsed/2800);c.actor.updateMatrixWorld(true);
+  const tip=blade.localToWorld(new T.Vector3(-.315,2.05,0)),origin=new T.Vector3().fromArray(knightShotOrigin(s));
+  assert(tip.distanceTo(origin)<.001,`the live Fly pose emits from its actual tip at yaw ${yaw}, ${elapsed} ms`);
+ }
+});
+
 test('the full sword stays in front of the torso throughout crouch, jump, reversal and impact',async()=>{
  const {pose,node,c,s}=await fixture(),blade=node('Galaxia'),body=node('Body_motion'),point=new T.Vector3();s.pattern='leap';
  for(const stage of ['jump-warn','jump','slam','open'] as const)for(let frame=0;frame<=40;frame++){

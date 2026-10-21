@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {KNIGHT,knightShotOrigin,type KnightBattle} from './meta-knight-battle';
+import {KNIGHT,knightShotOrigin,knightProjectile,type KnightBattle} from './meta-knight-battle';
 
 /** The release flash joins the body to the real blade tip, matching close-range contact. */
 export class MetaKnightCrescentLaunch{
@@ -16,11 +16,12 @@ export class MetaKnightCrescentLaunch{
   }`});
  private mesh=new T.Mesh(new T.PlaneGeometry(1,1),this.material);
  constructor(){this.group.name='Crescent launch connecting sword flash';this.group.visible=false;this.mesh.rotation.x=-Math.PI/2;this.mesh.renderOrder=9;this.group.add(this.mesh);}
- update(s:KnightBattle|undefined,now:number){
+ update(s:KnightBattle|undefined,now:number,bladeTip?:T.Vector3){
   const elapsed=s?now-s.since-KNIGHT.shotReleaseMs:-1;this.group.visible=s?.stage==='shot'&&elapsed>=0&&elapsed<KNIGHT.shotLaunchMs;if(!this.group.visible||!s)return;
-  const origin=knightShotOrigin(s),span=Math.hypot(origin[0]-s.from[0],origin[2]-s.from[2]);
-  this.group.position.set(s.from[0],KNIGHT.projectileHeight,s.from[2]);this.group.rotation.y=s.yaw;this.mesh.position.z=span/2;
-  this.mesh.scale.set(KNIGHT.projectileRadius*2*KNIGHT.projectileWidthScale,span+KNIGHT.projectileRadius*2,1);this.material.uniforms.span.value=span;this.material.uniforms.progress.value=elapsed/KNIGHT.shotLaunchMs;
+  const origin=bladeTip??new T.Vector3().fromArray(knightShotOrigin(s)),shot=knightProjectile(s,now)!;
+  const dx=shot[0]-origin.x,dz=shot[2]-origin.z,span=Math.hypot(dx,dz);
+  this.group.position.copy(origin);this.group.rotation.y=span>.001?Math.atan2(dx,dz):s.yaw;this.mesh.position.z=span/2;
+  this.mesh.scale.set(KNIGHT.projectileRadius,span+KNIGHT.projectileRadius*2,1);this.material.uniforms.span.value=span;this.material.uniforms.progress.value=elapsed/KNIGHT.shotLaunchMs;
  }
 }
 

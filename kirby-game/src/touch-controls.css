@@ -15,6 +15,7 @@
 .touch-actions{position:absolute;right:var(--touch-right);bottom:var(--touch-bottom);display:grid;grid-template-columns:62px 70px;gap:10px;align-items:end;}
 #touch-jump{grid-column:2;grid-row:2;width:70px;height:70px;font-size:32px!important;background:#385b76e8!important;}
 #touch-attack{grid-column:1;grid-row:2;width:60px;height:60px;font-size:27px!important;}
+.touch-attack-hint{display:block;font-size:10px;line-height:1.1;font-weight:700;white-space:normal}.touch-attack-hint[hidden]{display:none}
 #touch-interaction{position:fixed;right:var(--touch-right);bottom:calc(var(--touch-bottom) + 80px);z-index:29;width:142px;max-width:calc(100vw - var(--touch-left) - var(--touch-right));pointer-events:none;}
 #touch-interact{width:100%;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;padding:10px;background:#425d36ed!important;border-color:#e7d58a!important;color:#fff3bd!important;}
 #touch-interact[hidden]{display:none;}

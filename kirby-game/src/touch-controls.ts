@@ -16,6 +16,7 @@ export class TouchControls {
   private thumb=document.createElement('span');
   private look=new Map<number,{x:number;y:number}>();
   private action:HTMLButtonElement;
+  private attack:HTMLButtonElement;private attackHint=document.createElement('small');
   private actionRequiresHold=false;private interactionWasHold=false;private interactionId?:number;
   private jumpId?:number;
   get jumpHeld(){return this.jumpId!==undefined;}
@@ -45,7 +46,7 @@ export class TouchControls {
     jump.addEventListener('pointerdown',e=>{if(!this.enabled||e.pointerType!=='touch'||this.jumpId!==undefined)return;this.jumpId=e.pointerId;jump.setPointerCapture(e.pointerId);});
     const releaseJump=(e:PointerEvent)=>{if(e.pointerId===this.jumpId)this.jumpId=undefined;};
     for(const name of ['pointerup','pointercancel','lostpointercapture'])jump.addEventListener(name,releaseJump as EventListener);
-    button('touch-attack','✦','Толчок',actions.attack);
+    this.attack=button('touch-attack','✦','Толчок',actions.attack);this.attackHint.className='touch-attack-hint';this.attackHint.hidden=true;this.attack.append(this.attackHint);
     // Keep the contextual action above the scrollable HUD, outside the movement layer.
     this.action=button('touch-interact','Действие','Взаимодействовать',()=>{if(!this.interactionWasHold&&!this.actionRequiresHold)actions.interact();},this.interactionLayer);this.action.hidden=true;
     this.action.addEventListener('pointerdown',e=>{if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.interactionId!==undefined)return;this.interactionWasHold=this.actionRequiresHold;if(this.actionRequiresHold){this.interactionId=e.pointerId;this.action.setPointerCapture(e.pointerId);}});
@@ -107,6 +108,7 @@ export class TouchControls {
     this.action.hidden=!text;this.action.textContent=(text?t(text).replace(/^E\s*—\s*/,''):t('Действие'));
     this.action.setAttribute('aria-label',this.action.textContent);
   }
+  setAttackHint(text?:string){this.attackHint.hidden=!text;this.attackHint.textContent=text??'';this.attack.setAttribute('aria-label',text??t('Толчок'));}
   reset(){
     const jump=this.root.querySelector<HTMLButtonElement>('#touch-jump'),jumpId=this.jumpId;this.jumpId=undefined;if(jumpId!==undefined&&jump?.hasPointerCapture(jumpId))jump.releasePointerCapture(jumpId);
     const interaction=this.interactionId;this.interactionId=undefined;if(interaction!==undefined&&this.action.hasPointerCapture(interaction))this.action.releasePointerCapture(interaction);

@@ -6,6 +6,7 @@ import {emoteMessage} from './world-log';
 import {validFlowerIndex} from './musical-flower-site';
 import {validNumberDigit} from './number-garden-site';
 import {numberDeadline} from './number-garden-game';
+import {knightBattleActive} from './meta-knight-battle';
 import {flowerDeadline} from './musical-flower-game';
 import {newSealProgress,normalizeSealProgress} from './meta-knight-seal-state';
 import type {PlayerEmote} from './emotes';
@@ -106,9 +107,12 @@ export class NetworkSession{
   // messages. Multiplayer already supplies the host world at this cadence.
   const sendChase=this.host&&hasChasers(boss)&&this.chaseElapsed>=CHASERS.snapshotMs/1000;
   const sendPigeons=this.host&&!!this.room.pigeonFlock?.length&&!!pigeons;
-  if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons)return;
-  if(!changed&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons)return;
-  this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)}));
+  // A stationary fighter still wakes authoritative attacks at 10 Hz. The meadow's
+  // two-second solo checkpoints can skip entire sword cuts after a tab resumes.
+  const knightPlayer=this.room.knightBattle?.players[this.id],sendKnight=knightBattleActive(this.room.knightBattle)&&(this.host||!!knightPlayer&&!knightPlayer.withdrawn&&knightPlayer.hp>0);
+  if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
+  if(!changed&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
+  this.socket.send(JSON.stringify({type:'frame',actor:changed||this.events.length||sendChase||sendKnight?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)}));
   this.lastActor=serialized;this.chaseElapsed=0;if(sendWorld)this.worldElapsed=0;
  }
  close(){this.closed=true;clearInterval(this.heartbeat);for(const callback of this.locks.values())callback(false);this.locks.clear();this.events=[];this.socket?.close(1000,'Left game');}

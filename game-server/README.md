@@ -1,8 +1,13 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-30`) is shared with the browser in
+Protocol 2 (`build=meadow-network-32`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
+
+Active Meta Knight fighters send their actor at 10 Hz even when stationary,
+so authoritative short attacks are not skipped by solo world checkpoints or
+after a tab resumes. Client and Worker share the torso collision, including
+swept steps, flight clearance and separation at the arena rim.
 
 ## Run locally
 
@@ -181,11 +186,12 @@ local room and never mutates a production room.
 ## Publish
 
 `npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2
-(`meadow-network-29`) was deployed on 2026-10-20 with the current shared fruit
-and mountain layout rules, retaining room checkpoints in Durable Object storage
-and the Meta Knight airborne combat fixes. Public `/health` and
-`/room` returned HTTP 200 with protocol version 2 after deployment.
-Worker version: `1d5b8614-46d0-44b4-8e9b-4b71362717a5`.
+(`meadow-network-32`) was deployed on 2026-10-21 with shared Meta Knight torso
+collision and regular fighter updates for authoritative damage. Room checkpoints
+remain in Durable Object storage. The isolated release passed all 749 tests and
+the client production build. Public `/health` returned HTTP 200 with status `ok`
+and protocol version 2 after deployment.
+Worker version: `f1a85057-ef55-4590-b6d7-39a848d35319`.
 Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event

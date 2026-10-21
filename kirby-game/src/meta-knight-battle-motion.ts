@@ -128,7 +128,10 @@ export class MetaKnightBattleMotion{
    return;
   }
   if(charging){
-   const wind=stage==='shot-warn'?T.MathUtils.smoothstep(f,0,.72):1,cut=stage==='shot'?T.MathUtils.smoothstep(elapsed,0,KNIGHT.shotReleaseMs*2):0,returning=stage==='shot'?T.MathUtils.smoothstep(elapsed,500,1050):0;
+   // Keep the blade on the locked launch ray while the crescent separates.
+   // Native Fly animation must not move its emitter to the side of that ray.
+   const release=KNIGHT.shotReleaseMs,separate=release+KNIGHT.shotLaunchMs;
+   const wind=stage==='shot-warn'?T.MathUtils.smoothstep(f,0,.72):1,cut=stage==='shot'?(elapsed<=release?.5*T.MathUtils.smoothstep(elapsed,0,release):.5+.5*T.MathUtils.smoothstep(elapsed,separate,separate+release)):0,returning=stage==='shot'?T.MathUtils.smoothstep(elapsed,separate+release,1050):0;
    const angle=stage==='shot-warn'?T.MathUtils.lerp(.35,-1.2,wind):T.MathUtils.lerp(T.MathUtils.lerp(-1.2,1.2,cut),.35,returning),turn=stage==='shot-warn'?-.35*wind:T.MathUtils.lerp(-.35,.4,cut)*(1-returning);
    this.body.position.y=1.2-.06*(stage==='shot-warn'?wind:1-returning);this.body.rotation.set(.05,turn,0);this.arm.rotation.set(-.4,0,-.15);this.left.rotation.set(-.4,0,-.5);
    const x=stage==='shot-warn'?T.MathUtils.lerp(.6,-.6,wind):T.MathUtils.lerp(T.MathUtils.lerp(-.6,.6,cut),.6,returning),z=1.2+.12*Math.sin(Math.PI*cut)*(1-returning),dy=T.MathUtils.clamp(((KNIGHT.projectileHeight-this.actor.position.y)/KNIGHT.modelScale-KNIGHT.shotHiltY)/BLADE_LENGTH,-.8,.8),flat=Math.sqrt(1-dy*dy);

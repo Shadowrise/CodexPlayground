@@ -674,7 +674,7 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),music:active=>music.setEvent(active?'knight':false)});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),music:active=>music.setEvent(active?'knight':false)});
 function completeKnightVictory(local=false){
  if(!character)return;
  if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
@@ -1079,13 +1079,13 @@ renderer.setAnimationLoop((time: number) => {
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
     if(roundFinished()){cosmicArena.leave();return;}
     if(cosmicArena.active){
-      if(pendingBoard&&!settingsOpen&&!cosmicArena.engaged){if(cosmicArena.nearExit(character)){cosmicArena.leave();return;}cosmicArena.startBattle();}
+      if(pendingBoard&&!settingsOpen&&!cosmicArena.engaged){cosmicArena.interact();if(!cosmicArena.active)return;}
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
       const moveStick=settingsOpen||wheelUsed||touchBlocked?{x:0,y:0}:usingPad?{x:pad.x,y:pad.y}:usingTouch?Math.hypot(touch!.x,touch!.y)<.18?{x:0,y:0}:{x:touch!.x,y:touch!.y}:undefined;
       cosmicArena.update(dt,time*.001,character,{cancelDuel,moveStick,dashHeld,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
-      const hint=cosmicArena.nearExit(character)?t('E — Вернуться на поляну'):cosmicArena.engaged?t('E — Прервать дуэль'):(!cosmicArena.battle||['won','lost','cancelled'].includes(cosmicArena.battle.stage))&&cosmicArena.nearKnight(character)?t('E — Начать дуэль'):'';
-      setText(rideHint,hint.replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —'));touch?.setInteraction(hint||undefined,cosmicArena.engaged,cosmicArena.cancelProgress);
+      const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'Q');
+      setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
       sounds.update(dt,character,[],followCamera.azimuth);
     }
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
@@ -1096,6 +1096,7 @@ renderer.setAnimationLoop((time: number) => {
     return;
   }
   if(character&&playing&&!settingsOpen&&metaKnightPortalReady()&&insideMetaKnightPortal(character.actor.position)&&sealActor(character).available){void cosmicArena.enter(character);return;}
+  touch?.setAttackHint(undefined);
   if (character && !roundFinished()) {
     syncNetworkWorld(dt);
     const carryingBread=bread.holds(network?.id??'solo');

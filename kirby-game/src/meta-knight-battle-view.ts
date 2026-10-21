@@ -16,6 +16,8 @@ import {KnightCancelHold} from './meta-knight-cancel-hold';
 import {CentipedeTargetCue} from './centipede-target-cue';
 import {crystalPoint} from './meta-knight-shield';
 import type {KnightSound} from './meta-knight-sounds';
+import {MetaKnightPartyHud,type KnightProfile} from './meta-knight-party-hud';
+import {MetaKnightImpactLightning} from './meta-knight-impact-lightning';
 import './meta-knight-battle.css';
 
 const AMBER=0xffbd32,CORAL=0xff4863,CYAN=0x7ceaff;
@@ -66,11 +68,15 @@ function swordCountdown(radius=KNIGHT.slashRadius-.035*FX,half:number=KNIGHT.sla
 /** Every mesh is reused; attack paths are the same geometry as the shared rules. */
 export class MetaKnightBattleView{
  readonly group=new T.Group();
- readonly hud=document.createElement('section');readonly actions=document.createElement('div');
+ readonly hud=document.createElement('section');
  private countdown=document.createElement('div');
- private phase=document.createElement('span');private health=document.createElement('div');private fill=document.createElement('i');private hearts=document.createElement('span');private hint=document.createElement('p');
- private start=document.createElement('button');private cancel=document.createElement('button');
- private cancelHold=new KnightCancelHold();private cancelRequiresHold=false;private cancelPointer?:number;private cancelKey?:string;private cancelClickBlocked=false;private events=new AbortController();
+ private phase=document.createElement('span');private health=document.createElement('div');private fill=document.createElement('i');private hint=document.createElement('p');
+ private party=new MetaKnightPartyHud();private lightning=new MetaKnightImpactLightning();private floorWarnings=new T.Group();
+ private partyLayout=new ResizeObserver(()=>this.placeParty());
+ private placeParty(){this.party.element.style.setProperty('--knight-hud-bottom',`${Math.ceil(this.hud.getBoundingClientRect().bottom)+12}px`);}
+ updateParty(s:KnightBattle|undefined,id:string,profiles:readonly KnightProfile[],visible:boolean){this.party.update(s,id,profiles,visible);}
+ private cancelHold=new KnightCancelHold();private events=new AbortController();
+ private impactKey='';private impactPoint=new T.Vector3();private impactHilt=new T.Vector3();private impactTip=new T.Vector3();
  get cancelProgress(){return this.cancelHold.progress;}
  private amber=glass(AMBER);private redGlass=glass(CORAL);private amberLane=glass(AMBER,true);private redLane=glass(CORAL,true);private coral=material(CORAL,.95);
  private sector=new T.Mesh(new T.RingGeometry(.1,KNIGHT.slashRadius,48,1,-KNIGHT.slashHalfAngle,KNIGHT.slashHalfAngle*2),this.amber);
@@ -97,42 +103,32 @@ export class MetaKnightBattleView{
  private swordSwing:MetaKnightSwordSwing;
  private motion:MetaKnightBattleMotion;
  private dashSparks:MetaKnightDashSparks;
- constructor(private knight:CharacterController,scene:T.Scene,onStart:()=>void,private onCancel:()=>void,private cue:(kind:KnightSound)=>void){
+ constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
   this.motion=new MetaKnightBattleMotion(knight.actor);this.impactCountdown.name='Meta Knight impact countdown';
   this.dashSparks=new MetaKnightDashSparks(knight.actor.getObjectByName('Galaxia')!);
   this.lane.name='Meta Knight dash countdown lane';
   this.group.name='Meta Knight duel telegraphs and effects';this.group.position.x=SITE.x;scene.add(this.group);
-  for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.group.add(mesh);}this.group.add(this.wave.group);
+  this.floorWarnings.name='Meta Knight floor warnings behind characters';this.floorWarnings.renderOrder=-1;this.group.add(this.floorWarnings);
+  for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.floorWarnings.add(mesh);}this.group.add(this.wave.group,this.lightning.group);
   for(let i=0;i<8;i++){const shape=new T.Shape();shape.moveTo(-.35,-.4);shape.lineTo(0,0);shape.lineTo(.35,-.4);shape.lineTo(.35,-.15);shape.lineTo(0,.25);shape.lineTo(-.35,-.15);shape.closePath();const arrow=new T.Mesh(new T.ShapeGeometry(shape),material(AMBER));arrow.name=`Meta Knight danger arrow ${i}`;arrow.rotation.x=-Math.PI/2;this.arrows.push(arrow);this.group.add(arrow);}
   this.group.add(this.projectile,this.particles,this.dazedStars.group,this.assault.group,this.bossTarget.group,this.crystalTarget.group,this.crescentLaunch.group);this.particles.frustumCulled=false;
-  this.bossTarget.group.name='Meta Knight available hit target';this.crystalTarget.group.name='Violet crystal available hit target';this.bossTarget.group.scale.setScalar(2.7);this.crystalTarget.group.scale.setScalar(2.7);this.bossTarget.group.renderOrder=this.crystalTarget.group.renderOrder=14;
+  this.bossTarget.group.name='Meta Knight available hit target';this.crystalTarget.group.name='Violet crystal available hit target';this.bossTarget.group.scale.setScalar(2.7);this.crystalTarget.group.scale.setScalar(2.7);
   this.hud.id='knight-battle-hud';this.hud.dataset.i18nIgnore='';this.hud.setAttribute('aria-label',t('Бой с Метакнайтом'));
   const title=document.createElement('strong');title.textContent=t('Метакнайт');const top=document.createElement('div');top.className='knight-battle-top';top.append(title,this.phase);
   this.health.className='knight-health';this.health.setAttribute('role','progressbar');this.health.setAttribute('aria-label',t('Здоровье Метакнайта'));this.health.setAttribute('aria-valuemin','0');this.health.setAttribute('aria-valuemax','12');this.health.append(this.fill);
-  this.hearts.className='knight-hearts';this.hearts.setAttribute('role','status');this.hint.className='knight-hint';this.hint.setAttribute('aria-live','polite');
-  this.actions.className='knight-battle-actions';this.start.type=this.cancel.type='button';this.cancel.className='knight-battle-cancel';this.start.addEventListener('click',onStart);
-  this.cancel.addEventListener('click',e=>{e.preventDefault();if(this.cancelClickBlocked){this.cancelClickBlocked=false;return;}if(!this.cancelRequiresHold)this.onCancel();});
-  this.cancel.addEventListener('pointerdown',e=>{if(e.button!==0)return;this.cancelClickBlocked=this.cancelRequiresHold;if(!this.cancelRequiresHold||this.cancelPointer!==undefined)return;e.preventDefault();this.cancel.focus({preventScroll:true});this.cancelPointer=e.pointerId;this.cancel.setPointerCapture(e.pointerId);});
-  const release=(e:PointerEvent)=>{if(e.pointerId===this.cancelPointer)this.cancelPointer=undefined;};
-  for(const name of ['pointerup','pointercancel','lostpointercapture'] as const)this.cancel.addEventListener(name,release);
-  this.cancel.addEventListener('pointermove',e=>{const r=this.cancel.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)release(e);});
-  this.cancel.addEventListener('keydown',e=>{if(!['Space','Enter'].includes(e.code)||!this.cancelRequiresHold)return;e.preventDefault();if(!e.repeat){this.cancelClickBlocked=true;this.cancelKey=e.code;}});
-  this.cancel.addEventListener('keyup',e=>{if(e.code===this.cancelKey){e.preventDefault();this.cancelKey=undefined;}});
-  const clearHold=()=>{this.cancelPointer=undefined;this.cancelKey=undefined;this.cancelHold.reset();this.cancel.style.setProperty('--cancel-progress','0%');};
-  this.cancel.addEventListener('blur',clearHold);window.addEventListener('blur',clearHold,{signal:this.events.signal});document.addEventListener('visibilitychange',clearHold,{signal:this.events.signal});
-  this.cancel.textContent=t('Прервать дуэль');this.actions.append(this.start,this.cancel);this.hud.append(top,this.health,this.hearts,this.hint,this.actions);document.body.append(this.hud);
+  this.floorWarnings.add(...this.arrows);this.hint.className='knight-hint';this.hint.setAttribute('aria-live','polite');
+  const clearHold=()=>this.cancelHold.reset();window.addEventListener('blur',clearHold,{signal:this.events.signal});document.addEventListener('visibilitychange',clearHold,{signal:this.events.signal});
+  this.hud.append(top,this.health,this.hint);document.body.append(this.hud);this.partyLayout.observe(this.hud);window.addEventListener('resize',()=>this.placeParty(),{signal:this.events.signal});
   this.countdown.id='knight-battle-countdown';this.countdown.hidden=true;this.countdown.dataset.i18nIgnore='';this.countdown.setAttribute('role','status');this.countdown.setAttribute('aria-live','polite');this.countdown.setAttribute('aria-atomic','true');document.body.append(this.countdown);
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
   const participant=!!s?.players[id]&&!s.players[id].withdrawn&&!withdrawn,active=participant&&!!s&&!['won','lost','cancelled'].includes(s.stage);
-  this.cancelRequiresHold=active;
-  const enabled=active&&visible&&!document.hidden&&document.hasFocus(),source=this.cancelPointer!==undefined?'button-pointer':this.cancelKey?'button-key':cancelSource;
-  const confirmed=this.cancelHold.update(enabled?s?.id:undefined,enabled?source:undefined,dt);this.cancel.style.setProperty('--cancel-progress',`${this.cancelHold.progress*100}%`);
-  if(!enabled){this.cancelPointer=undefined;this.cancelKey=undefined;}
-  if(confirmed){this.cancelPointer=undefined;this.cancelKey=undefined;this.onCancel();return;}
+  const enabled=active&&visible&&!document.hidden&&document.hasFocus();
+  const confirmed=this.cancelHold.update(enabled?s?.id:undefined,enabled?cancelSource:undefined,dt);
+  if(confirmed){this.onCancel();return;}
   const count=knightStartCount(s,now),label=count==='fight'?t('БОЙ!'):count;
   this.countdown.hidden=!visible||!participant||!label;
   const beat=s&&count?`${s.id}:${count}`:'';
@@ -161,9 +157,17 @@ export class MetaKnightBattleView{
   if(this.bossTarget.group.visible){this.bossTarget.update([p[0],p[1]+3.2,p[2]],now,camera,true,f);this.bossTarget.arrow.position.y=1.4+.04*Math.sin(now*.003);}
   if(this.crystalTarget.group.visible){const target=crystalPoint(s!.activeCrystal!);target[1]=3.2;this.crystalTarget.update(target,now,camera,true);this.crystalTarget.arrow.position.y=1.4+.04*Math.sin(now*.003);}
   this.dashSparks.update(s?now-s.since:0,stage==='dash'||stage==='ricochet');
-  this.crescentLaunch.update(s,now);
   this.knight.updateKnightBladeGlow(now,s?.pattern==='star'&&stage!=='open'||['slash-warn','slash','jump-warn','jump','dash-warn','dash','shot-warn','shot','dive-warn','dive'].includes(stage));
-  this.knight.actor.getObjectByName('Galaxia')!.localToWorld(this.position.set(-.315,2.05,0));this.position.x-=SITE.x;this.assault.update(s,now,this.position);
+  const blade=this.knight.actor.getObjectByName('Galaxia')!;
+  if(s&&(knightJumpOpening(s)||stage==='slam'||stage==='shield')){
+   const key=`${s.id}:${s.since}:${stage}`;if(key!==this.impactKey){
+    this.impactKey=key;this.motion.clear();this.motion.apply(s,0);
+    blade.localToWorld(this.impactTip.set(-.315,2.05,0));blade.getWorldPosition(this.impactHilt);
+    const span=this.impactHilt.y-this.impactTip.y;this.impactPoint.copy(this.impactHilt).lerp(this.impactTip,span>.001?T.MathUtils.clamp(this.impactHilt.y/span,0,1):1);this.impactPoint.x-=SITE.x;
+    this.motion.clear();this.motion.apply(s,f);
+   }
+  }
+  blade.localToWorld(this.position.set(-.315,2.05,0));this.position.x-=SITE.x;this.assault.update(s,now,this.position);this.lightning.update(s,now,this.impactPoint);this.crescentLaunch.update(s,now,this.position);
   this.shadow.position.set(p[0],.075,p[2]);this.shadow.scale.setScalar(1+Math.max(0,p[1])*.1);
   for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane])m.uniforms.clock.value=now/1000;
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.projectile,...this.arrows])mesh.visible=false;this.wave.group.visible=false;
@@ -205,12 +209,11 @@ export class MetaKnightBattleView{
   this.particles.visible=now-this.burstAt<700;for(let i=0;i<22&&this.particles.visible;i++){const life=(now-this.burstAt)/700,a=i*2.399;this.position.copy(this.burstPosition).add(new T.Vector3(Math.cos(a)*life*2*FX,(life*2-life*life*1.5)*FX,Math.sin(a)*life*2*FX));this.scale.setScalar(1-life);this.matrix.compose(this.position,this.quaternion,this.scale);this.particles.setMatrixAt(i,this.matrix);}this.particles.instanceMatrix.needsUpdate=true;
   const key=[s?.id??0,s?.revision??0,stage,hp,near,withdrawn,attackKey,t('Метакнайт')].join(':');if(key===this.lastKey)return;this.lastKey=key;
   const finished=stage==='won'||stage==='lost'||stage==='cancelled';
-  this.hud.querySelector('strong')!.textContent=t('Метакнайт');this.cancel.textContent=t(s?.stage==='won'||s?.stage==='lost'?'Завершить дуэль':'Прервать дуэль');this.health.setAttribute('aria-label',t('Здоровье Метакнайта'));this.health.hidden=!s||finished;this.hearts.hidden=!participating||finished;
-  this.hud.dataset.phase=String(s?.phase??0);this.phase.textContent=s?t(['Дуэль','Крылья','Звёздный натиск'][s.phase-1]):t('Вызов рыцаря');this.fill.style.width=`${(s?.hp??12)/12*100}%`;this.health.setAttribute('aria-valuenow',String(s?.hp??12));this.hearts.textContent='♥'.repeat(hp)+'♡'.repeat(5-hp);this.hearts.setAttribute('aria-label',t('Сердца: {0} из 5').replace('{0}',String(hp)));
-  this.start.hidden=!!s&&!finished;this.start.disabled=!near&&!finished;this.start.textContent=t(finished&&stage!=='cancelled'?'Ещё раз':'Начать дуэль');this.cancel.hidden=!participating||stage==='cancelled';this.actions.hidden=this.start.hidden&&this.cancel.hidden;
+  this.hud.querySelector('strong')!.textContent=t('Метакнайт');this.health.setAttribute('aria-label',t('Здоровье Метакнайта'));this.health.hidden=!s||finished;
+  this.hud.dataset.phase=String(s?.phase??0);this.phase.textContent=s?t(['Дуэль','Крылья','Звёздный натиск'][s.phase-1]):t('Вызов рыцаря');this.fill.style.width=`${(s?.hp??12)/12*100}%`;this.health.setAttribute('aria-valuenow',String(s?.hp??12));
   const hints:Partial<Record<typeof stage,string>>={'intro':'Увидеть замах → уклониться → ответить','approach':'Следи за мечом и держись рядом','slash-warn':'Выйди из сектора взмаха','slash':'Дождись конца связки','jump-warn':'Выйди из отмеченного круга','jump':'Выйди из отмеченного круга','wave':'Прыгай или перелетай низкую волну','dash-warn':'Уходи поперёк золотой полосы','dash':'Следующий заход готовится отдельно','dive-warn':'Выйди из отмеченного круга','dive':'Пикирование!','shot-warn':'Золотой полумесяц можно отбить атакой','shot':'Нажми {0} перед касанием полумесяца','return':'Отбито! Полумесяц летит в Метакнайта','open':'Защита открыта! Подойди и нажми {0}','transition':'Новая фаза — приготовься','won':'Победа! Метакнайт уважает твоё мастерство','lost':'Попытка окончена. Попробуем ещё раз?'};
   Object.assign(hints,{'star-rise':'Кристаллы пробуждаются — следи за лучами','cross-warn':'Выйди из жёлтых треугольников','cross':'Следующий кристалл уже заряжается','ricochet-warn':'Три прицельных перелёта — уходи с полосы','ricochet':'Уходи с отмеченной полосы','star-warn':'Выйди из круга — рыцарь создаёт щит','star-fall':'Приземление! Купол закроет центр','shield':'Волны идут к щиту! Пройди в разрыв и ударь фиолетовый кристалл · {1}/4','crystal-break':'Кристалл разбит! Приготовься к новому заходу','stunned':'Попадание! Метакнайт потерял здоровье','get-up':'Метакнайт поднимается — приготовься'});
   this.hint.textContent=stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(4-(s?.hp??4)));
  }
- dispose(){this.events.abort();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+ dispose(){this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

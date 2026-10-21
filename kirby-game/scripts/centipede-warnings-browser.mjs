@@ -44,10 +44,18 @@ try{
   await page.screenshot({path:output+stage+'-'+elapsed+'.png'});frames.push(frame);
  }
  const late=await page.evaluate(()=>warningQA.pose('wheelWarning',900,true));assert.equal(late.route.progress,.5);assert.equal(late.route.width,2.85);
+ const targetOverlay=await page.evaluate(()=>{
+  const t=warningQA,T=t.THREE,q=structuredClone(t.states.warning);q.stage='exhausted';
+  const now=q.stageAt,target=new T.Vector3().fromArray(t.rules.centipedeTarget(q));t.camera.position.copy(target).add(new T.Vector3(8,9,15));t.camera.lookAt(target);t.camera.updateMatrixWorld();
+  t.model.update(now/1000,t.camera.position,q,now);t.model.update(now/1000,t.camera.position,q,now+700);t.view.update(q,'solo',now,t.c.actor.position,true,'Q',t.camera);t.renderer.render(t.scene,t.camera);
+  const ring=t.view.targetCue.ring,size=t.renderer.getDrawingBufferSize(new T.Vector2()),gl=t.renderer.getContext(),pixel=new Uint8Array(4),samples=[];
+  for(let i=0;i<24;i++){const a=i*Math.PI/12,p=ring.localToWorld(new T.Vector3(Math.sin(a)*1.05,Math.cos(a)*1.05,0)).project(t.camera);gl.readPixels(Math.floor((p.x+1)*size.x/2),Math.floor((p.y+1)*size.y/2),1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);samples.push([...pixel]);}
+  return {samples,complete:samples.every(p=>p[1]>p[0]+12&&p[1]>p[2]+8),depthTest:ring.material.depthTest};
+ });assert(targetOverlay.complete&&!targetOverlay.depthTest,'the entire green target stays visible over the actual Topotushka model');await page.screenshot({path:output+'complete-green-target.png'});
  const resources=await page.evaluate(()=>{
   const t=warningQA,lane=t.view.group.getObjectByName('Topotushka run and wheel countdown lane');t.pose('wheelWarning',100);const geometry=lane.geometry;t.pose('wheelWarning',1700);const stable=lane.geometry===geometry;
   t.view.update(undefined,'solo',0,t.c.actor.position,true,'Q',t.camera);return {stable,hidden:!t.view.group.visible};
  });assert(resources.stable&&resources.hidden);
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{document.body.classList.add('touch-ui');warningQA.camera.aspect=390/844;warningQA.camera.updateProjectionMatrix();warningQA.pose('wheelWarning',1200);});await page.screenshot({path:output+'wheel-mobile.png'});
- assert.deepEqual(errors,[]);await writeFile(output+'checks.json',JSON.stringify({frames,late,resources,errors},null,2));console.log(JSON.stringify({result:'PASS',frames:frames.length,late,resources,errors,output}));
+ assert.deepEqual(errors,[]);await writeFile(output+'checks.json',JSON.stringify({frames,late,targetOverlay,resources,errors},null,2));console.log(JSON.stringify({result:'PASS',frames:frames.length,late,targetOverlay,resources,errors,output}));
 }finally{await browser.close();}

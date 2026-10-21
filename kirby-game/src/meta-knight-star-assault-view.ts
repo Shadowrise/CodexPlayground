@@ -50,6 +50,7 @@ export class MetaKnightStarAssaultView{
  private matrix=new T.Matrix4();private q=new T.Quaternion();private p=new T.Vector3();private scale=new T.Vector3();private a=new T.Vector3();private b=new T.Vector3();private delta=new T.Vector3();
  constructor(){
   this.group.name='Meta Knight star assault';this.group.visible=false;
+  const floorWarnings=new T.Group();floorWarnings.name='Star assault floor warnings behind characters';floorWarnings.renderOrder=-1;this.crossZones.group.renderOrder=-1;
   this.group.add(this.cross.mesh,this.cross2.mesh,...this.routes.map(r=>r.mesh),this.shield.group,this.crossZones.group,this.rubble,this.fragments,this.beacon);this.rubble.name='Broken arena crystal rubble';this.fragments.name='Shattered violet crystal fragments';this.rubble.frustumCulled=this.fragments.frustumCulled=false;
   this.beacon.name='Active violet crystal beacon';this.mist.name='Violet crystal drifting mist';this.mist.position.y=5;this.mist.frustumCulled=false;this.beaconGlints.frustumCulled=false;this.mist.renderOrder=9;this.beaconGlints.renderOrder=10;this.beacon.add(this.mist,this.beaconGlints,...this.beaconRings);this.beacon.visible=false;
   const geometry=new T.OctahedronGeometry(1.2),plane=new T.PlaneGeometry(13,13),orbit=new T.TorusGeometry(1.55,.025,4,40);
@@ -68,7 +69,7 @@ export class MetaKnightStarAssaultView{
     float timer=rim*step(a,progress);vec3 tint=mix(vec3(1.,.64,.10),vec3(1.,.08,.22),max(attack,timer));gl_FragColor=vec4(tint,max(.38+.1*r,timer*.98));
     #include <colorspace_fragment>
    }`,
-  }));this.disc.name='Star assault centre impact countdown';this.disc.rotation.x=-Math.PI/2;this.disc.position.y=.12;this.group.add(this.disc);
+  }));this.disc.name='Star assault centre impact countdown';this.disc.rotation.x=-Math.PI/2;this.disc.position.y=.12;floorWarnings.add(this.cross.mesh,this.cross2.mesh,...this.routes.map(r=>r.mesh),this.crossZones.group,this.disc);this.group.add(floorWarnings);
  }
  bindCrystals(scene:T.Scene){this.nativeCrystals=Array.from({length:8},(_,i)=>scene.getObjectByName('Cosmic arena crystal '+i)).filter((o):o is T.Object3D=>!!o);}
  private line(mesh:T.Mesh,a:T.Vector3,b:T.Vector3,radius:number){
