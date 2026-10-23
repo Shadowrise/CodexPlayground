@@ -162,6 +162,9 @@ function nextStep(s:KnightBattle,now:number,actors:KnightActor[]){
  }
  if(old==='jump'||old==='dive'){s.from=[oldTo[0],0,oldTo[2]];s.to=[...s.from];}
  if(s.stage==='wave'||s.stage==='open'){s.height=0;s.from[1]=s.to[1]=0;}
+ // Keep the outward ring alive until its trailing edge clears the entire arena,
+ // including landings away from the centre. Rendering and damage share this stage.
+ if(s.stage==='wave')s.until=s.since+(Math.hypot(s.from[0],s.from[2])+META_KNIGHT_ARENA.radius+SHIELD.waveHalfWidth)/KNIGHT.waveSpeed;
  if(s.pattern==='star'&&s.stage==='open'){s.from=s.to=[0,0,0];}
  if(s.stage==='shield'){s.from=s.to=[0,0,0];s.activeCrystal=chooseShieldCrystal(s);}
 }

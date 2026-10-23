@@ -21,6 +21,7 @@ import {createReedGeometry,createWaterLilyGeometry,createWaterPlantMaterial} fro
 import {biomeAt} from './forest';
 import {makeOakBench} from './bench-model';
 import {makePicnic,makeRuins} from './clearing-models';
+import {makeWoodlandTimber,makeWoodlandMushroom} from './woodland-models';
 
 import { LANDMARKS, POND_SCALE } from './landmark-sites';
 export { LANDMARKS } from './landmark-sites';
@@ -163,16 +164,10 @@ export function createLandmarks(layout?:MeadowLayout,trees:readonly MeadowTree[]
       flowers(g,-15,-3,38);
     } else if(site.kind===1) flowers(g,0,0,120);
     else if(site.kind===2) {
-      put(g,'pole','#75503b',-2,.65,0,1.2,1.3,1.2);
-      put(g,'pole','#c9a574',-2,1.31,0,1.08,.04,1.08);
-      for(const r of [.4,.7,.95])put(g,'ring','#8c6646',-2,1.34,0,r,r,r,Math.PI/2);
-      put(g,'pole','#75503b',3,.65,1,.65,6,.65,0,0,Math.PI/2);
-      for(const x of [0,6])put(g,'pole','#c9a574',x,.65,1,.57,.04,.57,0,0,Math.PI/2);
+      g.add(makeWoodlandTimber());
       for(let i=0;i<30;i++) {const a=i*2.4,r=2+Math.sqrt(i/30)*6,h=.25+(i%4)*.16;
         const p=place(g,Math.cos(a)*r,Math.sin(a)*r,h*.8+.08,'mushroom');if(!p)continue;const {x,z}=p;
-        put(g,'pole','#ebdab4',x,h/2,z,.09,h,.09);
-        put(g,'cap',i%3?'#b34035':'#9b744d',x,h,z,h*.8,h*.45,h*.8);
-        for(let j=0;j<4;j++) {const b=j*1.57;put(g,'ball','#f7e5cf',x+Math.cos(b)*h*.4,h+h*.34,z+Math.sin(b)*h*.4,.055,.025,.055);}
+        const mushroom=makeWoodlandMushroom(i%3);mushroom.position.set(x,0,z);mushroom.scale.set(h*1.2,h*1.18,h*1.2);mushroom.rotation.y=a;g.add(mushroom);
       }
       for(let i=0;i<6;i++){const p=place(g,Math.sin(i*2)*4,Math.cos(i*2)*4,1.15,'moss');if(p)put(g,'rock','#607949',p.x,.1,p.z,1.1,.15,.7);}
     } else if(site.kind===3) {

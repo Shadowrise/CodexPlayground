@@ -75,13 +75,15 @@ commercial projects. Attribution is kept here for provenance.
 
 ## Meta Knight duel music and sounds
 
-- Game file: `public/audio/meta-knight-duel.wav` — original score “Galaxia — Knight of the Stars”, generated for this project by `scripts/make-meta-knight-music.cjs`.
+- Game file: `public/audio/meta-knight-duel.wav` — approved orchestral arrangement of the original project score “Galaxia — Knight of the Stars”. Original melody: `scripts/make-meta-knight-music.cjs`; approved MIDI, score and render settings: `design/music/meta-knight-orchestral/approved/`.
 - D minor, 144 BPM, 64 bars, 106.667 seconds, stereo PCM WAV at 44100 Hz. Theme, answer, reprise, lyrical bridge, bridge variation, return and two-part finale; instrument tails wrap into the loop.
+- Sampled violin, flute, piano, orchestral backing and drums: **GeneralUser GS v2.0.3**, S. Christian Collins, rendered with FluidSynth 2.6.1. Sound bank source: https://schristiancollins.com/generaluser and https://github.com/mrbumpy409/GeneralUser-GS. Bank license v2.0: `public/audio/meta-knight-duel-LICENSE.txt`; the bank itself is not distributed with the game.
+- Selected string option 3 on 2026-10-23: original solo-violin register, gentler attack and reduced upper-mid/high-frequency energy. Original melody pitches and timing preserved.
 - Original combat sound palette synthesized by `src/meta-knight-sounds.ts` with metallic partials, filtered noise and stereo echoes.
 - Countdown uses three original short wooden knocks and a bright layered starting bell from the same synthesizer.
 - The crystal assault adds original layered crystal bells, an ascending constellation arpeggio and an airy spiral cue. Phase-three music eases to 110% tempo while preserving pitch and the existing mute/volume controls.
 - The crystal shield adds original resonant glass, pressure-wave sweeps and a layered crystal-shattering chime; synthesized in the same sound palette without external samples. Dome, segmented/full pressure waves, violet crystal flares and rubble are procedural Three.js geometry and shaders.
-- Both the music and combat sounds use synthesis without third-party recordings or samples.
+- Combat sound effects use synthesis without third-party recordings or samples.
 
 ## Spruce needle surface
 

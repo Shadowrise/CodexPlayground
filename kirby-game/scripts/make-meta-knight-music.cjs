@@ -1,4 +1,13 @@
 const fs=require('node:fs'),path=require('node:path');
+// Preserve the approved sampled recording during ordinary asset generation.
+// The score below remains the original editable melody source. An explicit
+// --legacy-preview renders the old synth to a cache file for comparison.
+if(!process.argv.includes('--legacy-preview')){
+ const approved=path.resolve(__dirname,'../public/audio/meta-knight-duel.wav');
+ if(!fs.existsSync(approved))throw new Error('Restore the approved meta-knight-duel.wav from Git; its editable score and render settings are in design/music/meta-knight-orchestral/approved.');
+ console.log(JSON.stringify({file:approved,source:'approved orchestral arrangement with muted solo violin; preserved'}));
+ process.exit(0);
+}
 // Original score: “Galaxia — Knight of the Stars”, D minor, 144 BPM, 64 bars.
 // Theme, answer, reprise, lyrical bridge, bridge variation, return and two-part finale.
 // Every instrument tail wraps into the loop.
@@ -63,5 +72,6 @@ let peak=0;for(let i=0;i<n;i++){left[i]=Math.tanh(left[i]*1.3);right[i]=Math.tan
 const data=Buffer.alloc(n*4),gain=.78/peak;let energy=0;
 for(let i=0;i<n;i++){const l=left[i]*gain,r=right[i]*gain;energy+=l*l+r*r;data.writeInt16LE(Math.round(l*32767),i*4);data.writeInt16LE(Math.round(r*32767),i*4+2);}
 const h=Buffer.alloc(44);h.write('RIFF');h.writeUInt32LE(data.length+36,4);h.write('WAVEfmt ',8);h.writeUInt32LE(16,16);h.writeUInt16LE(1,20);h.writeUInt16LE(2,22);h.writeUInt32LE(rate,24);h.writeUInt32LE(rate*4,28);h.writeUInt16LE(4,32);h.writeUInt16LE(16,34);h.write('data',36);h.writeUInt32LE(data.length,40);
-fs.writeFileSync(path.resolve(__dirname,'../public/audio/meta-knight-duel.wav'),Buffer.concat([h,data]));
+const preview=path.resolve(__dirname,'../node_modules/.cache/meta-knight-original/meta-knight-duel.wav');
+fs.mkdirSync(path.dirname(preview),{recursive:true});fs.writeFileSync(preview,Buffer.concat([h,data]));
 console.log(JSON.stringify({title:'Galaxia — Knight of the Stars',bpm,bars,seconds:duration,bytes:data.length+44,peak:.78,rms:Math.sqrt(energy/n/2)}));

@@ -51,7 +51,7 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     music.start(); await Promise.resolve(); assert(!audio!.paused);
     volume.value = '37'; volume.dispatchEvent(new Event('input'));
     const first = MUSIC_TRACKS.findIndex(([file]) => audio!.src.split('?')[0].endsWith(`${file}.wav`));
-    assert(first >= 0);assert(label.textContent.includes('/ 15 ·'));
+    assert.equal(first,0,'every page starts with День на поляне');assert(label.textContent.includes('/ 15 ·'));
     for (let i = 0; i < MUSIC_TRACKS.length; i++) {
       assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       if (MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0] === 'meadow-day') {
@@ -74,7 +74,7 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     assert(background.paused);assert(event.loop);assert(!event.paused);assert(event.src.endsWith('/audio/topotushka-play.wav'));assert.equal(event.volume,.37);
     volume.value='29';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.29);assert.equal(background.volume,.29);
     music.setEvent('celebrate');await Promise.resolve();assert(!event.loop);assert(event.src.endsWith('/audio/topotushka-victory.wav'));assert.equal(event.volume,.29);assert(!event.paused);
-    music.setEvent('knight');await Promise.resolve();assert(event.loop);assert(event.src.endsWith('/audio/meta-knight-duel.wav'));assert(background.paused);assert(!event.paused);assert.equal(event.volume,.29);assert.match(label.textContent,/Галаксия/);
+    music.setEvent('knight');await Promise.resolve();assert(event.loop);assert(event.src.endsWith('/audio/meta-knight-duel.wav?v=orchestral-muted-20261023'),'load the approved muted-violin recording instead of cached legacy audio');assert(background.paused);assert(!event.paused);assert.equal(event.volume,.29);assert.match(label.textContent,/Галаксия/);
     music.updateKnightPhase(3,.1);assert(event.playbackRate>1&&event.playbackRate<1.1);
     for(let i=0;i<180;i++)music.updateKnightPhase(3,1/60);assert(Math.abs(event.playbackRate-1.1)<.001);assert(event.preservesPitch);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
@@ -97,5 +97,36 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');
     if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage); else Reflect.deleteProperty(globalThis, 'localStorage');
   }
+});
+
+test('menu autoplay keeps the music preference and retries on activation without restarting on game entry',async()=>{
+ class Element extends EventTarget{value='';textContent='';title='';hidden=false;attributes=new Map<string,string>();setAttribute(k:string,v:string){this.attributes.set(k,v);}}
+ let allowed=false;const audios:AudioStub[]=[];
+ class AudioStub extends EventTarget{
+  private source='';currentTime=0;paused=true;preload='';volume=1;loop=false;playCalls=0;loads=0;playbackRate=1;
+  constructor(){super();audios.push(this);}
+  get src(){return this.source;}set src(value:string){this.source=value;this.currentTime=0;this.loads++;}
+  pause(){this.paused=true;}
+  async play(){this.playCalls++;if(!allowed)throw new DOMException('User activation required','NotAllowedError');this.paused=false;}
+ }
+ const saved=new Map(['Audio','document','localStorage'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)]));
+ const storage=new Map<string,string>(),doc=new Element(),button=new Element(),slider=new Element(),previous=new Element(),next=new Element(),label=new Element();
+ Object.defineProperty(globalThis,'Audio',{configurable:true,value:AudioStub});
+ Object.defineProperty(globalThis,'document',{configurable:true,value:doc});
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(key:string)=>storage.get(key)??null,setItem:(key:string,value:string)=>storage.set(key,value)}});
+ try{
+  const music=new BackgroundMusic(button as unknown as HTMLButtonElement,slider as unknown as HTMLInputElement,previous as unknown as HTMLButtonElement,next as unknown as HTMLButtonElement,label as unknown as HTMLElement),background=audios[0];
+  music.enterMenu();await Promise.resolve();
+  assert(background.paused);assert(background.src.includes('/audio/meadow-day.wav'));assert.equal(button.attributes.get('aria-pressed'),'true','autoplay denial must not mute the user setting');
+  assert.equal(storage.size,0);
+  allowed=true;doc.dispatchEvent(new Event('pointerup'));await Promise.resolve();assert(!background.paused);
+  background.currentTime=17.25;const plays=background.playCalls;
+  music.start();assert.equal(background.playCalls,plays);assert.equal(background.currentTime,17.25);assert.equal(background.loads,1,'entering the game must not reload the menu track');
+  doc.dispatchEvent(new Event('keydown'));await Promise.resolve();assert.equal(background.playCalls,plays,'gesture retries are removed after playback starts');
+  music.setEvent('knight');await Promise.resolve();assert(background.paused);
+  music.updateDucking(true,1);music.enterMenu();await Promise.resolve();assert(!background.paused);assert.equal(background.currentTime,17.25);assert.equal(background.volume,.25);assert(audios[1].paused);
+  button.dispatchEvent(new Event('click'));assert(background.paused);music.enterMenu();doc.dispatchEvent(new Event('pointerup'));await Promise.resolve();assert(background.paused,'menu entry respects mute');
+  music.stop();
+ }finally{for(const [key,descriptor] of saved){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}}
 });
 

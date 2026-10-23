@@ -4,6 +4,7 @@ import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
 import {MillBakery} from './mill-bakery';
+import {makeMillrace,makeMillraceGate} from './millrace-model';
 import {newMillQuest,advanceMill,applyMill,millNear,millWorking,MILL_TABLE,MILL_OVEN,MILL_BAKE_MS,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
 
 // The eastern bank of the existing central pond; inside its tree-free clearing.
@@ -187,24 +188,9 @@ export class Watermill {
     for(const z of [-2.5,.5])box('#8e917f',9.6,1,z,.5,2,.55);
     beam(root,'#76533b',new T.Vector3(9.6,2,-2.5),new T.Vector3(9.6,3.65,-1),.3);
     beam(root,'#76533b',new T.Vector3(9.6,3.65,-1),new T.Vector3(9.6,2,.5),.3);
-    // Raised millrace with a visible sluice, braces, and overflow into the pond.
-    box('#8b6a45',10.8,6.9,-8.8,2.2,.2,8.6);
-    box('#8b6a45',10.8,6.9,-3.65,2.2,.2,2);
-    for(const x of [9.68,11.92])box('#aa8553',x,7.14,-3.65,.2,.5,2);
-    for(const x of [9.68,11.92])box('#aa8553',x,7.24,-8.8,.2,.75,8.6);
-    for(const z of [-12.5,-9,-5.2])for(const x of [9.75,11.85]) {
-      box('#735239',x,3.4,z,.3,6.8,.3);
-      beam(root,'#86613c',new T.Vector3(x,4.7,z),new T.Vector3(x,6.8,z+1),.18);
-    }
+    root.add(makeMillrace());
     this.gate.position.set(10.8,7.35,-5.4);root.add(this.gate);
-    for(let i=0;i<5;i++)part(this.gate,'box','#77563a',0,-.32+i*.17,0,1.96,.15,.18);
-    part(this.gate,'box','#35474b',0,.5,0,.1,1.1,.1);
-    for(const x of [9.6,12])box('#543f30',x,7.65,-5.4,.21,2,.23);
-    box('#543f30',10.8,8.6,-5.4,2.6,.22,.24);
-    // Supply pipe disappearing into a stone spring on the bank.
-    box('#898e7d',10.8,3.2,-14.2,3.2,6.4,2.2);
-    for(let i=0;i<5;i++)box('#acaf97',10.8,6.4+i*.14,-14.2,3.4-i*.35,.18,2.4-i*.2);
-    part(root,'cylinder','#65796a',10.8,7,-13.3,.47,1.3,.47,Math.PI/2);
+    this.gate.add(makeMillraceGate());
     // A fixed iron cradle joins the stone pedestal to the rotating X-axis hub.
     // The shaft enters that hub, so every gate angle keeps a continuous joint.
     const leverMount=new T.Group();leverMount.name='Watermill lever mount';leverMount.position.set(17,0,6.5);root.add(leverMount);
@@ -299,7 +285,7 @@ export class Watermill {
       batchRigidMeshes(parent);
     };
     batch(root);batch(this.wheel);batch(this.gate);batch(leverMount);batch(this.handle);
-    const race=new T.Mesh(new T.PlaneGeometry(1.9,8.3),this.water);race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.9);root.add(race);
+    const race=new T.Mesh(new T.PlaneGeometry(1.9,8.2),this.water);race.name='Raised millrace water';race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.95);root.add(race);
     const lip=new T.Mesh(new T.PlaneGeometry(1.9,2.2),this.water);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
     this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);

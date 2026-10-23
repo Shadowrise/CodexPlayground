@@ -174,6 +174,7 @@ settingsToggle.addEventListener('click', () => {
   else if(playing)canvas.focus();
 });
 const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
+music.enterMenu();
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
 let unlockStorage:Storage|undefined;try{unlockStorage=localStorage;}catch{}
 const characterUnlocks=new CharacterUnlocks(unlockStorage);
@@ -252,7 +253,7 @@ const backButton=document.querySelector<HTMLButtonElement>('#character-back')!;
 backButton.addEventListener('click',showStartupMenu);
 function showStartupMenu(){
  selectionGeneration++;joiningSession?.close();joiningSession=undefined;
- music.stop();sounds.reset();if(startupComplete)clearTutorialInput();
+ music.enterMenu();sounds.reset();if(startupComplete)clearTutorialInput();
  networkIntent=false;pendingSave=undefined;resetVariantAvailability();
  startButton.disabled=!startupComplete;startButton.textContent=t(startupComplete?'На поляну →':'Загрузка…');
  selectionMessage.hidden=true;selectionMessage.textContent='';startupMessage.hidden=true;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {knightSound,KNIGHT_SOUND_RATE,type KnightSound} from '../src/meta-knight-sounds';
 
-test('original duel score is a stereo 44.1 kHz seamless loop with headroom and audible musical energy',()=>{
+test('approved orchestral duel score is a stereo 44.1 kHz seamless loop with headroom and audible musical energy',()=>{
  const wav=readFileSync(new URL('../public/audio/meta-knight-duel.wav',import.meta.url));assert.equal(wav.toString('ascii',0,4),'RIFF');assert.equal(wav.readUInt16LE(22),2);assert.equal(wav.readUInt32LE(24),44100);
  const seconds=wav.readUInt32LE(40)/wav.readUInt32LE(28);assert(seconds>=90&&seconds<=120);assert(Math.abs(seconds-64*4*60/144)<.001);
  let peak=0,energy=0,difference=0;for(let i=44;i<wav.length;i+=4){const l=wav.readInt16LE(i)/32768,r=wav.readInt16LE(i+2)/32768;peak=Math.max(peak,Math.abs(l),Math.abs(r));energy+=l*l+r*r;difference+=(l-r)**2;}

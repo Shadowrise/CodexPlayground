@@ -143,6 +143,20 @@ test('phase two forward flights have a 50% wider lane at every heading regardles
  }
 });
 
+test('the dive ring reaches every arena edge from central and off-centre landings and remains jumpable',()=>{
+ for(const origin of [[0,0,0],[31,0,0],[-20,0,23]] as KnightActor['p'][])for(let i=0;i<16;i++)for(const height of [0,1.2]){
+  const s=battle(),a=actor(),angle=i*Math.PI/8;setStage(s,'slam');
+  Object.assign(s,{phase:2,hp:8,pattern:'dive',step:2,from:[...origin],to:[...origin]});
+  a.p=[Math.sin(angle)*41.7,height,Math.cos(angle)*41.7];advanceKnightBattle(s,[a],s.until);
+  assert.equal(s.stage,'wave');const since=s.since,until=s.until;
+  assert((until-since)*KNIGHT.waveSpeed>=Math.hypot(origin[0],origin[2])+ARENA.radius+.8-1e-8,'the trailing edge clears the far rim');
+  for(let now=since+25;now<until;now+=25)advanceKnightBattle(s,[a],now);
+  assert.equal(s.stage,'wave');assert.equal(s.players.a.hp,height?5:4,`edge ${i}, landing ${origin}, height ${height}`);
+  advanceKnightBattle(s,[a],until);assert.equal(s.stage,'open');assert.equal(s.until-s.since,3000,'the counterattack opening keeps its duration');
+  const hp=s.players.a.hp;advanceKnightBattle(s,[a],until+200);assert.equal(s.players.a.hp,hp,'the expired ring leaves no invisible damage');
+ }
+});
+
 test('marked sword, flight and landing attacks damage airborne players; only the phase-two ring can be jumped',()=>{
  for(const height of [0,1.45,2.9,8]){
   for(const stage of ['slash','dash','slam','open'] as const){

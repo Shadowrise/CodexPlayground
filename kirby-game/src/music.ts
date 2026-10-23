@@ -18,12 +18,13 @@ export const MUSIC_TRACKS = [
   ['accordion-stroll', 'Лёгкий аккордеон'],
 ] as const;
 
-const MUSIC_ASSET_REVISIONS: Partial<Record<typeof MUSIC_TRACKS[number][0], string>> = {
+const MUSIC_ASSET_REVISIONS: Partial<Record<typeof MUSIC_TRACKS[number][0] | 'meta-knight-duel', string>> = {
   'meadow-day': 'acoustic-20261021',
   'button-swing': '2',
+  'meta-knight-duel': 'orchestral-muted-20261023',
 };
 
-/** Sequential tracks, starting at a random position each session. */
+/** The meadow theme starts in the menu, then the playlist continues in order. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
   private eventAudio?:HTMLAudioElement;
@@ -32,8 +33,10 @@ export class BackgroundMusic {
   private volume = .25;
   private mix = 1;
   private started = false;
-  private track = Math.floor(Math.random() * MUSIC_TRACKS.length);
+  private track = 0;
   private playRequest = 0;
+  private waitingForGesture = false;
+  private readonly retryFromGesture = () => { if(this.started&&this.enabled)void this.play(); };
 
   constructor(private readonly button: HTMLButtonElement, volume: HTMLInputElement,
     previous: HTMLButtonElement, next: HTMLButtonElement, private readonly trackLabel: HTMLElement) {
@@ -50,7 +53,7 @@ export class BackgroundMusic {
     button.addEventListener('click', () => {
       this.enabled = !this.enabled;
       saveAudioSettings('music', this.enabled, this.volume);
-      if (this.enabled) void this.play(); else { this.playRequest++; this.audio.pause();this.eventAudio?.pause(); }
+      if (this.enabled) void this.play(); else { this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause(); }
       this.updateButton();
     });
     volume.addEventListener('input', () => {
@@ -100,12 +103,18 @@ export class BackgroundMusic {
       event.addEventListener('error',()=>{this.eventActive=false;if(this.enabled)void this.play();});
     }
     if(this.eventAudio)this.eventAudio.playbackRate=1;
-    if(active&&this.eventAudio){this.eventAudio.loop=active!=='celebrate';const file=active==='knight'?'meta-knight-duel':`topotushka-${active==='celebrate'?'victory':'play'}`;this.eventAudio.src=`${import.meta.env?.BASE_URL??'/'}audio/${file}.wav`;}
+    if(active&&this.eventAudio){
+      this.eventAudio.loop=active!=='celebrate';
+      const file=active==='knight'?'meta-knight-duel':`topotushka-${active==='celebrate'?'victory':'play'}`;
+      const revision=file==='meta-knight-duel'?MUSIC_ASSET_REVISIONS[file]:undefined;
+      this.eventAudio.src=`${import.meta.env?.BASE_URL??'/'}audio/${file}.wav${revision?`?v=${revision}`:''}`;
+    }
     this.updateTrackLabel();
     if(this.enabled)void this.play();
   }
-  start() { this.started = true; if (this.enabled) void this.play(); }
-  stop() { this.started=false;this.playRequest++;this.audio.pause();this.eventAudio?.pause();this.eventActive=false;this.mix=1;this.applyVolume(); }
+  enterMenu() { this.mix=1;this.applyVolume();this.setEvent(false);this.start(); }
+  start() { this.started = true; if (this.enabled&&(this.eventActive?this.eventAudio!:this.audio).paused) void this.play(); }
+  stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false;this.mix=1;this.applyVolume(); }
 
   private skip(direction: number) {
     this.track = (this.track + direction + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
@@ -127,9 +136,25 @@ export class BackgroundMusic {
   private async play() {
     if (!this.started || !this.enabled || document.hidden) return;
     const request = ++this.playRequest;
-    try { await (this.eventActive?this.eventAudio!:this.audio).play(); }
-    catch { if (request === this.playRequest) this.enabled = false; }
+    try {
+      await (this.eventActive?this.eventAudio!:this.audio).play();
+      if(request===this.playRequest)this.waitForGesture(false);
+    } catch(error) {
+      if(request!==this.playRequest)return;
+      if((error as {name?:string})?.name==='NotAllowedError')this.waitForGesture(true);
+      else if((error as {name?:string})?.name!=='AbortError'){this.waitForGesture(false);this.enabled=false;}
+    }
     this.updateButton();
+  }
+
+  private waitForGesture(wait:boolean){
+    if(wait===this.waitingForGesture)return;
+    this.waitingForGesture=wait;
+    // Touch activation arrives on pointerup; mouse and keyboard can unlock earlier.
+    for(const event of ['pointerdown','pointerup','keydown']){
+      if(wait)document.addEventListener(event,this.retryFromGesture,{capture:true});
+      else document.removeEventListener(event,this.retryFromGesture,{capture:true});
+    }
   }
 
   private updateButton() {

@@ -1,0 +1,3269 @@
+{
+  "method": {
+    "browser": "Isolated Chrome, hardware renderer recorded below; Vite serves existing prepared world, HMR/network rooms disabled.",
+    "ab": "Fixed scene and camera. 12 warmup + 20 measured render/gl.finish frames per sample. Paired baseline before/after each toggle. Effects overlap, savings must not be added.",
+    "live": "Actual game loop, real swing activity and camera rotation; CPU update/render submission and asynchronous EXT_disjoint_timer_query_webgl2 GPU time. This is separate from forced gl.finish A/B tests."
+  },
+  "metadata": {
+    "date": "2026-10-23T16:44:25.812Z",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "browserVisibility": "visible",
+    "pixelRatio": 1.25,
+    "viewDistance": 360,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "drawingBuffer": [
+      2400,
+      1350
+    ],
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimer": true,
+    "treehouseActive": true,
+    "npcs": 14,
+    "startupGlError": 1282,
+    "shadowCascades": 2,
+    "shadowMapSize": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "objects": 12922,
+    "main.ts": "3249985546894b58",
+    "ground-shadow-pass.ts": "165713b76974b7c6",
+    "prepared-shadows.ts": "aeeb999763bd670e",
+    "scenery-visibility.ts": "3627182b6f863645",
+    "abView": {
+      "hour": 8,
+      "angle": 225
+    },
+    "mode": "focused-randomized",
+    "finalGlError": 0
+  },
+  "live": [],
+  "angleTime": [],
+  "ab": [],
+  "inventory": {
+    "totals": {
+      "frame": 372,
+      "calls": 709,
+      "triangles": 5834781,
+      "points": 0,
+      "lines": 0
+    },
+    "groups": [
+      {
+        "name": "Four woodland biomes",
+        "pass": "colour",
+        "calls": 36,
+        "triangles": 1878135
+      },
+      {
+        "name": "Игрок",
+        "pass": "shadow",
+        "calls": 34,
+        "triangles": 518144
+      },
+      {
+        "name": "Continuous square mountain range",
+        "pass": "colour",
+        "calls": 78,
+        "triangles": 416808
+      },
+      {
+        "name": "Mountain circuit roller coaster",
+        "pass": "colour",
+        "calls": 37,
+        "triangles": 383904
+      },
+      {
+        "name": "Фрукты на поляне",
+        "pass": "colour",
+        "calls": 28,
+        "triangles": 332968
+      },
+      {
+        "name": "NPC 10 · Мята",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "NPC 14 · Сапфир",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "Игрок",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "Forty meadow fireflies",
+        "pass": "colour",
+        "calls": 213,
+        "triangles": 238620
+      },
+      {
+        "name": "NPC 6 · Лазурь",
+        "pass": "shadow",
+        "calls": 2,
+        "triangles": 162816
+      },
+      {
+        "name": "NPC 10 · Мята",
+        "pass": "shadow",
+        "calls": 2,
+        "triangles": 162816
+      },
+      {
+        "name": "NPC 14 · Сапфир",
+        "pass": "shadow",
+        "calls": 2,
+        "triangles": 162816
+      },
+      {
+        "name": "Biome meadow details",
+        "pass": "colour",
+        "calls": 28,
+        "triangles": 134548
+      },
+      {
+        "name": "Distant forest panorama",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 93500
+      },
+      {
+        "name": "Oak treehouse, lookout, swing and leaf pile",
+        "pass": "colour",
+        "calls": 12,
+        "triangles": 90368
+      },
+      {
+        "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+        "pass": "colour",
+        "calls": 10,
+        "triangles": 82746
+      },
+      {
+        "name": "Mountain circuit roller coaster",
+        "pass": "shadow",
+        "calls": 1,
+        "triangles": 81408
+      },
+      {
+        "name": "NPC 7 · Коралл",
+        "pass": "shadow",
+        "calls": 1,
+        "triangles": 81408
+      },
+      {
+        "name": "NPC 13 · Малина",
+        "pass": "shadow",
+        "calls": 1,
+        "triangles": 81408
+      },
+      {
+        "name": "Mountain corner retracting ledges",
+        "pass": "colour",
+        "calls": 60,
+        "triangles": 46102
+      },
+      {
+        "name": "Kirby home and bed",
+        "pass": "colour",
+        "calls": 23,
+        "triangles": 34318
+      },
+      {
+        "name": "Drifting clouds",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 32928
+      },
+      {
+        "name": "Подготовленные тени предметов",
+        "pass": "colour",
+        "calls": 41,
+        "triangles": 12410
+      },
+      {
+        "name": "Kirby home and bed",
+        "pass": "shadow",
+        "calls": 10,
+        "triangles": 12152
+      },
+      {
+        "name": "Colourful river boats",
+        "pass": "colour",
+        "calls": 10,
+        "triangles": 9528
+      },
+      {
+        "name": "Swimmable lakes",
+        "pass": "colour",
+        "calls": 2,
+        "triangles": 3105
+      },
+      {
+        "name": "Топотушка — прогулка по арене",
+        "pass": "shadow",
+        "calls": 2,
+        "triangles": 2400
+      },
+      {
+        "name": "Тени травы",
+        "pass": "colour",
+        "calls": 7,
+        "triangles": 1102
+      },
+      {
+        "name": "Тени деревьев",
+        "pass": "colour",
+        "calls": 12,
+        "triangles": 568
+      },
+      {
+        "name": "Daylight sky gradient",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 528
+      },
+      {
+        "name": "Mesh",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 8
+      },
+      {
+        "name": "Soft sun rays",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 2
+      }
+    ],
+    "roots": [
+      {
+        "name": "Meta Knight portal",
+        "type": "Group",
+        "children": 9
+      },
+      {
+        "name": "",
+        "type": "Group",
+        "children": 0
+      },
+      {
+        "name": "Available interaction outline",
+        "type": "Group",
+        "children": 0
+      },
+      {
+        "name": "Celestial shadow cascade 1",
+        "type": "DirectionalLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Object3D",
+        "children": 0
+      },
+      {
+        "name": "Celestial shadow cascade 2",
+        "type": "DirectionalLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Object3D",
+        "children": 0
+      },
+      {
+        "name": "Reflected celestial sky and ground",
+        "type": "Light",
+        "children": 0
+      },
+      {
+        "name": "Sun disc",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Moon",
+        "type": "Group",
+        "children": 13
+      },
+      {
+        "name": "Night stars",
+        "type": "Points",
+        "children": 0
+      },
+      {
+        "name": "Distant forest panorama",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Soft sunlight halo",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Soft sun rays",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Drifting clouds",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Daylight sky gradient",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Four woodland biomes",
+        "type": "Group",
+        "children": 145
+      },
+      {
+        "name": "Biome meadow details",
+        "type": "Group",
+        "children": 93
+      },
+      {
+        "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+        "type": "Group",
+        "children": 98
+      },
+      {
+        "name": "Continuous square mountain range",
+        "type": "Mesh",
+        "children": 1
+      },
+      {
+        "name": "Арена Топотушки",
+        "type": "Group",
+        "children": 5
+      },
+      {
+        "name": "Swimmable lakes",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Rainbow wishing fountain",
+        "type": "Group",
+        "children": 18
+      },
+      {
+        "name": "Seven musical flowers",
+        "type": "Group",
+        "children": 24
+      },
+      {
+        "name": "Звонкие циферки · Number garden",
+        "type": "Group",
+        "children": 16
+      },
+      {
+        "name": "Number garden celebration",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Flower memory adventure",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Mountain circuit roller coaster",
+        "type": "Group",
+        "children": 19
+      },
+      {
+        "name": "Mountain corner retracting ledges",
+        "type": "Group",
+        "children": 34
+      },
+      {
+        "name": "Fresh bakery bread",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal stone rests",
+        "type": "Group",
+        "children": 3
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Colourful river boats",
+        "type": "Group",
+        "children": 9
+      },
+      {
+        "name": "Interactive watermill",
+        "type": "Group",
+        "children": 14
+      },
+      {
+        "name": "Oak treehouse, lookout, swing and leaf pile",
+        "type": "Group",
+        "children": 3
+      },
+      {
+        "name": "Небесная тропа — сияющие ступени",
+        "type": "Group",
+        "children": 129
+      },
+      {
+        "name": "Kirby home and bed",
+        "type": "Group",
+        "children": 4
+      },
+      {
+        "name": "Stone maze and golden star",
+        "type": "Group",
+        "children": 10
+      },
+      {
+        "name": "Star reward trampoline and soft leaves",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Three colourful balloon ports",
+        "type": "Group",
+        "children": 6
+      },
+      {
+        "name": "Destination arrow",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Фрукты на поляне",
+        "type": "Group",
+        "children": 102
+      },
+      {
+        "name": "Prepared scenery shadows",
+        "type": "Group",
+        "children": 71
+      },
+      {
+        "name": "Топотушка — подсказки игры",
+        "type": "Group",
+        "children": 6
+      },
+      {
+        "name": "Personal rainbow starfall",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Топотушка — прогулка по арене",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Forty meadow fireflies",
+        "type": "Group",
+        "children": 40
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "Игрок",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 1 · Мандарин",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 2 · Лайм",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 3 · Пурпур",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 4 · Бирюза",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 5 · Лимон",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 6 · Лазурь",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 7 · Коралл",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 8 · Фуксия",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 9 · Индиго",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 10 · Мята",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 11 · Янтарь",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 12 · Орхидея",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 13 · Малина",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 14 · Сапфир",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Дикий Пиджи",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Дикий Снежок",
+        "type": "Group",
+        "children": 1
+      }
+    ]
+  },
+  "errors": [],
+  "focused": [
+    {
+      "id": "grass-shadows",
+      "name": "Подготовленные тени травы",
+      "round": 0,
+      "baseline": {
+        "ms": 14.5,
+        "p90Ms": 15.100000023841858,
+        "cpuMs": 14.5,
+        "gpuMs": 7.246848,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 14.200000047683716,
+        "p90Ms": 16.299999952316284,
+        "cpuMs": 14.200000047683716,
+        "gpuMs": 7.425024,
+        "gpuSamples": 8,
+        "calls": 702,
+        "triangles": 5833679
+      },
+      "control": {
+        "ms": 14.100000023841858,
+        "p90Ms": 15.399999976158142,
+        "cpuMs": 14.100000023841858,
+        "gpuMs": 6.711296,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 14.300000011920929,
+      "savedMs": 0.09999996423721313,
+      "gain": 0.6993004486283219,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-0",
+      "name": "Время суток 0:00 вместо 8:00",
+      "round": 0,
+      "baseline": {
+        "ms": 16.699999928474426,
+        "p90Ms": 20.300000071525574,
+        "cpuMs": 16.699999928474426,
+        "gpuMs": 7.74144,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 21.300000071525574,
+        "p90Ms": 24.600000023841858,
+        "cpuMs": 21.300000071525574,
+        "gpuMs": 12.097536,
+        "gpuSamples": 8,
+        "calls": 707,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 14.600000023841858,
+        "p90Ms": 16.899999976158142,
+        "cpuMs": 14.600000023841858,
+        "gpuMs": 7.252992,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 15.649999976158142,
+      "savedMs": -5.650000095367432,
+      "gain": -36.10223708610144,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-prepared-shadows",
+      "name": "Все подготовленные тени",
+      "round": 0,
+      "baseline": {
+        "ms": 13.5,
+        "p90Ms": 14.099999904632568,
+        "cpuMs": 13.5,
+        "gpuMs": 7.7312,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 12.599999904632568,
+        "p90Ms": 13.899999976158142,
+        "cpuMs": 12.599999904632568,
+        "gpuMs": 6.745088,
+        "gpuSamples": 8,
+        "calls": 593,
+        "triangles": 4555332
+      },
+      "control": {
+        "ms": 12.799999952316284,
+        "p90Ms": 13.899999976158142,
+        "cpuMs": 12.799999952316284,
+        "gpuMs": 7.217152,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 13.149999976158142,
+      "savedMs": 0.5500000715255737,
+      "gain": 4.182510057207314,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-update",
+      "name": "Обновление динамических карт теней",
+      "round": 0,
+      "baseline": {
+        "ms": 12.699999928474426,
+        "p90Ms": 13.399999976158142,
+        "cpuMs": 12.699999928474426,
+        "gpuMs": 6.682624,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.300000071525574,
+        "p90Ms": 12,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.86752,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 12.100000023841858,
+        "p90Ms": 14.100000023841858,
+        "cpuMs": 12.100000023841858,
+        "gpuMs": 6.675456,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 12.399999976158142,
+      "savedMs": 1.0999999046325684,
+      "gain": 8.870966989899772,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-12",
+      "name": "Время суток 12:00 вместо 8:00",
+      "round": 0,
+      "baseline": {
+        "ms": 11.799999952316284,
+        "p90Ms": 12.199999928474426,
+        "cpuMs": 11.799999952316284,
+        "gpuMs": 6.161408,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.699999928474426,
+        "p90Ms": 12.299999952316284,
+        "cpuMs": 11.699999928474426,
+        "gpuMs": 6.226944,
+        "gpuSamples": 8,
+        "calls": 706,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 12,
+        "p90Ms": 12.799999952316284,
+        "cpuMs": 12,
+        "gpuMs": 6.093824,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.899999976158142,
+      "savedMs": 0.20000004768371582,
+      "gain": 1.6806726729783144,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "npcs",
+      "name": "Персонажи NPC",
+      "round": 0,
+      "baseline": {
+        "ms": 12.299999952316284,
+        "p90Ms": 13.300000071525574,
+        "cpuMs": 12.299999952316284,
+        "gpuMs": 6.01088,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.5,
+        "p90Ms": 12.600000023841858,
+        "cpuMs": 11.5,
+        "gpuMs": 5.334016,
+        "gpuSamples": 8,
+        "calls": 667,
+        "triangles": 4665373
+      },
+      "control": {
+        "ms": 11.699999928474426,
+        "p90Ms": 12,
+        "cpuMs": 11.699999928474426,
+        "gpuMs": 5.853184,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.999999940395355,
+      "savedMs": 0.4999999403953552,
+      "gain": 4.166666190657349,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-actor-shadows",
+      "name": "Только динамические тени персонажей",
+      "round": 0,
+      "baseline": {
+        "ms": 11.600000023841858,
+        "p90Ms": 12.399999976158142,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 6.102016,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.600000023841858,
+        "p90Ms": 10.100000023841858,
+        "cpuMs": 9.600000023841858,
+        "gpuMs": 7.128064,
+        "gpuSamples": 8,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 12,
+        "p90Ms": 12.5,
+        "cpuMs": 12,
+        "gpuMs": 7.94624,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.800000011920929,
+      "savedMs": 2.199999988079071,
+      "gain": 18.64406767675021,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "pixel-ratio-1",
+      "name": "Разрешение рендера 1.0 вместо 1.25",
+      "round": 0,
+      "baseline": {
+        "ms": 11.700000047683716,
+        "p90Ms": 12.700000047683716,
+        "cpuMs": 11.700000047683716,
+        "gpuMs": 6.308864,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.700000047683716,
+        "p90Ms": 12.100000023841858,
+        "cpuMs": 11.700000047683716,
+        "gpuMs": 5.690368,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "control": {
+        "ms": 11.699999928474426,
+        "p90Ms": 12.300000071525574,
+        "cpuMs": 11.699999928474426,
+        "gpuMs": 5.924864,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.699999988079071,
+      "savedMs": -5.960464477539063e-8,
+      "gain": -5.094414088557332e-7,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "forest",
+      "name": "Лес: стволы и кроны",
+      "round": 0,
+      "baseline": {
+        "ms": 11.5,
+        "p90Ms": 12.300000071525574,
+        "cpuMs": 11.5,
+        "gpuMs": 5.87776,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11,
+        "gpuMs": 5.548032,
+        "gpuSamples": 8,
+        "calls": 674,
+        "triangles": 3957693
+      },
+      "control": {
+        "ms": 11.600000023841858,
+        "p90Ms": 12.299999952316284,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 5.444608,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.550000011920929,
+      "savedMs": 0.550000011920929,
+      "gain": 4.761904860201435,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-6",
+      "name": "Время суток 6:00 вместо 8:00",
+      "round": 0,
+      "baseline": {
+        "ms": 13,
+        "p90Ms": 20.800000071525574,
+        "cpuMs": 13,
+        "gpuMs": 6.595584,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 12.5,
+        "p90Ms": 12.699999928474426,
+        "cpuMs": 12.5,
+        "gpuMs": 6.738944,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5992739
+      },
+      "control": {
+        "ms": 11.800000071525574,
+        "p90Ms": 12.5,
+        "cpuMs": 11.800000071525574,
+        "gpuMs": 5.79072,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 12.400000035762787,
+      "savedMs": -0.09999996423721313,
+      "gain": -0.8064513221677715,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-all",
+      "name": "Динамические тени: карты и фильтрация",
+      "round": 0,
+      "baseline": {
+        "ms": 11.5,
+        "p90Ms": 12.800000071525574,
+        "cpuMs": 11.5,
+        "gpuMs": 5.75488,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.399999976158142,
+        "p90Ms": 10.899999976158142,
+        "cpuMs": 10.399999976158142,
+        "gpuMs": 5.448704,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.5,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.808128,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.400000035762787,
+      "savedMs": 1.0000000596046448,
+      "gain": 8.77193031989086,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "fireflies",
+      "name": "Светлячки: модели и ореолы",
+      "round": 0,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.773312,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.299999952316284,
+        "p90Ms": 9.800000071525574,
+        "cpuMs": 9.299999952316284,
+        "gpuMs": 5.12,
+        "gpuSamples": 9,
+        "calls": 496,
+        "triangles": 5596161
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.347328,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999988079071,
+      "savedMs": 1.9000000357627869,
+      "gain": 16.964286051652564,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-18",
+      "name": "Время суток 18:00 вместо 8:00",
+      "round": 0,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.899999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.383168,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.530624,
+        "gpuSamples": 8,
+        "calls": 719,
+        "triangles": 5994751
+      },
+      "control": {
+        "ms": 11.399999976158142,
+        "p90Ms": 11.899999976158142,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 5.563392,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.25,
+      "savedMs": 0.04999995231628418,
+      "gain": 0.4444440205891927,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "coverage-pass",
+      "name": "Обход MAX-прохода теней (меняет смешивание)",
+      "round": 0,
+      "baseline": {
+        "ms": 11.399999976158142,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 5.858304,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.599999904632568,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.835776,
+        "gpuSamples": 8,
+        "calls": 653,
+        "triangles": 4569412
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.853184,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.350000023841858,
+      "savedMs": 0.04999995231628418,
+      "gain": 0.44052821331501385,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "tree-shadows",
+      "name": "Подготовленные тени деревьев",
+      "round": 0,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 14,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 6.037504,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.689344,
+        "gpuSamples": 8,
+        "calls": 697,
+        "triangles": 5834213
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.4528,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.250000059604645,
+      "savedMs": 0.050000011920928955,
+      "gain": 0.4444445480535054,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-prepared-shadows",
+      "name": "Все подготовленные тени",
+      "round": 1,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.701632,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.600000023841858,
+        "p90Ms": 10.700000047683716,
+        "cpuMs": 10.600000023841858,
+        "gpuMs": 5.014528,
+        "gpuSamples": 9,
+        "calls": 593,
+        "triangles": 4555332
+      },
+      "control": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.90848,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.25,
+      "savedMs": 0.6499999761581421,
+      "gain": 5.777777565850152,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-actor-shadows",
+      "name": "Только динамические тени персонажей",
+      "round": 1,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.819392,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.399999976158142,
+        "p90Ms": 9.599999904632568,
+        "cpuMs": 9.399999976158142,
+        "gpuMs": 4.3776,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 6.023168,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.25,
+      "savedMs": 1.850000023841858,
+      "gain": 16.44444465637207,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-0",
+      "name": "Время суток 0:00 вместо 8:00",
+      "round": 1,
+      "baseline": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 6.144,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.5,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.970944,
+        "gpuSamples": 8,
+        "calls": 707,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.899999976158142,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.889024,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.300000071525574,
+      "savedMs": 0,
+      "gain": 0,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-all",
+      "name": "Динамические тени: карты и фильтрация",
+      "round": 1,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.986304,
+        "gpuSamples": 9,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.400000095367432,
+        "p90Ms": 10.600000023841858,
+        "cpuMs": 10.400000095367432,
+        "gpuMs": 5.581824,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.679104,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": 0.6999999284744263,
+      "gain": 6.30630564838636,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "tree-shadows",
+      "name": "Подготовленные тени деревьев",
+      "round": 1,
+      "baseline": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.5,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.569536,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.981184,
+        "gpuSamples": 8,
+        "calls": 697,
+        "triangles": 5834213
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.762048,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.250000059604645,
+      "savedMs": -0.049999892711639404,
+      "gain": -0.44444348841538167,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "fireflies",
+      "name": "Светлячки: модели и ореолы",
+      "round": 1,
+      "baseline": {
+        "ms": 11.5,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 5.558272,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.400000095367432,
+        "p90Ms": 9.799999952316284,
+        "cpuMs": 9.400000095367432,
+        "gpuMs": 5.52448,
+        "gpuSamples": 9,
+        "calls": 496,
+        "triangles": 5596161
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.936128,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.300000011920929,
+      "savedMs": 1.8999999165534973,
+      "gain": 16.814158535832686,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "pixel-ratio-1",
+      "name": "Разрешение рендера 1.0 вместо 1.25",
+      "round": 1,
+      "baseline": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 6.034432,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.557248,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 19.5,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.902336,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.300000011920929,
+      "savedMs": 0.09999996423721313,
+      "gain": 0.8849554347939665,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-18",
+      "name": "Время суток 18:00 вместо 8:00",
+      "round": 1,
+      "baseline": {
+        "ms": 11.399999976158142,
+        "p90Ms": 16.800000071525574,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.984256,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.299999952316284,
+        "p90Ms": 12.400000095367432,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.878784,
+        "gpuSamples": 8,
+        "calls": 719,
+        "triangles": 5994751
+      },
+      "control": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.516288,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.349999964237213,
+      "savedMs": 0.050000011920928955,
+      "gain": 0.4405287407795094,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-update",
+      "name": "Обновление динамических карт теней",
+      "round": 1,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.782528,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.400000095367432,
+        "p90Ms": 10.699999928474426,
+        "cpuMs": 10.399999976158142,
+        "gpuMs": 5.446656,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.813248,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999928474426,
+      "savedMs": 0.7999998331069946,
+      "gain": 7.142855698356813,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "grass-shadows",
+      "name": "Подготовленные тени травы",
+      "round": 1,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.699999928474426,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.8368,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11,
+        "gpuMs": 5.235712,
+        "gpuSamples": 8,
+        "calls": 702,
+        "triangles": 5833679
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 6.028288,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999928474426,
+      "savedMs": 0.09999990463256836,
+      "gain": 0.892856297064187,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "npcs",
+      "name": "Персонажи NPC",
+      "round": 1,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.854208,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.712896,
+        "gpuSamples": 9,
+        "calls": 667,
+        "triangles": 4665373
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.896192,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": 0,
+      "gain": 0,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-6",
+      "name": "Время суток 6:00 вместо 8:00",
+      "round": 1,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.861376,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.595136,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5992739
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.636096,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": 0.050000131130218506,
+      "gain": 0.4484316678910031,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-12",
+      "name": "Время суток 12:00 вместо 8:00",
+      "round": 1,
+      "baseline": {
+        "ms": 11.400000095367432,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 5.77024,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.56544,
+        "gpuSamples": 8,
+        "calls": 706,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 11.400000095367432,
+        "p90Ms": 13.800000071525574,
+        "cpuMs": 11.400000095367432,
+        "gpuMs": 5.987328,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.400000095367432,
+      "savedMs": 0.20000016689300537,
+      "gain": 1.7543874142095714,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "forest",
+      "name": "Лес: стволы и кроны",
+      "round": 1,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.680128,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.600000023841858,
+        "p90Ms": 11.199999928474426,
+        "cpuMs": 10.600000023841858,
+        "gpuMs": 5.408768,
+        "gpuSamples": 8,
+        "calls": 674,
+        "triangles": 3957693
+      },
+      "control": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.864448,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.250000059604645,
+      "savedMs": 0.6500000357627869,
+      "gain": 5.777778065057447,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "coverage-pass",
+      "name": "Обход MAX-прохода теней (меняет смешивание)",
+      "round": 1,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 6.027264,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.517312,
+        "gpuSamples": 8,
+        "calls": 653,
+        "triangles": 4569412
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.91872,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": 0.050000011920928955,
+      "gain": 0.44843059874939617,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-12",
+      "name": "Время суток 12:00 вместо 8:00",
+      "round": 2,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.5,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.766144,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.900000095367432,
+        "p90Ms": 12.399999976158142,
+        "cpuMs": 11.900000095367432,
+        "gpuMs": 6.284288,
+        "gpuSamples": 8,
+        "calls": 706,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 12.200000047683716,
+        "p90Ms": 14.299999952316284,
+        "cpuMs": 12.200000047683716,
+        "gpuMs": 7.471104,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.699999988079071,
+      "savedMs": -0.2000001072883606,
+      "gain": -1.7094026281379255,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "fireflies",
+      "name": "Светлячки: модели и ореолы",
+      "round": 2,
+      "baseline": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.84704,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.399999976158142,
+        "p90Ms": 9.5,
+        "cpuMs": 9.399999976158142,
+        "gpuMs": 5.436416,
+        "gpuSamples": 9,
+        "calls": 496,
+        "triangles": 5596161
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 12,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.615616,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.250000059604645,
+      "savedMs": 1.8500000834465027,
+      "gain": 16.44444509906533,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "npcs",
+      "name": "Персонажи NPC",
+      "round": 2,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.551104,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.5,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.195776,
+        "gpuSamples": 8,
+        "calls": 667,
+        "triangles": 4665373
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.865472,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": -0.20000004768371582,
+      "gain": -1.801802227514709,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-18",
+      "name": "Время суток 18:00 вместо 8:00",
+      "round": 2,
+      "baseline": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.976064,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.5,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.654528,
+        "gpuSamples": 8,
+        "calls": 719,
+        "triangles": 5994751
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.890048,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.25,
+      "savedMs": 0.05000007152557373,
+      "gain": 0.4444450802273221,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-6",
+      "name": "Время суток 6:00 вместо 8:00",
+      "round": 2,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.899264,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.5,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.587968,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5992739
+      },
+      "control": {
+        "ms": 11,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11,
+        "gpuMs": 5.75488,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": -0.09999990463256836,
+      "gain": -0.9009000397997933,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-prepared-shadows",
+      "name": "Все подготовленные тени",
+      "round": 2,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.599999904632568,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 6.013952,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.600000023841858,
+        "p90Ms": 11,
+        "cpuMs": 10.600000023841858,
+        "gpuMs": 5.27872,
+        "gpuSamples": 9,
+        "calls": 593,
+        "triangles": 4555332
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.690368,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": 0.550000011920929,
+      "gain": 4.932735517101752,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "forest",
+      "name": "Лес: стволы и кроны",
+      "round": 2,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.646336,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.299999952316284,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 10.299999952316284,
+        "gpuMs": 5.187584,
+        "gpuSamples": 8,
+        "calls": 674,
+        "triangles": 3957693
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 6.078464,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.149999976158142,
+      "savedMs": 0.8500000238418579,
+      "gain": 7.62331861577936,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-0",
+      "name": "Время суток 0:00 вместо 8:00",
+      "round": 2,
+      "baseline": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 5.892096,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.5,
+        "cpuMs": 11,
+        "gpuMs": 5.714944,
+        "gpuSamples": 8,
+        "calls": 707,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.624832,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999988079071,
+      "savedMs": 0.19999998807907104,
+      "gain": 1.7857141811780781,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "pixel-ratio-1",
+      "name": "Разрешение рендера 1.0 вместо 1.25",
+      "round": 2,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.556224,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 12.199999928474426,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.161984,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.809152,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": -0.050000011920928955,
+      "gain": -0.44843059874939617,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "tree-shadows",
+      "name": "Подготовленные тени деревьев",
+      "round": 2,
+      "baseline": {
+        "ms": 10.900000095367432,
+        "p90Ms": 11.100000023841858,
+        "cpuMs": 10.900000095367432,
+        "gpuMs": 5.394432,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 10.899999976158142,
+        "gpuMs": 5.922816,
+        "gpuSamples": 8,
+        "calls": 697,
+        "triangles": 5834213
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.691392,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.000000059604645,
+      "savedMs": 5.960464477539063e-8,
+      "gain": 5.418604041128788e-7,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-actor-shadows",
+      "name": "Только динамические тени персонажей",
+      "round": 2,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.699999928474426,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.940224,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.399999976158142,
+        "p90Ms": 9.700000047683716,
+        "cpuMs": 9.399999976158142,
+        "gpuMs": 4.241408,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.571584,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.149999916553497,
+      "savedMs": 1.7499999403953552,
+      "gain": 15.695066847464927,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "grass-shadows",
+      "name": "Подготовленные тени травы",
+      "round": 2,
+      "baseline": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.5,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.854208,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 11,
+        "gpuMs": 5.751808,
+        "gpuSamples": 8,
+        "calls": 702,
+        "triangles": 5833679
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.615616,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.099999964237213,
+      "savedMs": 0.09999996423721313,
+      "gain": 0.9009005816162189,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-all",
+      "name": "Динамические тени: карты и фильтрация",
+      "round": 2,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.400000095367432,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.648384,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.299999952316284,
+        "p90Ms": 10.600000023841858,
+        "cpuMs": 10.299999952316284,
+        "gpuMs": 5.566464,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11,
+        "gpuMs": 5.622784,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.099999964237213,
+      "savedMs": 0.800000011920929,
+      "gain": 7.207207337823668,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "coverage-pass",
+      "name": "Обход MAX-прохода теней (меняет смешивание)",
+      "round": 2,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 12,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 6.009856,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.800000071525574,
+        "cpuMs": 11,
+        "gpuMs": 5.808128,
+        "gpuSamples": 8,
+        "calls": 653,
+        "triangles": 4569412
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.75488,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.149999976158142,
+      "savedMs": 0.1499999761581421,
+      "gain": 1.3452912688689196,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-update",
+      "name": "Обновление динамических карт теней",
+      "round": 2,
+      "baseline": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.55008,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.5,
+        "p90Ms": 10.899999976158142,
+        "cpuMs": 10.5,
+        "gpuMs": 5.561344,
+        "gpuSamples": 8,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.599999904632568,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.982208,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999988079071,
+      "savedMs": 0.699999988079071,
+      "gain": 6.249999900215438,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "grass-shadows",
+      "name": "Подготовленные тени травы",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.623808,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 6.068224,
+        "gpuSamples": 8,
+        "calls": 702,
+        "triangles": 5833679
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.916672,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": -0.14999991655349731,
+      "gain": -1.3452907271065817,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-all",
+      "name": "Динамические тени: карты и фильтрация",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11,
+        "gpuMs": 6.019072,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.200000047683716,
+        "p90Ms": 10.5,
+        "cpuMs": 10.199999928474426,
+        "gpuMs": 5.378048,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 6.037504,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999988079071,
+      "savedMs": 0.9999999403953552,
+      "gain": 8.92857090589039,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-18",
+      "name": "Время суток 18:00 вместо 8:00",
+      "round": 3,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 6.052864,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.920768,
+        "gpuSamples": 8,
+        "calls": 719,
+        "triangles": 5994751
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.839872,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.149999976158142,
+      "savedMs": 0.04999995231628418,
+      "gain": 0.44843006657576895,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "forest",
+      "name": "Лес: стволы и кроны",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.8624,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.5,
+        "p90Ms": 10.700000047683716,
+        "cpuMs": 10.5,
+        "gpuMs": 5.352448,
+        "gpuSamples": 9,
+        "calls": 674,
+        "triangles": 3957693
+      },
+      "control": {
+        "ms": 11,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11,
+        "gpuMs": 5.837824,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.050000011920929,
+      "savedMs": 0.550000011920929,
+      "gain": 4.977375668122892,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "fireflies",
+      "name": "Светлячки: модели и ореолы",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 12,
+        "cpuMs": 11,
+        "gpuMs": 5.784576,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.299999952316284,
+        "p90Ms": 9.700000047683716,
+        "cpuMs": 9.299999952316284,
+        "gpuMs": 5.538816,
+        "gpuSamples": 9,
+        "calls": 496,
+        "triangles": 5596161
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 12.200000047683716,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 6.055936,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": 1.8500000834465027,
+      "gain": 16.59192894630284,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-6",
+      "name": "Время суток 6:00 вместо 8:00",
+      "round": 3,
+      "baseline": {
+        "ms": 11.399999976158142,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 5.941248,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.299999952316284,
+        "p90Ms": 11.599999904632568,
+        "cpuMs": 11.299999952316284,
+        "gpuMs": 6.00064,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5992739
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.976064,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.300000011920929,
+      "savedMs": 5.960464477539063e-8,
+      "gain": 5.274747319691216e-7,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "pixel-ratio-1",
+      "name": "Разрешение рендера 1.0 вместо 1.25",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.95968,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.610496,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.935104,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": -0.10000002384185791,
+      "gain": -0.9009011137573545,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-prepared-shadows",
+      "name": "Все подготовленные тени",
+      "round": 3,
+      "baseline": {
+        "ms": 11.300000071525574,
+        "p90Ms": 11.5,
+        "cpuMs": 11.300000071525574,
+        "gpuMs": 5.687296,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.5,
+        "p90Ms": 10.700000047683716,
+        "cpuMs": 10.5,
+        "gpuMs": 4.97664,
+        "gpuSamples": 9,
+        "calls": 593,
+        "triangles": 4555332
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.600000023841858,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.430272,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.25,
+      "savedMs": 0.75,
+      "gain": 6.666666666666667,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-0",
+      "name": "Время суток 0:00 вместо 8:00",
+      "round": 3,
+      "baseline": {
+        "ms": 11,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11,
+        "gpuMs": 5.487616,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.5,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.289984,
+        "gpuSamples": 8,
+        "calls": 707,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.5,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.38112,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.099999964237213,
+      "savedMs": -5.960464477539063e-8,
+      "gain": -5.369787834903532e-7,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "csm-update",
+      "name": "Обновление динамических карт теней",
+      "round": 3,
+      "baseline": {
+        "ms": 11,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11,
+        "gpuMs": 5.392384,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.300000071525574,
+        "p90Ms": 10.700000047683716,
+        "cpuMs": 10.300000071525574,
+        "gpuMs": 5.29408,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.916672,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": 0.7999999523162842,
+      "gain": 7.207206762143713,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "coverage-pass",
+      "name": "Обход MAX-прохода теней (меняет смешивание)",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.685248,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11,
+        "p90Ms": 11.200000047683716,
+        "cpuMs": 11,
+        "gpuMs": 5.730304,
+        "gpuSamples": 8,
+        "calls": 653,
+        "triangles": 4569412
+      },
+      "control": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.651456,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.100000023841858,
+      "savedMs": 0.10000002384185791,
+      "gain": 0.9009011137573545,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "tree-shadows",
+      "name": "Подготовленные тени деревьев",
+      "round": 3,
+      "baseline": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.5,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.726208,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.200000047683716,
+        "p90Ms": 12.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.61664,
+        "gpuSamples": 8,
+        "calls": 697,
+        "triangles": 5834213
+      },
+      "control": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.699999928474426,
+        "cpuMs": 11,
+        "gpuMs": 5.559296,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.099999904632568,
+      "savedMs": -0.10000014305114746,
+      "gain": -0.900902197390223,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "all-actor-shadows",
+      "name": "Только динамические тени персонажей",
+      "round": 3,
+      "baseline": {
+        "ms": 11.199999928474426,
+        "p90Ms": 11.5,
+        "cpuMs": 11.199999928474426,
+        "gpuMs": 5.649408,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 9.200000047683716,
+        "p90Ms": 9.400000095367432,
+        "cpuMs": 9.200000047683716,
+        "gpuMs": 4.256768,
+        "gpuSamples": 9,
+        "calls": 654,
+        "triangles": 4569413
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.399999976158142,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.90848,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.199999988079071,
+      "savedMs": 1.9999999403953552,
+      "gain": 17.85714234396511,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "hour-12",
+      "name": "Время суток 12:00 вместо 8:00",
+      "round": 3,
+      "baseline": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.299999952316284,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.569536,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 11.100000023841858,
+        "p90Ms": 11.700000047683716,
+        "cpuMs": 11.100000023841858,
+        "gpuMs": 5.827584,
+        "gpuSamples": 8,
+        "calls": 706,
+        "triangles": 5671963
+      },
+      "control": {
+        "ms": 11.200000047683716,
+        "p90Ms": 11.5,
+        "cpuMs": 11.200000047683716,
+        "gpuMs": 5.86752,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.150000035762787,
+      "savedMs": 0.050000011920928955,
+      "gain": 0.44843059874939617,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "npcs",
+      "name": "Персонажи NPC",
+      "round": 3,
+      "baseline": {
+        "ms": 11.099999904632568,
+        "p90Ms": 11.5,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 5.858304,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "variant": {
+        "ms": 10.700000047683716,
+        "p90Ms": 11.300000071525574,
+        "cpuMs": 10.700000047683716,
+        "gpuMs": 5.837824,
+        "gpuSamples": 9,
+        "calls": 667,
+        "triangles": 4665373
+      },
+      "control": {
+        "ms": 11.099999904632568,
+        "p90Ms": 12.200000047683716,
+        "cpuMs": 11.099999904632568,
+        "gpuMs": 6.273024,
+        "gpuSamples": 8,
+        "calls": 709,
+        "triangles": 5834781
+      },
+      "referenceMs": 11.099999904632568,
+      "savedMs": 0.39999985694885254,
+      "gain": 3.603602345815456,
+      "stable": true,
+      "glError": 0
+    }
+  ],
+  "pipeline": {
+    "total": {
+      "ms": 11.399999976158142,
+      "p90Ms": 12,
+      "cpuMs": 11.299999952316284,
+      "gpuMs": 5.988352,
+      "gpuSamples": 18,
+      "calls": 709,
+      "triangles": 5834781
+    },
+    "parts": [
+      {
+        "part": "main-scene-and-CSM",
+        "cpuMs": 10.5
+      },
+      {
+        "part": "Soft patterned tree shadows",
+        "cpuMs": 0.10000002384185791
+      },
+      {
+        "part": "Prepared scenery shadows",
+        "cpuMs": 0.5
+      },
+      {
+        "part": "composite",
+        "cpuMs": 0
+      }
+    ],
+    "frames": [
+      {
+        "id": 2774,
+        "part": "main-scene-and-CSM",
+        "ms": 10.5
+      },
+      {
+        "id": 2774,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2774,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2774,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2775,
+        "part": "main-scene-and-CSM",
+        "ms": 10.299999952316284
+      },
+      {
+        "id": 2775,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2775,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2775,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2776,
+        "part": "main-scene-and-CSM",
+        "ms": 10.5
+      },
+      {
+        "id": 2776,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 2776,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2776,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2777,
+        "part": "main-scene-and-CSM",
+        "ms": 11.199999928474426
+      },
+      {
+        "id": 2777,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2777,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2777,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2778,
+        "part": "main-scene-and-CSM",
+        "ms": 10.299999952316284
+      },
+      {
+        "id": 2778,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2778,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2778,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2779,
+        "part": "main-scene-and-CSM",
+        "ms": 10.5
+      },
+      {
+        "id": 2779,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2779,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2779,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2780,
+        "part": "main-scene-and-CSM",
+        "ms": 10.699999928474426
+      },
+      {
+        "id": 2780,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2780,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2780,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2781,
+        "part": "main-scene-and-CSM",
+        "ms": 10.899999976158142
+      },
+      {
+        "id": 2781,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2781,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2781,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2782,
+        "part": "main-scene-and-CSM",
+        "ms": 11.5
+      },
+      {
+        "id": 2782,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2782,
+        "part": "Prepared scenery shadows",
+        "ms": 0.3999999761581421
+      },
+      {
+        "id": 2782,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2783,
+        "part": "main-scene-and-CSM",
+        "ms": 10.299999952316284
+      },
+      {
+        "id": 2783,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2783,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2783,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2784,
+        "part": "main-scene-and-CSM",
+        "ms": 10.5
+      },
+      {
+        "id": 2784,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2784,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2784,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2785,
+        "part": "main-scene-and-CSM",
+        "ms": 10.700000047683716
+      },
+      {
+        "id": 2785,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 2785,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2785,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2786,
+        "part": "main-scene-and-CSM",
+        "ms": 11.5
+      },
+      {
+        "id": 2786,
+        "part": "Soft patterned tree shadows",
+        "ms": 0
+      },
+      {
+        "id": 2786,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6000000238418579
+      },
+      {
+        "id": 2786,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2787,
+        "part": "main-scene-and-CSM",
+        "ms": 10.5
+      },
+      {
+        "id": 2787,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2787,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6000000238418579
+      },
+      {
+        "id": 2787,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2788,
+        "part": "main-scene-and-CSM",
+        "ms": 10.300000071525574
+      },
+      {
+        "id": 2788,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.09999990463256836
+      },
+      {
+        "id": 2788,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6000000238418579
+      },
+      {
+        "id": 2788,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2789,
+        "part": "main-scene-and-CSM",
+        "ms": 10.799999952316284
+      },
+      {
+        "id": 2789,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 2789,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8999999761581421
+      },
+      {
+        "id": 2789,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2790,
+        "part": "main-scene-and-CSM",
+        "ms": 10.299999952316284
+      },
+      {
+        "id": 2790,
+        "part": "Soft patterned tree shadows",
+        "ms": 0
+      },
+      {
+        "id": 2790,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2790,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2791,
+        "part": "main-scene-and-CSM",
+        "ms": 10.700000047683716
+      },
+      {
+        "id": 2791,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2791,
+        "part": "Prepared scenery shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 2791,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2792,
+        "part": "main-scene-and-CSM",
+        "ms": 10.599999904632568
+      },
+      {
+        "id": 2792,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2792,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6000000238418579
+      },
+      {
+        "id": 2792,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 2793,
+        "part": "main-scene-and-CSM",
+        "ms": 10.899999976158142
+      },
+      {
+        "id": 2793,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 2793,
+        "part": "Prepared scenery shadows",
+        "ms": 0.3999999761581421
+      },
+      {
+        "id": 2793,
+        "part": "composite",
+        "ms": 0
+      }
+    ]
+  },
+  "recheck": [],
+  "gpuTelemetry": "2026/10/23 19:43:57.058, P3, 42, 1327, 6001, 36.07, 48\r\n2026/10/23 19:43:58.074, P0, 34, 1425, 7001, 39.37, 49\r\n2026/10/23 19:43:59.083, P0, 38, 1425, 7001, 40.02, 49\r\n2026/10/23 19:44:00.092, P0, 35, 1425, 7001, 39.85, 49\r\n2026/10/23 19:44:01.098, P0, 35, 1425, 7001, 39.81, 49\r\n2026/10/23 19:44:02.099, P3, 38, 1335, 6001, 40.15, 49\r\n2026/10/23 19:44:03.110, P3, 40, 1320, 6001, 35.91, 49\r\n2026/10/23 19:44:04.113, P0, 39, 1327, 7001, 38.95, 49\r\n2026/10/23 19:44:05.126, P3, 41, 1372, 6001, 37.40, 49\r\n2026/10/23 19:44:06.134, P0, 37, 1372, 7001, 39.69, 49\r\n2026/10/23 19:44:07.139, P0, 36, 1335, 7001, 39.68, 49\r\n2026/10/23 19:44:08.153, P0, 33, 1365, 7001, 39.83, 49\r\n2026/10/23 19:44:09.161, P0, 35, 1290, 7001, 39.45, 49\r\n2026/10/23 19:44:10.175, P0, 46, 1395, 7001, 40.68, 49\r\n2026/10/23 19:44:11.178, P0, 42, 1447, 7001, 40.90, 49\r\n2026/10/23 19:44:12.183, P0, 38, 1365, 7001, 38.44, 49\r\n2026/10/23 19:44:13.194, P0, 37, 1380, 7001, 40.87, 49\r\n2026/10/23 19:44:14.197, P0, 38, 1380, 7001, 39.05, 49\r\n2026/10/23 19:44:15.208, P0, 40, 1312, 7001, 67.84, 49\r\n2026/10/23 19:44:16.218, P3, 41, 1290, 6001, 37.57, 49\r\n2026/10/23 19:44:17.231, P0, 23, 1395, 7001, 32.75, 48\r\n2026/10/23 19:44:18.247, P0, 25, 1395, 7001, 33.27, 48\r\n2026/10/23 19:44:19.259, P3, 30, 877, 6001, 26.51, 47\r\n2026/10/23 19:44:20.267, P3, 38, 832, 6001, 27.04, 47\r\n2026/10/23 19:44:21.281, P3, 2, 682, 6001, 21.85, 47\r\n2026/10/23 19:44:22.296, P5, 20, 720, 810, 18.33, 46\r\n2026/10/23 19:44:23.303, P5, 7, 720, 810, 17.95, 46\r\n2026/10/23 19:44:24.313, P8, 5, 232, 405, 15.90, 45\r\n2026/10/23 19:44:25.316, P0, 1, 1425, 7001, 26.86, 46\r\n2026/10/23 19:44:26.319, P0, 11, 1425, 7001, 26.81, 46\r\n2026/10/23 19:44:27.331, P0, 29, 1425, 7001, 32.87, 48\r\n2026/10/23 19:44:28.345, P0, 31, 1275, 7001, 39.23, 48\r\n2026/10/23 19:44:29.360, P3, 40, 1170, 6001, 33.98, 47\r\n2026/10/23 19:44:30.369, P0, 34, 1245, 7001, 37.24, 48\r\n2026/10/23 19:44:31.381, P0, 35, 1245, 7001, 37.57, 48\r\n2026/10/23 19:44:32.385, P3, 5, 997, 6001, 22.44, 46\r\n2026/10/23 19:44:33.391, P3, 6, 675, 6001, 22.59, 46\r\n2026/10/23 19:44:34.400, P3, 44, 1147, 6001, 36.36, 47\r\n2026/10/23 19:44:35.412, P0, 36, 1305, 7001, 37.76, 47\r\n2026/10/23 19:44:36.426, P0, 38, 1365, 7001, 36.06, 47\r\n2026/10/23 19:44:37.435, P0, 41, 1245, 7001, 40.01, 47\r\n2026/10/23 19:44:38.448, P0, 36, 1275, 7001, 38.20, 47\r\n2026/10/23 19:44:39.449, P0, 36, 1275, 7001, 38.70, 48\r\n2026/10/23 19:44:40.456, P3, 42, 1177, 6001, 36.93, 47\r\n2026/10/23 19:44:41.460, P0, 39, 1230, 7001, 36.66, 47\r\n2026/10/23 19:44:42.471, P0, 39, 1230, 7001, 38.33, 47\r\n2026/10/23 19:44:43.485, P0, 28, 1357, 7001, 36.62, 47\r\n2026/10/23 19:44:44.495, P0, 35, 1357, 7001, 39.92, 47\r\n2026/10/23 19:44:45.496, P0, 37, 1245, 7001, 37.42, 47\r\n2026/10/23 19:44:46.497, P0, 33, 1215, 7001, 38.34, 47\r\n2026/10/23 19:44:47.512, P3, 31, 1207, 6001, 34.99, 47\r\n2026/10/23 19:44:48.524, P0, 37, 1222, 7001, 36.93, 47\r\n2026/10/23 19:44:49.527, P0, 36, 1260, 7001, 38.66, 47\r\n2026/10/23 19:44:50.529, P0, 36, 1260, 7001, 38.54, 47\r\n2026/10/23 19:44:51.543, P3, 37, 1200, 6001, 38.06, 47\r\n2026/10/23 19:44:52.557, P3, 39, 1177, 6001, 34.36, 47\r\n2026/10/23 19:44:53.569, P0, 44, 1230, 7001, 36.44, 47\r\n2026/10/23 19:44:54.581, P0, 31, 1297, 7001, 38.90, 47\r\n2026/10/23 19:44:55.585, P0, 37, 1222, 7001, 38.68, 47\r\n2026/10/23 19:44:56.598, P3, 40, 1200, 6001, 36.09, 47\r\n2026/10/23 19:44:57.611, P0, 39, 1230, 7001, 36.83, 47\r\n2026/10/23 19:44:58.621, P0, 35, 1230, 7001, 38.40, 47\r\n2026/10/23 19:44:59.622, P3, 40, 1200, 6001, 36.09, 47\r\n2026/10/23 19:45:00.631, P0, 39, 1215, 7001, 35.29, 47\r\n2026/10/23 19:45:01.643, P0, 45, 1215, 7001, 38.41, 47\r\n2026/10/23 19:45:02.655, P3, 34, 1297, 6001, 36.48, 47\r\n2026/10/23 19:45:03.670, P0, 37, 1297, 7001, 38.90, 47\r\n2026/10/23 19:45:04.682, P3, 43, 1192, 6001, 35.58, 47\r\n2026/10/23 19:45:05.683, P0, 41, 1230, 7001, 37.79, 47\r\n2026/10/23 19:45:06.692, P3, 39, 1192, 6001, 37.85, 47\r\n"
+}
