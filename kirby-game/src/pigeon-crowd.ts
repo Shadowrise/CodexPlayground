@@ -12,6 +12,21 @@ export type PigeonPalette={data:Float32Array;width:number;parts:Part[];clips:Map
 const palettes=new WeakMap<T.Object3D,PigeonPalette>();
 const FPS=24;
 
+/** Retriangulate the authored body grid without changing skin, UVs or morph IDs. */
+function bodyGeometry(source:T.BufferGeometry){
+ const uv=source.attributes.uv;if(!uv)return source;
+ let stride=1;while(stride<uv.count&&uv.getY(stride)===uv.getY(0))stride++;
+ const columns=stride-1,rows=uv.count/stride-1;
+ if(columns<16||rows<16||!Number.isInteger(rows)||columns%2||rows%2)return source;
+ const indices:number[]=[];
+ for(let row=0;row<rows;row+=2)for(let col=0;col<columns;col+=2){
+  const a=row*stride+col,b=a+2*stride;
+  if(row)indices.push(a,b,a+2);
+  if(row<rows-2)indices.push(a+2,b,b+2);
+ }
+ const geometry=source.clone();geometry.setIndex(indices);return geometry;
+}
+
 /** Bake the native rig once. Only small bone/part matrices are stored, not vertices. */
 export function pigeonPalette(template:Template):PigeonPalette{
  const cached=palettes.get(template.scene);if(cached)return cached;
@@ -28,9 +43,10 @@ export function pigeonPalette(template:Template):PigeonPalette{
    morph=new T.DataTexture(values,width,height,T.RGBAFormat,T.FloatType);morph.minFilter=morph.magFilter=T.NearestFilter;morph.generateMipmaps=false;morph.needsUpdate=true;
   }
   // Thousands of triangles in a beak/toe/wing are invisible at game scale.
-  // Keep the deforming body, eyes and expression meshes completely native.
-  const geometry=!bones&&!morphCount&&(node.geometry.index?.count??0)>1800
-   ?new SimplifyModifier().modify(node.geometry,Math.floor(node.geometry.attributes.position.count*.78)):node.geometry;
+  // The body keeps every authored attribute; only its grid indices get coarser.
+  // Eyes and expressions retain their native meshes.
+  const geometry=bones&&/^Continuous[ _]pigeon[ _]body$/.test(node.name)?bodyGeometry(node.geometry):!bones&&!morphCount&&(node.geometry.index?.count??0)>1800
+   ?new SimplifyModifier().modify(node.geometry,Math.floor(node.geometry.attributes.position.count*.9)):node.geometry;
   parts.push({mesh:node,geometry,base,bones,morphBase,morphCount,morph});matrices+= (bones||1)+Math.ceil(morphCount/16);
  }});
  for(const name of PIDGIE_CLIPS){const source=template.animations.find(c=>c.name===name);if(!source)throw Error('Missing flock animation '+name);const frames=Math.ceil(source.duration*FPS)+1;clips.set(name,{start:rows,frames,duration:source.duration,loop:PIGEON_CLIP_BY_NAME[name].loop});rows+=frames;}

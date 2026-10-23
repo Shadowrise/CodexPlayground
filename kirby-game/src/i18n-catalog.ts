@@ -1,5 +1,9 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Дальность видимости':['View distance','Разстояние на видимост'],
+ 'Близко · 240 м':['Near · 240 m','Близко · 240 м'],
+ 'Средняя · 360 м':['Medium · 360 m','Средно · 360 м'],
+ 'Далеко · 750 м':['Far · 750 m','Далеч · 750 м'],
  'Значки Метакнайта':['Meta Knight badges','Значки на Мета Найт'],
  'Соберите три значка, чтобы открыть портал':['Collect three badges to open the portal','Съберете три значки, за да отворите портала'],
  'Все три значка собраны!':['All three badges collected!','И трите значки са събрани!'],

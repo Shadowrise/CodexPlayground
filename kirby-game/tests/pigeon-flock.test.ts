@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {PigeonFlock,pigeonSlot,FLOCK_RADIUS} from '../src/pigeon-flock';
+import {PigeonFlock,pigeonSlot,FLOCK_RADIUS,FLOCK_GROUND_RADIUS,flockRadius} from '../src/pigeon-flock';
 import {PIGEON_FLOCK_BATCH,validPigeonCheckpoint,type SummonedPigeon} from '../src/pigeon-flock-state';
 import {PidgieNpc} from '../src/pidgie-npc';
 
@@ -37,13 +37,37 @@ function clearance(flock:PigeonFlock){
  const birds=Array.from(flock.birds.values()).filter(b=>b.npc.actor.visible);
  for(let i=0;i<birds.length;i++)for(let j=i+1;j<birds.length;j++){
   const d=birds[i].npc.actor.position.distanceTo(birds[j].npc.actor.position);
-  assert(d>=FLOCK_RADIUS*2-.001,`${birds[i].spec.id}/${birds[j].spec.id}: ${d}`);
+  assert(d>=flockRadius(birds[i].npc.actor.position.y)+flockRadius(birds[j].npc.actor.position.y)-.001,`${birds[i].spec.id}/${birds[j].spec.id}: ${d}`);
  }
 }
 
 test('expanding formation reserves distinct places for a thousand pigeons',()=>{
  const slots=Array.from({length:1000},(_,i)=>pigeonSlot(i));
- for(let i=0;i<slots.length;i++)for(let j=i+1;j<slots.length;j++)assert(slots[i].distanceTo(slots[j])>=FLOCK_RADIUS*2);
+ for(let i=0;i<slots.length;i++)for(let j=i+1;j<slots.length;j++)assert(slots[i].distanceTo(slots[j])>=FLOCK_GROUND_RADIUS*2);
+});
+
+test('ten summons land close to the actual player and recover their compact formation after a blocked approach',()=>{
+ player.position.set(47,0,-32);let blocked=true;
+ const flock=new PigeonFlock({pidgie,snowball},{safeGround:(x,z)=>!blocked||Math.hypot(x-47,z+32)>14}),birds=specs(10);
+ for(let i=0;i<900;i++)flock.update(.05,birds,true,[player],[]);
+ assert(Array.from(flock.birds.values()).every(b=>b.npc.phase==='follow'),'blocked approaches still find ground');
+ blocked=false;
+ for(let i=0;i<900;i++){flock.update(.05,birds,true,[player],[]);clearance(flock);}
+ for(const bird of flock.birds.values()){
+  assert.equal(bird.npc.phase,'follow',bird.spec.id);
+  assert(bird.npc.actor.position.distanceTo(player.position)<9,`${bird.spec.id} must return from a distant fallback`);
+ }
+ flock.dispose();
+});
+
+test('a fully blocked meadow has a bounded landing search even for hundreds of summons',()=>{
+ let probes=0;player.position.set(0,0,0);
+ const flock=new PigeonFlock({pidgie,snowball},{safeGround:()=>{probes++;return false;}}),birds=specs(240);
+ for(let frame=0;frame<30;frame++){
+  probes=0;flock.update(1/60,birds,true,[player],[]);
+  assert(probes<=64,`landing search must yield: ${probes} surface checks in one frame`);
+ }
+ flock.dispose();
 });
 
 test('a flock arrives, lands, greets repeatedly with sound and chases a breadless player without intersections',()=>{

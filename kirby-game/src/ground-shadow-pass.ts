@@ -50,7 +50,7 @@ export class GroundShadowPass{
  }
  private render(camera:T.Camera){
   const r=this.renderer,roots=this.roots();if(!roots.length){this.original(this.scene,camera);return;}
-  const materials=new Set<T.Material>();for(const root of roots)root.traverse(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material]){this.prepare(m);materials.add(m);}}});
+  const materials=new Set<T.Material>();for(const root of roots)root.traverseVisible(o=>{if(o instanceof T.Mesh){for(const m of Array.isArray(o.material)?o.material:[o.material]){this.prepare(m);materials.add(m);}}});
   const states=[...materials].map(material=>({material,blending:material.blending,blendEquation:material.blendEquation,blendSrc:material.blendSrc,blendDst:material.blendDst,depthWrite:material.depthWrite,depthTest:material.depthTest,depthFunc:material.depthFunc,polygonOffset:material.polygonOffset}));
   const autoClear=r.autoClear,autoReset=r.info.autoReset,shadowUpdate=r.shadowMap.autoUpdate,clear=r.getClearColor(new T.Color()),alpha=r.getClearAlpha();
   this.active=true;

@@ -11,6 +11,8 @@ import {updateTreeShadows} from './tree-shadows';
 import {WorldShadows} from './world-shadows';
 import {restrictShadowCasters} from './prepared-shadows';
 import {GroundShadowPass} from './ground-shadow-pass';
+import {SceneryVisibility} from './scenery-visibility';
+import {createViewDistanceControl,DEFAULT_VIEW_DISTANCE} from './view-distance';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
@@ -614,6 +616,11 @@ preparedShadows.grass.visible=new URLSearchParams(location.search).get('grassSha
 setupShadowMaterials();
 const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
+const sceneryVisibility=new SceneryVisibility(environmentRoots);
+let viewDistance=DEFAULT_VIEW_DISTANCE;
+languageSetting.after(createViewDistanceControl(distance=>{
+ viewDistance=distance;const fog=scene.fog as THREE.Fog;fog.near=Math.min(180,distance*.5);fog.far=distance;
+}));
 
 const keys = new Set<string>();
 let pendingTurn: 'KeyA' | 'KeyD' | undefined;
@@ -1316,6 +1323,7 @@ renderer.setAnimationLoop((time: number) => {
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
   const profileRender=sceneProfiler?performance.now():0;
   const firstRenderStart=firstSceneFrame?performance.now():0;
+  sceneryVisibility.update(camera,viewDistance);
   preparedShadows.update(lightTime,camera.position);
   renderer.render(scene, camera);
   if(firstSceneFrame){performance.measure('kirby-first-frame',{start:firstRenderStart,end:performance.now()});firstSceneFrame=false;}

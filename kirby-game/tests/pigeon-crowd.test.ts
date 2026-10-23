@@ -44,9 +44,14 @@ test('flock geometry reduces rigid detail while keeping native deforming bodies 
   for(const part of pigeonPalette(template).parts){
    native+=(part.mesh.geometry.index?.count??part.mesh.geometry.attributes.position.count)/3;reduced+=(part.geometry.index?.count??part.geometry.attributes.position.count)/3;
    assert(part.geometry.attributes.uv&&part.geometry.attributes.color,'native paint attributes');
-   if(part.bones||part.morphCount)assert.equal(part.geometry,part.mesh.geometry);
+   if(part.bones||part.morphCount){
+    const native=part.mesh.geometry;
+    for(const name of ['position','normal','uv','color','skinIndex','skinWeight'])if(native.attributes[name])assert.deepEqual(part.geometry.attributes[name].array,native.attributes[name].array);
+    for(const name of ['position','normal'] as const)assert.deepEqual(part.geometry.morphAttributes[name]?.map(a=>a.array),native.morphAttributes[name]?.map(a=>a.array));
+    if(part.mesh.name==='Continuous_pigeon_body')assert(part.geometry.index!.count<native.index!.count*.3,'body grid uses fewer triangles with unchanged deformation data');
+   }
   }
-  assert(reduced<native*.5);assert(reduced>15000,'retain enough silhouette detail');
+  assert(reduced<native*.25);assert(reduced>5000,'retain the sculpted silhouette and expressions');
  }
 });
 

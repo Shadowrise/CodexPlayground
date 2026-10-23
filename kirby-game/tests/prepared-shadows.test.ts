@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import * as T from 'three';
-import {bakeShadowProfile,PreparedShadows,characterShadow,restrictShadowCasters,shadowParts,shadowDistanceMask,SHADOW_MASK_SIZE as SIZE} from '../src/prepared-shadows';
+import {bakeShadowProfile,PreparedShadows,characterShadow,restrictShadowCasters,shadowParts,shadowDistanceMask,SHADOW_MASK_SIZE as SIZE,GRASS_SHADOW_FADE,SCENERY_SHADOW_FADE} from '../src/prepared-shadows';
 import {daylight} from '../src/day-cycle';
 import {createShrubGeometry} from '../src/shrub-model';
 import {groundShadowOpacity} from '../src/ground-shadow-style';
@@ -85,4 +85,16 @@ test('static matrices stay unchanged; moving silhouettes follow their source and
  const count=shadows.group.children.length;shadows.commit();assert.equal(shadows.group.children.length,count,'registration must not duplicate batches');
  boat.removeFromParent();shadows.commit();assert(!shadows.group.getObjectByName('Prepared moving object shadows'));
  scene.add(boat);shadows.addMoving(boat,profile);shadows.commit();assert(shadows.group.getObjectByName('Prepared moving object shadows'),'moving shadows can be restored after the last source was removed');
+});
+
+test('static shadow cells are culled only after every placement has fully faded',()=>{
+ const shadows=new PreparedShadows(),profile=shadows.geometryProfile(new T.BoxGeometry(2,2,2));
+ shadows.add(profile,new T.Matrix4().makeTranslation(10,0,10));shadows.add(profile,new T.Matrix4().makeTranslation(60,0,10));
+ shadows.add(profile,new T.Matrix4().makeTranslation(10,0,10),{grass:true});shadows.commit();
+ const props=shadows.group.getObjectByName('Prepared scenery cell')!,grass=shadows.grass.children[0],time=daylight(.25);
+ shadows.update(time,new T.Vector3(60+SCENERY_SHADOW_FADE.far-.01,1000,10));assert(props.visible,'use horizontal placement distance, including the far edge of a cell');
+ shadows.update(time,new T.Vector3(60+SCENERY_SHADOW_FADE.far+.01,0,10));assert(!props.visible);
+ shadows.update(time,new T.Vector3(10+GRASS_SHADOW_FADE.far-.01,0,10));assert(grass.visible);
+ shadows.update(time,new T.Vector3(10+GRASS_SHADOW_FADE.far+.01,0,10));assert(!grass.visible);
+ shadows.update(time,new T.Vector3(10,0,10));assert(props.visible&&grass.visible,'returning to a cell restores both kinds of shadow');
 });

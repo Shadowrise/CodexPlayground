@@ -366,7 +366,12 @@ export class PidgieNpc {
     }
     constrain?.(point,this.actor.scale.x,from);
     if(this.data.phase==='landing'&&point.y===0&&Math.hypot(point.x-goal.x,point.z-goal.z)<.5&&this.safe(xz(point))){this.data.phase='follow';this.data.elapsed=0;this.data.followId=player.id;this.data.followSpeed=0;}
-    this.actor.position.copy(point);this.setYaw(this.heading(xz(player.position)));this.animate('Fly');
+    this.actor.position.copy(point);this.setYaw(this.heading(xz(player.position)));
+    if(this.data.phase==='landing'&&point.y<6){
+     this.animate('Jump');this.active!.time=.70+(1-point.y/6)*.35;
+    }else if(this.data.phase==='takeoff'&&point.y<6){
+     this.animate('Jump');this.active!.time=.25+.45*point.y/6;
+    }else this.animate('Fly');
     if(this.data.phase==='follow')this.animate('Idle');
    }else this.follow(step,people,[{...player,hasBread:true}],constrain,goal);
    this.mixer.update(step);this.syncPosition();
@@ -395,12 +400,15 @@ export class PidgieNpc {
     if(this.data.elapsed>=PIGEON_CLIP_BY_NAME.Fear.duration/1.15){this.data.phase='takeoff';this.data.elapsed=0;this.animate('Fly');}
    }else if(this.data.phase==='takeoff'){
     point.y=T.MathUtils.lerp(originY,this.data.height,smooth(this.data.elapsed/1.8));
+    point.x=this.data.origin[0]+Math.sin(heading)*4*this.data.elapsed;point.z=this.data.origin[1]+Math.cos(heading)*4*this.data.elapsed;
+    if(point.y<6){this.animate('Jump');this.active!.time=.25+.45*point.y/6;}else this.animate('Fly');
     this.setYaw(this.data.yaw+wrap(heading-this.data.yaw)*Math.min(1,step*5));
     if(this.data.elapsed>=1.8){this.data.phase='fly';this.data.elapsed=0;}
    }else if(this.data.phase==='fly'){
     point.x+=Math.sin(heading)*20*step;point.z+=Math.cos(heading)*20*step;point.y=this.data.height;this.setYaw(heading);
    }
-   constrain?.(point,this.actor.scale.x,from);this.actor.position.copy(point);this.mixer.update(step);this.syncPosition();
+   constrain?.(point,this.actor.scale.x,from);
+   this.actor.position.copy(point);this.mixer.update(step);this.syncPosition();
   }
   return this.data.phase==='fly'&&Math.hypot(this.actor.position.x-this.data.origin[0],this.actor.position.z-this.data.origin[1])>=100;
  }

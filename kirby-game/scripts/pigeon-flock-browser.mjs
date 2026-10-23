@@ -6,7 +6,7 @@ import {roomSql} from '../tests/room-sql.ts';
 import {historyRoutes} from '../../game-server/src/admin.ts';
 import {PROTOCOL} from '../src/network-protocol.ts';
 import {createServer} from 'vite';
-import {FLOCK_RADIUS} from '../src/pigeon-flock.ts';
+import {FLOCK_GROUND_RADIUS} from '../src/pigeon-flock.ts';
 import {fileURLToPath} from 'node:url';
 
 const base=process.env.GAME_URL??'http://127.0.0.1:5178',output=new URL('../node_modules/.cache/pigeon-flock/',import.meta.url);
@@ -20,7 +20,7 @@ if(real){
  worker=await unstable_dev(config.main,{config:fileURLToPath(path),envFiles:[],port:8793,inspectorPort:9293,ip:'127.0.0.1',local:true,persist:false,logLevel:'error',experimental:{disableExperimentalWarning:true,disableDevRegistry:true,watch:false}});
 }
 const workerUrl='http://127.0.0.1:8793';
-const dev=process.argv.includes('--serve')?await createServer({define:real?{'import.meta.env.VITE_GAME_SERVER_URL':JSON.stringify(workerUrl)}:undefined,server:{host:'127.0.0.1',port:5178,strictPort:true,hmr:false}}):undefined;
+const dev=process.argv.includes('--serve')?await createServer({define:real?{'import.meta.env.VITE_GAME_SERVER_URL':JSON.stringify(workerUrl)}:undefined,server:{host:'127.0.0.1',port:Number(new URL(base).port),strictPort:true,hmr:false}}):undefined;
 await dev?.listen();
 await mkdir(output,{recursive:true});
 globalThis.WebSocketRequestResponsePair=class{};
@@ -73,10 +73,10 @@ try{
  await guest.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);
  await host.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.phase==='follow'),undefined,{timeout:20000});
  await guest.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.phase==='follow'),undefined,{timeout:20000});
- const summary=await host.evaluate(()=>flockQA.summary());assert(summary.min>=FLOCK_RADIUS*2-.01);assert.equal(new Set(summary.skins).size,2);
+ const summary=await host.evaluate(()=>flockQA.summary());assert(summary.min>=FLOCK_GROUND_RADIUS*2-.01);assert.equal(new Set(summary.skins).size,2);
  const png=await guest.evaluate(()=>flockQA.capture());await writeFile(new URL('landed.png',output),Buffer.from(png.split(',')[1],'base64'));
  await host.evaluate(()=>flockQA.advance(12));assert((await host.evaluate(()=>flockQA.summary())).hello>0);
- const remote=await guest.evaluate(()=>flockQA.summary());assert(remote.min>=FLOCK_RADIUS*2-.01);
+ const remote=await guest.evaluate(()=>flockQA.summary());assert(remote.min>=FLOCK_GROUND_RADIUS*2-.01);
  let performanceReport;
  if(stress){
   await guest.bringToFront();await guest.evaluate(()=>{flockQA.watch=true;flockQA.motion=setInterval(()=>{flockQA.player.actor.position.x+=.08;},20);});
@@ -87,9 +87,9 @@ try{
   console.log('Guest real movement',performanceReport);
  }
  await guest.evaluate(()=>flockQA.teleport(flockQA.player.actor.position.x+20,flockQA.player.actor.position.z));await host.waitForTimeout(500);await host.evaluate(()=>flockQA.advance(15));
- assert((await host.evaluate(()=>flockQA.summary())).min>=FLOCK_RADIUS*2-.01);
+ assert((await host.evaluate(()=>flockQA.summary())).min>=FLOCK_GROUND_RADIUS*2-.01);
  await host.close();if(!real&&sockets[0].readyState===1)await room.webSocketClose(sockets[0]);await guest.waitForFunction(()=>flockQA.session.host);await guest.evaluate(()=>flockQA.advance(8));assert.equal((await guest.evaluate(()=>flockQA.summary())).count,birdCount);
- const late=await game('late',2);await late.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);assert((await late.evaluate(()=>flockQA.summary())).min>=FLOCK_RADIUS*2-.01);
+ const late=await game('late',2);await late.waitForFunction(n=>flockQA.flock.birds.size===n,birdCount);assert((await late.evaluate(()=>flockQA.summary())).min>=FLOCK_GROUND_RADIUS*2-.01);
  await admin.getByRole('button',{name:'Разогнать всех голубей',exact:true}).click();
  await guest.waitForFunction(()=>Array.from(flockQA.flock.birds.values()).every(b=>b.npc.state==='Fear'));
  const fear=await guest.evaluate(()=>flockQA.capture());await writeFile(new URL('scared.png',output),Buffer.from(fear.split(',')[1],'base64'));
@@ -97,5 +97,5 @@ try{
  await guest.evaluate(()=>flockQA.advance(16));await guest.waitForFunction(()=>flockQA.flock.birds.size===0);await late.waitForFunction(()=>flockQA.flock.birds.size===0);
  if(!real){assert.equal(room.room.pigeonFlock.length,0);assert(!Array.from(stored.keys()).some(k=>k.startsWith('pigeon:')));}
  assert.deepEqual(errors,[]);await writeFile(new URL(stress?'stability-checks.json':'checks.json',output),JSON.stringify({host:summary,remote,performanceReport,scattered:true,errors},null,2));console.log('PASS admin button, '+birdCount+' shared pigeons, both skins, landing, greetings, collision clearance, host handoff, late join and scared departure');
-}catch(error){for(const context of browser.contexts())for(const page of context.pages())try{console.log('DIAGNOSTIC',await page.evaluate(()=>({wire:window.flockWire,session:window.flockQA?.session?.host,flock:window.flockQA?.flock?Array.from(flockQA.flock.birds.values(),b=>({id:b.spec.id,phase:b.npc.phase,departed:b.departed,departureY:b.departureY,p:b.npc.actor.position.toArray(),seed:b.npc.networkState().seed,follow:b.npc.networkState().followId})):null})));}catch{}throw error;
+}catch(error){console.log('Browser errors',errors);for(const context of browser.contexts())for(const page of context.pages())try{console.log('DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({wire:window.flockWire,session:window.flockQA?.session?.host,flock:window.flockQA?.flock?Array.from(flockQA.flock.birds.values(),b=>({id:b.spec.id,phase:b.npc.phase,departed:b.departed,departureY:b.departureY,p:b.npc.actor.position.toArray(),seed:b.npc.networkState().seed,follow:b.npc.networkState().followId})):null}))));}catch{}throw error;
 }finally{await browser.close();await dev?.close();await worker?.stop();}

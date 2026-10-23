@@ -1,7 +1,7 @@
 import {CENTIPEDE_TIMES,CENTIPEDE_EMPTY_MS} from './centipede-event';
 import {hasChasers,applyChaseSnapshot,CHASERS} from './centipede-chasers';
 import {PlayerSnapshots} from './player-snapshots';
-import {ROOM_FRAME_LIMIT,type PigeonCheckpoint} from './pigeon-flock-state';
+import {ROOM_FRAME_LIMIT,compactPigeonCheckpoint,type PigeonCheckpoint} from './pigeon-flock-state';
 import {emoteMessage} from './world-log';
 import {validFlowerIndex} from './musical-flower-site';
 import {validNumberDigit} from './number-garden-site';
@@ -112,7 +112,7 @@ export class NetworkSession{
   const knightPlayer=this.room.knightBattle?.players[this.id],sendKnight=knightBattleActive(this.room.knightBattle)&&(this.host||!!knightPlayer&&!knightPlayer.withdrawn&&knightPlayer.hp>0);
   if(this.peerCount===1&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
   if(!changed&&!sendWorld&&!this.events.length&&!sendChase&&!sendPigeons&&!sendKnight)return;
-  const frame={type:'frame',actor:changed||this.events.length||sendChase||sendKnight?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!():undefined,events:this.events.splice(0,16)};
+  const frame={type:'frame',actor:changed||this.events.length||sendChase||sendKnight?actor:undefined,world:sendWorld?world():undefined,pigeons:sendPigeons?pigeons!().map(compactPigeonCheckpoint):undefined,events:this.events.splice(0,16)};
   const payload=JSON.stringify(frame);
   if(payload.length<=ROOM_FRAME_LIMIT)this.socket.send(payload);
   else {

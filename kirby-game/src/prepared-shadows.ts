@@ -17,6 +17,7 @@ export function projectGroundShadow(point:T.Vector3,projection:T.Vector2,receive
  return target.set(point.x+projection.x*(point.y-receiver),receiver+.019,point.z+projection.y*(point.y-receiver));
 }
 export const GRASS_SHADOW_FADE={near:24,far:52};
+export const SCENERY_SHADOW_FADE={near:145,far:205};
 export type ShadowPart={geometry:T.BufferGeometry;matrix:T.Matrix4};
 export type ShadowProfile={index:number;center:T.Vector3;radius:number;masks:Uint8Array[]};
 type Stamp={profile:ShadowProfile;matrix:T.Matrix4;receiver:number;strength:number;grass:boolean};
@@ -160,6 +161,8 @@ export class PreparedShadows{
  private movingAngles=new T.Euler(0,0,0,'YXZ');
  private up=new T.Vector3(0,1,0);
  private lastProfileCount=0;
+ private cullCells:{mesh:T.InstancedMesh;bounds:T.Box2;distance:number}[]=[];
+ private cullEye=new T.Vector2();
  constructor(){
   this.group.name='Prepared scenery shadows';this.group.userData.preparedShadow=true;
   this.grass.name='Prepared grass shadows';this.group.add(this.grass);
@@ -190,7 +193,7 @@ export class PreparedShadows{
      world.y=receiver+.018;
      float distanceToEye=distance(placement[3].xz,preparedEye.xz);
      float isGrass=step(4.,instanceColor.g);
-     float fade=mix(1.-smoothstep(145.,205.,distanceToEye),1.-smoothstep(${GRASS_SHADOW_FADE.near.toFixed(1)},${GRASS_SHADOW_FADE.far.toFixed(1)},distanceToEye),isGrass);
+     float fade=mix(1.-smoothstep(${SCENERY_SHADOW_FADE.near.toFixed(1)},${SCENERY_SHADOW_FADE.far.toFixed(1)},distanceToEye),1.-smoothstep(${GRASS_SHADOW_FADE.near.toFixed(1)},${GRASS_SHADOW_FADE.far.toFixed(1)},distanceToEye),isGrass);
      vPrepared=vec3(instanceColor.r,mod(instanceColor.g,4.),fade);`)
     .replace('#include <project_vertex>','vec4 mvPosition=viewMatrix*vec4(world,1.);gl_Position=projectionMatrix*mvPosition;');
    shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
@@ -262,18 +265,19 @@ export class PreparedShadows{
   const cells=new Map<string,Stamp[]>();
   for(const stamp of this.stamps){const p=this.placement(stamp.profile,stamp.matrix).elements,cellSize=stamp.grass?24:64,key=`${stamp.grass?'grass':'props'}:${Math.floor(p[12]/cellSize)},${Math.floor(p[14]/cellSize)}`;const cell=cells.get(key)??[];cell.push(stamp);cells.set(key,cell);}
   for(const [key,stamps] of cells){
-   const mesh=new T.InstancedMesh(this.geometry,this.material,stamps.length),bounds=new T.Box3();mesh.name=key.startsWith('grass')?'Prepared grass cell':'Prepared scenery cell';mesh.userData.preparedShadow=true;mesh.renderOrder=1;
+   const mesh=new T.InstancedMesh(this.geometry,this.material,stamps.length),bounds=new T.Box3(),fadeBounds=new T.Box2();mesh.name=key.startsWith('grass')?'Prepared grass cell':'Prepared scenery cell';mesh.userData.preparedShadow=true;mesh.renderOrder=1;
    stamps.forEach((stamp,i)=>{
     const matrix=this.placement(stamp.profile,stamp.matrix);mesh.setMatrixAt(i,matrix);mesh.setColorAt(i,this.colour.setRGB(stamp.profile.index,stamp.strength+(stamp.grass?4:0),stamp.receiver,T.LinearSRGBColorSpace));
     const p=new T.Vector3().setFromMatrixPosition(matrix),s=new T.Vector3().setFromMatrixScale(matrix),radius=Math.max(s.x,s.y,s.z)*MAX_STRETCH+Math.max(0,p.y-stamp.receiver)*SLOPE*MAX_STRETCH;
+    fadeBounds.expandByPoint(new T.Vector2(p.x,p.z));
     bounds.expandByPoint(new T.Vector3(p.x-radius,stamp.receiver,p.z-radius));bounds.expandByPoint(new T.Vector3(p.x+radius,stamp.receiver+.025,p.z+radius));
    });
    mesh.boundingBox=bounds;mesh.boundingSphere=bounds.getBoundingSphere(new T.Sphere());mesh.matrixAutoUpdate=false;
-   if(key.startsWith('grass')){
-    // Reject a whole cell before submission once its last silhouette has faded.
-    const center=mesh.boundingSphere.center.clone(),radius=mesh.boundingSphere.radius;
-    mesh.userData.grassCull={center,radius};this.grass.add(mesh);
-   }else this.group.add(mesh);
+   const grass=key.startsWith('grass');
+   // The shader fades by the placement centre, not the stretched footprint.
+   // Cull only after every placement in the cell has reached zero opacity.
+   this.cullCells.push({mesh,bounds:fadeBounds,distance:grass?GRASS_SHADOW_FADE.far:SCENERY_SHADOW_FADE.far});
+   (grass?this.grass:this.group).add(mesh);
   }
   this.stamps=[];
   if(this.movingMesh?.count!==this.moving.length){
@@ -289,7 +293,8 @@ export class PreparedShadows{
   this.direction.value.set(time.shadowDirection[0],time.shadowDirection[2]);if(this.direction.value.lengthSq()>.0001)this.direction.value.normalize();else this.direction.value.set(0,1);
   this.stretch.value=.85+.7*(1-Math.abs(time.sunDirection[1])/CELESTIAL_MAX_HEIGHT);this.eye.value.copy(camera);
   this.material.opacity=groundShadowOpacity(time);
-  for(const mesh of this.grass.children){const {center,radius}=mesh.userData.grassCull as {center:T.Vector3;radius:number};mesh.visible=Math.hypot(camera.x-center.x,camera.z-center.z)<GRASS_SHADOW_FADE.far+radius;}
+  this.cullEye.set(camera.x,camera.z);
+  for(const {mesh,bounds,distance} of this.cullCells)mesh.visible=bounds.distanceToPoint(this.cullEye)<distance;
   if(this.movingMesh){
    this.moving.forEach((stamp,i)=>{
     let visible=true,connected=false;for(let p:T.Object3D|null=stamp.root;p;p=p.parent){if(!p.visible)visible=false;if(p===this.group.parent)connected=true;}visible&&=connected;

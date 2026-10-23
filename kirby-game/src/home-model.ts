@@ -12,7 +12,8 @@ export function makeHomeModel(windows:T.MeshStandardMaterial,roof:T.Group){
  b.box('#8f8771',0,.09,0,11,.18,10,'stone',true);
  for(const x of [-4.8,-3.2,-1.6,0,1.6,3.2,4.8])b.box(stone[(Math.round(x*10)+49)%4],x,.2,4.65,1.54,.24,.52,'stone',true);
  for(const x of [-5.2,5.2])for(let i=0;i<6;i++)b.box(stone[i%4],x,.2,-3.8+i*1.5,.48,.24,1.44,'stone',true);
- for(let i=0;i<24;i++)wood(-4.8+i*.42,.26,0,.39,.12,8.7,OAK_TONES[i%6]);
+ // Keep the floor inside the stone edging: both top faces sit at y=.32.
+ for(let i=0;i<24;i++)wood((i-11.5)*.41,.26,0,.39,.12,8.7,OAK_TONES[i%6]);
  b.box('#f2dfba',0,2.7,-4.2,10,5.3,.28,'plaster');
  for(const x of [-5,5]){
   b.box('#f2dfba',x,2.7,-.5,.28,5.3,7.5,'plaster');
@@ -88,10 +89,9 @@ export function makeHomeModel(windows:T.MeshStandardMaterial,roof:T.Group){
  for(const z of [-1.5,.5])wood(-4.81,2.97,z,.19,.35,.12,'#946e4b');
  // A low woven chest and folded blankets fill the otherwise empty corner.
  b.box('#b28a56',3.55,.65,1.52,1.73,.61,1.11,'wicker',true);b.box('#c5a46e',3.55,.99,1.52,1.82,.12,1.18,'wicker',true);
- for(const x of [2.89,4.21])b.box('#8c6844',x,.7,1.52,.11,.7,1.13,'oak');
+ // The straps end under the lid instead of sharing its top face.
+ for(const x of [2.89,4.21])b.box('#8c6844',x,.65,1.52,.11,.61,1.13,'oak');
  b.box('#c18f9b',3.52,1.11,1.51,1.36,.13,.85,'linen',true);b.box('#ede0be',3.57,1.23,1.51,1.27,.13,.81,'linen',true);
- // Mortared stepping stones with softly worn edges.
- for(let i=0;i<7;i++){const p=b.box(stone[i%4],0,.08,5+i*.7,3.2,.16,.57,'stone',true);p.rotation.y=(i%3-1)*.012;}
  // Roof geometry keeps the existing separated tile courses (no flickering).
  for(const side of [-1,1]){
   r.box('#a4734d',side*2.75,6.54,-.465,6.27,.08,9.22,'oak').rotation.z=-side*Math.atan2(.27,.55);
