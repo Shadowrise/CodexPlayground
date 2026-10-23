@@ -12,6 +12,9 @@ import {WorldShadows} from './world-shadows';
 import {restrictShadowCasters} from './prepared-shadows';
 import {GroundShadowPass} from './ground-shadow-pass';
 import {SceneryVisibility} from './scenery-visibility';
+import {CharacterShadowPass} from './character-shadow-pass';
+import {ForestDetail} from './forest-detail';
+import {createRenderScaleControl,DEFAULT_RENDER_SCALE} from './render-scale';
 import {createViewDistanceControl,DEFAULT_VIEW_DISTANCE} from './view-distance';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
@@ -396,10 +399,10 @@ scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 // A less extreme depth range keeps distant ground overlays from fighting at altitude.
 const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
-const RENDER_PIXEL_RATIO = 1.25;
+let renderScale:number=DEFAULT_RENDER_SCALE;
 const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true, powerPreference: 'high-performance' });
 configureSceneryBatching(renderer.extensions.has('WEBGL_multi_draw'));
-renderer.setPixelRatio(RENDER_PIXEL_RATIO);
+renderer.setPixelRatio(renderScale);
 renderer.setSize(innerWidth, innerHeight);
 const surfaceAnisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
 renderer.shadowMap.enabled = true;
@@ -422,6 +425,7 @@ shadows.updateFrustums();
 // Allow for the coarse distant-cascade texels to suppress moving self-shadow stripes.
 for(const light of shadows.lights){light.color.set('#fff1d7');light.shadow.normalBias=.12;}
 const celestialLighting=new CelestialLighting(shadows,scene);
+const characterShadows=new CharacterShadowPass(renderer,scene);
 celestialLighting.update(daylight(currentDayPhase()));
 updateTreeShadows(daylight(currentDayPhase()));
 const shadowMaterials=new WeakSet<THREE.Material>();
@@ -445,6 +449,7 @@ function setupShadowMaterials(root:THREE.Object3D=scene) {
       shadowMaterials.add(material);material.needsUpdate=true;
     }
   });
+  characterShadows.refresh();
 }
 const updateSky = createSky(scene);
 
@@ -482,7 +487,7 @@ const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
 let sealProgress:SealProgress=newSealProgress(),lastSealRequest=0;
 const sealHud=new MetaKnightSealHud();
 let soloPortalOverride:boolean|undefined;
-function metaKnightPortalReady(){return playing&&(network?allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
+function metaKnightPortalReady(){return playing&&(network?network.room.metaKnightPortalOpen===true||allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
@@ -618,6 +623,8 @@ setupShadowMaterials();
 const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
 const sceneryVisibility=new SceneryVisibility(environmentRoots);
+const forestDetail=new ForestDetail(environmentRoots);
+languageSetting.after(createRenderScaleControl(scale=>{renderScale=scale;renderer.setPixelRatio(scale);}));
 let viewDistance=DEFAULT_VIEW_DISTANCE;
 languageSetting.after(createViewDistanceControl(distance=>{
  viewDistance=distance;const fog=scene.fog as THREE.Fog;fog.near=Math.min(180,distance*.5);fog.far=distance;
@@ -871,7 +878,7 @@ async function startGame(){
   const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
   soloPortalOverride=pendingSave?.portal?.override;
-  lastSealRequest=0;sealHud.reset(sealProgress,network?allSealsCollected(sealProgress):soloPortalOverride??allSealsCollected(sealProgress));
+  lastSealRequest=0;sealHud.reset(sealProgress,network?network.room.metaKnightPortalOpen===true||allSealsCollected(sealProgress):soloPortalOverride??allSealsCollected(sealProgress));
   bread.reset(pendingSave?.bread);lastBreadRequest=0;watermill.setQuest(pendingSave?.millQuest?restoreMillQuest(pendingSave.millQuest,Date.parse(pendingSave.savedAt),Date.now()):newMillQuest(),Date.now());
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
   mountainLedges.resetPlayer();
@@ -1084,7 +1091,7 @@ renderer.setAnimationLoop((time: number) => {
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
   const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
   const dashHeld=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&(usingPad?pad.held.has(0):usingTouch?!!touch?.jumpHeld:held('Space'));
-  if(!dashHeld)character?.knightDash.chargeHold(0,false,true);
+  if(!dashHeld)character?.playerDash.chargeHold(0,false,true);
   knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'));
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
@@ -1276,7 +1283,7 @@ renderer.setAnimationLoop((time: number) => {
   celestialLighting.update(lightTime);
   metaKnightReflections?.update(lightTime);
   updateTreeShadows(lightTime);
-  shadows.update();
+  shadows.update(time/1000);
   renderer.toneMappingExposure=1+day*.2;
   // The dial completes one turn in ten minutes; 10 Hz is already subpixel.
   if(time-lastDialUpdate>=100){lastDialUpdate=time;timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);const label=t(lightTime.label);if(timeDial.title!==label){timeDial.title=label;timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));}}
@@ -1325,6 +1332,7 @@ renderer.setAnimationLoop((time: number) => {
   const profileRender=sceneProfiler?performance.now():0;
   const firstRenderStart=firstSceneFrame?performance.now():0;
   sceneryVisibility.update(camera,viewDistance);
+  fireflies?.syncInstances(camera);
   preparedShadows.update(lightTime,camera.position);
   renderer.render(scene, camera);
   if(firstSceneFrame){performance.measure('kirby-first-frame',{start:firstRenderStart,end:performance.now()});firstSceneFrame=false;}
@@ -1335,7 +1343,7 @@ window.addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   shadows.updateFrustums();
-  renderer.setPixelRatio(RENDER_PIXEL_RATIO);
+  renderer.setPixelRatio(renderScale);
   renderer.setSize(innerWidth, innerHeight);
 });
 
@@ -1522,7 +1530,7 @@ function syncNetworkWorld(dt:number){
  bread.state=r.bread??newBread();
  if(r.sealProgress)sealProgress=r.sealProgress;
  for(const id of WILD_PIGEONS)if(breadOffering(r.bread,id)?.by===network.id)character.achievements.add(pigeonFriendAchievement(id));
- if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{n.networkApplyLife(w.npcLife[i]);if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);
+ if(network.world && worldRevision!==network.revision){const w=network.world;coaster.networkApply(w.carts);balloons.networkApply(w.balloons,npcs);fireflies!.networkApply(w.bugs);npcs.forEach((n,i)=>{if(network!.host||worldRevision<0)applyActor(n,w.npcs[i],0,true);n.networkApplyLife(w.npcLife[i]);});if(!network.host)npcSnapshots.push(performance.now(),w.npcs);
   if(w.mountainSteps&&(!network.host||worldRevision<0))mountainLedges.networkApply(w.mountainSteps);
   for(const [id,bird] of wildBirds){
    const state=w[id];if(!state)continue;

@@ -1,0 +1,180 @@
+{
+  "views": [
+    {
+      "angle": 45,
+      "hour": 8,
+      "before": {
+        "frame": 128,
+        "calls": 859,
+        "triangles": 5334282,
+        "points": 0,
+        "lines": 432
+      },
+      "after": {
+        "frame": 144,
+        "calls": 751,
+        "triangles": 3949617,
+        "points": 0,
+        "lines": 432
+      },
+      "pixels": {
+        "fractionOver8": 0.008773971193415638,
+        "mean": 0.4525812757201646,
+        "max": 246
+      },
+      "glError": 0
+    },
+    {
+      "angle": 135,
+      "hour": 8,
+      "before": {
+        "frame": 160,
+        "calls": 806,
+        "triangles": 6864821,
+        "points": 0,
+        "lines": 0
+      },
+      "after": {
+        "frame": 176,
+        "calls": 656,
+        "triangles": 4890014,
+        "points": 0,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 0.009751851851851852,
+        "mean": 0.5036291152263375,
+        "max": 238
+      },
+      "glError": 0
+    },
+    {
+      "angle": 225,
+      "hour": 8,
+      "before": {
+        "frame": 192,
+        "calls": 630,
+        "triangles": 4225029,
+        "points": 0,
+        "lines": 0
+      },
+      "after": {
+        "frame": 208,
+        "calls": 480,
+        "triangles": 3480861,
+        "points": 0,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 0.003977469135802469,
+        "mean": 0.10231460905349794,
+        "max": 175
+      },
+      "glError": 0
+    },
+    {
+      "angle": 135,
+      "hour": 0,
+      "before": {
+        "frame": 224,
+        "calls": 781,
+        "triangles": 6648373,
+        "points": 2200,
+        "lines": 0
+      },
+      "after": {
+        "frame": 240,
+        "calls": 631,
+        "triangles": 4857890,
+        "points": 2200,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 0.004369341563786008,
+        "mean": 0.11297551440329218,
+        "max": 159
+      },
+      "glError": 0
+    }
+  ],
+  "fireflies": [
+    {
+      "distance": 12,
+      "before": {
+        "frame": 244,
+        "calls": 43,
+        "triangles": 47796,
+        "points": 0,
+        "lines": 0
+      },
+      "after": {
+        "frame": 248,
+        "calls": 43,
+        "triangles": 47796,
+        "points": 0,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 0,
+        "mean": 0,
+        "max": 0
+      },
+      "instances": 0,
+      "glError": 0
+    },
+    {
+      "distance": 40,
+      "before": {
+        "frame": 252,
+        "calls": 43,
+        "triangles": 47796,
+        "points": 0,
+        "lines": 0
+      },
+      "after": {
+        "frame": 256,
+        "calls": 43,
+        "triangles": 47796,
+        "points": 0,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 0,
+        "mean": 7.201646090534979e-7,
+        "max": 2
+      },
+      "instances": 40,
+      "glError": 0
+    },
+    {
+      "distance": 95,
+      "before": {
+        "frame": 260,
+        "calls": 42,
+        "triangles": 47616,
+        "points": 0,
+        "lines": 0
+      },
+      "after": {
+        "frame": 264,
+        "calls": 42,
+        "triangles": 25170,
+        "points": 0,
+        "lines": 0
+      },
+      "pixels": {
+        "fractionOver8": 9.259259259259259e-7,
+        "mean": 0.00003240740740740741,
+        "max": 59
+      },
+      "instances": 40,
+      "glError": 0
+    }
+  ],
+  "errors": [],
+  "settings": {
+    "scale": 1,
+    "saved": "1",
+    "fits": true
+  }
+}

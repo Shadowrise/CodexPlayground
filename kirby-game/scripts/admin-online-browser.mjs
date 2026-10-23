@@ -33,6 +33,7 @@ try{
 
  assert(await page.locator('#history-panel').isHidden());assert(await page.locator('#starfall').isDisabled());
  assert(await page.locator('#room-chat-send').isDisabled());
+ assert(await page.getByRole('button',{name:'Открыть портал',exact:true}).isDisabled());
 
  const icon=await page.request.get(base+'/admin/favicon.svg');assert.equal(icon.status(),200);assert.match(icon.headers()['content-type'],/svg/);
 
@@ -43,6 +44,11 @@ try{
  await page.locator('#refresh').click();await page.waitForFunction(()=>document.querySelectorAll('#online-rows tr').length===2);
 
  assert.equal(await page.locator('#room-id').textContent(),oldId);
+ await page.getByRole('button',{name:'Открыть портал',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#online-message').textContent==='Портал открыт.');
+ assert(await page.locator('#open-portal').isDisabled());
+ for(const player of [a,b]){const m=await wait(()=>player.messages.find(m=>m.type==='room'&&m.room.metaKnightPortalOpen));assert.deepEqual(m.room.sealProgress.collected,{});}
+ assert((await page.request.get(base+'/admin/api/online').then(r=>r.json())).room.portalOpen);
  // The player's ordinary chat arrives in the admin without pressing Refresh.
  a.socket.send(JSON.stringify({type:'frame',events:[{type:'chat',text:'Привет админу!'}]}));
  await page.locator('#room-chat-log').getByText('Привет админу!',{exact:true}).waitFor();

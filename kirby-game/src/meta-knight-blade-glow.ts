@@ -1,5 +1,7 @@
 import * as T from 'three';
 
+export const GALAXIA_GLOW_COLOR=0xffb52b;
+
 /** Warm light in the metal and a restrained silhouette aura, without extra lights. */
 export class MetaKnightBladeGlow{
  private originals:{mesh:T.Mesh;material:T.Material|T.Material[]}[]=[];
@@ -15,7 +17,7 @@ export class MetaKnightBladeGlow{
    const original=mesh.material;let changed=false;
    const materials=(Array.isArray(original)?original:[original]).map(source=>{
     if(!(source instanceof T.MeshStandardMaterial)||!source.name.includes('gold'))return source;
-    changed=true;let copy=clones.get(source);if(!copy){copy=source.clone();copy.metalness=.55;copy.roughness=.20;copy.emissive.setHex(0xffb52b);copy.emissiveIntensity=.85;clones.set(source,copy);this.materials.push(copy);}return copy;
+    changed=true;let copy=clones.get(source);if(!copy){copy=source.clone();copy.metalness=.55;copy.roughness=.20;copy.emissive.setHex(GALAXIA_GLOW_COLOR);copy.emissiveIntensity=.85;clones.set(source,copy);this.materials.push(copy);}return copy;
    });
    if(!changed)continue;this.originals.push({mesh,material:original});mesh.material=Array.isArray(original)?materials:materials[0];
    const halo=new T.Mesh(mesh.geometry,this.haloMaterial);halo.name='Galaxia warm blade aura';halo.position.copy(mesh.position);halo.quaternion.copy(mesh.quaternion);halo.scale.copy(mesh.scale);halo.renderOrder=3;mesh.parent!.add(halo);this.halos.push(halo);

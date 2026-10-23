@@ -17,6 +17,8 @@ import {MetaKnightDashSparks} from './meta-knight-dash-sparks';
 import {MetaKnightBladeGlow} from './meta-knight-blade-glow';
 import {DuelDazedPose} from './duel-dazed-pose';
 import {PigeonFlightWings} from './pigeon-flight-wings';
+import {PigeonDashMotion,pigeonDashTravel} from './pigeon-dash-motion';
+import {KirbyDashMotion} from './kirby-dash-motion';
 import {FruitEatingPose} from './fruit-eating';
 import {TURN_RATE} from './movement-input';
 
@@ -50,7 +52,23 @@ export class CharacterController {
     return true;
   }
   readonly flight = new Flight();
-  readonly knightDash = new MetaKnightPlayerDash();
+  readonly playerDash = new MetaKnightPlayerDash();
+  /** Compatibility alias for the sword dash callers; every rig shares the hold rules. */
+  readonly knightDash = this.playerDash;
+  private pigeonDashMotion?:PigeonDashMotion;
+  private kirbyDashMotion?:KirbyDashMotion;
+  clearKirbyDashPose(){this.kirbyDashMotion?.clear();}
+  updateKirbyDashVisual(){
+    if(this.hasNativeAnimations)return;
+    if(this.playerDash.charge>0||this.state==='Dash')this.kirbyDashMotion??=new KirbyDashMotion(this.animationRoot);
+    this.kirbyDashMotion?.apply(this.playerDash.charge,this.playerDash.progress,this.state==='Dash');
+  }
+  clearPigeonDashPose(){this.pigeonDashMotion?.clear();}
+  updatePigeonDashVisual(charge=this.playerDash.charge,progress=this.playerDash.progress,active=this.state==='Dash'){
+    if(!this.isPigeon)return;
+    if(charge>0||active)this.pigeonDashMotion??=new PigeonDashMotion(this.animationRoot.parent!,this.actions.get('Fly')!.getClip());
+    this.pigeonDashMotion?.apply(charge,progress,active);
+  }
   private dashMotion?:MetaKnightBattleMotion;
   private dashSparks?:MetaKnightDashSparks;
   private bladeGlow?:MetaKnightBladeGlow;
@@ -79,7 +97,7 @@ export class CharacterController {
     }
     this.dashSparks?.update(this.mixer.time*1000,active);
   }
-  disposeEffects(){this.fruitEating.dispose();this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;}
+  disposeEffects(){this.clearKirbyDashPose();this.kirbyDashMotion=undefined;this.fruitEating.dispose();this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;this.pigeonDashMotion?.dispose();this.pigeonDashMotion=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -198,7 +216,7 @@ export class CharacterController {
       if (!this.actions.has(name)) throw new Error(`В модели отсутствует анимация ${name}`);
     }
     if(!this.hasNativeAnimations)this.actions.set('Swim',this.mixer.clipAction(swimClip(clips.find(c=>c.name==='Idle')!,model)));
-    if(this.isMetaKnight){const dash=this.actions.get('Fly')!.getClip().clone();dash.name='Dash';this.actions.set('Dash',this.mixer.clipAction(dash));}
+    {const dash=this.actions.get('Fly')!.getClip().clone();dash.name='Dash';this.actions.set('Dash',this.mixer.clipAction(dash));}
     this.play('Idle');
     if(this.isMetaKnight){this.bladeGlow=new MetaKnightBladeGlow(this.actor.getObjectByName('Galaxia')!);this.updateKnightBladeGlow();}
   }
@@ -243,6 +261,8 @@ export class CharacterController {
   }
 
   setActivity(name:string) {
+    this.clearKirbyDashPose();
+    this.clearPigeonDashPose();
     this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
@@ -267,7 +287,7 @@ export class CharacterController {
 
   /** Winged native characters fly with their wings; Kirby keeps his flight puffs. */
   updateFlightVisual(levitating=this.flight.levitating){
-    if(this.hasNativeAnimations)this.cloud.visible=false;
+    if(this.hasNativeAnimations||this.state==='Dash')this.cloud.visible=false;
     else updateFlightCloud(this.cloud,this.flight,levitating);
   }
 
@@ -317,6 +337,8 @@ export class CharacterController {
 
   /** A mount moves the actor while its native pose and growth continue. */
   updateActivity(dt:number){
+    this.clearKirbyDashPose();
+    this.clearPigeonDashPose();
     this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
@@ -327,6 +349,8 @@ export class CharacterController {
   }
 
   update(dt: number, input: Input) {
+    this.clearKirbyDashPose();
+    this.clearPigeonDashPose();
     this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.updateKnightBladeGlow((this.mixer.time+dt)*1000);
@@ -377,19 +401,20 @@ export class CharacterController {
         this.flight.press();
       }
     }
-    const dashStart=this.isMetaKnight?this.knightDash.chargeHold(dt,input.dashHeld??!!input.jump,(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined):undefined;
+    const dashStart=this.playerDash.chargeHold(dt,input.dashHeld??!!input.jump,(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined);
     if(dashStart!==undefined){
       if(!this.flight.active){this.flight.press();this.flightBoost=this.starRemaining>0?2:1;}
       this.flight.sustain();
       this.play('Dash');
     }
     if(this.knightDash.active){
-      const step=this.knightDash.step(dashStart??dt),distance=step*PLAYER_KNIGHT_DASH.distance/PLAYER_KNIGHT_DASH.duration*this.sizeSpeedMultiplier;
+      const previous=this.playerDash.progress,step=this.playerDash.step(dashStart??dt);
+      const distance=(!this.isMetaKnight?(pigeonDashTravel(this.playerDash.progress)-pigeonDashTravel(previous))*PLAYER_KNIGHT_DASH.distance:step*PLAYER_KNIGHT_DASH.distance/PLAYER_KNIGHT_DASH.duration)*this.sizeSpeedMultiplier;
       this.actor.position.x+=Math.sin(this.yaw)*distance;this.actor.position.z+=Math.cos(this.yaw)*distance;
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
       this.updateFlightVisual();this.mixer.update(dt);
       if(!this.knightDash.active)this.play(this.flight.active?'Fly':this.locomotion(input));
-      this.constrainPosition();this.updateKnightDashVisual();return;
+      this.constrainPosition();this.updateKnightDashVisual();this.updatePigeonDashVisual();this.updateKirbyDashVisual();return;
     }
     if(!this.isPigeon)this.actions.get('Run')!.setEffectiveTimeScale(input.sprint && input.forward && !input.backward ? 2 : 1);
     if (this.eatElapsed !== undefined) {
@@ -455,5 +480,7 @@ export class CharacterController {
       this.advanceGroundMixer(dt);
     }
     this.constrainPosition();
+    this.updatePigeonDashVisual();
+    this.updateKirbyDashVisual();
   }
 }

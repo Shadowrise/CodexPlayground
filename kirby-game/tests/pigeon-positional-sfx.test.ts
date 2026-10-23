@@ -22,6 +22,20 @@ function harness(){
  return {sounds,internal,context,fear,master,page,nodes,restore(){if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');}};
 }
 
+test('dash voices use the real hawk recording or exact coaster cheer, respect mute and clean up',()=>{
+ const h=harness();
+ try{
+  const hawk={duration:2.124} as AudioBuffer,cheer={duration:.9} as AudioBuffer;h.internal.buffers.set('hawk-dash',hawk);h.internal.buffers.set('cheer',cheer);
+  for(const [kind,buffer] of [['pigeon',hawk],['kirby',cheer]] as const){
+   h.sounds.playPlayerDash(kind);const source=h.nodes.filter(n=>n.kind==='source').at(-1)!;assert.equal(source.buffer,buffer);assert(source.started);
+   assert.equal(h.internal.active.size,1);source.onended?.();assert.equal(h.internal.active.size,0);assert(source.disconnected);
+  }
+  const before=h.nodes.length;h.internal.enabled=false;h.sounds.playPlayerDash('pigeon');h.internal.enabled=true;
+  h.page.hidden=true;h.sounds.playPlayerDash('kirby');h.page.hidden=false;
+  h.context.state='suspended';h.sounds.playPlayerDash('pigeon');assert.equal(h.nodes.length,before);
+ }finally{h.restore();}
+});
+
 test('NPC fear coo uses the native buffer, shared master, distance falloff, camera panning and tracked cleanup',async()=>{
  const h=harness();
  try{

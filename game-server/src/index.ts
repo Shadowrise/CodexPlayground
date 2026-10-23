@@ -7,7 +7,7 @@ import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCen
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,millWorking,millCarrying,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
 import {newBread,applyBread,advanceBread,grantBread,holdsBread,breadOffering,normalizeBread,type BreadAction} from '../../kirby-game/src/bread-state';
-import {newSealProgress,normalizeSealProgress,collectSeal,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
+import {newSealProgress,normalizeSealProgress,collectSeal,allSealsCollected,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
 import {WILD_PIGEONS,isWildPigeonId,pigeonFriendAchievement} from '../../kirby-game/src/wild-pigeons';
 import {canPressNumber,NUMBER_PRESS_MS} from '../../kirby-game/src/number-garden-site';
@@ -136,9 +136,17 @@ export class GameRoom extends DurableObject<Env>{
   this.log(a,delta>.0?`вырос до ${pct}% — Ветерок налепил немного жирка.`:`уменьшился до ${pct}% — Ветерок сдул лишний жирок.`);
   this.broadcast({type:'frame',id:a.id,actor:a.actor},socket);this.changed();return {ok:true,size:next};
  });}
+ adminOpenPortal(roomId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+  const r=this.room;if(!r||r.id!==roomId||!this.players().length)return {ok:false,error:'Активной комнаты уже нет. Обнови список.'};
+  if(r.festival?.results)return {ok:false,error:'Игра уже завершена.'};
+  if(r.metaKnightPortalOpen||allSealsCollected(r.sealProgress??newSealProgress()))return {ok:true};
+  r.metaKnightPortalOpen=true;
+  this.logEntry({id:crypto.randomUUID(),name:'',variant:-1,text:'Портал на космическую арену открыт!',chat:false});
+  this.changed();return {ok:true};
+ });}
  adminOnline(){return this.ctx.blockConcurrencyWhile(async()=>{
   const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
-  return {room:room?{id:room.id,createdAt:room.epoch,festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const size=a.actor?Math.round((a.actor.progress?.size??a.actor.s)*1000)/1000:1;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null,size,ready:!!a.actor};})};
+  return {room:room?{id:room.id,createdAt:room.epoch,portalOpen:room.metaKnightPortalOpen===true||allSealsCollected(room.sealProgress??newSealProgress()),festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const size=a.actor?Math.round((a.actor.progress?.size??a.actor.s)*1000)/1000:1;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null,size,ready:!!a.actor};})};
  });}
  adminDisconnect(roomId:string,playerId:string){return this.ctx.blockConcurrencyWhile(async()=>{
   if(this.room?.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};

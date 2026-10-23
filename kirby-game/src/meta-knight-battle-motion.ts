@@ -147,6 +147,6 @@ export class MetaKnightBattleMotion{
   }
   const crouch=warning?T.MathUtils.smoothstep(f,.12,.85):air?1:impact?1:1-T.MathUtils.smoothstep(elapsed,0,350);
   const plunge=warning?0:air?T.MathUtils.smoothstep(f,.4,.94):impact?1:crouch;
-  this.jumpPose(crouch,plunge,air,warning?T.MathUtils.smoothstep(f,0,.3):1,0,undefined,stage==='jump'?T.MathUtils.smoothstep(f,.82,1):0);
+  this.jumpPose(crouch,plunge,air,warning?T.MathUtils.smoothstep(f,0,.3):1,0,undefined,air?T.MathUtils.smoothstep(f,.82,1):0);
  }
 }

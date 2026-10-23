@@ -14,15 +14,15 @@ function create(){const model=new Group();model.add(asset.root.clone(true));retu
 function advance(c:CharacterController,seconds:number,input=idle,fps=100){for(let i=0;i<Math.round(seconds*fps);i++)c.update(1/fps,input);}
 function bladeDirection(c:CharacterController){const blade=c.actor.getObjectByName('Galaxia')!;c.actor.updateMatrixWorld(true);return blade.localToWorld(new Vector3(-.315,2.05,0)).sub(blade.getWorldPosition(new Vector3())).normalize();}
 
-test('short Space presses still fly, and only a continuous half second starts a dash',()=>{
- const c=create();advance(c,.49,held);assert(c.flight.active);assert.notEqual(c.state,'Dash');assert.equal(c.knightDash.cooldown,0);assert.equal(c.actor.position.z,0);
- c.update(.01,idle);advance(c,.49,held);assert.notEqual(c.state,'Dash','separate holds cannot add up');
+test('short Space presses still fly, and only a continuous 0.3 seconds starts a dash',()=>{
+ const c=create();advance(c,DASH.hold-.01,held);assert(c.flight.active);assert.notEqual(c.state,'Dash');assert.equal(c.knightDash.cooldown,0);assert.equal(c.actor.position.z,0);
+ c.update(.01,idle);advance(c,DASH.hold-.01,held);assert.notEqual(c.state,'Dash','separate holds cannot add up');
  c.update(.01,held);assert.equal(c.state,'Dash');assert.equal(c.knightDash.cooldown,6);assert(c.knightDash.active);assert(!c.cloud.visible);
 });
 
 test('the sword thrust covers twelve metres in 0.7s at different frame rates and locks the heading',()=>{
  for(const fps of [30,60,120])for(const yaw of [0,.7,Math.PI]){
-  const c=create();c.yaw=yaw;c.actor.rotation.y=yaw;advance(c,.5,held,fps);assert.equal(c.state,'Dash');const origin=c.actor.position.clone();
+  const c=create();c.yaw=yaw;c.actor.rotation.y=yaw;advance(c,DASH.hold,held,fps);assert.equal(c.state,'Dash');const origin=c.actor.position.clone();
   const direction=bladeDirection(c),forward=new Vector3(Math.sin(yaw),0,Math.cos(yaw));assert(direction.dot(forward)>.995,'the actual held blade points along the dash');assert(Math.abs(direction.y)<.06);
   assert(c.actor.getObjectByName('Meta Knight flying sword sparks')!.visible);
   advance(c,.7,{...held,forward:true,left:true,sprint:true},fps);
@@ -33,21 +33,21 @@ test('the sword thrust covers twelve metres in 0.7s at different frame rates and
 
 test('holding through cooldown never repeats or queues a dash, and a fresh hold recharges',()=>{
  const c=create();advance(c,7.2,held);assert.equal(c.knightDash.cooldown,0);assert(Math.abs(c.actor.position.z-DASH.distance)<1e-6);assert(!c.knightDash.active);
- c.update(.01,idle);advance(c,.5,held);assert.equal(c.state,'Dash');assert.equal(c.knightDash.cooldown,6);
+ c.update(.01,idle);advance(c,DASH.hold,held);assert.equal(c.state,'Dash');assert.equal(c.knightDash.cooldown,6);
  c.update(.01,idle);advance(c,6,held);assert(!c.knightDash.active);assert(Math.abs(c.actor.position.z-2*DASH.distance)<1e-6,'a press begun during cooldown is spent');
- c.update(.01,idle);advance(c,.5,held);assert(c.knightDash.active);
+ c.update(.01,idle);advance(c,DASH.hold,held);assert(c.knightDash.active);
 });
 
 test('activity interruption resets charge and cancels thrust without resetting cooldown',()=>{
- const c=create();advance(c,.3,held);c.updateActivity(0);advance(c,.3,held);assert.equal(c.knightDash.cooldown,0);assert(!c.knightDash.active);
- c.update(.01,idle);advance(c,.5,held);c.update(.1,held);const z=c.actor.position.z;
+ const c=create();advance(c,.15,held);c.updateActivity(0);advance(c,.15,held);assert.equal(c.knightDash.cooldown,0);assert(!c.knightDash.active);
+ c.update(.01,idle);advance(c,DASH.hold,held);c.update(.1,held);const z=c.actor.position.z;
  c.setActivity('Boat');assert(!c.knightDash.active);assert(!c.actor.getObjectByName('Meta Knight flying sword sparks')!.visible);
  c.updateActivity(2);assert(Math.abs(c.knightDash.cooldown-3.9)<1e-6);assert.equal(c.actor.position.z,z);assert.equal(c.state,'Boat');
  c.setActivity('Idle');advance(c,4,held);assert(!c.knightDash.active);assert.equal(c.actor.position.z,z,'holding on a ride cannot arm a delayed dash');
 });
 
 test('an air attack pressed during a dash cannot leave a queued sword hit',()=>{
- const c=create();advance(c,.5,held);c.update(.1,{...held,attack:true});
+ const c=create();advance(c,DASH.hold,held);c.update(.1,{...held,attack:true});
  let hits=Number(c.attackHit);for(let i=0;i<100;i++){c.update(.01,{...idle});hits+=Number(c.attackHit);}
  assert.equal(hits,0);assert.equal(c.state,'Fly');
 });
@@ -60,7 +60,7 @@ test('swimming and eating block charging, and normal position constraints stop t
 });
 
 test('jumping out of water can charge on the first hold despite the previous swimming flag',()=>{
- const c=create();c.swimming=true;c.update(.01,held);assert(c.flight.active);c.swimming=false;advance(c,.49,held);assert.equal(c.state,'Dash');
+ const c=create();c.swimming=true;c.update(.01,held);assert(c.flight.active);c.swimming=false;advance(c,DASH.hold-.01,held);assert.equal(c.state,'Dash');
 });
 
 test('flight mist stays attached to the sword and ends with the dash, without a wake through the body',()=>{

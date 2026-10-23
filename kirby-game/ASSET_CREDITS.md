@@ -63,6 +63,13 @@ commercial projects. Attribution is kept here for provenance.
 - Five original pigeon coos: `public/audio/pigeon-{hello,joy,fear,anger,sad}.wav`.
 - Voices are synthesized by `scripts/make-pigeon-coos.py` using resonant harmonics, breath and pitch phrasing; no third-party recordings.
 
+### Pigeon dash cry
+
+- `public/audio/hawk-dash.ogg`: Red-tailed Hawk, XC71575, recorded by Jonathon Jongsma on 2011-02-12.
+- Source: https://commons.wikimedia.org/wiki/File:Buteo_jamaicensis_-_Red-tailed_Hawk_-_XC71575.ogg and https://xeno-canto.org/71575.
+- CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/. Original recording redistributed unchanged; runtime playback volume adjusted. Attribution also ships in `public/audio/hawk-dash-LICENSE.txt`.
+- Kirby's dash reuses this project's original roller-coaster cheer buffer, without a new third-party voice.
+
 ## Shiba bark
 
 - Game file: `public/audio/shiba-bark.wav`

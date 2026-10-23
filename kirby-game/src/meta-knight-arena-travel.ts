@@ -15,7 +15,7 @@ import {knightArenaActions} from './meta-knight-actions';
 import type {KnightSound} from './meta-knight-sounds';
 import {constrainKnightShield} from './meta-knight-shield';
 import {MetaKnightDazedStars} from './meta-knight-dazed-stars';
-import {crossLines,ricochetCurve,ricochetIndex} from './meta-knight-star-assault';
+import {fitKnightArenaCamera} from './meta-knight-camera-fit';
 import './meta-knight-arena-travel.css';
 
 const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
@@ -186,25 +186,24 @@ export class MetaKnightArenaTravel{
   if(!paused&&Math.abs(c.actor.position.y-floor)<.7&&Math.abs(portal.across)<1.8&&Math.abs(portal.along)<.65)this.leave();
  }
  private starCameraMix=0;
- private starFocus=new T.Vector3(SITE.x,3,0);private starDistance=0;
+ private starFocus=new T.Vector3(SITE.x,3,0);private starDistance=0;private starViewport='';
  private placeCamera(c:CharacterController,_dt:number){
   const battle=this.battle;if(battle&&this.engaged){
    const now=this.battleOptions?.online()?this.battleOptions.now():this.soloNow,p=knightPosition(battle,now),target=new T.Vector3((c.actor.position.x+SITE.x+p[0])/2,2,(c.actor.position.z+p[2])/2);let d=Math.max(24,Math.hypot(c.actor.position.x-SITE.x-p[0],c.actor.position.z-p[2])*1.15+16)*(innerHeight>innerWidth?1.35:1);
    const wide=battle.phase===3&&battle.stage!=='open';this.starCameraMix+=((wide?1:0)-this.starCameraMix)*(1-Math.exp(-Math.max(0,_dt)/.35));
    if(this.starCameraMix>.001){
-    const points=[p,[c.actor.position.x-SITE.x,0,c.actor.position.z]],stage=battle.stage;
-    if(stage==='cross'||stage==='cross-warn')points.push(...crossLines(battle).flat());
-    else if(stage==='ricochet'||stage==='ricochet-warn')points.push(...[0,.25,.5,.75,1].map(t=>ricochetCurve(battle,ricochetIndex(battle),t)));
-    else if(stage==='star-rise')points.push(battle.to);
-    else points.push([0,0,0]);
-    if(stage==='shield'&&battle.activeCrystal!==undefined){const a=battle.activeCrystal*Math.PI/4;points.push([Math.sin(a)*44.6,0,Math.cos(a)*44.6]);}
-    const xs=points.map(v=>v[0]),zs=points.map(v=>v[2]),minX=Math.min(...xs),maxX=Math.max(...xs),minZ=Math.min(...zs),maxZ=Math.max(...zs),radius=T.MathUtils.clamp(Math.max(maxX-minX,maxZ-minZ)/2+5,32,48);
-    const focus=new T.Vector3(SITE.x+(minX+maxX)/2,3,(minZ+maxZ)/2),vertical=(innerHeight>innerWidth?75:55)*Math.PI/360,tan=Math.tan(vertical),aspect=innerWidth/innerHeight,pitch=Math.atan2(.68,.82),depth=Math.cos(pitch),rise=Math.sin(pitch),fit=radius*Math.max(Math.hypot(1/(tan*aspect),depth),rise/tan+depth)+4,distance=fit/Math.hypot(.68,.82),blend=_dt>0?1-Math.exp(-_dt/.3):1;
-    if(!this.starDistance){this.starDistance=d;this.starFocus.copy(target);}this.starFocus.lerp(focus,blend);this.starDistance=T.MathUtils.lerp(this.starDistance,distance,blend);d=T.MathUtils.lerp(d,this.starDistance,this.starCameraMix);target.lerp(this.starFocus,this.starCameraMix);
+    const hud=this.battleView?.hud.getBoundingClientRect(),action=document.getElementById('action-hint')?.getBoundingClientRect();
+    const top=hud?.height?hud.bottom+8:96,bottom=action?.height&&action.top>innerHeight*.6?innerHeight-action.top+8:24;
+    const points:KnightActor['p'][]=[[p[0]-5,p[1]+7,p[2]],[p[0]+5,p[1]+7,p[2]],[c.actor.position.x-SITE.x,c.actor.position.y+3*c.actor.scale.x,c.actor.position.z]];
+    if(battle.stage==='shield'&&battle.activeCrystal!==undefined){const a=battle.activeCrystal*Math.PI/4;points.push([Math.sin(a)*44.6,7,Math.cos(a)*44.6]);}
+    const fit=fitKnightArenaCamera(innerWidth,innerHeight,points,top,bottom),focus=new T.Vector3(SITE.x+fit.focus[0],fit.focus[1],fit.focus[2]),distance=fit.distance,blend=_dt>0?1-Math.exp(-_dt/.3):1,viewport=`${innerWidth}:${innerHeight}:${Math.round(top)}:${Math.round(bottom)}`;
+    if(!this.starDistance){this.starDistance=d;this.starFocus.copy(target);}
+    if(viewport!==this.starViewport){this.starViewport=viewport;this.starFocus.copy(focus);this.starDistance=distance;}else{this.starFocus.lerp(focus,blend);this.starDistance=T.MathUtils.lerp(this.starDistance,distance,blend);}
+    d=T.MathUtils.lerp(d,this.starDistance,this.starCameraMix);target.lerp(this.starFocus,this.starCameraMix);
    }
    this.camera.fov=innerHeight>innerWidth?75:55;this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();this.camera.position.set(target.x,target.y+d*.68,target.z+d*.82);this.camera.lookAt(target);this.camera.updateMatrixWorld();return;
   }
-  this.starCameraMix=0;this.starDistance=0;
+  this.starCameraMix=0;this.starDistance=0;this.starViewport='';
   const f=this.follow,size=c.actor.scale.x,target=c.actor.position.clone().add(new T.Vector3(0,.9*size,0));
   this.camera.fov=innerHeight>innerWidth?75:55;this.camera.aspect=innerWidth/innerHeight;this.camera.updateProjectionMatrix();
   this.camera.position.set(target.x+f.distance*size*Math.cos(f.elevation)*Math.sin(f.azimuth),target.y+f.distance*size*Math.sin(f.elevation),target.z+f.distance*size*Math.cos(f.elevation)*Math.cos(f.azimuth));this.camera.lookAt(target);this.camera.updateMatrixWorld();

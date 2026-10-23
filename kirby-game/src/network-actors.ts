@@ -22,7 +22,8 @@ function poseNodes(c:CharacterController|KirbyNpc){
 }
 export function actorState(c:CharacterController|KirbyNpc,name:string,variant:number):ActorState{
  const fruitBoost=c.fruitBoost.snapshot();
- return {p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(fruitBoost?{fruitBoost:{...fruitBoost,remaining:Math.max(.001,round(fruitBoost.remaining))}}:{}),...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),speed:round(c.savedSpeedSize),checkpoint:c.skyCheckpoint,mountainCheckpoint:c.mountainCheckpoint,ground:round(c.surfaceY)}}:{})};
+ const dash=c instanceof CharacterController&&c.isPigeon&&(c.playerDash.charge>0||c.state==='Dash')?[round(c.playerDash.charge),round(c.state==='Dash'?c.playerDash.progress:0)] as [number,number]:undefined;
+ return {...(dash?{dash}:{}),p:c.actor.position.toArray().map(round),q:c.actor.quaternion.toArray().map(round),s:round(c.actor.scale.x),...(riderFit(c)<.9999?{fit:round(riderFit(c))}:{}),state:c.state,...(c.roll.state?{roll:[...c.roll.state].map(round)}:{}),pose:(c instanceof CharacterController&&c.state!=='Idle')||c.state==='Hello'?poseNodes(c).map(n=>[...n.position.toArray(),...n.quaternion.toArray(),...n.scale.toArray()].map(round)):[],fruits:c.fruitsEaten,...(fruitBoost?{fruitBoost:{...fruitBoost,remaining:Math.max(.001,round(fruitBoost.remaining))}}:{}),...(c instanceof CharacterController?{eventPoints:c.eventPoints}:{}),achievements:[...c.achievements],name,variant,star:c instanceof CharacterController?round(c.starRemaining):0,...(c instanceof CharacterController?{progress:{size:round(c.savedSize),speed:round(c.savedSpeedSize),checkpoint:c.skyCheckpoint,mountainCheckpoint:c.mountainCheckpoint,ground:round(c.surfaceY)}}:{})};
 }
 /** Restore durable progress without resuming an abandoned ride or animation. */
 export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
@@ -35,6 +36,8 @@ export function restoreNetworkPlayer(c:CharacterController,a:ActorState){
  if(a.location==='meta-knight-arena'){c.actor.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset);c.surfaceY=0;}
 }
 export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number,snap=false){
+ if(c instanceof CharacterController)c.clearKirbyDashPose();
+ if(c instanceof CharacterController)c.clearPigeonDashPose();
  if(c instanceof CharacterController)c.fruitEating.clear();
  if(c instanceof CharacterController)c.clearDuelDazedPose();
  if(c instanceof CharacterController)c.clearKnightDashPose();
@@ -42,7 +45,10 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
  c.actor.userData.location=a.location;
  c.roll.clearPose();c.roll.state=a.roll?[...a.roll]:undefined;
  const previousX=c.actor.position.x,previousZ=c.actor.position.z;
- const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion).y;
+ const blend=snap?1:1-Math.exp(-dt*16);c.actor.position.lerp(new T.Vector3().fromArray(a.p),blend);c.actor.quaternion.slerp(new T.Quaternion().fromArray(a.q).normalize(),blend);c.actor.scale.setScalar(T.MathUtils.lerp(c.actor.scale.x,a.s,blend));c.yaw=new T.Euler().setFromQuaternion(c.actor.quaternion,'YXZ').y;
+ // XYZ decomposes a rear-facing heading into pitch/roll of PI and a folded
+ // yaw. A new NPC host must resume movement with the same upright heading.
+ if(!(c instanceof CharacterController)&&a.state!=='Balloon')c.actor.rotation.set(0,c.yaw,0);
  const model=c.animationRoot.parent;if(model&&model!==c.actor)model.scale.setScalar(T.MathUtils.lerp(model.scale.x,a.fit??1,blend));
  c.fruitsEaten=a.fruits;if(validAchievements(a.achievements)){c.achievements.clear();for(const v of a.achievements)c.achievements.add(v);}
  c.fruitBoost.restore(a.fruitBoost);
@@ -52,11 +58,12 @@ export function applyActor(c:CharacterController|KirbyNpc,a:ActorState,dt:number
   const nativeGait=c.syncPigeonLocomotion(dt,Math.hypot(c.actor.position.x-previousX,c.actor.position.z-previousZ));
   c.mixer.update(dt);
   c.updatePigeonFlightWings(a.state==='Fly'||a.state==='Push'&&a.p[1]>(a.progress?.ground??0)+.02);
+  c.updatePigeonDashVisual(a.dash?.[0]??0,a.dash?.[1]??Math.min(1,(c.actions.get('Dash')?.time??0)/.7),a.state==='Dash');
   // Buffered positions drive the native gait clock. Old foot poses belong to
   // another presentation time and would undo planted-foot travel each frame.
   // Flight supplies the untransmitted vane pose; transmitted wings stay authoritative.
   if(!nativeGait)poseNodes(c).forEach((n,i)=>{const pose=a.pose[i];if(!pose)return;n.position.fromArray(pose);n.quaternion.fromArray(pose.slice(3,7));n.scale.fromArray(pose.slice(7,10));});
-  c.flight.active=a.state==='Jump'||a.state==='Fly'||c.isMetaKnight&&a.state==='Dash';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual(a.state==='Fly');
+  c.flight.active=a.state==='Jump'||a.state==='Fly'||a.state==='Dash';c.flight.height=c.flight.active?Math.max(0,a.p[1]/Math.max(1,a.s)):0;c.updateFlightVisual(a.state==='Fly');
   c.updateKnightDashVisual();
  }else {
   c.swimming=a.state==='Swim';c.surfaceY=a.p[1];

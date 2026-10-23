@@ -51,17 +51,45 @@ try{
  assert(mobile.changedPixels.every(n=>n>3));checks.push({mobile:true,...mobile});await page.screenshot({path:output+'mobile-dash-arrows.png'});
  await page.setViewportSize({width:1280,height:900});
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
- // A real shared-rule slam enters a ring that survives beyond the old 1.25 s.
+ // Landing opens immediately; the ring remains after a counter and the next attack.
  const wave=await page.evaluate(()=>{
-  const q=telegraphQA,s=q.pose('dash-warn'),a={id:'solo',p:[-41,1.2,0],yaw:0,available:true};
-  Object.assign(s,{pattern:'dive',stage:'slam',step:2,hp:8,from:[31,0,0],to:[31,0,0],since:100000,until:100180,checked:100000});
-  q.rules.advanceKnightBattle(s,[a],s.until);q.waveState=s;q.waveActor=a;q.wavePose=elapsed=>{const now=s.since+elapsed;q.rules.advanceKnightBattle(s,[a],now);q.camera(true);q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.render();const body=q.travel.scene.getObjectByName('Meta Knight solid golden impact wave');return {stage:s.stage,radius:body.material.uniforms.radius.value,visible:body.parent.visible,life:s.players.solo.hp};};
-  return {duration:s.until-s.since,...q.wavePose(3000)};
+  const q=telegraphQA,s=q.pose('dash-warn'),a={id:'solo',p:[31,1.2,3],yaw:Math.PI,available:true};
+  Object.assign(s,{pattern:'dive',stage:'dive',step:1,cycle:2,hp:8,from:[12,0,-12],to:[31,0,0],since:100000,until:100450,checked:100000});
+  q.c.actor.position.set(2031,1.2,3);q.rules.advanceKnightBattle(s,[a],s.until);q.waveAt=s.since;q.waveUntil=q.rules.knightPressureWave(s,s.since).until;q.waveState=s;q.waveActor=a;
+  q.wavePose=(elapsed,close=false)=>{const now=q.waveAt+elapsed;q.rules.advanceKnightBattle(s,[a],now);q.camera(!close);if(close){q.travel.camera.position.set(2052,14,25);q.travel.camera.lookAt(2031,2,0);q.travel.camera.updateMatrixWorld();}q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.render();const body=q.travel.scene.getObjectByName('Meta Knight solid golden impact wave');return {stage:s.stage,hp:s.hp,radius:body.material.uniforms.radius.value,visible:body.parent.visible,origin:body.parent.position.toArray(),bodyY:q.travel.knight.actor.getObjectByName('Body_motion').position.y,target:q.travel.scene.getObjectByName('Meta Knight available hit target').visible};};
+  return {duration:q.waveUntil-q.waveAt,...q.wavePose(0,true)};
  });
- assert.equal(wave.stage,'wave');assert(wave.visible&&wave.radius>40&&wave.duration>5500);checks.push(wave);
+ assert.equal(wave.stage,'open');assert(wave.target&&wave.bodyY<.95&&wave.visible&&wave.duration>5500);checks.push(wave);
+ await page.screenshot({path:output+'dive-immediate-opening.png'});
+ const hit=await page.evaluate(()=>{const q=telegraphQA;q.rules.knightAttack(q.waveState,q.waveActor,q.waveAt);const result=q.wavePose(140,true);q.waveState.players.solo.invulnerable=1e12;return result;});
+ assert.equal(hit.stage,'stunned');assert.equal(hit.hp,7);assert(hit.visible&&!hit.target);checks.push(hit);await page.screenshot({path:output+'dive-hit-while-wave-flies.png'});
+ const continued=await page.evaluate(()=>telegraphQA.wavePose(3000));assert(!['wave','open','stunned'].includes(continued.stage));assert(continued.visible&&continued.radius>40);checks.push(continued);
  await page.screenshot({path:output+'wave-beyond-old-radius.png'});
- const far=await page.evaluate(()=>telegraphQA.wavePose(5200));assert.equal(far.stage,'wave');assert(far.visible&&far.radius>72);assert.equal(far.life,5);checks.push(far);
+ const far=await page.evaluate(()=>telegraphQA.wavePose(5200));assert(far.visible&&far.radius>72);assert.deepEqual(far.origin,[31,0,0]);checks.push(far);
  await page.screenshot({path:output+'wave-far-edge.png'});
- const expired=await page.evaluate(()=>{const q=telegraphQA;return q.wavePose(q.waveState.until-q.waveState.since);});assert.equal(expired.stage,'open');assert(!expired.visible);checks.push(expired);
+ const expired=await page.evaluate(()=>{const q=telegraphQA;return q.wavePose(q.waveUntil-q.waveAt);});assert(!expired.visible);checks.push(expired);
+ const third=await page.evaluate(async()=>{
+  const q=telegraphQA,T=q.THREE,v=q.travel.battleView;q.star=await import('/src/meta-knight-star-assault.ts');
+  q.pose('slash-warn');const phase1={gold:v.amber.uniforms.tint.value.getHex(),arrow:v.arrows[0].material.color.getHex(),opacity:v.amber.uniforms.baseOpacity.value};
+  q.pose('dash-warn');const phase2={gold:v.amberLane.uniforms.tint.value.getHex(),arrow:v.arrows[0].material.color.getHex(),opacity:v.amberLane.uniforms.baseOpacity.value};
+  const s=q.pose('slash-warn');Object.assign(s,{phase:3,hp:4,pattern:'star',stage:'cross-warn',step:1,cycle:1,since:100000,until:103600,from:[0,0,-9],to:[0,0,-9],starCross:{pairs:[[0,4],[2,6]],side:0}});q.starState=s;q.c.actor.position.set(2028,0,-12);
+  q.thirdPose=(now=100900)=>{q.travel.soloNow=now;q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.starCameraMix=1;q.travel.placeCamera(q.c,0);q.travel.render();};q.thirdPose();
+  const u=v.assault.cross.mesh.material.uniforms,phase3={gold:u.gold.value.getHex(),arrow:u.arrowTint.value.getHex(),opacity:u.baseOpacity.value};
+  const bolts=q.travel.scene.getObjectByName('Golden crystal lightning cores'),blade=q.travel.knight.actor.getObjectByName('Galaxia'),tip=blade.localToWorld(new T.Vector3(-.315,2.05,0));tip.x-=2000;
+  const m=new T.Matrix4(),endpoints=q.star.crossPairs(s).flat().map((index,i)=>{bolts.getMatrixAt(i*44,m);const start=new T.Vector3(0,-.5,0).applyMatrix4(m);bolts.getMatrixAt(i*44+31,m);const end=new T.Vector3(0,.5,0).applyMatrix4(m);return {fromError:start.distanceTo(tip),toError:end.distanceTo(new T.Vector3().fromArray(q.star.crystalPoint(index)))};});
+  q.cameraBounds=()=>{const camera=q.travel.camera,points=[];for(let i=0;i<256;i++){const a=i*Math.PI/128;points.push(new T.Vector3(2000+Math.sin(a)*46.25,0,Math.cos(a)*46.25).project(camera));}return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),distance:q.travel.starDistance};};
+  return {phase1,phase2,phase3,bolts:bolts.count,lightning:bolts.parent.visible,endpoints,bounds:q.cameraBounds()};
+ });
+ assert.deepEqual(third.phase1,third.phase2);assert.deepEqual(third.phase1,third.phase3);assert.equal(third.bolts,176);assert(third.lightning);assert(third.endpoints.every(p=>p.fromError<.0001&&p.toError<.0001));checks.push(third);
+ await page.screenshot({path:output+'phase-3-gold-lightning.png'});
+ const flicker=await page.evaluate(()=>{const q=telegraphQA,b=q.travel.scene.getObjectByName('Golden crystal lightning cores'),before=Array.from(b.instanceMatrix.array);q.thirdPose(100960);return Array.from(b.instanceMatrix.array).some((v,i)=>v!==before[i]);});assert(flicker);
+ for(const [width,height] of [[1920,1080],[3440,1440],[1280,1024],[844,390],[390,844]]){
+  await page.setViewportSize({width,height});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const bounds=await page.evaluate(()=>{telegraphQA.thirdPose();return telegraphQA.cameraBounds();});assert(bounds.minX>-.99&&bounds.maxX<.99&&bounds.minY>-.99&&bounds.maxY<.99);checks.push({width,height,...bounds});
+  await page.screenshot({path:output+`phase-3-camera-${width}x${height}.png`});
+ }
+ await page.setViewportSize({width:1440,height:900});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ const route=await page.evaluate(()=>{const q=telegraphQA,s=q.starState;Object.assign(s,{stage:'ricochet-warn',step:5,since:104000,until:105550});q.star.planStarRoute(s,[28,0,-12]);q.star.lockStarFlight(s,[28,0,-12]);q.thirdPose(104700);const u=q.travel.battleView.assault.routes[0].mesh.material.uniforms;return {gold:u.gold.value.getHex(),arrow:u.arrowTint.value.getHex(),lightning:q.travel.scene.getObjectByName('Golden crystal lightning cores').parent.visible};});
+ assert.equal(route.gold,third.phase1.gold);assert.equal(route.arrow,third.phase1.arrow);assert(!route.lightning);checks.push(route);await page.screenshot({path:output+'phase-3-shared-gold-route.png'});
  assert.deepEqual(errors,[]);await writeFile(output+'checks.json',JSON.stringify({checks,errors},null,2));console.log(JSON.stringify({checks,errors}));
 }finally{await browser.close();}

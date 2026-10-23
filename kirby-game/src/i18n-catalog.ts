@@ -1,5 +1,8 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Масштаб рендера':['Render scale','Мащаб на изобразяване'],
+ '100% · быстрее':['100% · faster','100% · по-бързо'],
+ '125% · чётче':['125% · sharper','125% · по-ясно'],
  'Дальность видимости':['View distance','Разстояние на видимост'],
  'Близко · 240 м':['Near · 240 m','Близко · 240 м'],
  'Средняя · 360 м':['Medium · 360 m','Средно · 360 м'],
@@ -18,6 +21,8 @@ export const translations: Record<string, readonly [string, string]> = {
  'ВЫСОКИЙ':['HIGH','ВИСОКО'],
  'НОРМА — 100%':['NORMAL — 100%','НОРМА — 100%'],
  'Рывок мечом':['Sword dash','Рязък устрем с меч'],
+ 'Ускорение':['Boost','Ускорение'],
+ 'Удерживай {0} · 0,3 с':['Hold {0} · 0.3 s','Задръж {0} · 0,3 сек'],
  'Рывок!':['Dash!','Устрем!'],
  'Через {0} с':['Ready in {0} s','Готово след {0} сек'],
  'Зарядка…':['Charging…','Зареждане…'],

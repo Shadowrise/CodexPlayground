@@ -34,6 +34,8 @@ export class SoundEffects {
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private readonly dogBarkData=fetch(`${import.meta.env.BASE_URL}audio/shiba-bark.wav`)
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
+  private readonly hawkCryData=fetch(`${import.meta.env.BASE_URL}audio/hawk-dash.ogg`)
+    .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private readonly flowerNoteData=fetch(`${import.meta.env.BASE_URL}audio/flower-bells.wav`)
     .then(response=>response.ok?response.arrayBuffer():undefined).catch(()=>undefined);
   private active = new Set<PlayingVoice>();
@@ -90,6 +92,7 @@ export class SoundEffects {
         this.buffers.set('npc-greeting',greeting);
         void this.loadFruitBite(this.context);
         void this.loadDogBark(this.context);
+        void this.loadHawkCry(this.context);
         void this.loadFlowerNotes(this.context);
         this.pigeonVoices=this.pigeonVoiceData.then(()=>loadPigeonEmoteBuffers(this.context!));
       }
@@ -106,6 +109,17 @@ export class SoundEffects {
   private async loadDogBark(context:AudioContext){
     try{const bytes=await this.dogBarkData;if(bytes)this.buffers.set('dog-bark',await context.decodeAudioData(bytes));}
     catch{/* A missing decorative bark must not interrupt gameplay. */}
+  }
+  private async loadHawkCry(context:AudioContext){
+    try{const bytes=await this.hawkCryData;if(bytes)this.buffers.set('hawk-dash',await context.decodeAudioData(bytes));}
+    catch{/* An optional voice file never blocks the game. */}
+  }
+  playPlayerDash(kind:'pigeon'|'kirby'){
+    const ctx=this.context,buffer=this.buffers.get(kind==='pigeon'?'hawk-dash':'cheer');
+    if(!ctx||!buffer||!this.enabled||document.hidden||ctx.state!=='running')return;
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;
+    gain.gain.value=kind==='pigeon'?.7:.65;
+    source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);
   }
   private async loadFlowerNotes(context:AudioContext){
     try{
@@ -581,7 +595,7 @@ export class SoundEffects {
     // Player and important life-cycle events take precedence over ambient chatter.
     events.sort((a, b) => Number(a.kind === 'step') - Number(b.kind === 'step') || Number(!!b.actor.player) - Number(!!a.actor.player));
     for (const event of events) {
-      if(event.kind==='thrust'){this.playKnight('thrust');continue;}
+      if(event.kind==='thrust'){if(player.isMetaKnight)this.playKnight('thrust');else this.playPlayerDash(player.isPigeon?'pigeon':'kirby');continue;}
       const dx = event.actor.x - player.actor.position.x, dz = event.actor.z - player.actor.position.z;
       const distance = Math.hypot(dx, dz);
       // Greetings accompany the visible wave, including the full 24m greeting

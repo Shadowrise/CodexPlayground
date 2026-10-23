@@ -7,7 +7,7 @@ const smooth=(v:number)=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
 export function knightBody(s:KnightBattle,now:number){
  const p=knightPosition(s,now),f=knightProgress(s,now),seated=['open','stunned','crystal-break'].includes(s.stage),yaw=starFacing(s,now);
  const plunge=['jump','dive','star-fall'].includes(s.stage)?smooth((f-.4)/.54):s.stage==='slam'?1:s.stage==='wave'?1-smooth((now-s.since)/350):0;
- const seat=s.stage==='jump'?smooth((f-.82)/.18):0,back=-1.04*plunge*(1-seat)-(seated?.18:0);
+ const seat=s.stage==='jump'||s.stage==='dive'?smooth((f-.82)/.18):0,back=-1.04*plunge*(1-seat)-(seated?.18:0);
  const crouch=s.stage==='jump-warn'||s.stage==='dive-warn'?smooth((f-.12)/.73):['jump','dive','star-fall','slam'].includes(s.stage)?1:plunge;
  const height=seated?.92:s.stage==='get-up'?.92+.25*smooth(f):s.stage==='slash'||s.stage==='slash-warn'?.95:s.stage==='shot'||s.stage==='shot-warn'?1.14:1.17-.22*crouch-.03*seat;
  return {x:p[0]+Math.sin(yaw)*back*KNIGHT.modelScale,y:p[1]+height*KNIGHT.modelScale,z:p[2]+Math.cos(yaw)*back*KNIGHT.modelScale,radius:.91*KNIGHT.modelScale};

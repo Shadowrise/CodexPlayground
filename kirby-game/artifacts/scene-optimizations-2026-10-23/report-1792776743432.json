@@ -1,0 +1,2422 @@
+{
+  "method": {
+    "browser": "Isolated Chrome, hardware renderer recorded below; Vite serves existing prepared world, HMR/network rooms disabled.",
+    "ab": "Fixed scene and camera. 12 warmup + 20 measured render/gl.finish frames per sample. Paired baseline before/after each toggle. Effects overlap, savings must not be added.",
+    "live": "Actual game loop, real swing activity and camera rotation; CPU update/render submission and asynchronous EXT_disjoint_timer_query_webgl2 GPU time. This is separate from forced gl.finish A/B tests."
+  },
+  "metadata": {
+    "date": "2026-10-23T17:32:51.996Z",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "browserVisibility": "visible",
+    "pixelRatio": 1.25,
+    "viewDistance": 360,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "drawingBuffer": [
+      2400,
+      1350
+    ],
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimer": true,
+    "treehouseActive": true,
+    "npcs": 14,
+    "startupGlError": 1282,
+    "shadowCascades": 2,
+    "shadowMapSize": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "objects": 13003,
+    "main.ts": "7f764336c96ad628",
+    "ground-shadow-pass.ts": "165713b76974b7c6",
+    "prepared-shadows.ts": "aeeb999763bd670e",
+    "scenery-visibility.ts": "3627182b6f863645",
+    "worldManifest": {
+      "version": 1,
+      "hash": "d65958f4eaf7d23d",
+      "bytes": 21589364
+    },
+    "counterMode": "explicit-all-passes",
+    "abView": {
+      "hour": 8,
+      "angle": 45
+    },
+    "mode": "focused-randomized",
+    "focusAngles": [
+      45,
+      135,
+      225
+    ],
+    "finalGlError": 0
+  },
+  "live": [],
+  "angleTime": [],
+  "ab": [],
+  "inventory": {
+    "totals": {
+      "frame": 372,
+      "calls": 819,
+      "triangles": 4383255,
+      "points": 0,
+      "lines": 432
+    },
+    "groups": [
+      {
+        "name": "Four woodland biomes",
+        "pass": "colour",
+        "calls": 86,
+        "triangles": 1140575
+      },
+      {
+        "name": "Фрукты на поляне",
+        "pass": "colour",
+        "calls": 34,
+        "triangles": 440096
+      },
+      {
+        "name": "Continuous square mountain range",
+        "pass": "colour",
+        "calls": 91,
+        "triangles": 437112
+      },
+      {
+        "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+        "pass": "colour",
+        "calls": 85,
+        "triangles": 322746
+      },
+      {
+        "name": "NPC 6 · Лазурь",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "NPC 10 · Мята",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "Игрок",
+        "pass": "colour",
+        "calls": 17,
+        "triangles": 259072
+      },
+      {
+        "name": "Interactive watermill",
+        "pass": "colour",
+        "calls": 37,
+        "triangles": 192732
+      },
+      {
+        "name": "Mountain circuit roller coaster",
+        "pass": "colour",
+        "calls": 28,
+        "triangles": 133916
+      },
+      {
+        "name": "Three colourful balloon ports",
+        "pass": "colour",
+        "calls": 10,
+        "triangles": 104428
+      },
+      {
+        "name": "Forty meadow fireflies",
+        "pass": "colour",
+        "calls": 43,
+        "triangles": 100860
+      },
+      {
+        "name": "Distant forest panorama",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 93500
+      },
+      {
+        "name": "Biome meadow details",
+        "pass": "colour",
+        "calls": 27,
+        "triangles": 80940
+      },
+      {
+        "name": "Небесная тропа — сияющие ступени",
+        "pass": "colour",
+        "calls": 54,
+        "triangles": 59206
+      },
+      {
+        "name": "Rainbow wishing fountain",
+        "pass": "colour",
+        "calls": 8,
+        "triangles": 58976
+      },
+      {
+        "name": "Oak treehouse, lookout, swing and leaf pile",
+        "pass": "colour",
+        "calls": 11,
+        "triangles": 57368
+      },
+      {
+        "name": "Дикий Пиджи",
+        "pass": "colour",
+        "calls": 21,
+        "triangles": 50084
+      },
+      {
+        "name": "Арена Топотушки",
+        "pass": "colour",
+        "calls": 3,
+        "triangles": 39005
+      },
+      {
+        "name": "Drifting clouds",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 32928
+      },
+      {
+        "name": "Seven musical flowers",
+        "pass": "colour",
+        "calls": 3,
+        "triangles": 32186
+      },
+      {
+        "name": "Подготовленные тени предметов",
+        "pass": "colour",
+        "calls": 62,
+        "triangles": 23028
+      },
+      {
+        "name": "Meta Knight portal",
+        "pass": "colour",
+        "calls": 9,
+        "triangles": 11550
+      },
+      {
+        "name": "Colourful river boats",
+        "pass": "colour",
+        "calls": 5,
+        "triangles": 4764
+      },
+      {
+        "name": "Swimmable lakes",
+        "pass": "colour",
+        "calls": 2,
+        "triangles": 3105
+      },
+      {
+        "name": "Flower memory adventure",
+        "pass": "colour",
+        "calls": 2,
+        "triangles": 3002
+      },
+      {
+        "name": "Тени деревьев",
+        "pass": "colour",
+        "calls": 36,
+        "triangles": 2886
+      },
+      {
+        "name": "Stone maze and golden star",
+        "pass": "colour",
+        "calls": 2,
+        "triangles": 1980
+      },
+      {
+        "name": "Тени травы",
+        "pass": "colour",
+        "calls": 8,
+        "triangles": 1198
+      },
+      {
+        "name": "Daylight sky gradient",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 528
+      },
+      {
+        "name": "Mesh",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 8
+      },
+      {
+        "name": "Топотушка — прогулка по арене",
+        "pass": "colour",
+        "calls": 1,
+        "triangles": 0
+      }
+    ],
+    "roots": [
+      {
+        "name": "Meta Knight portal",
+        "type": "Group",
+        "children": 9
+      },
+      {
+        "name": "",
+        "type": "Group",
+        "children": 0
+      },
+      {
+        "name": "Available interaction outline",
+        "type": "Group",
+        "children": 0
+      },
+      {
+        "name": "Celestial shadow cascade 1",
+        "type": "DirectionalLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Object3D",
+        "children": 0
+      },
+      {
+        "name": "Celestial shadow cascade 2",
+        "type": "DirectionalLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Object3D",
+        "children": 0
+      },
+      {
+        "name": "Reflected celestial sky and ground",
+        "type": "Light",
+        "children": 0
+      },
+      {
+        "name": "Sun disc",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Moon",
+        "type": "Group",
+        "children": 13
+      },
+      {
+        "name": "Night stars",
+        "type": "Points",
+        "children": 0
+      },
+      {
+        "name": "Distant forest panorama",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Soft sunlight halo",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Soft sun rays",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Drifting clouds",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Daylight sky gradient",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "Mesh",
+        "children": 0
+      },
+      {
+        "name": "Four woodland biomes",
+        "type": "Group",
+        "children": 145
+      },
+      {
+        "name": "Biome meadow details",
+        "type": "Group",
+        "children": 93
+      },
+      {
+        "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+        "type": "Group",
+        "children": 98
+      },
+      {
+        "name": "Continuous square mountain range",
+        "type": "Mesh",
+        "children": 1
+      },
+      {
+        "name": "Арена Топотушки",
+        "type": "Group",
+        "children": 5
+      },
+      {
+        "name": "Swimmable lakes",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Rainbow wishing fountain",
+        "type": "Group",
+        "children": 18
+      },
+      {
+        "name": "Seven musical flowers",
+        "type": "Group",
+        "children": 24
+      },
+      {
+        "name": "Звонкие циферки · Number garden",
+        "type": "Group",
+        "children": 16
+      },
+      {
+        "name": "Number garden celebration",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Flower memory adventure",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Mountain circuit roller coaster",
+        "type": "Group",
+        "children": 19
+      },
+      {
+        "name": "Mountain corner retracting ledges",
+        "type": "Group",
+        "children": 34
+      },
+      {
+        "name": "Fresh bakery bread",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal stone rests",
+        "type": "Group",
+        "children": 3
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Meta Knight seal · floating display",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Colourful river boats",
+        "type": "Group",
+        "children": 9
+      },
+      {
+        "name": "Interactive watermill",
+        "type": "Group",
+        "children": 14
+      },
+      {
+        "name": "Oak treehouse, lookout, swing and leaf pile",
+        "type": "Group",
+        "children": 3
+      },
+      {
+        "name": "Небесная тропа — сияющие ступени",
+        "type": "Group",
+        "children": 129
+      },
+      {
+        "name": "Kirby home and bed",
+        "type": "Group",
+        "children": 4
+      },
+      {
+        "name": "Stone maze and golden star",
+        "type": "Group",
+        "children": 10
+      },
+      {
+        "name": "Star reward trampoline and soft leaves",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Three colourful balloon ports",
+        "type": "Group",
+        "children": 6
+      },
+      {
+        "name": "Destination arrow",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Фрукты на поляне",
+        "type": "Group",
+        "children": 102
+      },
+      {
+        "name": "Prepared scenery shadows",
+        "type": "Group",
+        "children": 71
+      },
+      {
+        "name": "Топотушка — подсказки игры",
+        "type": "Group",
+        "children": 6
+      },
+      {
+        "name": "Personal rainbow starfall",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Топотушка — прогулка по арене",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Forty meadow fireflies",
+        "type": "Group",
+        "children": 41
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "",
+        "type": "PointLight",
+        "children": 0
+      },
+      {
+        "name": "Игрок",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 1 · Мандарин",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 2 · Лайм",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 3 · Пурпур",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 4 · Бирюза",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 5 · Лимон",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 6 · Лазурь",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 7 · Коралл",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 8 · Фуксия",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 9 · Индиго",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 10 · Мята",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 11 · Янтарь",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 12 · Орхидея",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 13 · Малина",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "NPC 14 · Сапфир",
+        "type": "Group",
+        "children": 2
+      },
+      {
+        "name": "Дикий Пиджи",
+        "type": "Group",
+        "children": 1
+      },
+      {
+        "name": "Дикий Снежок",
+        "type": "Group",
+        "children": 1
+      }
+    ]
+  },
+  "errors": [],
+  "focused": [
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 45,
+      "round": 0,
+      "baseline": {
+        "ms": 15,
+        "p90Ms": 16.799999952316284,
+        "cpuMs": 15,
+        "gpuMs": 9.18528,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4383255
+      },
+      "variant": {
+        "ms": 14.899999976158142,
+        "p90Ms": 17.700000047683716,
+        "cpuMs": 14.899999976158142,
+        "gpuMs": 9.209856,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4896807
+      },
+      "control": {
+        "ms": 15.199999928474426,
+        "p90Ms": 18.59999990463257,
+        "cpuMs": 15.199999928474426,
+        "gpuMs": 9.660416,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 15.099999964237213,
+      "savedMs": 0.19999998807907104,
+      "gain": 1.3245032354486774,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 45,
+      "round": 0,
+      "baseline": {
+        "ms": 13.900000095367432,
+        "p90Ms": 15.200000047683716,
+        "cpuMs": 13.900000095367432,
+        "gpuMs": 8.56064,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 15.600000023841858,
+        "p90Ms": 16.600000023841858,
+        "cpuMs": 15.600000023841858,
+        "gpuMs": 9.797632,
+        "gpuSamples": 8,
+        "calls": 843,
+        "triangles": 5721768
+      },
+      "control": {
+        "ms": 14.399999976158142,
+        "p90Ms": 17.799999952316284,
+        "cpuMs": 14.399999976158142,
+        "gpuMs": 9.703424,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 14.150000035762787,
+      "savedMs": -1.449999988079071,
+      "gain": -10.247349713175499,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 45,
+      "round": 0,
+      "baseline": {
+        "ms": 13.600000023841858,
+        "p90Ms": 15.200000047683716,
+        "cpuMs": 13.600000023841858,
+        "gpuMs": 8.505344,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 17.799999952316284,
+        "p90Ms": 19,
+        "cpuMs": 17.799999952316284,
+        "gpuMs": 10.202112,
+        "gpuSamples": 8,
+        "calls": 969,
+        "triangles": 6306288
+      },
+      "control": {
+        "ms": 14.899999976158142,
+        "p90Ms": 17.300000071525574,
+        "cpuMs": 14.899999976158142,
+        "gpuMs": 9.102336,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 14.25,
+      "savedMs": -3.549999952316284,
+      "gain": -24.91228036713182,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 45,
+      "round": 0,
+      "baseline": {
+        "ms": 15.900000095367432,
+        "p90Ms": 16.90000009536743,
+        "cpuMs": 15.900000095367432,
+        "gpuMs": 9.865216,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 16.800000071525574,
+        "p90Ms": 19.40000009536743,
+        "cpuMs": 16.800000071525574,
+        "gpuMs": 10.018816,
+        "gpuSamples": 8,
+        "calls": 945,
+        "triangles": 4491855
+      },
+      "control": {
+        "ms": 22.600000023841858,
+        "p90Ms": 24.90000009536743,
+        "cpuMs": 22.600000023841858,
+        "gpuMs": 13.878272,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 19.250000059604645,
+      "savedMs": 2.449999988079071,
+      "gain": 12.727272625937793,
+      "stable": false,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 45,
+      "round": 1,
+      "baseline": {
+        "ms": 18.800000071525574,
+        "p90Ms": 21.799999952316284,
+        "cpuMs": 18.800000071525574,
+        "gpuMs": 12.013568,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 16.200000047683716,
+        "p90Ms": 18,
+        "cpuMs": 16.200000047683716,
+        "gpuMs": 10.25024,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4896807
+      },
+      "control": {
+        "ms": 19,
+        "p90Ms": 21.100000023841858,
+        "cpuMs": 19,
+        "gpuMs": 9.919488,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 18.900000035762787,
+      "savedMs": 2.699999988079071,
+      "gain": 14.285714195609003,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 45,
+      "round": 1,
+      "baseline": {
+        "ms": 19.700000047683716,
+        "p90Ms": 22.600000023841858,
+        "cpuMs": 19.700000047683716,
+        "gpuMs": 11.836416,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 18.5,
+        "p90Ms": 20,
+        "cpuMs": 18.5,
+        "gpuMs": 10.46528,
+        "gpuSamples": 8,
+        "calls": 945,
+        "triangles": 4491855
+      },
+      "control": {
+        "ms": 26,
+        "p90Ms": 27.200000047683716,
+        "cpuMs": 26,
+        "gpuMs": 13.883392,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 22.850000023841858,
+      "savedMs": 4.350000023841858,
+      "gain": 19.03719920920366,
+      "stable": false,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 45,
+      "round": 1,
+      "baseline": {
+        "ms": 23.799999952316284,
+        "p90Ms": 26.700000047683716,
+        "cpuMs": 23.799999952316284,
+        "gpuMs": 15.012864,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 16.399999976158142,
+        "p90Ms": 17.799999952316284,
+        "cpuMs": 16.399999976158142,
+        "gpuMs": 10.26048,
+        "gpuSamples": 8,
+        "calls": 843,
+        "triangles": 5721768
+      },
+      "control": {
+        "ms": 15.899999976158142,
+        "p90Ms": 16.899999976158142,
+        "cpuMs": 15.899999976158142,
+        "gpuMs": 10.733568,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 19.849999964237213,
+      "savedMs": 3.449999988079071,
+      "gain": 17.38035261609456,
+      "stable": false,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 45,
+      "round": 1,
+      "baseline": {
+        "ms": 15.800000071525574,
+        "p90Ms": 18.299999952316284,
+        "cpuMs": 15.800000071525574,
+        "gpuMs": 10.022912,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 29,
+        "p90Ms": 42.60000002384186,
+        "cpuMs": 29,
+        "gpuMs": 19.69152,
+        "gpuSamples": 8,
+        "calls": 969,
+        "triangles": 6306288
+      },
+      "control": {
+        "ms": 14.099999904632568,
+        "p90Ms": 15.5,
+        "cpuMs": 14.099999904632568,
+        "gpuMs": 9.311232,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 14.949999988079071,
+      "savedMs": -14.050000011920929,
+      "gain": -93.97993326504488,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 45,
+      "round": 2,
+      "baseline": {
+        "ms": 14.899999976158142,
+        "p90Ms": 15.5,
+        "cpuMs": 14.799999952316284,
+        "gpuMs": 9.242624,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 16.100000023841858,
+        "p90Ms": 18.200000047683716,
+        "cpuMs": 16.100000023841858,
+        "gpuMs": 9.182208,
+        "gpuSamples": 8,
+        "calls": 945,
+        "triangles": 4491855
+      },
+      "control": {
+        "ms": 14.299999952316284,
+        "p90Ms": 15.700000047683716,
+        "cpuMs": 14.299999952316284,
+        "gpuMs": 8.167424,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 14.599999964237213,
+      "savedMs": -1.5000000596046448,
+      "gain": -10.273973036156876,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 45,
+      "round": 2,
+      "baseline": {
+        "ms": 16.700000047683716,
+        "p90Ms": 19.799999952316284,
+        "cpuMs": 16.700000047683716,
+        "gpuMs": 10.251264,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 19.5,
+        "p90Ms": 22.600000023841858,
+        "cpuMs": 19.5,
+        "gpuMs": 12.007424,
+        "gpuSamples": 8,
+        "calls": 843,
+        "triangles": 5721768
+      },
+      "control": {
+        "ms": 16.600000023841858,
+        "p90Ms": 20,
+        "cpuMs": 16.600000023841858,
+        "gpuMs": 10.180608,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 16.650000035762787,
+      "savedMs": -2.849999964237213,
+      "gain": -17.11711686555949,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 45,
+      "round": 2,
+      "baseline": {
+        "ms": 15.700000047683716,
+        "p90Ms": 16.800000071525574,
+        "cpuMs": 15.600000023841858,
+        "gpuMs": 10.356736,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 14.199999928474426,
+        "p90Ms": 16.799999952316284,
+        "cpuMs": 14.199999928474426,
+        "gpuMs": 9.079808,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4896807
+      },
+      "control": {
+        "ms": 14.5,
+        "p90Ms": 17.799999952316284,
+        "cpuMs": 14.5,
+        "gpuMs": 8.745984,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 15.100000023841858,
+      "savedMs": 0.9000000953674316,
+      "gain": 5.960265522823799,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 45,
+      "round": 2,
+      "baseline": {
+        "ms": 13.600000023841858,
+        "p90Ms": 14,
+        "cpuMs": 13.600000023841858,
+        "gpuMs": 8.341504,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "variant": {
+        "ms": 17,
+        "p90Ms": 19.899999976158142,
+        "cpuMs": 17,
+        "gpuMs": 9.529344,
+        "gpuSamples": 8,
+        "calls": 969,
+        "triangles": 6306288
+      },
+      "control": {
+        "ms": 14.099999904632568,
+        "p90Ms": 14.700000047683716,
+        "cpuMs": 14.099999904632568,
+        "gpuMs": 8.541184,
+        "gpuSamples": 8,
+        "calls": 819,
+        "triangles": 4402071
+      },
+      "referenceMs": 13.849999964237213,
+      "savedMs": -3.150000035762787,
+      "gain": -22.743682627412,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 135,
+      "round": 0,
+      "baseline": {
+        "ms": 14.200000047683716,
+        "p90Ms": 21.200000047683716,
+        "cpuMs": 14.199999928474426,
+        "gpuMs": 9.023488,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5016424
+      },
+      "variant": {
+        "ms": 13.5,
+        "p90Ms": 20.200000047683716,
+        "cpuMs": 13.5,
+        "gpuMs": 7.520256,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 6094600
+      },
+      "control": {
+        "ms": 21.899999976158142,
+        "p90Ms": 23.09999990463257,
+        "cpuMs": 21.799999952316284,
+        "gpuMs": 13.073408,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 18.05000001192093,
+      "savedMs": 4.550000011920929,
+      "gain": 25.207756282082716,
+      "stable": false,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 135,
+      "round": 0,
+      "baseline": {
+        "ms": 13.100000023841858,
+        "p90Ms": 15.399999976158142,
+        "cpuMs": 13.100000023841858,
+        "gpuMs": 8.861696,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 15,
+        "p90Ms": 17.700000047683716,
+        "cpuMs": 15,
+        "gpuMs": 9.124864,
+        "gpuSamples": 8,
+        "calls": 734,
+        "triangles": 6418633
+      },
+      "control": {
+        "ms": 13,
+        "p90Ms": 13.5,
+        "cpuMs": 13,
+        "gpuMs": 7.327744,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.050000011920929,
+      "savedMs": -1.949999988079071,
+      "gain": -14.942528630634353,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 135,
+      "round": 0,
+      "baseline": {
+        "ms": 13.900000095367432,
+        "p90Ms": 15.099999904632568,
+        "cpuMs": 13.900000095367432,
+        "gpuMs": 8.736768,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 18.399999976158142,
+        "p90Ms": 19.300000071525574,
+        "cpuMs": 18.399999976158142,
+        "gpuMs": 10.55744,
+        "gpuSamples": 8,
+        "calls": 944,
+        "triangles": 7472413
+      },
+      "control": {
+        "ms": 12.799999952316284,
+        "p90Ms": 15.700000047683716,
+        "cpuMs": 12.799999952316284,
+        "gpuMs": 7.114752,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.350000023841858,
+      "savedMs": -5.049999952316284,
+      "gain": -37.82771493106708,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 135,
+      "round": 0,
+      "baseline": {
+        "ms": 12.099999904632568,
+        "p90Ms": 12.300000071525574,
+        "cpuMs": 12,
+        "gpuMs": 6.72768,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 15.299999952316284,
+        "p90Ms": 15.899999976158142,
+        "cpuMs": 15.299999952316284,
+        "gpuMs": 8.655872,
+        "gpuSamples": 8,
+        "calls": 920,
+        "triangles": 5310172
+      },
+      "control": {
+        "ms": 13.5,
+        "p90Ms": 14.600000023841858,
+        "cpuMs": 13.5,
+        "gpuMs": 8.501248,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 12.799999952316284,
+      "savedMs": -2.5,
+      "gain": -19.531250072759576,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 135,
+      "round": 1,
+      "baseline": {
+        "ms": 13,
+        "p90Ms": 14.899999976158142,
+        "cpuMs": 13,
+        "gpuMs": 7.959552,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 13.700000047683716,
+        "p90Ms": 14.200000047683716,
+        "cpuMs": 13.700000047683716,
+        "gpuMs": 8.697856,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 6094600
+      },
+      "control": {
+        "ms": 13.5,
+        "p90Ms": 15.200000047683716,
+        "cpuMs": 13.5,
+        "gpuMs": 7.73632,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.25,
+      "savedMs": -0.4500000476837158,
+      "gain": -3.39622677497144,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 135,
+      "round": 1,
+      "baseline": {
+        "ms": 14.100000023841858,
+        "p90Ms": 15.699999928474426,
+        "cpuMs": 14.100000023841858,
+        "gpuMs": 8.293376,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 15,
+        "p90Ms": 17.399999976158142,
+        "cpuMs": 15,
+        "gpuMs": 9.233408,
+        "gpuSamples": 8,
+        "calls": 920,
+        "triangles": 5310172
+      },
+      "control": {
+        "ms": 13.900000095367432,
+        "p90Ms": 15.599999904632568,
+        "cpuMs": 13.900000095367432,
+        "gpuMs": 8.481792,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 14.000000059604645,
+      "savedMs": -0.9999999403953552,
+      "gain": -7.142856686699149,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 135,
+      "round": 1,
+      "baseline": {
+        "ms": 12.799999952316284,
+        "p90Ms": 14.600000023841858,
+        "cpuMs": 12.799999952316284,
+        "gpuMs": 8.229888,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 13.600000023841858,
+        "p90Ms": 15.299999952316284,
+        "cpuMs": 13.600000023841858,
+        "gpuMs": 8.11008,
+        "gpuSamples": 8,
+        "calls": 734,
+        "triangles": 6418633
+      },
+      "control": {
+        "ms": 13.700000047683716,
+        "p90Ms": 14.900000095367432,
+        "cpuMs": 13.700000047683716,
+        "gpuMs": 8.414208,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.25,
+      "savedMs": -0.3500000238418579,
+      "gain": -2.6415096139008143,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 135,
+      "round": 1,
+      "baseline": {
+        "ms": 13.100000023841858,
+        "p90Ms": 13.5,
+        "cpuMs": 13.100000023841858,
+        "gpuMs": 8.27904,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 16.399999976158142,
+        "p90Ms": 21.5,
+        "cpuMs": 16.399999976158142,
+        "gpuMs": 9.4208,
+        "gpuSamples": 8,
+        "calls": 944,
+        "triangles": 7472413
+      },
+      "control": {
+        "ms": 13.299999952316284,
+        "p90Ms": 16.399999976158142,
+        "cpuMs": 13.299999952316284,
+        "gpuMs": 8.48384,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.199999988079071,
+      "savedMs": -3.199999988079071,
+      "gain": -24.242424174007525,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 135,
+      "round": 2,
+      "baseline": {
+        "ms": 13.400000095367432,
+        "p90Ms": 19.199999928474426,
+        "cpuMs": 13.300000071525574,
+        "gpuMs": 9.121792,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 16.800000071525574,
+        "p90Ms": 23.199999928474426,
+        "cpuMs": 16.800000071525574,
+        "gpuMs": 10.038272,
+        "gpuSamples": 8,
+        "calls": 920,
+        "triangles": 5310172
+      },
+      "control": {
+        "ms": 15,
+        "p90Ms": 16.100000023841858,
+        "cpuMs": 15,
+        "gpuMs": 8.933376,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 14.200000047683716,
+      "savedMs": -2.600000023841858,
+      "gain": -18.30985926134533,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 135,
+      "round": 2,
+      "baseline": {
+        "ms": 15.399999976158142,
+        "p90Ms": 17.899999976158142,
+        "cpuMs": 15.399999976158142,
+        "gpuMs": 8.36608,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 17.199999928474426,
+        "p90Ms": 19.700000047683716,
+        "cpuMs": 17.199999928474426,
+        "gpuMs": 10.1888,
+        "gpuSamples": 8,
+        "calls": 734,
+        "triangles": 6418633
+      },
+      "control": {
+        "ms": 15.200000047683716,
+        "p90Ms": 19.200000047683716,
+        "cpuMs": 15.200000047683716,
+        "gpuMs": 7.704576,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 15.300000011920929,
+      "savedMs": -1.8999999165534973,
+      "gain": -12.418300098517127,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 135,
+      "round": 2,
+      "baseline": {
+        "ms": 14.299999952316284,
+        "p90Ms": 16,
+        "cpuMs": 14.299999952316284,
+        "gpuMs": 8.940544,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 14.100000023841858,
+        "p90Ms": 16,
+        "cpuMs": 14.100000023841858,
+        "gpuMs": 8.1152,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 6094600
+      },
+      "control": {
+        "ms": 13.100000023841858,
+        "p90Ms": 15.100000023841858,
+        "cpuMs": 13.100000023841858,
+        "gpuMs": 8.312832,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 13.699999988079071,
+      "savedMs": -0.40000003576278687,
+      "gain": -2.9197082927798776,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 135,
+      "round": 2,
+      "baseline": {
+        "ms": 12.800000071525574,
+        "p90Ms": 14.199999928474426,
+        "cpuMs": 12.800000071525574,
+        "gpuMs": 7.753728,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "variant": {
+        "ms": 16.5,
+        "p90Ms": 17.799999952316284,
+        "cpuMs": 16.5,
+        "gpuMs": 10.14784,
+        "gpuSamples": 8,
+        "calls": 944,
+        "triangles": 7472413
+      },
+      "control": {
+        "ms": 13.099999904632568,
+        "p90Ms": 13.5,
+        "cpuMs": 13.099999904632568,
+        "gpuMs": 7.585792,
+        "gpuSamples": 8,
+        "calls": 710,
+        "triangles": 5175496
+      },
+      "referenceMs": 12.949999988079071,
+      "savedMs": -3.550000011920929,
+      "gain": -27.413127530415665,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 225,
+      "round": 0,
+      "baseline": {
+        "ms": 12,
+        "p90Ms": 13.600000023841858,
+        "cpuMs": 12,
+        "gpuMs": 7.683072,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4484086
+      },
+      "variant": {
+        "ms": 11.600000023841858,
+        "p90Ms": 11.799999952316284,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 7.303168,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4715782
+      },
+      "control": {
+        "ms": 11.699999928474426,
+        "p90Ms": 12.299999952316284,
+        "cpuMs": 11.699999928474426,
+        "gpuMs": 6.885376,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.849999964237213,
+      "savedMs": 0.24999994039535522,
+      "gain": 2.109704144724424,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 225,
+      "round": 0,
+      "baseline": {
+        "ms": 11.5,
+        "p90Ms": 12,
+        "cpuMs": 11.5,
+        "gpuMs": 6.946816,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 12.399999976158142,
+        "p90Ms": 13.599999904632568,
+        "cpuMs": 12.399999976158142,
+        "gpuMs": 7.01952,
+        "gpuSamples": 8,
+        "calls": 663,
+        "triangles": 5759767
+      },
+      "control": {
+        "ms": 12.5,
+        "p90Ms": 19,
+        "cpuMs": 12.399999976158142,
+        "gpuMs": 6.957056,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 12,
+      "savedMs": -0.3999999761581421,
+      "gain": -3.333333134651184,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 225,
+      "round": 0,
+      "baseline": {
+        "ms": 12.5,
+        "p90Ms": 14.100000023841858,
+        "cpuMs": 12.5,
+        "gpuMs": 6.9888,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 15.100000023841858,
+        "p90Ms": 18.299999952316284,
+        "cpuMs": 15.100000023841858,
+        "gpuMs": 7.391232,
+        "gpuSamples": 8,
+        "calls": 789,
+        "triangles": 6026257
+      },
+      "control": {
+        "ms": 11.400000095367432,
+        "p90Ms": 12,
+        "cpuMs": 11.400000095367432,
+        "gpuMs": 6.65088,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.950000047683716,
+      "savedMs": -3.149999976158142,
+      "gain": -26.359832331286988,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 225,
+      "round": 0,
+      "baseline": {
+        "ms": 11.899999976158142,
+        "p90Ms": 13.199999928474426,
+        "cpuMs": 11.899999976158142,
+        "gpuMs": 7.43936,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 13.5,
+        "p90Ms": 14.200000047683716,
+        "cpuMs": 13.5,
+        "gpuMs": 8.20736,
+        "gpuSamples": 8,
+        "calls": 765,
+        "triangles": 4583968
+      },
+      "control": {
+        "ms": 12.5,
+        "p90Ms": 15,
+        "cpuMs": 12.5,
+        "gpuMs": 6.944768,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 12.199999988079071,
+      "savedMs": -1.300000011920929,
+      "gain": -10.655737813042556,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 225,
+      "round": 1,
+      "baseline": {
+        "ms": 12.899999976158142,
+        "p90Ms": 14.600000023841858,
+        "cpuMs": 12.899999976158142,
+        "gpuMs": 7.281664,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 18.5,
+        "p90Ms": 21.399999976158142,
+        "cpuMs": 18.399999976158142,
+        "gpuMs": 10.1632,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4715782
+      },
+      "control": {
+        "ms": 11.900000095367432,
+        "p90Ms": 13.5,
+        "cpuMs": 11.900000095367432,
+        "gpuMs": 6.926336,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 12.400000035762787,
+      "savedMs": -6.099999964237213,
+      "gain": -49.1935479568083,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 225,
+      "round": 1,
+      "baseline": {
+        "ms": 11.899999976158142,
+        "p90Ms": 12.800000071525574,
+        "cpuMs": 11.899999976158142,
+        "gpuMs": 7.007232,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 13.799999952316284,
+        "p90Ms": 17.5,
+        "cpuMs": 13.799999952316284,
+        "gpuMs": 8.438784,
+        "gpuSamples": 8,
+        "calls": 765,
+        "triangles": 4583968
+      },
+      "control": {
+        "ms": 12.100000023841858,
+        "p90Ms": 15,
+        "cpuMs": 12.100000023841858,
+        "gpuMs": 7.005184,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 12,
+      "savedMs": -1.7999999523162842,
+      "gain": -14.999999602635702,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 225,
+      "round": 1,
+      "baseline": {
+        "ms": 12.100000023841858,
+        "p90Ms": 12.899999976158142,
+        "cpuMs": 12.100000023841858,
+        "gpuMs": 7.072768,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 12.899999976158142,
+        "p90Ms": 13.199999928474426,
+        "cpuMs": 12.899999976158142,
+        "gpuMs": 7.17824,
+        "gpuSamples": 8,
+        "calls": 663,
+        "triangles": 5759767
+      },
+      "control": {
+        "ms": 11.600000023841858,
+        "p90Ms": 12.5,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 6.44608,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.850000023841858,
+      "savedMs": -1.0499999523162842,
+      "gain": -8.860759073449067,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 225,
+      "round": 1,
+      "baseline": {
+        "ms": 12,
+        "p90Ms": 12.899999976158142,
+        "cpuMs": 12,
+        "gpuMs": 7.791616,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 14.699999928474426,
+        "p90Ms": 16.199999928474426,
+        "cpuMs": 14.699999928474426,
+        "gpuMs": 8.487936,
+        "gpuSamples": 8,
+        "calls": 789,
+        "triangles": 6026257
+      },
+      "control": {
+        "ms": 12.200000047683716,
+        "p90Ms": 14.399999976158142,
+        "cpuMs": 12.200000047683716,
+        "gpuMs": 7.073792,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 12.100000023841858,
+      "savedMs": -2.5999999046325684,
+      "gain": -21.48760247528533,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-fireflies",
+      "name": "Исходные отдельные светлячки",
+      "angle": 225,
+      "round": 2,
+      "baseline": {
+        "ms": 11.600000023841858,
+        "p90Ms": 12.100000023841858,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 6.966272,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 12.800000071525574,
+        "p90Ms": 13.700000047683716,
+        "cpuMs": 12.800000071525574,
+        "gpuMs": 7.282688,
+        "gpuSamples": 8,
+        "calls": 765,
+        "triangles": 4583968
+      },
+      "control": {
+        "ms": 11.5,
+        "p90Ms": 12.399999976158142,
+        "cpuMs": 11.5,
+        "gpuMs": 6.607872,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.550000011920929,
+      "savedMs": -1.2500000596046448,
+      "gain": -10.822511327398276,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-shadows",
+      "name": "Исходные тени персонажей и полный обход",
+      "angle": 225,
+      "round": 2,
+      "baseline": {
+        "ms": 12,
+        "p90Ms": 12.700000047683716,
+        "cpuMs": 12,
+        "gpuMs": 7.647232,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 12.699999928474426,
+        "p90Ms": 14,
+        "cpuMs": 12.699999928474426,
+        "gpuMs": 7.114752,
+        "gpuSamples": 8,
+        "calls": 663,
+        "triangles": 5759767
+      },
+      "control": {
+        "ms": 11.899999976158142,
+        "p90Ms": 16.699999928474426,
+        "cpuMs": 11.899999976158142,
+        "gpuMs": 7.904256,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.949999988079071,
+      "savedMs": -0.7499999403953552,
+      "gain": -6.276150135092307,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-forest",
+      "name": "Исходные расстояния детализации леса",
+      "angle": 225,
+      "round": 2,
+      "baseline": {
+        "ms": 11.600000023841858,
+        "p90Ms": 12.200000047683716,
+        "cpuMs": 11.600000023841858,
+        "gpuMs": 6.351872,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 11.799999952316284,
+        "p90Ms": 13.399999976158142,
+        "cpuMs": 11.799999952316284,
+        "gpuMs": 8.510464,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4715782
+      },
+      "control": {
+        "ms": 11.799999952316284,
+        "p90Ms": 13.100000023841858,
+        "cpuMs": 11.799999952316284,
+        "gpuMs": 7.427072,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.699999988079071,
+      "savedMs": -0.09999996423721313,
+      "gain": -0.8547005499068495,
+      "stable": true,
+      "glError": 0
+    },
+    {
+      "id": "legacy-all",
+      "name": "Все прежние настройки при том же разрешении и дальности",
+      "angle": 225,
+      "round": 2,
+      "baseline": {
+        "ms": 12,
+        "p90Ms": 13.800000071525574,
+        "cpuMs": 12,
+        "gpuMs": 6.9888,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "variant": {
+        "ms": 14,
+        "p90Ms": 15.100000023841858,
+        "cpuMs": 14,
+        "gpuMs": 7.578624,
+        "gpuSamples": 8,
+        "calls": 789,
+        "triangles": 6026257
+      },
+      "control": {
+        "ms": 11.399999976158142,
+        "p90Ms": 13,
+        "cpuMs": 11.399999976158142,
+        "gpuMs": 7.120896,
+        "gpuSamples": 8,
+        "calls": 639,
+        "triangles": 4516630
+      },
+      "referenceMs": 11.699999988079071,
+      "savedMs": -2.300000011920929,
+      "gain": -19.65811978003726,
+      "stable": true,
+      "glError": 0
+    }
+  ],
+  "pipeline": {
+    "total": {
+      "ms": 14.300000071525574,
+      "p90Ms": 16,
+      "cpuMs": 14.300000071525574,
+      "gpuMs": 9.218048,
+      "gpuSamples": 18,
+      "calls": 819,
+      "triangles": 4402071
+    },
+    "parts": [
+      {
+        "part": "main-scene-and-CSM",
+        "cpuMs": 13.200000047683716
+      },
+      {
+        "part": "Soft patterned tree shadows",
+        "cpuMs": 0.20000004768371582
+      },
+      {
+        "part": "Prepared scenery shadows",
+        "cpuMs": 0.8000000715255737
+      },
+      {
+        "part": "composite",
+        "cpuMs": 0
+      }
+    ],
+    "frames": [
+      {
+        "id": 1694,
+        "part": "main-scene-and-CSM",
+        "ms": 18
+      },
+      {
+        "id": 1694,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 1694,
+        "part": "Prepared scenery shadows",
+        "ms": 1
+      },
+      {
+        "id": 1694,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1695,
+        "part": "main-scene-and-CSM",
+        "ms": 13.600000023841858
+      },
+      {
+        "id": 1695,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1695,
+        "part": "Prepared scenery shadows",
+        "ms": 1.2000000476837158
+      },
+      {
+        "id": 1695,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1696,
+        "part": "main-scene-and-CSM",
+        "ms": 14
+      },
+      {
+        "id": 1696,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1696,
+        "part": "Prepared scenery shadows",
+        "ms": 0.7999999523162842
+      },
+      {
+        "id": 1696,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1697,
+        "part": "main-scene-and-CSM",
+        "ms": 18.699999928474426
+      },
+      {
+        "id": 1697,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.3999999761581421
+      },
+      {
+        "id": 1697,
+        "part": "Prepared scenery shadows",
+        "ms": 1.5
+      },
+      {
+        "id": 1697,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1698,
+        "part": "main-scene-and-CSM",
+        "ms": 14.5
+      },
+      {
+        "id": 1698,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1698,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8000000715255737
+      },
+      {
+        "id": 1698,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1699,
+        "part": "main-scene-and-CSM",
+        "ms": 12.700000047683716
+      },
+      {
+        "id": 1699,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1699,
+        "part": "Prepared scenery shadows",
+        "ms": 1
+      },
+      {
+        "id": 1699,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1700,
+        "part": "main-scene-and-CSM",
+        "ms": 12.5
+      },
+      {
+        "id": 1700,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.2999999523162842
+      },
+      {
+        "id": 1700,
+        "part": "Prepared scenery shadows",
+        "ms": 1
+      },
+      {
+        "id": 1700,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1701,
+        "part": "main-scene-and-CSM",
+        "ms": 12.5
+      },
+      {
+        "id": 1701,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1701,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8999999761581421
+      },
+      {
+        "id": 1701,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1702,
+        "part": "main-scene-and-CSM",
+        "ms": 12.399999976158142
+      },
+      {
+        "id": 1702,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1702,
+        "part": "Prepared scenery shadows",
+        "ms": 0.7999999523162842
+      },
+      {
+        "id": 1702,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1703,
+        "part": "main-scene-and-CSM",
+        "ms": 11.899999976158142
+      },
+      {
+        "id": 1703,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1703,
+        "part": "Prepared scenery shadows",
+        "ms": 0.7999999523162842
+      },
+      {
+        "id": 1703,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1704,
+        "part": "main-scene-and-CSM",
+        "ms": 12.899999976158142
+      },
+      {
+        "id": 1704,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1704,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6999999284744263
+      },
+      {
+        "id": 1704,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 1705,
+        "part": "main-scene-and-CSM",
+        "ms": 13.699999928474426
+      },
+      {
+        "id": 1705,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1705,
+        "part": "Prepared scenery shadows",
+        "ms": 0.7999999523162842
+      },
+      {
+        "id": 1705,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1706,
+        "part": "main-scene-and-CSM",
+        "ms": 13.099999904632568
+      },
+      {
+        "id": 1706,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 1706,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8999999761581421
+      },
+      {
+        "id": 1706,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1707,
+        "part": "main-scene-and-CSM",
+        "ms": 12.799999952316284
+      },
+      {
+        "id": 1707,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1707,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6999999284744263
+      },
+      {
+        "id": 1707,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1708,
+        "part": "main-scene-and-CSM",
+        "ms": 14.100000023841858
+      },
+      {
+        "id": 1708,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.20000004768371582
+      },
+      {
+        "id": 1708,
+        "part": "Prepared scenery shadows",
+        "ms": 0.6999999284744263
+      },
+      {
+        "id": 1708,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1709,
+        "part": "main-scene-and-CSM",
+        "ms": 12.5
+      },
+      {
+        "id": 1709,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.2999999523162842
+      },
+      {
+        "id": 1709,
+        "part": "Prepared scenery shadows",
+        "ms": 0.7000000476837158
+      },
+      {
+        "id": 1709,
+        "part": "composite",
+        "ms": 0.09999990463256836
+      },
+      {
+        "id": 1710,
+        "part": "main-scene-and-CSM",
+        "ms": 14.100000023841858
+      },
+      {
+        "id": 1710,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1710,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8000000715255737
+      },
+      {
+        "id": 1710,
+        "part": "composite",
+        "ms": 0.10000002384185791
+      },
+      {
+        "id": 1711,
+        "part": "main-scene-and-CSM",
+        "ms": 13.200000047683716
+      },
+      {
+        "id": 1711,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1711,
+        "part": "Prepared scenery shadows",
+        "ms": 0.9000000953674316
+      },
+      {
+        "id": 1711,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1712,
+        "part": "main-scene-and-CSM",
+        "ms": 14.300000071525574
+      },
+      {
+        "id": 1712,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.5
+      },
+      {
+        "id": 1712,
+        "part": "Prepared scenery shadows",
+        "ms": 1.0999999046325684
+      },
+      {
+        "id": 1712,
+        "part": "composite",
+        "ms": 0
+      },
+      {
+        "id": 1713,
+        "part": "main-scene-and-CSM",
+        "ms": 13.399999976158142
+      },
+      {
+        "id": 1713,
+        "part": "Soft patterned tree shadows",
+        "ms": 0.19999992847442627
+      },
+      {
+        "id": 1713,
+        "part": "Prepared scenery shadows",
+        "ms": 0.8000000715255737
+      },
+      {
+        "id": 1713,
+        "part": "composite",
+        "ms": 0
+      }
+    ]
+  },
+  "recheck": [],
+  "gpuTelemetry": "2026/10/23 20:32:23.494, P8, 7, 210, 405, 15.88, 39\r\n2026/10/23 20:32:24.505, P0, 3, 1425, 7001, 26.50, 40\r\n2026/10/23 20:32:25.514, P0, 8, 1425, 7001, 26.75, 40\r\n2026/10/23 20:32:26.525, P0, 2, 1425, 7001, 26.46, 40\r\n2026/10/23 20:32:27.538, P0, 6, 1425, 7001, 26.76, 40\r\n2026/10/23 20:32:28.548, P0, 24, 1530, 7001, 34.53, 41\r\n2026/10/23 20:32:29.558, P0, 34, 1530, 7001, 44.04, 42\r\n2026/10/23 20:32:30.566, P0, 34, 1342, 7001, 39.15, 42\r\n2026/10/23 20:32:31.580, P0, 23, 1987, 7001, 53.14, 44\r\n2026/10/23 20:32:32.593, P0, 37, 1987, 7001, 60.28, 46\r\n2026/10/23 20:32:33.608, P0, 45, 1987, 7001, 66.93, 47\r\n2026/10/23 20:32:34.612, P0, 39, 1987, 7001, 64.20, 47\r\n2026/10/23 20:32:35.625, P0, 44, 1987, 7001, 69.73, 47\r\n2026/10/23 20:32:36.626, P0, 42, 1987, 7001, 66.39, 47\r\n2026/10/23 20:32:37.628, P3, 41, 1987, 6001, 59.34, 47\r\n2026/10/23 20:32:38.632, P0, 21, 1987, 7001, 50.37, 46\r\n2026/10/23 20:32:39.648, P0, 29, 1267, 7001, 32.13, 44\r\n2026/10/23 20:32:40.661, P3, 30, 1132, 6001, 28.28, 43\r\n2026/10/23 20:32:41.669, P3, 37, 1057, 6001, 27.40, 43\r\n2026/10/23 20:32:42.677, P3, 33, 952, 6001, 26.21, 43\r\n2026/10/23 20:32:43.693, P5, 29, 720, 810, 20.40, 42\r\n2026/10/23 20:32:44.703, P3, 35, 1110, 6001, 23.73, 42\r\n2026/10/23 20:32:45.708, P3, 35, 1110, 6001, 27.42, 42\r\n2026/10/23 20:32:46.720, P3, 40, 945, 6001, 26.21, 42\r\n2026/10/23 20:32:47.742, P3, 51, 1140, 6001, 20.68, 42\r\n2026/10/23 20:32:48.757, P0, 45, 1260, 7001, 28.26, 42\r\n2026/10/23 20:32:49.767, P0, 35, 1260, 7001, 32.76, 43\r\n2026/10/23 20:32:50.774, P3, 38, 1132, 6001, 28.78, 42\r\n2026/10/23 20:32:51.786, P0, 86, 1987, 7001, 30.17, 43\r\n2026/10/23 20:32:52.798, P0, 41, 1942, 7001, 49.22, 45\r\n2026/10/23 20:32:53.810, P0, 43, 1987, 7001, 68.15, 47\r\n2026/10/23 20:32:54.821, P0, 51, 1987, 7001, 71.41, 48\r\n2026/10/23 20:32:55.836, P0, 50, 1987, 7001, 75.01, 49\r\n2026/10/23 20:32:56.840, P0, 47, 1980, 7001, 73.51, 49\r\n2026/10/23 20:32:57.854, P0, 34, 1980, 7001, 66.62, 48\r\n2026/10/23 20:32:58.866, P0, 40, 1980, 7001, 66.12, 49\r\n2026/10/23 20:32:59.873, P0, 42, 1980, 7001, 62.39, 49\r\n2026/10/23 20:33:00.876, P0, 24, 1980, 7001, 63.65, 48\r\n2026/10/23 20:33:01.888, P0, 56, 1980, 7001, 78.90, 50\r\n2026/10/23 20:33:02.902, P0, 40, 1980, 7001, 71.62, 50\r\n2026/10/23 20:33:03.916, P0, 56, 1980, 7001, 79.79, 51\r\n2026/10/23 20:33:04.923, P0, 59, 1980, 7001, 84.25, 51\r\n2026/10/23 20:33:05.935, P0, 53, 1980, 7001, 76.13, 51\r\n2026/10/23 20:33:06.949, P0, 52, 1980, 7001, 78.60, 51\r\n2026/10/23 20:33:07.965, P0, 54, 1980, 7001, 80.29, 52\r\n2026/10/23 20:33:08.975, P0, 57, 1980, 7001, 77.90, 52\r\n2026/10/23 20:33:09.988, P0, 42, 1980, 7001, 70.85, 51\r\n2026/10/23 20:33:10.999, P0, 44, 1980, 7001, 74.03, 51\r\n2026/10/23 20:33:12.009, P0, 56, 1980, 7001, 79.47, 53\r\n2026/10/23 20:33:13.016, P0, 51, 1980, 7001, 76.86, 53\r\n2026/10/23 20:33:14.029, P0, 45, 1980, 7001, 70.28, 53\r\n2026/10/23 20:33:15.034, P0, 52, 1980, 7001, 78.29, 53\r\n2026/10/23 20:33:16.050, P0, 47, 1980, 7001, 73.34, 53\r\n2026/10/23 20:33:17.061, P0, 61, 1980, 7001, 83.98, 54\r\n2026/10/23 20:33:18.072, P0, 59, 1980, 7001, 82.57, 53\r\n2026/10/23 20:33:19.082, P0, 56, 1980, 7001, 81.30, 54\r\n2026/10/23 20:33:20.089, P0, 49, 1980, 7001, 58.94, 53\r\n"
+}

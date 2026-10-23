@@ -5,10 +5,11 @@ import {createHash} from 'node:crypto';
 import {spawn} from 'node:child_process';
 
 const url=process.env.GAME_URL??'http://127.0.0.1:5183/';
-const out=new URL('../artifacts/scene-performance-2026-10-23/',import.meta.url);await mkdir(out,{recursive:true});
+const optimizing=process.env.PERF_RESEARCH_MODE==='optimizations';
+const out=new URL(optimizing?'../artifacts/scene-optimizations-2026-10-23/':'../artifacts/scene-performance-2026-10-23/',import.meta.url);await mkdir(out,{recursive:true});
 const checkpoints=new URL('../node_modules/.cache/scene-research-checkpoints/',import.meta.url);await mkdir(checkpoints,{recursive:true});
 const runId=Date.now();let checkpoint=0;
-const focused=process.env.PERF_RESEARCH_MODE==='focused';
+const focused=optimizing||process.env.PERF_RESEARCH_MODE==='focused';
 const gpuTelemetry=[];
 const gpuMonitor=spawn('nvidia-smi',['--query-gpu=timestamp,pstate,utilization.gpu,clocks.current.graphics,clocks.current.memory,power.draw,temperature.gpu','--format=csv,noheader,nounits','--loop-ms=1000'],{windowsHide:true});
 gpuMonitor.stdout.on('data',chunk=>gpuTelemetry.push(chunk.toString()));gpuMonitor.on('error',()=>{});
@@ -36,7 +37,7 @@ try{
   body=body.replace(/renderer\.setAnimationLoop\(\(time\)\s*=>\s*\{/,m=>m+'window.__researchRaf=time;');
   body=body.replace('camera.lookAt(cameraTarget);','camera.lookAt(cameraTarget);window.sceneResearch?.applyCamera(camera,time);');
   body=body.replace(/const lightTime\s*=\s*daylight\(currentDayPhase\(\)\);/,'const lightTime=daylight(window.__researchPhase??currentDayPhase());');
-  body+='\nwindow.__researchApi={THREE,scene,camera,renderer,shadows,preparedShadows,groundShadowPass,sceneryVisibility,celestialLighting,updateTreeShadows,updateSky,fruits,treehouse,coaster,boats,ponds,fountain,watermill,home,numberGarden,musicalFlowers,chat,wayfinder,sounds,sealLocations,centipedeView,numberGameView,get npcs(){return npcs},get c(){return character},get fireflies(){return fireflies}};';
+  body+='\nwindow.__researchApi={THREE,scene,camera,renderer,shadows,preparedShadows,groundShadowPass,sceneryVisibility,characterShadows,forestDetail,celestialLighting,updateTreeShadows,updateSky,fruits,treehouse,coaster,boats,ponds,fountain,watermill,home,numberGarden,musicalFlowers,chat,wayfinder,sounds,sealLocations,centipedeView,numberGameView,get npcs(){return npcs},get c(){return character},get fireflies(){return fireflies}};';
   await route.fulfill({response,body});
  });
  await page.goto(url+'?perf=1');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:180000});
@@ -70,7 +71,7 @@ try{
   q.setHour=hour=>{window.__researchPhase=phaseAtHour(hour);};q.setHour(8);
   q.prepare=(angle,hour)=>{
    q.view={angle,rotate:false};q.setHour(hour);q.applyCamera(api.camera,performance.now());api.camera.updateMatrixWorld();
-   const light=daylight(window.__researchPhase);api.celestialLighting.update(light);api.updateTreeShadows(light);api.updateSky(0,api.camera,light);api.shadows.update();api.preparedShadows.update(light,api.camera.position);api.sceneryVisibility.update(api.camera,api.scene.fog.far);
+   const light=daylight(window.__researchPhase);api.celestialLighting.update(light);api.updateTreeShadows(light);api.updateSky(0,api.camera,light);api.shadows.update();api.preparedShadows.update(light,api.camera.position);api.sceneryVisibility.update(api.camera,api.scene.fog.far);api.fireflies?.syncInstances(api.camera);
    api.scene.fog.color.set('#d8e9eb').lerp(new T.Color('#182b4b'),light.night).lerp(new T.Color('#ffc392'),light.twilight*.7);api.scene.background.set('#b3d9ef').lerp(new T.Color('#0b1428'),light.night).lerp(new T.Color('#dd8b9b'),light.twilight*.65);api.renderer.toneMappingExposure=1+light.day*.2;
   };
   q.quant=(values,p)=>{if(!values.length)return null;const a=[...values].sort((a,b)=>a-b);return a[Math.min(a.length-1,Math.floor((a.length-1)*p))];};
@@ -135,6 +136,16 @@ try{
  const caseNames=await page.evaluate(()=>{
   const q=sceneResearch,{api}=q,T=api.THREE,all=[];api.scene.traverse(o=>all.push(o));
   const cases=[];
+  if(api.characterShadows){
+   cases.push({id:'legacy-shadows',name:'Исходные тени персонажей и полный обход',apply:()=>{api.characterShadows.enabled=false;return ()=>api.characterShadows.enabled=true;}});
+   cases.push({id:'legacy-shadow-geometry',name:'Исходная геометрия теней при сокращённом обходе',apply:()=>{api.characterShadows.simplify=false;return ()=>api.characterShadows.simplify=true;}});
+   cases.push({id:'legacy-fireflies',name:'Исходные отдельные светлячки',apply:()=>{api.fireflies.instances.enabled=false;api.fireflies.syncInstances(api.camera);return ()=>{api.fireflies.instances.enabled=true;api.fireflies.syncInstances(api.camera);};}});
+   cases.push({id:'legacy-forest',name:'Исходные расстояния детализации леса',apply:()=>{api.forestDetail.setEnabled(false);return ()=>api.forestDetail.setEnabled(true);}});
+   cases.push({id:'legacy-all',name:'Все прежние настройки при том же разрешении и дальности',apply:()=>{
+    api.characterShadows.enabled=false;api.fireflies.instances.enabled=false;api.forestDetail.setEnabled(false);api.fireflies.syncInstances(api.camera);
+    return ()=>{api.characterShadows.enabled=true;api.fireflies.instances.enabled=true;api.forestDetail.setEnabled(true);api.fireflies.syncInstances(api.camera);};
+   }});
+  }
   const hide=(id,name,objects)=>{if(objects.length)cases.push({id,name,apply:()=>{const states=objects.map(o=>[o,o.visible]);states.forEach(([o])=>o.visible=false);return ()=>states.forEach(([o,v])=>o.visible=v);}});};
   const forest=api.scene.getObjectByName('Four woodland biomes');
   hide('forest','Лес: стволы и кроны',forest.children.filter(o=>o.name!=='Biome ground'&&o.name!=='Soft patterned tree shadows'));

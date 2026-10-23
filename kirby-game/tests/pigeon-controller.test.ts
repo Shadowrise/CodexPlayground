@@ -17,7 +17,7 @@ function advance(c:CharacterController,seconds:number,input=idle){for(let i=0;i<
 
 test('pigeon retains native animations and selects every playable ride pose',()=>{
  const c=create();assert(c.isPigeon);assert.equal(c.animationRoot.name,'GoofyPigeon');
- assert.equal(c.actions.size,PIGEON_CLIPS.length-1,'Attack aliases native Push');
+ assert.equal(c.actions.size,PIGEON_CLIPS.length,'Attack aliases native Push; player dash is added at runtime');
  for(const clip of PIGEON_CLIPS.filter(clip=>clip.group==='rides')){
   c.setActivity(clip.name);c.mixer.update(.19);
   assert.equal(c.state,clip.name);assert(c.actions.get(clip.name)!.isRunning(),`${clip.name} must play its native pose`);

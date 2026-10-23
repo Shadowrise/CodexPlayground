@@ -6,11 +6,24 @@ import {STAR_SEQUENCE,STAR_FLIGHTS,starSequence,starFlightCount,nearestCrystalCh
 import {MetaKnightCrossZonesView} from '../src/meta-knight-cross-zones-view';
 import {MetaKnightStarAssaultView} from '../src/meta-knight-star-assault-view';
 import {MetaKnightPressureWave} from '../src/meta-knight-shield-view';
+import {MetaKnightCrystalLightning,CRYSTAL_LIGHTNING_SEGMENTS_PER_LINK} from '../src/meta-knight-crystal-lightning';
 import {SHIELD,chooseShieldCrystal,crystalPoint,crystalBroken,shieldWaves,shieldWaveAngle,shieldWaveGap,shieldCountdown,constrainKnightShield} from '../src/meta-knight-shield';
 
 const actor:KnightActor={id:'a',p:[12,0,12],yaw:0,available:true};
 function battle(){const s=startKnightBattle([{...actor,p:[0,0,-2]}],'a',1000)!;Object.assign(s,{phase:3,hp:4,stage:'transition',since:1000,until:2500});return s;}
 function stage(s:KnightBattle,step:number){const [name,duration]=STAR_SEQUENCE[step];Object.assign(s,{pattern:'star',stage:name,step,cycle:1,yaw:.3,since:5000,until:5000+duration});}
+
+test('golden charging bolts stay attached to the moving sword and actual crystals, flicker and reuse their geometry',()=>{
+ const s=battle();stage(s,1);s.starCross={pairs:[[0,4],[1,6]],side:0};const before=JSON.stringify(s),tip=new T.Vector3(3,8,-2),view=new MetaKnightCrystalLightning();
+ view.update(s,5500,tip);assert(view.group.visible);assert.equal(view.cores.count,176);assert.equal(view.cores.material.toneMapped,false);
+ const geometry=view.cores.geometry,matrix=new T.Matrix4(),ends=()=>crossPairs(s).flat().forEach((crystal,i)=>{
+  view.cores.getMatrixAt(i*CRYSTAL_LIGHTNING_SEGMENTS_PER_LINK,matrix);assert(new T.Vector3(0,-.5,0).applyMatrix4(matrix).distanceTo(tip)<.00001);
+  view.cores.getMatrixAt(i*CRYSTAL_LIGHTNING_SEGMENTS_PER_LINK+31,matrix);assert(new T.Vector3(0,.5,0).applyMatrix4(matrix).distanceTo(new T.Vector3().fromArray(crystalPoint(crystal)))<.00001);
+ });ends();const first=view.cores.instanceMatrix.array.slice();
+ view.update(s,5560,tip);assert.notDeepEqual(view.cores.instanceMatrix.array,first,'the paths have changing lightning kinks');assert.equal(view.cores.geometry,geometry);
+ tip.set(-4,10,7);view.update(s,5600,tip);ends();assert.equal(JSON.stringify(s),before,'decoration does not alter targets, timing or damage');
+ s.stage='cross';view.update(s,5700,tip);assert(!view.group.visible);view.dispose();
+});
 
 test('stationary targets across the entire floor must dodge both crosses and all three flights after any three crystal breaks',()=>{
  for(let mask=0;mask<256;mask++){

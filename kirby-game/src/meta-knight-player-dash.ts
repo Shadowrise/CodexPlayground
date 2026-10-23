@@ -1,4 +1,4 @@
-export const PLAYER_KNIGHT_DASH={hold:.5,cooldown:6,duration:.7,distance:12} as const;
+export const PLAYER_KNIGHT_DASH={hold:.3,cooldown:6,duration:.7,distance:12} as const;
 
 /** One thrust per continuous hold; a press during cooldown is never queued. */
 export class MetaKnightPlayerDash{
@@ -7,6 +7,7 @@ export class MetaKnightPlayerDash{
  private spent=false;
  private remaining=0;
  get active(){return this.remaining>0;}
+ get progress(){return 1-this.remaining/PLAYER_KNIGHT_DASH.duration;}
  get charge(){return this.heldFor/PLAYER_KNIGHT_DASH.hold;}
  tick(dt:number){this.cooldown=Math.max(0,this.cooldown-dt);if(this.cooldown<1e-9)this.cooldown=0;}
  cancelCharge(){this.heldFor=0;this.spent=true;}

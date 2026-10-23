@@ -1,6 +1,6 @@
 import * as T from 'three';
 import type {CharacterController} from './controller';
-import {KNIGHT,knightDashHalfWidth,knightPosition,knightProjectile,knightShotOrigin,knightProgress,knightImpactProgress,knightStartCount,knightJumpOpening,type KnightBattle,type KnightPoint} from './meta-knight-battle';
+import {KNIGHT,knightDashHalfWidth,knightPosition,knightProjectile,knightShotOrigin,knightProgress,knightImpactProgress,knightStartCount,knightJumpOpening,knightPressureWave,type KnightBattle,type KnightPoint} from './meta-knight-battle';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
 import {t} from './i18n';
 import {MetaKnightCrescent,MetaKnightCrescentLaunch} from './meta-knight-crescent';
@@ -18,17 +18,18 @@ import {crystalPoint} from './meta-knight-shield';
 import type {KnightSound} from './meta-knight-sounds';
 import {MetaKnightPartyHud,type KnightProfile} from './meta-knight-party-hud';
 import {MetaKnightImpactLightning} from './meta-knight-impact-lightning';
+import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 import './meta-knight-battle.css';
 
-const AMBER=0xffbd32,CORAL=0xff4863,CYAN=0x7ceaff;
+const AMBER=KNIGHT_WARNING_STYLE.gold,CORAL=KNIGHT_WARNING_STYLE.red,CYAN=0x7ceaff;
 const FX=KNIGHT.effectScale;
 const material=(color:number,opacity=1)=>new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,side:T.DoubleSide,depthWrite:false,toneMapped:false});
 /** Saturated translucent glass: a tinted centre, brighter edges and a soft glint. */
 function glass(color:number,lane=false){
  return new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-  uniforms:{tint:{value:new T.Color(color)},lane:{value:lane?1:0},clock:{value:0},span:{value:1},width:{value:KNIGHT.laneHalfWidth*2},progress:{value:-1}},
+  uniforms:{tint:{value:new T.Color(color)},activeTint:{value:new T.Color(CORAL)},lane:{value:lane?1:0},clock:{value:0},span:{value:1},width:{value:KNIGHT.laneHalfWidth*2},progress:{value:-1},baseOpacity:{value:KNIGHT_WARNING_STYLE.opacity}},
   vertexShader:'varying vec2 glassUv;void main(){glassUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-  fragmentShader:`varying vec2 glassUv;uniform vec3 tint;uniform float lane;uniform float clock;uniform float span;uniform float width;uniform float progress;
+  fragmentShader:`varying vec2 glassUv;uniform vec3 tint;uniform vec3 activeTint;uniform float lane;uniform float clock;uniform float span;uniform float width;uniform float progress;uniform float baseOpacity;
   void main(){vec2 p=glassUv*2.-1.;float edge=smoothstep(.12,1.,length(p));float mask=1.;float rim=0.;float timer=0.;float front=0.;
    if(lane>.5){vec2 point=(glassUv-.5)*vec2(width,span+width);float radius=width*.5;
     float distanceToEdge=length(vec2(point.x,max(abs(point.y)-span*.5,0.)))-radius;
@@ -38,9 +39,9 @@ function glass(color:number,lane=false){
      timer=ribbon*(1.-smoothstep(progress-.004,progress+.004,along))*step(.0001,progress);front=exp(-pow((along-progress)*45.,2.))*timer;}}
    float glint=1.-smoothstep(.025,.16,abs(glassUv.x*.62+glassUv.y*.38-.54));
    float sheen=.5+.5*sin(glassUv.y*8.+clock*.6);
-   vec3 colour=mix(tint*.88,tint,edge)+vec3(.07,.055,.025)*glint+vec3(.10,.075,.025)*rim;
-   colour=mix(colour,vec3(1.,.045,.11)+vec3(.35,.22,.09)*front,timer);
-   gl_FragColor=vec4(colour,max(max(.46+.25*edge+.065*glint+.025*sheen,rim*.98),timer*.98)*mask);
+   vec3 colour=tint+vec3(.07,.055,.025)*glint+vec3(.10,.075,.025)*rim;
+   colour=mix(colour,activeTint+vec3(.35,.22,.09)*front,timer);
+   gl_FragColor=vec4(colour,max(max(baseOpacity+.25*edge+.065*glint+.025*sheen,rim*.98),timer*.98)*mask);
    #include <colorspace_fragment>
   }`});
 }
@@ -113,7 +114,7 @@ export class MetaKnightBattleView{
   this.floorWarnings.name='Meta Knight floor warnings behind characters';this.floorWarnings.renderOrder=-1;this.group.add(this.floorWarnings);
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.floorWarnings.add(mesh);}this.group.add(this.wave.group,this.lightning.group);
   // Draw chevrons after the transparent warning glass, within the floor group.
-  for(let i=0;i<8;i++){const shape=new T.Shape();shape.moveTo(-.35,-.4);shape.lineTo(0,0);shape.lineTo(.35,-.4);shape.lineTo(.35,-.15);shape.lineTo(0,.25);shape.lineTo(-.35,-.15);shape.closePath();const arrow=new T.Mesh(new T.ShapeGeometry(shape),material(AMBER));arrow.material.transparent=true;arrow.renderOrder=3;arrow.name=`Meta Knight danger arrow ${i}`;arrow.rotation.x=-Math.PI/2;this.arrows.push(arrow);this.floorWarnings.add(arrow);}
+  for(let i=0;i<8;i++){const shape=new T.Shape();shape.moveTo(-.35,-.4);shape.lineTo(0,0);shape.lineTo(.35,-.4);shape.lineTo(.35,-.15);shape.lineTo(0,.25);shape.lineTo(-.35,-.15);shape.closePath();const arrow=new T.Mesh(new T.ShapeGeometry(shape),material(KNIGHT_WARNING_STYLE.arrow,KNIGHT_WARNING_STYLE.arrowOpacity));arrow.renderOrder=3;arrow.name=`Meta Knight danger arrow ${i}`;arrow.rotation.x=-Math.PI/2;this.arrows.push(arrow);this.floorWarnings.add(arrow);}
   this.group.add(this.projectile,this.particles,this.dazedStars.group,this.assault.group,this.bossTarget.group,this.crystalTarget.group,this.crescentLaunch.group);this.particles.frustumCulled=false;
   this.bossTarget.group.name='Meta Knight available hit target';this.crystalTarget.group.name='Violet crystal available hit target';this.bossTarget.group.scale.setScalar(2.7);this.crystalTarget.group.scale.setScalar(2.7);
   this.hud.id='knight-battle-hud';this.hud.dataset.i18nIgnore='';this.hud.setAttribute('aria-label',t('Бой с Метакнайтом'));
@@ -196,8 +197,8 @@ export class MetaKnightBattleView{
     (this.target.material as T.MeshBasicMaterial).color.setHex(impact?CORAL:AMBER);
     for(let i=0;i<4;i++){const arrow=this.arrows[i],a=i*Math.PI/2;arrow.visible=true;arrow.scale.setScalar(1.1*FX);arrow.position.set(s.to[0]+Math.sin(a)*3.2*FX,.15,s.to[2]+Math.cos(a)*3.2*FX);arrow.rotation.set(-Math.PI/2,0,a);(arrow.material as T.MeshBasicMaterial).color.setHex(AMBER);}
    }
-   if(stage==='wave'){
-    const r=Math.max(.1,(now-s.since)*KNIGHT.waveSpeed);this.wave.update(r,now,KNIGHT.waveHeight/SHIELD.waveHeight);this.wave.group.position.set(p[0],0,p[2]);
+   const wave=knightPressureWave(s,now);if(wave){
+    this.wave.update(Math.max(.1,wave.radius),now,KNIGHT.waveHeight/SHIELD.waveHeight);this.wave.group.position.set(wave.origin[0],0,wave.origin[2]);
    }
    const shot=knightProjectile(s,now);if(shot){
     if(stage==='shot'&&this.shotSoundAt!==s.since){this.shotSoundAt=s.since;this.cue('shot');}

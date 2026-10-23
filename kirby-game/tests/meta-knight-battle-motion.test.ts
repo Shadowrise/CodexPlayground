@@ -54,13 +54,13 @@ test('ordinary and crystal hits sit with attached boots, then the recovery pose 
  motion.clear();c.setActivity('Idle');c.updateActivity(.4);pose('get-up',0);const seated=body.position.y,boots=node('Left_foot_pivot').position.clone();pose('get-up',1);assert(body.position.y>seated+.04);assert(node('Left_foot_pivot').position.distanceTo(boots)>.05);motion.clear();
 });
 
-test('leap is fully seated on its first open frame, without delaying vulnerability for the sword recovery',async()=>{
- const {pose,node,s,c}=await fixture();s.pattern='leap';s.step=2;
+test('both jumps are fully seated on their first open frame, without delaying vulnerability for the sword recovery',async()=>{
+ for(const pattern of ['leap','dive'] as const){const {pose,node,s,c}=await fixture();s.pattern=pattern;s.step=2;
  const body=node('Body_motion'),foot=node('Left_foot_pivot'),blade=node('Galaxia'),hand=node('Left_gauntlet');
- c.actor.position.y=5*Math.sin(Math.PI*.999);pose('jump',.999);const before=body.getWorldPosition(new T.Vector3()),boot=foot.getWorldPosition(new T.Vector3());
+ c.actor.position.y=pattern==='leap'?5*Math.sin(Math.PI*.999):.005;pose(pattern==='leap'?'jump':'dive',.999);const before=body.getWorldPosition(new T.Vector3()),boot=foot.getWorldPosition(new T.Vector3());
  c.actor.position.y=0;pose('open',0);assert(body.getWorldPosition(new T.Vector3()).distanceTo(before)<.06,'the final flight frames prepare the seated body');assert(foot.getWorldPosition(new T.Vector3()).distanceTo(boot)<.06);
  const tip=blade.localToWorld(new T.Vector3(-.315,2.05,0));assert(tip.y<0&&tip.y>-.4);assert(Math.hypot(tip.x,tip.z)<KNIGHT.impactRadius,'the two-handed stab stays inside the marked circle and ahead of the body');assert(hand.getWorldPosition(new T.Vector3()).distanceTo(blade.localToWorld(new T.Vector3(0,-.23,.025)))<.001);
- for(const elapsed of [0,1,60,180,240,400]){pose('open',elapsed/1600);assert(body.position.y<.95,`seated after ${elapsed}ms`);assert.equal(node('MetaKnight_motion').position.z,0);assert(foot.position.z<.4);}
+ for(const elapsed of [0,1,60,180,240,400]){pose('open',elapsed/1600);assert(body.position.y<.95,`seated after ${elapsed}ms`);assert.equal(node('MetaKnight_motion').position.z,0);assert(foot.position.z<.4);}}
 });
 test('crescent release has a large actual sword swing before the projectile appears',async()=>{
  const {pose,node}=await fixture(),blade=node('Galaxia');

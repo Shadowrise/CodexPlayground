@@ -33,6 +33,13 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   send(b,actor(portal));assert(Math.hypot(b.data.actor.p[0]-ARENA.x,b.data.actor.p[2])<=41+1e-8,'Worker blocks escape from the arena');
   send(a,actor(),[{type:'knight',action:'win',hp:0}],{knightBattle:{stage:'won',hp:0}});assert.equal(room.room.knightBattle.hp,12);assert(!a.messages.some(m=>m.type==='knight-victory'));
   send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert(room.room.knightBattle.players[b.data.id].withdrawn);assert.notEqual(room.room.knightBattle.stage,'cancelled');assert.equal(b.data.actor.location,'meta-knight-arena');
+  // Landing vulnerability and the independent wave survive authoritative persistence.
+  const beforeWave=structuredClone(room.room.knightBattle),landing=now+200;
+  Object.assign(room.room.knightBattle,{phase:2,hp:8,pattern:'dive',stage:'dive',step:1,since:landing-450,until:landing,checked:now,from:[0,0,-9],to:[0,0,0]});
+  send(a,actor([2000,1.2,3]));assert.equal(room.room.knightBattle.stage,'open');assert.equal(room.room.knightBattle.impactWave.at,landing);
+  send(a,actor([2000,1.2,3]),[{type:'knight',action:'attack'}]);send(a,actor([2000,1.2,3]));assert.equal(room.room.knightBattle.hp,7);assert.equal(room.room.knightBattle.stage,'stunned');
+  const persistedWave=structuredClone(room.room.knightBattle.impactWave);await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));
+  assert.equal(room.room.knightBattle.stage,'stunned');assert.deepEqual(room.room.knightBattle.impactWave,persistedWave,'Worker wakeup retains the ring while the boss reacts to a hit');room.room.knightBattle=beforeWave;
   for(let i=0;i<7;i++){
    const s=room.room.knightBattle;Object.assign(s,{stage:'open',since:now,until:now+2500,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});
    const height=[0,1.45,2.2,2.9,2.9,1.45,0][i],attacker=actor([2000,height,2]);attacker.state=height===2.9?'Fly':height?'Jump':'Idle';

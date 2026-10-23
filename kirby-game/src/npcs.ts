@@ -42,7 +42,7 @@ export class KirbyNpc {
   private next = new Vector3();
   readonly roll=new PushRoll();
   readonly animationRoot:Object3D;
-  // Legacy snapshot slots stay neutral for saved rooms; pushes never damage anyone.
+  // Retain the old health accessors for callers; pushes never damage anyone.
   get health(){return 3;}
   get isDown(){return false;}
   get canBoardBalloon(){return !this.swimming&&!this.waterDestination&&!this.roll.active && !this.greeting && !this.flight.active && ['Idle','Walk','Run','WalkBackward'].includes(this.state);}
@@ -124,14 +124,22 @@ export class KirbyNpc {
     this.duration += index * .13;
   }
 
-  // Reuse the retired damage slots for greeting recovery; row length stays 15.
-  networkLife(){return [3,Number(this.greeted),this.greeting?.elapsed??-1,this.elapsed,this.duration,this.seed,this.turnStart,...this.flight.networkState()];}
-  networkApplyLife(v:number[]){[this.elapsed,this.duration,this.seed,this.turnStart]=v.slice(3,7);this.flight.networkApply(v.slice(7));this.greeted=!!v[1];if(this.greeted&&v[2]>=0)this.greeting={elapsed:v[2],yaw:this.yaw,landed:v[2]>=this.actions.get('Jump')!.getClip().duration};else this.greeting=undefined;}
+  // Retired health holds the turn angle (negative for obstacle avoidance).
+  // The checkpoint keeps its 15 slots; old rooms used a constant 3 here.
+  networkLife(){return [this.avoiding?-this.turnAngle:this.turnAngle,Number(this.greeted),this.greeting?.elapsed??-1,this.elapsed,this.duration,this.seed,this.turnStart,...this.flight.networkState()];}
+  networkApplyLife(v:number[]){
+    [this.elapsed,this.duration,this.seed,this.turnStart]=v.slice(3,7);
+    this.turnAngle=v[0]===3?Math.PI/2:Math.abs(v[0]);this.avoiding=v[0]<0;
+    this.flight.networkApply(v.slice(7));this.flightTime=this.elapsed;
+    // Actor Y already contains flight height. It is not the support surface.
+    this.surfaceY=this.actor.position.y-(this.flight.active?this.flight.height*this.actor.scale.x:0);
+    this.greeted=!!v[1];if(this.greeted&&v[2]>=0)this.greeting={elapsed:v[2],yaw:this.yaw,landed:v[2]>=this.actions.get('Jump')!.getClip().duration};else this.greeting=undefined;
+  }
   networkAnimate(state:string,dt:number,moving=true){
     this.roll.clearPose();
     const walking=['Walk','Run','WalkBackward','BalloonWalk'].includes(state)||state.startsWith('FireflyApproach:');
     const clip=walking?(moving?(state==='Run'?'Run':'Walk'):'Idle'):this.actions.has(state)?state:'Idle';
-    if(this.active!==this.actions.get(clip))this.start(clip);
+    if(this.active!==this.actions.get(clip))this.animate(clip);
     this.state=state;this.mixer.update(dt);
   }
   private random() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
@@ -143,15 +151,20 @@ export class KirbyNpc {
     this.start('Idle');this.state='Roll';this.roll.start(dx,dz,0);return true;
   }
 
-  private start(name: string) {
-    this.eatingFruit = false;
+  private animate(name:string) {
     const next = this.actions.get(name)!;
     next.reset().setEffectiveWeight(1).setEffectiveTimeScale(name === 'Walk' ? 1.5 : name === 'Run' ? 2 : 1);
-    next.setLoop(loops.has(name) ? LoopRepeat : LoopOnce, loops.has(name) ? Infinity : 1);
-    next.clampWhenFinished = !loops.has(name);
+    const loop=loops.has(name)||name==='Fly';
+    next.setLoop(loop ? LoopRepeat : LoopOnce, loop ? Infinity : 1);
+    next.clampWhenFinished = !loop;
     next.fadeIn(.16).play();
     if (this.active !== next) this.active?.fadeOut(.16);
     this.active = next;
+    return next;
+  }
+  private start(name: string) {
+    this.eatingFruit = false;
+    const next=this.animate(name);
     this.state = name;
     this.elapsed = 0;
     this.duration = loops.has(name) ? 1.5 + this.random() * 2 : next.getClip().duration;
@@ -216,7 +229,7 @@ export class KirbyNpc {
     this.appetite = Math.max(0, this.appetite - dt);
     this.model.position.y *= Math.exp(-14 * dt);
     if(this.flight.active) {
-      const before=this.flightTime;this.flightTime+=dt;
+      const before=this.flightTime;this.flightTime+=dt;this.elapsed=this.flightTime;
       if(before<.25 && this.flightTime>=.25)this.flight.press();
       if(before<1.3 && this.flightTime>=1.3)this.flight.press();
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*this.actor.scale.x;

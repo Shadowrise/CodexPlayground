@@ -44,6 +44,7 @@ function matteSurface(source: MeshStandardMaterial) {
 export function cloneVariant(template: Object3D, variant: KirbyVariant, npc: boolean) {
   const model = template.clone(true);
   model.userData.characterShadow=true;
+  model.userData.shadowSilhouette='kirby';
   const materials = new Map<MeshStandardMaterial, MeshStandardMaterial | MeshLambertMaterial>();
   model.traverse(object => {
     if (!(object instanceof Mesh)) return;

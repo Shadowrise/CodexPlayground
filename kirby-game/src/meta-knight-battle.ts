@@ -7,7 +7,8 @@ export type KnightActor={id:string;p:KnightPoint;yaw:number;available:boolean};
 export type KnightStage='intro'|'approach'|'slash-warn'|'slash'|'jump-warn'|'jump'|'slam'|'wave'|'dash-warn'|'dash'|'dive-warn'|'dive'|'shot-warn'|'shot'|'return'|'open'|'rest'|'stunned'|'get-up'|'transition'|'won'|'lost'|'cancelled'|'star-rise'|'cross-warn'|'cross'|'ricochet-warn'|'ricochet'|'star-warn'|'star-fall'|'shield'|'crystal-break';
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
-export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3;hp:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross};
+export type KnightImpactWave={at:number;origin:KnightPoint};
+export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3;hp:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Server time keeps the local and remote damage flicker in the same phase. */
@@ -16,6 +17,14 @@ export function knightPlayerVisible(s:KnightBattle|undefined,id:string,now:numbe
 export function knightArenaSide(s:KnightBattle|undefined,id:string):KnightArenaSide|undefined{return knightBattleActive(s)?s!.players[id]?'arena':'annex':undefined;}
 export const KNIGHT_PHASE_HEALTH={1:12,2:8,3:4} as const;
 export function knightDashHalfWidth(s:KnightBattle){return KNIGHT.laneHalfWidth*(s.phase===2?1.5:1);}
+/** The landing ring keeps its own origin and clock while the duel continues. */
+export function knightPressureWave(s:KnightBattle,now:number){
+ if(!knightBattleActive(s))return;
+ const wave=s.impactWave??(s.stage==='wave'?{at:s.since,origin:s.from}:undefined);if(!wave)return;
+ const until=wave.at+(Math.hypot(wave.origin[0],wave.origin[2])+META_KNIGHT_ARENA.radius+SHIELD.waveHalfWidth)/KNIGHT.waveSpeed;
+ if(now<wave.at||now>=until)return;
+ return {...wave,radius:(now-wave.at)*KNIGHT.waveSpeed,until};
+}
 const distance=(a:KnightPoint,b:KnightPoint)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 const clamp=(p:KnightPoint,r=31):KnightPoint=>{const d=Math.hypot(p[0],p[2]);return d>r?[p[0]*r/d,p[1],p[2]*r/d]:[...p];};
 const angle=(a:KnightPoint,b:KnightPoint)=>Math.atan2(b[0]-a[0],b[2]-a[2]);
@@ -50,12 +59,12 @@ const recipes:Record<KnightBattle['pattern'],[KnightStage,number][]>={
  sword:[['slash-warn',1000],['slash',250],['slash-warn',750],['slash',250],['open',2200]],
  leap:[['jump-warn',1000],['jump',850],['open',3200]],
  flight:[['dash-warn',1000],['dash',700],['dash-warn',850],['dash',700],['open',2100]],
- dive:[['dive-warn',1200],['dive',450],['slam',180],['wave',1250],['open',2400]],
+ dive:[['dive-warn',1200],['dive',450],['open',2400]],
  crescent:[['shot-warn',1100],['shot',1800],['shot-warn',1100],['shot',1800],['shot-warn',1100],['shot',1800],['rest',650]],
  star:STAR_SEQUENCE,
 };
-/** A leap lands directly in its seated counterattack opening. */
-export function knightJumpOpening(s:KnightBattle){return s.stage==='open'&&s.pattern==='leap';}
+/** Both jumps land directly in their seated counterattack opening. */
+export function knightJumpOpening(s:KnightBattle){return s.stage==='open'&&(s.pattern==='leap'||s.pattern==='dive');}
 /** The circular warning counts all the way through flight to the sword impact. */
 export function knightImpactProgress(s:KnightBattle,now:number){
  const dive=s.stage.startsWith('dive'),recipe=recipes[dive?'dive':'leap'],warning=warningDuration(recipe[0][1],s.phase),air=recipe[1][1];
@@ -90,6 +99,7 @@ export function cancelKnightBattle(s:KnightBattle|undefined,id:string,now:number
 }
 function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:KnightActor[]){
  const p=knightPosition(s,now),a=target(s,actors);s.from=[...p];s.to=[...s.from];s.stage=stage;s.since=now;s.until=now+ms;s.openHit=false;delete s.shotContacts;s.revision++;
+ if(['won','lost','cancelled'].includes(stage))delete s.impactWave;
  if(!a||s.pattern==='star')return;
  if(stage.endsWith('-warn')){
   s.yaw=angle(s.from,a.p);s.height=stage==='shot-warn'?KNIGHT.hoverHeight:stage==='dash-warn'?Math.max(.5,Math.min(3,a.p[1])):0;
@@ -132,6 +142,7 @@ export function setKnightPhase(s:KnightBattle,phase:1|2|3,actors:KnightActor[],n
  enter(s,'transition',1500,now,actors);s.phase=phase;s.hp=KNIGHT_PHASE_HEALTH[phase];
  s.checked=now;s.cycle=0;s.step=-1;s.pattern='sword';s.height=0;
  delete s.returnFrom;delete s.shotContacts;
+ delete s.impactWave;
  delete s.activeCrystal;delete s.lastCrystal;delete s.starRoute;delete s.starAims;delete s.starCross;s.brokenCrystals=0;
  for(const p of Object.values(s.players))p.handled=p.attackAt;
  return true;
@@ -162,9 +173,7 @@ function nextStep(s:KnightBattle,now:number,actors:KnightActor[]){
  }
  if(old==='jump'||old==='dive'){s.from=[oldTo[0],0,oldTo[2]];s.to=[...s.from];}
  if(s.stage==='wave'||s.stage==='open'){s.height=0;s.from[1]=s.to[1]=0;}
- // Keep the outward ring alive until its trailing edge clears the entire arena,
- // including landings away from the centre. Rendering and damage share this stage.
- if(s.stage==='wave')s.until=s.since+(Math.hypot(s.from[0],s.from[2])+META_KNIGHT_ARENA.radius+SHIELD.waveHalfWidth)/KNIGHT.waveSpeed;
+ if(old==='dive')s.impactWave={at:now,origin:[...s.from]};
  if(s.pattern==='star'&&s.stage==='open'){s.from=s.to=[0,0,0];}
  if(s.stage==='shield'){s.from=s.to=[0,0,0];s.activeCrystal=chooseShieldCrystal(s);}
 }
@@ -195,6 +204,10 @@ function segmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){
  return Math.hypot(p[0]-a[0]-dx*t,p[1]-a[1]-dy*t,p[2]-a[2]-dz*t);
 }
 export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=now){
+ const wave=knightPressureWave(s,now);
+ if(wave){const d=distance(wave.origin,a.p),old=Math.max(0,previous-wave.at)*KNIGHT.waveSpeed;
+  if(a.p[1]<KNIGHT.waveHeight&&d>=old-SHIELD.waveHalfWidth-KNIGHT.bodyRadius&&d<=wave.radius+SHIELD.waveHalfWidth+KNIGHT.bodyRadius)return true;
+ }
  if(s.pattern==='star')return starDanger(s,a.p,now,previous,KNIGHT.bodyRadius);
  // Marked attacks cover their floor footprint at every height. Only the low ring is jumpable.
  const p=knightPosition(s,now),d=distance(p,a.p);
@@ -203,15 +216,12 @@ export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=no
   const before=knightPosition(s,Math.max(s.since,previous));return segmentDistance([before[0],0,before[2]],[p[0],0,p[2]],[a.p[0],0,a.p[2]])<knightDashHalfWidth(s)+KNIGHT.bodyRadius;
  }
  if(s.stage==='slam'||knightJumpOpening(s)&&previous<=s.since&&now-s.since<150)return d<KNIGHT.impactRadius+KNIGHT.bodyRadius;
- if(s.stage==='wave'){
-  const r=Math.max(0,now-s.since)*KNIGHT.waveSpeed,old=Math.max(0,previous-s.since)*KNIGHT.waveSpeed;
-  return a.p[1]<KNIGHT.waveHeight&&d>=old-.8-KNIGHT.bodyRadius&&d<=r+.8+KNIGHT.bodyRadius;
- }
  return false;
 }
 /** Mutates only encounter state; returns true for state changes worth broadcasting. */
 export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:number,protectedPlayer?:string){
  const revision=s.revision;if(!knightBattleActive(s))return false;
+ if(s.impactWave&&!knightPressureWave(s,now)&&now>=s.impactWave.at){delete s.impactWave;s.revision++;}
  const alive=living(s,actors);if(!alive.length){enter(s,'lost',1e12,now,actors);return true;}
  // Never replay unseen damage after a background tab, reconnect or Worker wakeup.
  const previous=Math.max(s.checked,now-150);s.checked=now;
@@ -224,6 +234,10 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
  for(const a of alive){
   const p=s.players[a.id];
   if(a.id!==protectedPlayer&&knightDanger(s,a,now,previous)&&now>=p.invulnerable){p.hp--;p.invulnerable=now+KNIGHT.invulnerableMs;s.revision++;}
+ }
+ // A counterattack must not skip another fighter's independent wave contact.
+ for(const a of alive){
+  const p=s.players[a.id];
   if(p.hp<=0)continue;
   if(p.handled<p.attackAt&&now>=p.attackAt+140){
    p.handled=p.attackAt;const pos=knightPosition(s,now);

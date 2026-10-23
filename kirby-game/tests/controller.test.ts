@@ -106,7 +106,8 @@ function advance(c: CharacterController, seconds: number, input = idle) {
 }
 test('actual GLB loads and forward movement uses Run', async () => {
   const c = await create();
-  assert.equal(c.actions.size, 12);
+  assert.equal(c.actions.size, 13);
+  assert(c.actions.has('Dash'));
   assert(c.actions.has('Swim'));
   advance(c, 1, { ...idle, forward: true });
   assert.equal(c.state, 'Run');
@@ -200,11 +201,11 @@ test('backward clip moves opposite facing direction and W+S cancels', async () =
   assert.equal(c.state, 'Idle');
   assert(c.actor.position.distanceTo(previous) < 1e-6);
 });
-test('jump rises, lands, cannot retrigger while Space is held and works again after release', async () => {
+test('uncharged jump rises, lands, cannot retrigger while held and works again after release', async () => {
   const c = await create();
   let maxHeight = 0;
   for (let i = 0; i < 180; i++) {
-    c.update(1 / 60, { ...idle, jump: true });
+    c.update(1 / 60, { ...idle, jump: true, dashHeld: false });
     assert(!c.flight.levitating);assert(!c.cloud.visible);
     assert(Math.abs(c.animationRoot.position.y)<1e-6,'the animation cannot add height to the ballistic arc');
     if(i>=48)assert.equal(c.state,'Idle','a single jump has already landed before 0.8s');

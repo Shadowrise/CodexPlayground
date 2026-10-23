@@ -19,10 +19,11 @@ export class PlayerSnapshots{
   const a=this.frames[0],b=this.frames[1];if(!a)return;
   if(!b||time<=a.time)return a.actor;if(time>=b.time)return b.actor;
   const t=(time-a.time)/(b.time-a.time),from=a.actor,to=b.actor;
+  const dash=from.state===to.state&&from.dash&&to.dash?vector(from.dash,to.dash,t) as [number,number]:from.dash;
   const pose=from.state===to.state&&from.pose.length===to.pose.length?from.pose.map((v,i)=>[...vector(v.slice(0,3),to.pose[i].slice(0,3),t),...rotation(v.slice(3,7),to.pose[i].slice(3,7),t),...vector(v.slice(7,10),to.pose[i].slice(7,10),t)]):from.pose;
   // Bug carrier and rider share the same presentation time, including changing seat height.
   let ride=from.ride;
   if(ride?.key.startsWith('bug:')&&ride.key===to.ride?.key){const data=[...ride.data];for(const i of [4,5,6,9])data[i]=mix(ride.data[i] as number,to.ride.data[i] as number,t);ride={key:ride.key,data};}
-  return {...from,p:vector(from.p,to.p,t),q:rotation(from.q,to.q,t),s:mix(from.s,to.s,t),fit:mix(from.fit??1,to.fit??1,t),pose,ride};
+  return {...from,p:vector(from.p,to.p,t),q:rotation(from.q,to.q,t),s:mix(from.s,to.s,t),fit:mix(from.fit??1,to.fit??1,t),pose,ride,dash};
  }
 }

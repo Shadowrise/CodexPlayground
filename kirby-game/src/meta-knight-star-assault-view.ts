@@ -5,6 +5,8 @@ import {AssaultRibbon} from './meta-knight-assault-ribbon';
 import {crystalBroken} from './meta-knight-shield';
 import {MetaKnightShieldView} from './meta-knight-shield-view';
 import {MetaKnightCrossZonesView} from './meta-knight-cross-zones-view';
+import {MetaKnightCrystalLightning} from './meta-knight-crystal-lightning';
+import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 
 const UP=new T.Vector3(0,1,0),GOLD=new T.Color(0xffcb58),VIOLET=new T.Color(0xb58aff),WHITE=new T.Color(0xfff3c8);
 const basic=(color:number,opacity=1)=>new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:false,toneMapped:false});
@@ -35,7 +37,7 @@ export class MetaKnightStarAssaultView{
  private beam=new T.Mesh(new T.CylinderGeometry(1,1,1,12,1,true),basic(0xfff4d4));
  private beamAura=new T.Mesh(this.beam.geometry,basic(0xffb844,.16));
  private secondBeam=new T.Mesh(this.beam.geometry,this.beam.material);private secondAura=new T.Mesh(this.beam.geometry,this.beamAura.material);
- private links=Array.from({length:4},()=>new T.Mesh(this.beam.geometry,basic(0xd6adff,.32)));
+ private lightning=new MetaKnightCrystalLightning();
  private rings=new T.InstancedMesh(new T.TorusGeometry(.75,.035,4,20),basic(0xffe7a1,.78),24);
  private sparks=new T.InstancedMesh(new T.OctahedronGeometry(.075),basic(0xffe6a1),96);
  private rubble=new T.InstancedMesh(new T.OctahedronGeometry(.5),new T.MeshStandardMaterial({color:0x655876,metalness:.4,roughness:.5,emissive:0x291a3b,emissiveIntensity:.2}),56);
@@ -61,12 +63,12 @@ export class MetaKnightStarAssaultView{
    const ring=new T.Mesh(orbit,basic(0xffd580,.55));ring.position.copy(gem.position);ring.rotation.set(.7,i*.6,.4);this.ornaments.push(ring);this.group.add(gem,halo,ring);
   }
   this.beam.name='Star assault crystal beam';this.beamAura.name='Star assault crystal beam aura';this.rings.frustumCulled=this.sparks.frustumCulled=this.comet.frustumCulled=false;
-  this.secondBeam.name='Star assault second crystal beam';this.impactHalo.rotation.x=Math.PI/2;this.group.add(this.beam,this.beamAura,this.secondBeam,this.secondAura,...this.links,this.rings,this.sparks,this.comet,this.impactHalo);
+  this.secondBeam.name='Star assault second crystal beam';this.impactHalo.rotation.x=Math.PI/2;this.group.add(this.beam,this.beamAura,this.secondBeam,this.secondAura,this.lightning.group,this.rings,this.sparks,this.comet,this.impactHalo);
   const r=A.impactRadius;
   this.disc=new T.Mesh(new T.PlaneGeometry(r*2+.6,r*2+.6),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-   uniforms:{progress:{value:0},attack:{value:0}},vertexShader:'varying vec2 point;void main(){point=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:`varying vec2 point;uniform float progress;uniform float attack;void main(){float r=length(point);if(r>1.)discard;float rim=smoothstep(.86,.96,r)*(1.-smoothstep(.97,1.,r));float a=fract(atan(point.y,point.x)/6.2831853+.75);
-    float timer=rim*step(a,progress);vec3 tint=mix(vec3(1.,.64,.10),vec3(1.,.08,.22),max(attack,timer));gl_FragColor=vec4(tint,max(.38+.1*r,timer*.98));
+   uniforms:{progress:{value:0},attack:{value:0},gold:{value:new T.Color(KNIGHT_WARNING_STYLE.gold)},red:{value:new T.Color(KNIGHT_WARNING_STYLE.red)},baseOpacity:{value:KNIGHT_WARNING_STYLE.opacity}},vertexShader:'varying vec2 point;void main(){point=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+   fragmentShader:`varying vec2 point;uniform float progress;uniform float attack;uniform vec3 gold;uniform vec3 red;uniform float baseOpacity;void main(){float r=length(point);if(r>1.)discard;float rim=smoothstep(.86,.96,r)*(1.-smoothstep(.97,1.,r));float a=fract(atan(point.y,point.x)/6.2831853+.75);
+    float timer=rim*step(a,progress);vec3 tint=mix(gold,red,max(attack,timer));gl_FragColor=vec4(tint,max(baseOpacity+.1*r,timer*.98));
     #include <colorspace_fragment>
    }`,
   }));this.disc.name='Star assault centre impact countdown';this.disc.rotation.x=-Math.PI/2;this.disc.position.y=.12;floorWarnings.add(this.cross.mesh,this.cross2.mesh,...this.routes.map(r=>r.mesh),this.crossZones.group,this.disc);this.group.add(floorWarnings);
@@ -76,13 +78,13 @@ export class MetaKnightStarAssaultView{
   this.delta.subVectors(b,a);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(UP,this.delta.clone().normalize());mesh.scale.set(radius,this.delta.length(),radius);mesh.visible=true;
  }
  update(s:KnightBattle|undefined,now:number,bladeTip:T.Vector3){
-  const visible=!!s&&s.phase===3&&s.stage!=='cancelled';this.group.visible=visible;this.nativeCrystals.forEach(o=>o.visible=!visible);this.shield.update(s,now);this.crossZones.update(s,now);if(!s||!visible)return;
+  const visible=!!s&&s.phase===3&&s.stage!=='cancelled';this.group.visible=visible;this.nativeCrystals.forEach(o=>o.visible=!visible);this.shield.update(s,now);this.crossZones.update(s,now);this.lightning.update(s,now,bladeTip);if(!s||!visible)return;
   const f=starProgress(s,now),elapsed=now-s.since,opening=starOpening(s),impact=s.stage==='shield'&&elapsed<220,finale=s.stage==='star-warn'||s.stage==='star-fall';
   const key=[s.id,s.cycle,s.brokenCrystals??0,s.starRoute?.join(','),s.starAims?.flat().join(','),s.yaw.toFixed(5)].join(':');if(key!==this.key){
    this.key=key;this.routes.forEach((r,i)=>r.setPath(Array.from({length:65},(_,j)=>ricochetCurve(s,i,j/64))));
   }
   this.cross.mesh.visible=this.cross2.mesh.visible=false;this.routes.forEach(r=>r.mesh.visible=false);
-  for(const mesh of [this.beam,this.beamAura,this.secondBeam,this.secondAura,...this.links,this.rings,this.comet,this.impactHalo,this.disc,this.fragments])mesh.visible=false;
+  for(const mesh of [this.beam,this.beamAura,this.secondBeam,this.secondAura,this.rings,this.comet,this.impactHalo,this.disc,this.fragments])mesh.visible=false;
   const cross=s.stage==='cross'||s.stage==='cross-warn',route=s.stage==='ricochet'||s.stage==='ricochet-warn',index=ricochetIndex(s);
   for(let i=0;i<8;i++){
    const broken=crystalBroken(s,i),selected=s.stage==='shield'&&s.activeCrystal===i;this.gems[i].visible=this.halos[i].visible=this.ornaments[i].visible=!broken;
@@ -107,7 +109,6 @@ export class MetaKnightStarAssaultView{
    const lines=crossLines(s);for(let j=0;j<2;j++){
     const line=lines[j],ribbon=j?this.cross2:this.cross,tag=`${s.id}:${crossPairs(s).flat().join(',')}`;
     if(ribbon.mesh.userData.path!==tag){ribbon.mesh.userData.path=tag;ribbon.setPath(line);}ribbon.update(s.stage==='cross'?1:f,s.stage==='cross',now);
-    if(s.stage==='cross-warn')for(let i=0;i<2;i++){this.a.copy(bladeTip);this.b.fromArray(line[i]);this.line(this.links[j*2+i],this.a,this.b,.045+.055*f);}
     if(s.stage==='cross'){
      this.a.fromArray(line[0]);this.b.fromArray(line[1]);this.line(j?this.secondBeam:this.beam,this.a,this.b,.16*(.9+.1*Math.sin(now*.035)));this.line(j?this.secondAura:this.beamAura,this.a,this.b,1.8);
      this.rings.visible=true;this.delta.subVectors(this.b,this.a);this.q.setFromUnitVectors(new T.Vector3(0,0,1),this.delta.clone().normalize());
@@ -127,7 +128,7 @@ export class MetaKnightStarAssaultView{
   if(opening&&elapsed<650){const t=elapsed/650;this.impactHalo.visible=true;this.impactHalo.position.set(0,4+t*1.5,0);this.impactHalo.scale.setScalar(6+t*25);(this.impactHalo.material as T.MeshBasicMaterial).opacity=(1-t)*.7;}
  }
  dispose(){
-  for(const ribbon of [this.cross,this.cross2,...this.routes])ribbon.dispose();this.shield.dispose();this.crossZones.dispose();this.nativeCrystals.forEach(o=>o.visible=true);this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();
+  for(const ribbon of [this.cross,this.cross2,...this.routes])ribbon.dispose();this.lightning.dispose();this.shield.dispose();this.crossZones.dispose();this.nativeCrystals.forEach(o=>o.visible=true);this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();
   this.group.traverse(o=>{if(o instanceof T.Mesh){if(o instanceof T.InstancedMesh)o.dispose();geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}else if(o instanceof T.Sprite){o.material.map?.dispose();materials.add(o.material);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
  }
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {PerspectiveCamera,Scene,Vector3} from 'three';
+import {PerspectiveCamera,Scene,Vector3,WebGLRenderTarget} from 'three';
 import {daylight} from '../src/day-cycle';
 import {StableCSM} from '../src/stable-shadows';
 
@@ -22,6 +22,20 @@ test('shadow cameras track sun and moon without rolling over at noon or midnight
     assert(rotations[1].angleTo(rotations[2])<.001);
   }
   csm.dispose();csm.remove();
+});
+
+test('far cascade retains matching light matrices between updates and refreshes immediately on camera/time jumps',()=>{
+ const camera=new PerspectiveCamera(48,1.6,.75,1200),scene=new Scene();camera.position.set(30,8,40);camera.lookAt(0,0,0);
+ const csm=new StableCSM({camera,parent:scene,cascades:2,maxFar:200,shadowMapSize:1024});
+ csm.lightDirection.fromArray(daylight(.18).shadowDirection);csm.update(0);
+ const light=csm.lights[1];light.shadow.map=new WebGLRenderTarget(1,1);light.shadow.needsUpdate=false;
+ const position=light.position.clone(),target=light.target.position.clone();
+ csm.update(.016);assert(!light.shadow.needsUpdate);assert(light.position.equals(position));assert(light.target.position.equals(target));
+ csm.update(.034);assert(light.shadow.needsUpdate);light.shadow.needsUpdate=false;
+ camera.position.x+=2;csm.update(.04);assert(light.shadow.needsUpdate);light.shadow.needsUpdate=false;
+ camera.lookAt(-100,10,10);csm.update(.045);assert(light.shadow.needsUpdate);light.shadow.needsUpdate=false;
+ csm.lightDirection.fromArray(daylight(.7).shadowDirection);csm.update(.05);assert(light.shadow.needsUpdate);
+ csm.dispose();csm.remove();
 });
 
 test('camera motion keeps a stationary world point on the same shadow texel grid',()=>{

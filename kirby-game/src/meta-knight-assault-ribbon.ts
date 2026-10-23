@@ -1,13 +1,14 @@
 import * as T from 'three';
 import type {KnightPoint} from './meta-knight-battle';
 import {attackRibbonMaterial,updateAttackRibbon} from './attack-ribbon-material';
+import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 
 /** Rounded glass path with a red countdown on both edges. Arc length is in metres. */
 export class AssaultRibbon{
  readonly mesh:T.Mesh<T.BufferGeometry,T.ShaderMaterial>;
  private width:number;private length=1;
  constructor(name:string,width:number){
-  this.width=width;this.mesh=new T.Mesh(new T.BufferGeometry(),attackRibbonMaterial(width));this.mesh.name=name;this.mesh.position.y=.135;this.mesh.renderOrder=2;this.mesh.visible=false;
+  this.width=width;this.mesh=new T.Mesh(new T.BufferGeometry(),attackRibbonMaterial(width,KNIGHT_WARNING_STYLE));this.mesh.name=name;this.mesh.position.y=.135;this.mesh.renderOrder=2;this.mesh.visible=false;
  }
  setPath(points:KnightPoint[]){
   const length=[0];for(let i=1;i<points.length;i++)length.push(length[i-1]+Math.hypot(points[i][0]-points[i-1][0],points[i][2]-points[i-1][2]));

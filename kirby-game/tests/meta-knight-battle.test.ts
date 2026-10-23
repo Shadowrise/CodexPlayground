@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {KNIGHT,startKnightBattle,advanceKnightBattle,setKnightPhase,knightDashHalfWidth,knightAttack,knightDanger,knightPosition,knightProjectile,knightShotOrigin,knightShotPath,knightImpactProgress,knightStartCount,knightJumpOpening,cancelKnightBattle,knightBattleActive,knightArenaSide,type KnightActor,type KnightBattle} from '../src/meta-knight-battle';
+import {KNIGHT,startKnightBattle,advanceKnightBattle,setKnightPhase,knightDashHalfWidth,knightAttack,knightDanger,knightPosition,knightProjectile,knightShotOrigin,knightShotPath,knightImpactProgress,knightStartCount,knightJumpOpening,knightPressureWave,cancelKnightBattle,knightBattleActive,knightArenaSide,type KnightActor,type KnightBattle} from '../src/meta-knight-battle';
 import {META_KNIGHT_ARENA as ARENA} from '../src/meta-knight-arena-site';
 import {metaKnightVictoryLog} from '../src/world-log';
 import {CharacterUnlocks} from '../src/character-unlocks';
@@ -145,15 +145,16 @@ test('phase two forward flights have a 50% wider lane at every heading regardles
 
 test('the dive ring reaches every arena edge from central and off-centre landings and remains jumpable',()=>{
  for(const origin of [[0,0,0],[31,0,0],[-20,0,23]] as KnightActor['p'][])for(let i=0;i<16;i++)for(const height of [0,1.2]){
-  const s=battle(),a=actor(),angle=i*Math.PI/8;setStage(s,'slam');
-  Object.assign(s,{phase:2,hp:8,pattern:'dive',step:2,from:[...origin],to:[...origin]});
+  const s=battle(),a=actor(),angle=i*Math.PI/8;setStage(s,'dive');
+  Object.assign(s,{phase:2,hp:8,pattern:'dive',step:1,from:[...origin],to:[...origin]});
   a.p=[Math.sin(angle)*41.7,height,Math.cos(angle)*41.7];advanceKnightBattle(s,[a],s.until);
-  assert.equal(s.stage,'wave');const since=s.since,until=s.until;
+  assert.equal(s.stage,'open');assert.equal(s.until-s.since,3000,'the counterattack opening starts immediately');const since=s.since,until=knightPressureWave(s,since)!.until;
   assert((until-since)*KNIGHT.waveSpeed>=Math.hypot(origin[0],origin[2])+ARENA.radius+.8-1e-8,'the trailing edge clears the far rim');
-  for(let now=since+25;now<until;now+=25)advanceKnightBattle(s,[a],now);
-  assert.equal(s.stage,'wave');assert.equal(s.players.a.hp,height?5:4,`edge ${i}, landing ${origin}, height ${height}`);
-  advanceKnightBattle(s,[a],until);assert.equal(s.stage,'open');assert.equal(s.until-s.since,3000,'the counterattack opening keeps its duration');
-  const hp=s.players.a.hp;advanceKnightBattle(s,[a],until+200);assert.equal(s.players.a.hp,hp,'the expired ring leaves no invisible damage');
+  const contact=since+Math.hypot(a.p[0]-origin[0],a.p[2]-origin[2])/KNIGHT.waveSpeed;
+  for(let now=since+25;now<contact;now+=25)advanceKnightBattle(s,[a],now);
+  advanceKnightBattle(s,[a],contact);assert.equal(s.players.a.hp,height?5:4,`edge ${i}, landing ${origin}, height ${height}`);
+  assert.deepEqual(knightPressureWave(s,contact)!.origin,origin,'the ring stays at the landing point after the next attack begins');
+  assert(!knightPressureWave(s,until),'the ring expires after clearing the arena');
  }
 });
 
@@ -322,8 +323,9 @@ test('a melee hit removes one HP immediately, then holds a one-second stun and g
 });
 test('complete attack schedules include sword, jumping, waves, flight, diving and crescents without invisible warning damage',()=>{
  for(const phase of [1,2,3] as const){const s=battle(),a=actor();s.phase=phase;s.players.a.invulnerable=1e12;const seen=new Set<string>();
-  for(let now=1000;now<115000;now+=40){advanceKnightBattle(s,[a],now);seen.add(s.stage);if(s.stage.endsWith('-warn'))assert(!knightDanger(s,a,now));}
-  for(const stage of phase===1?['slash','jump','shot']:phase===2?['dash','dive','wave','shot']:['cross','ricochet','star-fall','shield'])assert(seen.has(stage),`phase ${phase} missing ${stage}`);
+  let waveSeen=false;for(let now=1000;now<115000;now+=40){advanceKnightBattle(s,[a],now);seen.add(s.stage);waveSeen ||= !!knightPressureWave(s,now);if(s.stage.endsWith('-warn')&&!knightPressureWave(s,now))assert(!knightDanger(s,a,now));}
+  for(const stage of phase===1?['slash','jump','shot']:phase===2?['dash','dive','shot']:['cross','ricochet','star-fall','shield'])assert(seen.has(stage),`phase ${phase} missing ${stage}`);
+  if(phase===2){assert(waveSeen);assert(!seen.has('wave')&&!seen.has('slam'),'the dive opens immediately while its ring travels independently');}
   if(phase===1)assert(!seen.has('wave'),'leap opens at landing instead of waiting for a wave');
  }
 });
