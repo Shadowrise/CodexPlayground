@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: full-screen background illustration for the loading screen of a cheerful Kirby meadow game.
+Primary request: A very joyful sunlit meadow full of smiling multicolored Kirby characters. This should immediately make waiting for the world to load feel happy and welcoming.
+Scene/backdrop: Brilliant clear pale cyan sky, a warm glowing sun in the upper right, fluffy soft white clouds, rolling lush green meadow hills, little wildflowers in pink, yellow and white, warm sunbeams and soft grass.
+Subject: Six recognizable round Kirby characters in pink, yellow, sky blue, mint green, orange and lavender, all with little arms, big oval feet, expressive bright eyes, rosy cheeks and clear cheerful smiles. They happily wave, sit and bounce together in a loose group across the lower half of the composition. The main pink Kirby and several friends are near the middle, so several happy characters stay visible when cropped to a portrait phone screen.
+Style/medium: Polished whimsical 3D game key art with soft toy-like rounded forms, clean expressive faces and rich colorful grass. Charming, sunny, playful, high quality.
+Composition/framing: Wide landscape 16:9, edge-to-edge environment, eye-level camera. Characters occupy the lower 45 percent. Upper center around x=50%, y=28% is calm open sky with no characters or important details, reserved for a small live loading status overlay. Keep all characters' faces comfortably below the upper-center text zone. Landscape supports center cropping on phones.
+Lighting/mood: Bright golden sunshine, soft ambient light and gentle shadows, exuberantly happy atmosphere.
+Constraints: No text, letters, numbers, logos, watermark, UI, frames or loading spinner. Do not use dark blue or a nighttime sky.

@@ -200,10 +200,15 @@ let loadedPigeon: GLTF | undefined;
 let loadedSnowball: GLTF | undefined;
 let loadedMetaKnight: GLTF | undefined;
 let startupComplete=false;
+let startupFailed=false,entryPending=false;
+let resolveStartup!:()=>void,rejectStartup!:(error:unknown)=>void;
+// Entry buttons can await this promise before the scene module finishes evaluating.
+export const ready=new Promise<void>((resolve,reject)=>{resolveStartup=resolve;rejectStartup=reject;});
+void ready.catch(()=>{});
 let firstSceneFrame=true;
 let arenaCentipede:ArenaCentipede|undefined;
 let pendingSave: GameSave | undefined;
-const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');loadButton.disabled=true;
+const loadButton=document.createElement('button');loadButton.id='load-game';loadButton.type='button';loadButton.textContent=t('Загрузить сохранение');
 const selectionCard=document.querySelector<HTMLElement>('.selection-card')!;
 const nameInput=document.querySelector<HTMLInputElement>('#player-name-input')!;
 const selectionMessage=document.querySelector<HTMLElement>('#selection-message')!;
@@ -258,11 +263,12 @@ function showStartupMenu(){
  selectionGeneration++;joiningSession?.close();joiningSession=undefined;
  music.enterMenu();sounds.reset();if(startupComplete)clearTutorialInput();
  networkIntent=false;pendingSave=undefined;resetVariantAvailability();
- startButton.disabled=!startupComplete;startButton.textContent=t(startupComplete?'На поляну →':'Загрузка…');
+ startButton.disabled=false;startButton.textContent=t('На поляну →');
  selectionMessage.hidden=true;selectionMessage.textContent='';startupMessage.hidden=true;
  startupCard.hidden=false;selectionCard.hidden=true;
  document.querySelector<HTMLElement>('#character-select')!.hidden=false;
  document.body.classList.add('choosing');newGameButton.focus();
+ if(!earlyMenuFrame){earlyMenuTime=performance.now();earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);}
 }
 window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
@@ -271,11 +277,11 @@ const saveButton=document.createElement('button');saveButton.type='button';saveB
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
 try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
-loadButton.disabled=!hasSave||!startupComplete;
+loadButton.disabled=!hasSave;
 selectionCard.hidden=true;
 loadButton.title=t(hasSave?'Загрузить сохранение':'Сохранений пока нет');
 loadButton.addEventListener('click',async()=>{
-  if(!startupComplete||playing||joiningSession)return;
+  if(entryPending||playing||joiningSession)return;
   networkIntent=false;
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
@@ -300,6 +306,26 @@ saveButton.addEventListener('click',()=>{
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
 const startButton = document.querySelector<HTMLButtonElement>('#start-game')!;
+startButton.disabled=false;startButton.textContent=t('На поляну →');
+startButton.addEventListener('click',()=>{void startGame();});
+async function startGame(){
+ if(entryPending||playing||joiningSession||!pendingSave&&(selectionCard.hidden||characterUnlocks.isLocked(selected[0]))||!requirePlayerName())return;
+ entryPending=true;
+ const generation=selectionGeneration,waiting=!startupComplete;
+ try{
+  // Unlock audio in the click handler, before waiting for background preparation.
+  music.start();sounds.start();lockedCharacterTooltip.hide();
+  if(waiting)document.dispatchEvent(new Event('kirby-entry-loading'));
+  await ready;
+  if(generation!==selectionGeneration)return;
+  await enterGame();
+ }catch(error){
+  if(!startupFailed){pendingSave=undefined;selectionMessage.textContent=t(error instanceof Error?error.message:String(error));selectionMessage.hidden=false;}
+ }finally{
+  entryPending=false;
+  if(waiting&&!startupFailed)document.dispatchEvent(new Event('kirby-entry-settled'));
+ }
+}
 let dayStart=Date.now(),dayStartPhase=Math.random();
 const currentDayPhase=()=>network?cyclePhase(network.room.dayPhase??.25,network.room.epoch,network.serverNow):cyclePhase(dayStartPhase,dayStart,Date.now());
 const timeDial=document.querySelector<HTMLElement>('#time-dial')!;
@@ -374,7 +400,8 @@ function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:nu
 // Menu input remains available while world and graphics preparation yield.
 let earlyMenuFrame=0,earlyMenuTime=performance.now();
 function pollEarlyMenu(time:number){
- if(startupComplete)return;
+ earlyMenuFrame=0;
+ if(!document.body.classList.contains('choosing'))return;
  const dt=Math.min((time-earlyMenuTime)/1000,.05);earlyMenuTime=time;
  const pad=gamepad.poll(),usingPad=!document.body.classList.contains('loading')&&gamepad.input.active!=='keyboard';
  if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'');}
@@ -386,7 +413,7 @@ function pollEarlyMenu(time:number){
  if(usingPad)navigateCharacterMenu(pad,horizontal,vertical,repeat);
  earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
 }
-document.addEventListener('kirby-startup-failed',()=>cancelAnimationFrame(earlyMenuFrame),{once:true});
+document.addEventListener('kirby-startup-failed',()=>{startupFailed=true;rejectStartup(new Error('Game startup failed'));cancelAnimationFrame(earlyMenuFrame);earlyMenuFrame=0;},{once:true});
 earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
 localizeDOM();document.dispatchEvent(new Event('kirby-menu-ready'));
 await startupFrame();await startupTask();
@@ -671,7 +698,7 @@ document.addEventListener('visibilitychange', () => { keys.clear(); pendingTurn 
 const followCamera = new FollowCamera();
 const canvas = renderer.domElement;
 const touch=mobile?new TouchControls(canvas,{
- jump:()=>{pendingJump=true;},attack:()=>{pendingAttack=true;},interact:()=>{pendingBoard=true;},
+ jump:()=>{if(!character?.playerDash.triggered)pendingJump=true;},attack:()=>{pendingAttack=true;},interact:()=>{pendingBoard=true;},
  chat:()=>{chat.show();},emote:emote=>{pendingEmote=emote;},
  orbit:(x,y)=>followCamera.orbit(x,y),zoom:delta=>followCamera.zoom(delta),
 }):undefined;
@@ -837,20 +864,17 @@ async function loadCharacter() {
     throw error;
   }
 }
-export const ready=loadCharacter().then(async()=>{
+void loadCharacter().then(async()=>{
   performance.mark('kirby-models-ready');
   await prepareStartupGraphics(renderer,scene,camera);
   performance.mark('kirby-graphics-ready');
-  startupComplete=true;renderer.domElement.style.visibility='';startButton.disabled=false;loadButton.disabled=!hasSave;startButton.textContent=t('На поляну →');
-});
-startButton.addEventListener('click',()=>{void startGame();});
-async function startGame(){
+  startupComplete=true;resolveStartup();
+}).catch(error=>{startupFailed=true;rejectStartup(error);});
+async function enterGame(){
   if (!startupComplete || !loadedModel || playing || joiningSession || !pendingSave&&(selectionCard.hidden || characterUnlocks.isLocked(selected[0])) || !requirePlayerName()) return;
   lockedCharacterTooltip.hide();
   const generation=selectionGeneration;
   selectionMessage.hidden=true;selectionMessage.textContent='';
-  music.start();
-  sounds.start();
   if(networkIntent){
     startButton.disabled=true;startButton.textContent=t('Подключаемся…');
     const session=joiningSession=new NetworkSession();
@@ -909,7 +933,7 @@ async function startGame(){
   scene.add(character.actor, ...npcs.map(npc => npc.actor),...Array.from(wildBirds.values(),b=>b.npc.actor));
   setupShadowMaterials();
   keys.clear(); pendingTurn = undefined; pendingJump = false;
-  playing = true;meadowPortal.setWorking(metaKnightPortalReady());startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
+  playing = true;renderer.domElement.style.visibility='';meadowPortal.setWorking(metaKnightPortalReady());startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
   startButton.disabled=false;startButton.textContent=t('На поляну →');saveButton.hidden=saveMessage.hidden=!!network;saveMessage.textContent='';
   if(!network)try{soloHistory=new SoloHistory(serverUrl,()=>({name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),score:scoreOf(character!),tasksDone:SCORE_ACTIONS.filter(t=>character!.achievements.has(t)).length,tasksTotal:SCORE_ACTIONS.length}),historyDevice);}catch{/* Statistics are optional; the game must always start. */}
   document.body.classList.remove('choosing');
@@ -1034,7 +1058,7 @@ let controlMode='';
 let sceneProfiler:import('./scene-profiler').SceneProfiler|undefined;
 if(new URLSearchParams(location.search).get('perf')==='1')void import('./scene-profiler').then(({SceneProfiler})=>{sceneProfiler=new SceneProfiler(renderer,scene,camera,()=>playing&&!network,shadows);});
 renderer.setAnimationLoop((time: number) => {
-  if(!startupComplete){previousTime=time;return;}
+  if(!startupComplete||document.body.classList.contains('choosing')){previousTime=time;return;}
   if(sceneProfiler?.busy){previousTime=time;fpsCounter.sample(time,false);return;}
   meadowWind.value=time*.001;
   const profileStart=sceneProfiler?performance.now():0;
@@ -1092,7 +1116,7 @@ renderer.setAnimationLoop((time: number) => {
   const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
   const dashHeld=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&(usingPad?pad.held.has(0):usingTouch?!!touch?.jumpHeld:held('Space'));
   if(!dashHeld)character?.playerDash.chargeHold(0,false,true);
-  knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'));
+  knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'),usingTouch?touch?.jumpButton:undefined);
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
   if(network?.room.sealProgress)sealProgress=network.room.sealProgress;

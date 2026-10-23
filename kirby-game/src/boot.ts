@@ -12,11 +12,19 @@ const blocked=[...document.body.children].filter((el):el is HTMLElement=>el inst
 blocked.forEach(el=>el.inert=true);
 const retry=document.querySelector<HTMLButtonElement>('#loading-retry')!;
 retry.addEventListener('click',()=>location.reload());
+const setLoading=(loading:boolean)=>{
+ document.body.classList.toggle('loading',loading);document.body.setAttribute('aria-busy',String(loading));
+ document.querySelector<HTMLElement>('#startup-loader')!.hidden=!loading;
+ document.querySelector<HTMLElement>('#character-select')!.inert=loading;
+};
+document.addEventListener('kirby-entry-loading',()=>setLoading(true));
+document.addEventListener('kirby-entry-settled',()=>{
+ setLoading(false);
+ document.querySelector<HTMLElement>(document.body.classList.contains('choosing')?'#start-game':'#game canvas')?.focus();
+});
 let menuShown=false;
 const showMenu=()=>{
- menuShown=true;localizeDOM();document.querySelector<HTMLElement>('#character-select')!.inert=false;
- document.body.classList.remove('loading');document.body.setAttribute('aria-busy','false');
- document.querySelector<HTMLElement>('#startup-loader')!.hidden=true;
+ menuShown=true;localizeDOM();setLoading(false);
  document.querySelector<HTMLButtonElement>('#new-game')?.focus();
  performance.mark('kirby-menu-ready');
 };
@@ -31,7 +39,7 @@ try {
 } catch(error) {
  document.dispatchEvent(new Event('kirby-startup-failed'));
  console.error('Game startup failed',error);
- document.body.classList.add('loading');document.querySelector<HTMLElement>('#startup-loader')!.hidden=false;
+ setLoading(true);
  document.querySelector('#loading-title')!.textContent=t('Не удалось загрузить игру');
  document.querySelector('#loading-detail')!.textContent=t('Проверь подключение и попробуй ещё раз.');
  document.querySelector<HTMLElement>('.loading-orbit')!.hidden=true;

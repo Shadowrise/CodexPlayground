@@ -38,6 +38,7 @@ try{
   const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile}),page=await context.newPage();await prepare(page,pigeon);
   const hud=page.locator('#knight-dash-hud');assert(await hud.isVisible());assert.equal(await hud.getAttribute('aria-label'),'Ускорение');assert.match(await hud.getAttribute('aria-description'),/0,3/);
   assert.equal(await hud.locator('.knight-dash-symbol').count(),1);
+  assert.doesNotMatch(await hud.textContent(),/Пробел/);
   await page.waitForFunction(pigeon=>boostQA.sounds.buffers.has(pigeon?'hawk-dash':'cheer'),pigeon);
   const session=mobile?await context.newCDPSession(page):undefined,box=mobile?await page.locator('#touch-jump').boundingBox():undefined;
   const down=()=>mobile?session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2}]}):page.keyboard.down('Space');
@@ -54,6 +55,12 @@ try{
   await page.screenshot({path:resolve(output,`${pigeon?'pigeon':'kirby'}-${mobile?'touch':'keyboard'}.png`)});
   await page.waitForFunction(()=>!boostQA.c.playerDash.active);
   const bounds=await hud.boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height);
+  if(mobile){
+   const jump=await page.locator('#touch-jump').boundingBox();assert.equal(await hud.getAttribute('data-embedded'),'true');
+   assert(Math.abs(bounds.x-jump.x)<1&&Math.abs(bounds.y-jump.y)<1&&Math.abs(bounds.width-jump.width)<1&&Math.abs(bounds.height-jump.height)<1,'boost feedback is inside the jump button');
+   assert(await hud.locator('.knight-dash-key').isHidden());
+   assert(!await page.evaluate(()=>boostQA.frames.some(f=>f.jump)),'releasing a successful dash hold must not add a jump');
+  }else assert(Math.abs(bounds.x+bounds.width/2-viewport.width/2)<1,'the ability stays centered at the bottom');
   report.runs.push({pigeon,mobile,charge,sound,bounds});console.log(`PASS ${pigeon?'pigeon':'Kirby'} ${mobile?'touch':'keyboard'} charge, dash, cooldown, correct voice`);
   await context.close();
  }

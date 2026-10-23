@@ -59,9 +59,9 @@ test('sword lightning grows out of the contact point, fades across stage changes
  }
 });
 
-test('the shared attack target is a complete overlay with no depth clipping in both encounters',()=>{
+test('every shared attack target layer respects scene depth in both encounters',()=>{
  const cue=new CentipedeTargetCue();cue.update([0,0,0],2000,new T.PerspectiveCamera(),true,.5);
- let draws=0;cue.group.traverse(o=>{if(o instanceof T.Mesh){draws++;for(const m of Array.isArray(o.material)?o.material:[o.material]){assert.equal(m.depthTest,false);assert.equal(m.depthWrite,false);assert(m.transparent);}o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());}});assert.equal(draws,3);
+ let draws=0;cue.group.traverse(o=>{if(o instanceof T.Mesh){draws++;for(const m of Array.isArray(o.material)?o.material:[o.material]){assert.equal(m.depthTest,true);assert.equal(m.depthWrite,false);assert(m.transparent);}o.geometry.dispose();(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());}});assert.equal(draws,3);
 });
 
 test('stationary solo and multiplayer fighters keep server damage ticking after a tab resumes',()=>{

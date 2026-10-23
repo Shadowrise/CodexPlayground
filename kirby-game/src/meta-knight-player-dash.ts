@@ -5,7 +5,10 @@ export class MetaKnightPlayerDash{
  cooldown=0;
  private heldFor=0;
  private spent=false;
+ private triggeredForHold=false;
  private remaining=0;
+ /** Keeps the jump button from firing again when a completed dash hold is released. */
+ get triggered(){return this.triggeredForHold;}
  get active(){return this.remaining>0;}
  get progress(){return 1-this.remaining/PLAYER_KNIGHT_DASH.duration;}
  get charge(){return this.heldFor/PLAYER_KNIGHT_DASH.hold;}
@@ -14,13 +17,13 @@ export class MetaKnightPlayerDash{
  cancel(){this.remaining=0;this.cancelCharge();}
  /** Returns the part of this frame after reaching the charge threshold. */
  chargeHold(dt:number,held:boolean,allowed:boolean):number|undefined{
-  if(!held){this.heldFor=0;this.spent=false;return;}
+  if(!held){this.heldFor=0;this.spent=false;this.triggeredForHold=false;return;}
   if(!allowed||this.cooldown>0){this.cancelCharge();return;}
   if(this.spent)return;
   this.heldFor+=dt;
   if(this.heldFor+1e-9<PLAYER_KNIGHT_DASH.hold)return;
   const overflow=Math.max(0,this.heldFor-PLAYER_KNIGHT_DASH.hold);
-  this.cancelCharge();this.remaining=PLAYER_KNIGHT_DASH.duration;this.cooldown=PLAYER_KNIGHT_DASH.cooldown;
+  this.cancelCharge();this.triggeredForHold=true;this.remaining=PLAYER_KNIGHT_DASH.duration;this.cooldown=PLAYER_KNIGHT_DASH.cooldown;
   return overflow;
  }
  step(dt:number){const step=Math.min(dt,this.remaining);this.remaining=Math.max(0,this.remaining-step);if(this.remaining<1e-9)this.remaining=0;return step;}

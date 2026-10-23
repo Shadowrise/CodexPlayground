@@ -8,28 +8,32 @@
     <meta name="apple-mobile-web-app-title" content="Кирби" />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%kirby-icon.svg" />
+    <link rel="preload" as="image" type="image/webp" href="%BASE_URL%images/loading-meadow.webp" fetchpriority="high" />
     <title>Кирби: Полянка друзей</title>
   </head>
   <body class="choosing loading" aria-busy="true">
     <style>
-      body.loading {margin:0;background:#171e29;overflow:hidden;}
+      body.loading {margin:0;background:#a5e0ef;overflow:hidden;}
       body.loading > :not(#startup-loader) {visibility:hidden!important;}
-      #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:radial-gradient(ellipse at center,#293347,#171e29 70%);color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
+      #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;align-items:start;justify-items:center;box-sizing:border-box;padding:clamp(32px,12svh,128px) 20px 24px;overflow-y:auto;background:#a5e0ef url('%BASE_URL%images/loading-meadow.webp') center / cover no-repeat;color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
       #startup-loader[hidden] {display:none;}
+      .loading-status {box-sizing:border-box;width:min(380px,100%);padding:22px 26px;border-radius:28px;background:radial-gradient(ellipse at center,#293347eb,#171e29eb 70%);}
       .loading-orbit {width:68px;height:68px;margin:0 auto 24px;border:5px solid #ffffff18;border-top-color:#ff8fbb;border-right-color:#a6edcf;border-radius:50%;animation:loading-spin 1.1s linear infinite;will-change:transform;}
       #startup-loader p {color:#bfc9da;font-size:14px;font-weight:400;}
       #loading-retry {background:#ff8fbb;color:#241923;border:0;border-radius:12px;padding:12px 24px;font:inherit;cursor:pointer;}
       @keyframes loading-spin {to {transform:rotate(360deg);}}
+      @media(max-aspect-ratio:3/4){#startup-loader{background-position:53% center;}}
+      @media(max-height:500px){#startup-loader{padding-top:16px;}.loading-status{padding:14px 22px;border-radius:22px;}.loading-orbit{width:30px;height:30px;margin-bottom:8px;border-width:4px;}}
       @media(prefers-reduced-motion:reduce){.loading-orbit{animation:none;}}
     </style>
-    <div id="startup-loader" role="status" aria-live="polite"><div><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
+    <div id="startup-loader" role="status" aria-live="polite"><div class="loading-status"><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
     <section id="character-select" aria-labelledby="select-title">
       <div class="selection-card">
         <h2 id="select-title">Какой Кирби — ты?</h2>
         <p class="selection-description">Выбери своего Кирби. На поляне тебя уже ждут 14 друзей.</p>
         <div id="player-name-field" class="name-field"><label for="player-name-input">Твоё имя <span aria-hidden="true">*</span></label><input id="player-name-input" name="nickname" type="text" required maxlength="24" autocomplete="nickname" placeholder="Как тебя зовут?" aria-describedby="player-name-hint" /><small id="player-name-hint">Обязательно · до 24 символов</small></div>
         <div id="variant-grid" aria-label="Варианты Кирби"></div>
-        <div class="selection-bottom"><button id="character-back" type="button">← Назад</button><button id="start-game" disabled>Загрузка…</button></div>
+        <div class="selection-bottom"><button id="character-back" type="button">← Назад</button><button id="start-game">На поляну →</button></div>
         <p id="selection-message" role="status" hidden></p>
       </div>
     </section>

@@ -18,7 +18,13 @@ try{
   await page.goto(base,{waitUntil:'domcontentloaded'});
   await page.locator('#startup-loader').waitFor({state:'hidden'});
   assert(await page.locator('#new-game').isVisible());
-  await page.waitForFunction(()=>performance.getEntriesByName('kirby-game-ready').length>0&&performance.getEntriesByName('kirby-first-frame').length>0,{},{timeout:120000});
+  await page.waitForFunction(()=>performance.getEntriesByName('kirby-game-ready').length>0,{},{timeout:120000});
+  assert(await page.locator('#game canvas').isHidden());
+  assert(await page.locator('#start-game').isEnabled());
+  assert.equal(await page.evaluate(()=>performance.getEntriesByName('kirby-first-frame').length),0);
+  assert((await page.locator('#character-select').evaluate(el=>getComputedStyle(el).backgroundImage)).includes('loading-meadow.webp'));
+  await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Загрузка');await page.locator('#start-game').click();
+  await page.waitForFunction(()=>!document.body.classList.contains('choosing')&&performance.getEntriesByName('kirby-first-frame').length>0);
   const report=await page.evaluate(()=>{
    const marks=Object.fromEntries(performance.getEntriesByType('mark').map(entry=>[entry.name,Math.round(entry.startTime)]));
    const models=performance.getEntriesByType('resource').filter(entry=>entry.name.includes('/models/')&&entry.name.includes('.glb')).map(entry=>({file:entry.name.split('/').at(-1),startMs:Math.round(entry.startTime),downloadMs:Math.round(entry.duration)}));
@@ -26,13 +32,11 @@ try{
   });
   assert(report.marks['kirby-menu-ready']<report.marks['kirby-environment-ready']);
   assert.equal(report.models.length,GAME_MODEL_FILES.length);assert(report.models.every(model=>model.startMs<report.marks['kirby-menu-ready']));
-  await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Загрузка');await page.locator('#start-game').click();
-  await page.waitForFunction(()=>!document.body.classList.contains('choosing'));
   await page.waitForTimeout(500);assert.deepEqual(errors,[]);
   const cache=new URL('../node_modules/.cache/',import.meta.url);await mkdir(cache,{recursive:true});
   await page.screenshot({path:new URL(`startup-game-${viewport.width}.png`,cache).pathname.replace(/^\/(\w:)/,'$1')});
   reports.push({viewport,...report});await context.close();
  }
  console.log(JSON.stringify(reports,null,2));
- console.log('PASS: early menu, immediate model transfers, complete startup and desktop/touch game entry');
+ console.log('PASS: early menu, immediate transfers, static backdrop until requested and desktop/touch game entry');
 }finally{await browser.close();}

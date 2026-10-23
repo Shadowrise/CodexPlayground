@@ -8,6 +8,7 @@ type Actions={jump:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
 export class TouchControls {
   readonly root=document.createElement('div');
   readonly chooser=document.createElement('div');
+  readonly jumpButton=document.createElement('button');
   private interactionLayer=document.createElement('div');
   x=0;y=0;
   private enabled=false;
@@ -42,10 +43,15 @@ export class TouchControls {
       b.addEventListener('click',e=>{if(e.detail===0&&this.enabled)fn();});
       parent.append(b);return b;
     };
-    const jump=button('touch-jump','↑','Прыжок / полёт',actions.jump);
-    jump.addEventListener('pointerdown',e=>{if(!this.enabled||e.pointerType!=='touch'||this.jumpId!==undefined)return;this.jumpId=e.pointerId;jump.setPointerCapture(e.pointerId);});
-    const releaseJump=(e:PointerEvent)=>{if(e.pointerId===this.jumpId)this.jumpId=undefined;};
+    const jump=this.jumpButton;jump.type='button';jump.id='touch-jump';jump.setAttribute('aria-label',t('Прыжок / полёт / ускорение'));
+    const jumpIcon=document.createElement('span');jumpIcon.className='touch-jump-default';jumpIcon.textContent='↑';jumpIcon.setAttribute('aria-hidden','true');jump.append(jumpIcon);buttons.append(jump);
+    jump.addEventListener('pointerdown',e=>{if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.jumpId!==undefined)return;e.preventDefault();this.jumpId=e.pointerId;jump.setPointerCapture(e.pointerId);});
+    const releaseJump=(e:PointerEvent)=>{
+      if(e.pointerId!==this.jumpId)return;this.jumpId=undefined;
+      if(e.type==='pointerup'&&this.enabled&&!this.choosing){e.preventDefault();actions.jump();}
+    };
     for(const name of ['pointerup','pointercancel','lostpointercapture'])jump.addEventListener(name,releaseJump as EventListener);
+    jump.addEventListener('click',e=>{if(e.detail===0&&this.enabled&&!this.choosing)actions.jump();});
     this.attack=button('touch-attack','✦','Толчок',actions.attack);this.attackHint.className='touch-attack-hint';this.attackHint.hidden=true;this.attack.append(this.attackHint);
     // Keep the contextual action above the scrollable HUD, outside the movement layer.
     this.action=button('touch-interact','Действие','Взаимодействовать',()=>{if(!this.interactionWasHold&&!this.actionRequiresHold)actions.interact();},this.interactionLayer);this.action.hidden=true;

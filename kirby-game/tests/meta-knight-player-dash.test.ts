@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Group,Vector3} from 'three';
 import {CharacterController,type Input} from '../src/controller';
 import {createMetaKnight} from '../src/meta-knight-model';
-import {PLAYER_KNIGHT_DASH as DASH} from '../src/meta-knight-player-dash';
+import {MetaKnightPlayerDash,PLAYER_KNIGHT_DASH as DASH} from '../src/meta-knight-player-dash';
 import {actorState,applyActor} from '../src/network-actors';
 import {validActor} from '../src/network-protocol';
 import {KIRBY_VARIANTS} from '../src/variants';
@@ -13,6 +13,16 @@ const asset=createMetaKnight(),idle:Input={forward:false,left:false,right:false}
 function create(){const model=new Group();model.add(asset.root.clone(true));return new CharacterController(model,asset.clips);}
 function advance(c:CharacterController,seconds:number,input=idle,fps=100){for(let i=0;i<Math.round(seconds*fps);i++)c.update(1/fps,input);}
 function bladeDirection(c:CharacterController){const blade=c.actor.getObjectByName('Galaxia')!;c.actor.updateMatrixWorld(true);return blade.localToWorld(new Vector3(-.315,2.05,0)).sub(blade.getWorldPosition(new Vector3())).normalize();}
+
+test('a shared touch button consumes a successful hold until release, while cooldown presses remain jumps',()=>{
+ const dash=new MetaKnightPlayerDash();dash.chargeHold(.1,true,true);assert(!dash.triggered,'a short tap remains a jump');
+ dash.chargeHold(.2,true,true);assert(dash.triggered);dash.step(1);dash.tick(7);
+ assert(dash.triggered,'releasing even after the dash and cooldown cannot add a jump');
+ dash.chargeHold(0,false,true);assert(!dash.triggered);
+ dash.chargeHold(.3,true,true);assert(dash.triggered);dash.step(1);dash.chargeHold(0,false,true);
+ dash.chargeHold(.5,true,true);assert(!dash.triggered,'a hold begun during cooldown remains a usable jump');
+ dash.tick(7);dash.chargeHold(.5,true,true);assert(!dash.triggered);assert(!dash.active,'cooldown presses cannot queue another dash');
+});
 
 test('short Space presses still fly, and only a continuous 0.3 seconds starts a dash',()=>{
  const c=create();advance(c,DASH.hold-.01,held);assert(c.flight.active);assert.notEqual(c.state,'Dash');assert.equal(c.knightDash.cooldown,0);assert.equal(c.actor.position.z,0);

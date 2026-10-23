@@ -33,7 +33,7 @@ try{
  if(!mobileOnly){
  const viewport={width:1280,height:800},page=await browser.newPage({viewport});await prepare(page);
  const hud=page.locator('#knight-dash-hud'),counter=hud.locator('.knight-dash-countdown');
- assert(await hud.isVisible());assert.match(await hud.textContent(),/Пробел/);assert.match(await hud.getAttribute('aria-description'),/Пробел.*0,3/);
+ assert(await hud.isVisible());assert.doesNotMatch(await hud.textContent(),/Пробел/);assert.match(await hud.getAttribute('aria-description'),/Пробел.*0,3/);
  assert.equal(await hud.getAttribute('data-state'),'ready');assert(await counter.isHidden());
  assert.equal(await hud.evaluate(el=>parseFloat(getComputedStyle(el).width)),76);await page.screenshot({path:resolve(output,'desktop-ready.png')});
  await page.keyboard.down('Space');await page.waitForFunction(()=>dashQA.c.knightDash.charge>.25);
@@ -79,13 +79,15 @@ try{
  }
  for(const viewport of [{width:390,height:844},{width:844,height:390}]){
   const context=await browser.newContext({viewport,isMobile:true,hasTouch:true}),phone=await context.newPage();await prepare(phone);
-  assert.match(await phone.locator('#knight-dash-hud').textContent(),/↑/);
+  assert.equal(await phone.locator('#knight-dash-hud').getAttribute('data-embedded'),'true');
+  assert.match(await phone.locator('#touch-jump').getAttribute('aria-label'),/Прыжок.*ускорение/);
   // Real touch pointer events, held across multiple game frames.
   const session=await context.newCDPSession(phone),box=await phone.locator('#touch-jump').boundingBox(),point={x:box.x+box.width/2,y:box.y+box.height/2};
   await session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});await phone.waitForFunction(()=>dashQA.c.state==='Dash');
   await session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert(await phone.evaluate(()=>dashQA.c.knightDash.cooldown>0));
   const hud=await hudBox(phone,viewport);
-  for(const selector of ['.touch-tools','#touch-stick','#touch-jump','#touch-interaction','.combat-message','.right-hud']){
+  const jump=await phone.locator('#touch-jump').boundingBox();assert(Math.abs(hud.x-jump.x)<1&&Math.abs(hud.y-jump.y)<1&&Math.abs(hud.width-jump.width)<1&&Math.abs(hud.height-jump.height)<1);
+  for(const selector of ['.touch-tools','#touch-stick','#touch-interaction','.combat-message','.right-hud']){
    const other=phone.locator(selector);if(!await other.isVisible())continue;const box=await other.boundingBox();
    assert(!box||hud.x+hud.width<=box.x||box.x+box.width<=hud.x||hud.y+hud.height<=box.y||box.y+box.height<=hud.y,`Dash HUD overlaps ${selector} at ${viewport.width}x${viewport.height}`);
   }
