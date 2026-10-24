@@ -1,8 +1,10 @@
-import {KNIGHT,knightPartyHearts,type KnightBattle} from './meta-knight-battle';
+import {KNIGHT,knightBattleActive,knightPartyHearts,type KnightBattle} from './meta-knight-battle';
 import {KIRBY_VARIANTS,styleVariant} from './variants';
 import {t} from './i18n';
 
-export type KnightProfile={id:string;name:string;variant:number};
+export type KnightProfile={id:string;name:string;variant:number;location?:'meta-knight-arena'};
+/** Presence is live; the battle's frozen membership only decides who can fight. */
+export function knightArenaRoster(localId:string,profiles:readonly KnightProfile[]){return [...new Set([localId,...profiles.filter(p=>p.location==='meta-knight-arena').map(p=>p.id)])];}
 type PartyRow={element:HTMLDivElement;name:HTMLSpanElement;state:HTMLSpanElement;you:HTMLSpanElement;key:string};
 
 /** Stable rows preserve scroll position while the room sends fresh battle snapshots. */
@@ -32,9 +34,9 @@ export class MetaKnightPartyHud{
  update(s:KnightBattle|undefined,localId:string,profiles:readonly KnightProfile[],visible:boolean){
   this.element.hidden=!visible;if(!visible)return;
   for(const profile of profiles)this.profiles.set(profile.id,profile);
-  this.element.setAttribute('aria-label',t('Участники дуэли'));this.list.setAttribute('aria-label',t('Участники дуэли'));
-  const ids=s?Object.keys(s.players):[localId];
-  const shared=ids.length>1,hp=knightPartyHearts(s),label=t(shared?'Жизни команды':'Твои жизни');
+  this.element.setAttribute('aria-label',t('На арене'));this.list.setAttribute('aria-label',t('На арене'));
+  const ids=knightArenaRoster(localId,profiles);
+  const shared=(s?Object.keys(s.players).length:ids.length)>1,hp=knightPartyHearts(s),label=t(shared?'Жизни команды':'Твои жизни');
   const healthKey=`${hp}:${label}`;
   if(this.healthKey!==healthKey){
    this.healthKey=healthKey;this.element.dataset.shared=String(shared);this.element.dataset.defeated=String(hp===0);this.title.textContent=label;
@@ -42,7 +44,7 @@ export class MetaKnightPartyHud{
    Array.from(this.hearts.children).forEach((heart,i)=>{heart.classList.toggle('empty',i>=hp);heart.textContent=i<hp?'♥':'♡';});
    this.caption.textContent=t(shared?'Общие для всех участников':'Сердца на эту попытку');
   }
-  const rosterTitle=t('Участники дуэли'),count=String(ids.filter(id=>!s?.players[id]?.withdrawn).length),rosterKey=`${rosterTitle}:${count}`;
+  const rosterTitle=t('На арене'),count=String(ids.length),rosterKey=`${rosterTitle}:${count}`;
   if(this.rosterKey!==rosterKey){this.rosterKey=rosterKey;this.rosterTitle.textContent=rosterTitle;this.rosterCount.textContent=count;}
   // Put your own character first and retain the encounter's order for teammates.
   ids.sort((a,b)=>Number(b===localId)-Number(a===localId));
@@ -57,10 +59,10 @@ export class MetaKnightPartyHud{
    }
    if(this.list.children[index]!==row.element)this.list.insertBefore(row.element,this.list.children[index]??null);
    const profile=this.profiles.get(id),player=s?.players[id];
-   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,state=player?.withdrawn?t('Дуэль прервана'):hp===0?t('Сердца закончились'):'';
+   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,defeated=!!player&&!player.withdrawn&&hp===0,state=player?.withdrawn?t('Дуэль прервана'):defeated?t('Сердца закончились'):knightBattleActive(s)&&!player?t('Наблюдает за боем'):'';
    const key=JSON.stringify([name,variant,hp,state,id===localId,t('Ты')]);if(row.key===key)return;row.key=key;
    styleVariant(row.element,KIRBY_VARIANTS[variant]??KIRBY_VARIANTS[0]);row.name.textContent=name;row.name.title=name;row.you.textContent=t('Ты');row.you.hidden=id!==localId;
-   row.state.textContent=state;row.state.hidden=!state;row.element.dataset.defeated=String(hp===0);row.element.dataset.withdrawn=String(!!player?.withdrawn);
+   row.state.textContent=state;row.state.hidden=!state;row.element.dataset.defeated=String(defeated);row.element.dataset.withdrawn=String(!!player?.withdrawn);
   });
  }
  dispose(){this.element.remove();this.rows.clear();this.profiles.clear();}

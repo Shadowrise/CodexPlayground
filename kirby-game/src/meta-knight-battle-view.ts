@@ -19,53 +19,12 @@ import type {KnightSound} from './meta-knight-sounds';
 import {MetaKnightPartyHud,type KnightProfile} from './meta-knight-party-hud';
 import {MetaKnightImpactLightning} from './meta-knight-impact-lightning';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
+import {knightWarningGlass as glass,knightWarningCountdown as swordCountdown,knightWarningArrow} from './meta-knight-warning-material';
 import './meta-knight-battle.css';
 
 const AMBER=KNIGHT_WARNING_STYLE.gold,CORAL=KNIGHT_WARNING_STYLE.red,CYAN=0x7ceaff;
 const FX=KNIGHT.effectScale;
 const material=(color:number,opacity=1)=>new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,side:T.DoubleSide,depthWrite:false,toneMapped:false});
-/** Saturated translucent glass: a tinted centre, brighter edges and a soft glint. */
-function glass(color:number,lane=false){
- return new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-  uniforms:{tint:{value:new T.Color(color)},activeTint:{value:new T.Color(CORAL)},lane:{value:lane?1:0},clock:{value:0},span:{value:1},width:{value:KNIGHT.laneHalfWidth*2},progress:{value:-1},baseOpacity:{value:KNIGHT_WARNING_STYLE.opacity}},
-  vertexShader:'varying vec2 glassUv;void main(){glassUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-  fragmentShader:`varying vec2 glassUv;uniform vec3 tint;uniform vec3 activeTint;uniform float lane;uniform float clock;uniform float span;uniform float width;uniform float progress;uniform float baseOpacity;
-  void main(){vec2 p=glassUv*2.-1.;float edge=smoothstep(.12,1.,length(p));float mask=1.;float rim=0.;float timer=0.;float front=0.;
-   if(lane>.5){vec2 point=(glassUv-.5)*vec2(width,span+width);float radius=width*.5;
-    float distanceToEdge=length(vec2(point.x,max(abs(point.y)-span*.5,0.)))-radius;
-    mask=1.-smoothstep(-.015,.015,distanceToEdge);if(mask<.001)discard;
-    edge=pow(clamp(1.+distanceToEdge/radius,0.,1.),1.7);rim=1.-smoothstep(.025,.085,abs(distanceToEdge));
-    if(progress>=0.){float along=(span*.5+radius-point.y)/(span+width);float ribbon=1.-smoothstep(.12,.20,abs(distanceToEdge+.20));
-     timer=ribbon*(1.-smoothstep(progress-.004,progress+.004,along))*step(.0001,progress);front=exp(-pow((along-progress)*45.,2.))*timer;}}
-   float glint=1.-smoothstep(.025,.16,abs(glassUv.x*.62+glassUv.y*.38-.54));
-   float sheen=.5+.5*sin(glassUv.y*8.+clock*.6);
-   vec3 colour=tint+vec3(.07,.055,.025)*glint+vec3(.10,.075,.025)*rim;
-   colour=mix(colour,activeTint+vec3(.35,.22,.09)*front,timer);
-   gl_FragColor=vec4(colour,max(max(baseOpacity+.25*edge+.065*glint+.025*sheen,rim*.98),timer*.98)*mask);
-   #include <colorspace_fragment>
-  }`});
-}
-/** A rounded red ribbon fills the outer arc in the direction of the coming cut. */
-function swordCountdown(radius=KNIGHT.slashRadius-.035*FX,half:number=KNIGHT.slashHalfAngle,full=false){
- const width=.14*FX;
- const mesh=new T.Mesh(new T.RingGeometry(radius-width-.04,radius+width+.04,96,1,-half-(full?0:.06),half*2+(full?0:.12)),new T.ShaderMaterial({
-  transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-  uniforms:{progress:{value:0},direction:{value:-1},radius:{value:radius},width:{value:width},halfAngle:{value:half},tint:{value:new T.Color(CORAL)}},
-  vertexShader:'varying vec2 arcPoint;void main(){arcPoint=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-  fragmentShader:`varying vec2 arcPoint;uniform float progress;uniform float direction;uniform float radius;uniform float width;uniform float halfAngle;uniform vec3 tint;
-   void main(){if(progress<.0001)discard;
-    vec2 p=vec2(arcPoint.x,arcPoint.y*direction);float angle=atan(p.y,p.x);float end=mix(-halfAngle,halfAngle,progress);
-    float closest=clamp(angle,-halfAngle,end);vec2 centre=radius*vec2(cos(closest),sin(closest));float distanceToArc=length(p-centre);
-    distanceToArc=min(distanceToArc,length(p-radius*vec2(cos(-halfAngle),sin(-halfAngle))));
-    float mask=1.-smoothstep(width-.025,width+.025,distanceToArc);if(mask<.001)discard;
-    float front=exp(-pow((angle-end)*radius/(width*2.8),2.));float rim=smoothstep(width*.25,width,distanceToArc);
-    vec3 colour=tint*(.92+.08*rim)+vec3(.40,.21,.12)*front+vec3(.09,.045,.035)*(1.-rim);
-    gl_FragColor=vec4(colour,mask*.97);
-    #include <colorspace_fragment>
-   }`,
- }));
- mesh.name='Meta Knight sword wind-up countdown';mesh.renderOrder=2;return mesh;
-}
 /** Every mesh is reused; attack paths are the same geometry as the shared rules. */
 export class MetaKnightBattleView{
  readonly group=new T.Group();
@@ -114,7 +73,7 @@ export class MetaKnightBattleView{
   this.floorWarnings.name='Meta Knight floor warnings behind characters';this.floorWarnings.renderOrder=-1;this.group.add(this.floorWarnings);
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.floorWarnings.add(mesh);}this.group.add(this.wave.group,this.lightning.group);
   // Draw chevrons after the transparent warning glass, within the floor group.
-  for(let i=0;i<8;i++){const shape=new T.Shape();shape.moveTo(-.35,-.4);shape.lineTo(0,0);shape.lineTo(.35,-.4);shape.lineTo(.35,-.15);shape.lineTo(0,.25);shape.lineTo(-.35,-.15);shape.closePath();const arrow=new T.Mesh(new T.ShapeGeometry(shape),material(KNIGHT_WARNING_STYLE.arrow,KNIGHT_WARNING_STYLE.arrowOpacity));arrow.renderOrder=3;arrow.name=`Meta Knight danger arrow ${i}`;arrow.rotation.x=-Math.PI/2;this.arrows.push(arrow);this.floorWarnings.add(arrow);}
+  for(let i=0;i<8;i++){const arrow=knightWarningArrow();arrow.name=`Meta Knight danger arrow ${i}`;this.arrows.push(arrow);this.floorWarnings.add(arrow);}
   this.group.add(this.projectile,this.particles,this.dazedStars.group,this.assault.group,this.bossTarget.group,this.crystalTarget.group,this.crescentLaunch.group);this.particles.frustumCulled=false;
   this.bossTarget.group.name='Meta Knight available hit target';this.crystalTarget.group.name='Violet crystal available hit target';this.bossTarget.group.scale.setScalar(2.7);this.crystalTarget.group.scale.setScalar(2.7);
   this.hud.id='knight-battle-hud';this.hud.dataset.i18nIgnore='';this.hud.setAttribute('aria-label',t('Бой с Метакнайтом'));

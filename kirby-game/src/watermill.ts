@@ -6,6 +6,7 @@ import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
 import {MillBakery} from './mill-bakery';
 import {makeMillrace,makeMillraceGate} from './millrace-model';
+import {createWaterSurface,waterPlanarUVs} from './water-surface';
 import {newMillQuest,advanceMill,applyMill,millNear,millWorking,MILL_TABLE,MILL_OVEN,MILL_BAKE_MS,MILL_HOPPER,MILL_BAGS,MILL_COLOR_NAMES,type MillQuest,type MillAction,type MillActor} from './mill-quest';
 
 // The eastern bank of the existing central pond; inside its tree-free clearing.
@@ -25,7 +26,7 @@ export function createWheelWaterGeometry() {
   for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+points[i].distanceTo(points[i-1]));
   const positions:number[]=[],uvs:number[]=[],indices:number[]=[];
   points.forEach((p,i)=>{
-    for(const side of [-1,1]){positions.push(side*.8,p.y,p.z);uvs.push((side+1)/2,1-lengths[i]/lengths[lengths.length-1]);}
+    for(const side of [-1,1]){positions.push(side*.8,p.y,p.z);uvs.push((side+1)*.8,-lengths[i]);}
     if(i<points.length-1){const a=i*2;indices.push(a,a+2,a+1,a+1,a+2,a+3);}
   });
   const geometry=new T.BufferGeometry();
@@ -34,22 +35,14 @@ export function createWheelWaterGeometry() {
   return geometry;
 }
 
-function createMillWaterMaterial(){
-  return new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,
-      uniforms:{phase:{value:0}},
-      vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
-      fragmentShader:'varying vec2 vUv; uniform float phase; void main(){float ripple=sin(vUv.y*85.0+phase*11.0+sin(vUv.x*19.0)*1.5);float foam=pow(max(0.0,ripple),14.0)*.35;float edge=smoothstep(0.0,.09,vUv.x)*smoothstep(0.0,.09,1.0-vUv.x);gl_FragColor=vec4(vec3(.14,.61,.65)+foam,(.62+foam)*edge);}'
-    });
-}
-
 export class Watermill {
   readonly group = new T.Group();
   readonly wheel = new T.Group();
   readonly gate = new T.Group();
   readonly handle = new T.Group();
   quest:MillQuest=newMillQuest();
-  private readonly water=createMillWaterMaterial();
-  readonly decor=new MillQuestDecor(this.water);
+  private readonly water=createWaterSurface({flow:true,opacity:.8});
+  readonly decor=new MillQuestDecor(this.water.material);
   readonly bakery:MillBakery;
   now=0;
   get running(){return millWorking(this.quest);}
@@ -288,9 +281,9 @@ export class Watermill {
       yield* rigidMeshWork(parent);
     };
     for(const parent of [root,this.wheel,this.gate,leverMount,this.handle])yield* batch(parent);
-    const race=new T.Mesh(new T.PlaneGeometry(1.9,8.2),this.water);race.name='Raised millrace water';race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.95);root.add(race);
-    const lip=new T.Mesh(new T.PlaneGeometry(1.9,2.2),this.water);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
-    this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
+    const race=new T.Mesh(waterPlanarUVs(new T.PlaneGeometry(1.9,8.2)),this.water.material);race.name='Raised millrace water';race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.95);root.add(race);
+    const lip=new T.Mesh(waterPlanarUVs(new T.PlaneGeometry(1.9,2.2)),this.water.material);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
+    this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water.material);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;
     this.splashes=new T.InstancedMesh(new T.SphereGeometry(1,6,4),new T.MeshBasicMaterial({color:'#d4ffff',transparent:true,opacity:.65,depthWrite:false}),36);
     this.splashes.frustumCulled=false;this.splashes.visible=false;root.add(this.splashes);
     this.decor.group.position.copy(MILL_SITE).multiplyScalar(-1);root.add(this.decor.group);
@@ -316,7 +309,7 @@ export class Watermill {
     this.wheel.rotation.x-=this.speed*dt;
     this.gate.position.y=7.35+this.openness*.8;this.handle.rotation.x=-.55+this.openness*1.1;
     // Integrate flow so changing pressure never reverses or jumps the ripple phase.
-    this.water.uniforms.phase.value+=dt*this.openness;
+    this.water.phase.value+=dt*this.openness;
     this.waterfall.visible=this.splashes.visible=this.openness>.015;
     this.waterfall.scale.x=this.openness;
     for(let i=0;i<36;i++) {

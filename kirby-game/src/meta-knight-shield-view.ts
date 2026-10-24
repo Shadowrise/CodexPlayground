@@ -1,6 +1,7 @@
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import {SHIELD as S,SHIELD_WAVE_SLOTS,shieldWaves,shieldWaveAngle,shieldCountdown,shieldNextWave} from './meta-knight-shield';
+import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 
 function waveGeometry(segmented=true){
  const vertices:number[]=[],normals:number[]=[],uv:number[]=[],indices:number[]=[],steps=segmented?48:192,profile=16;
@@ -50,8 +51,8 @@ export class MetaKnightShieldView{
    const body=new T.Mesh(geometry,waveMaterial()),glow=new T.Mesh(geometry,waveMaterial(true));body.name=`Segmented crystal wave ${i+1}`;glow.name=`Segmented crystal wave halo ${i+1}`;body.frustumCulled=glow.frustumCulled=false;body.renderOrder=7;glow.renderOrder=8;this.waves.push({body,glow});this.group.add(body,glow);
   }
   this.countdown=new T.Mesh(new T.RingGeometry(S.crystalRadius-.5,S.crystalRadius+.5,192),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-   uniforms:{angle:{value:0},progress:{value:0},clock:{value:0}},vertexShader:'varying vec2 p;void main(){p=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:`uniform float angle;uniform float progress;uniform float clock;varying vec2 p;void main(){float a=atan(p.x,-p.y);float part=fract((a-angle)/1.57079633);if(part>.5)discard;float along=part*2.;float timer=step(along,progress);float head=exp(-pow((along-progress)*40.,2.));float edge=smoothstep(${(S.crystalRadius-.3).toFixed(2)},${(S.crystalRadius+.4).toFixed(2)},length(p));vec3 colour=mix(vec3(1.,.65,.18),vec3(1.,.08,.25),timer)+vec3(.20,.17,.10)*head;gl_FragColor=vec4(colour,.72+.2*edge);
+   uniforms:{angle:{value:0},progress:{value:0},clock:{value:0},gold:{value:new T.Color(KNIGHT_WARNING_STYLE.gold)},red:{value:new T.Color(KNIGHT_WARNING_STYLE.red)}},vertexShader:'varying vec2 p;void main(){p=position.xy;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+   fragmentShader:`uniform float angle;uniform float progress;uniform float clock;uniform vec3 gold;uniform vec3 red;varying vec2 p;void main(){float a=atan(p.x,-p.y);float part=fract((a-angle)/1.57079633);if(part>.5)discard;float along=part*2.;float timer=step(along,progress);float head=exp(-pow((along-progress)*40.,2.));float edge=smoothstep(${(S.crystalRadius-.3).toFixed(2)},${(S.crystalRadius+.4).toFixed(2)},length(p));vec3 colour=mix(gold,red,timer)+vec3(.20,.17,.10)*head;gl_FragColor=vec4(colour,.72+.2*edge);
    #include <colorspace_fragment>
    }`,
   }));this.countdown.name='Next segmented wave countdown';this.countdown.rotation.x=-Math.PI/2;this.countdown.position.y=.16;this.countdown.renderOrder=3;this.group.add(this.countdown);

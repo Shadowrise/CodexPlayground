@@ -195,13 +195,15 @@ local room and never mutates a production room.
 
 ## Publish
 
-`npm run deploy` publishes the Worker; a Git push does not deploy it. Protocol 2
-(`meadow-network-32`) was deployed on 2026-10-21 with shared Meta Knight torso
-collision and regular fighter updates for authoritative damage. Room checkpoints
-remain in Durable Object storage. The isolated release passed all 749 tests and
-the client production build. Public `/health` returned HTTP 200 with status `ok`
-and protocol version 2 after deployment.
-Worker version: `f1a85057-ef55-4590-b6d7-39a848d35319`.
+`npm run deploy -- --keep-vars` publishes the Worker while preserving its runtime
+variables; a Git push does not deploy it. Protocol 2 (`meadow-network-33`) was
+republished on 2026-10-24 from the verified arena/water release snapshot. Room
+checkpoints remain in Durable Object storage. The isolated release passed all
+851 tests, the client production build, Worker type checking and a dry run.
+Two browser clients verified shared lives and the live arena roster; water
+rendering was checked in daylight, at night and on a mobile viewport.
+Public `/health` returned HTTP 200 with status `ok` and protocol version 2.
+Worker version: `3ef29fc7-afc2-4384-a992-fed159fc39f6`.
 Credentials and `.wrangler/` are not tracked.
 
 ## Topotushka play event

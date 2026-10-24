@@ -46,19 +46,19 @@ export function showSwimRing(actor:T.Group,visible:boolean,time:number){
 export class Ponds {
  readonly group=new T.Group();
  private time=0;
- private texture:T.DataTexture;
+ private readonly water=createWaterSurface();
  private bankSupport:BankSupport;
  private supports=new WeakMap<Swimmer,{onBridge:boolean;base:number}>();
  constructor(groundMaterial?:T.Material){
   this.group.name='Swimmable lakes';
-  const water=createWaterSurface();this.texture=water.texture;
+  const water=this.water;
   const surface=new T.Mesh(new T.ShapeGeometry(waterShapes()),water.material);surface.name='Lake and river water';surface.rotation.x=-Math.PI/2;surface.position.y=WATER_Y;surface.receiveShadow=true;this.group.add(surface);
   const geo=bankGeometry();
   this.bankSupport=new BankSupport(geo);
   const bank=new T.Mesh(geo,groundMaterial??new T.MeshLambertMaterial({color:'#87916c'}));bank.name='Soft sloping river banks';bank.receiveShadow=true;this.group.add(bank);
 
  }
- update(dt:number){this.time+=dt;this.texture.offset.set(this.time*.015,this.time*.009);}
+ update(dt:number){this.time+=dt;this.water.phase.value=this.time;}
  apply(c:Swimmer,previous:T.Vector3,enabled=true){
   let support=this.supports.get(c);if(!support){support={onBridge:false,base:0};this.supports.set(c,support);}
   if(!enabled){showSwimRing(c.actor,false,this.time);c.swimming=false;c.surfaceY=0;support.base=0;support.onBridge=false;return;}

@@ -5,6 +5,7 @@ import type {CharacterController} from './controller';
 import {awardFirst} from './score';
 import {FOUNTAIN_SITE,FOUNTAIN_WATER_Y,inFountain} from './fountain-site';
 import {batchRigidMeshes} from './rigid-batch';
+import {createWaterSurface,waterPlanarUVs} from './water-surface';
 
 const COLORS=['#ef557e','#f6a044','#f5d75b','#62be91','#54bbd9','#627ed3','#a375d0'];
 /** Batched enamel/stone ornament, animated water and instanced droplets; no extra lights. */
@@ -18,7 +19,8 @@ export class RainbowFountain {
  private petals:T.Group;
  private bubbles:T.InstancedMesh;
  private bathing?:CharacterController;
- private water:T.ShaderMaterial;
+ private readonly water=createWaterSurface({opacity:.9});
+ private readonly flowingWater=createWaterSurface({flow:true,opacity:.72});
  private readonly view=new T.Frustum();
  private readonly viewProjection=new T.Matrix4();
  private readonly bounds=new T.Sphere(new T.Vector3(FOUNTAIN_SITE.x,4,FOUNTAIN_SITE.z),16);
@@ -75,29 +77,25 @@ export class RainbowFountain {
    m.castShadow=list[0].material===stone;this.group.add(m);
   }
   batchRigidMeshes(this.group);
-  this.water=new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,
-   uniforms:{time:{value:0},brightness:{value:1}},
-   vertexShader:'varying vec3 p;void main(){p=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:`varying vec3 p;uniform float time;uniform float brightness;void main(){
-    float wave=sin(length(p.xy)*12.-time*2.3)+sin(p.x*5.+p.y*7.+time*1.7);
-    float glint=pow(max(0.,wave*.5),8.);
-    vec3 c=mix(vec3(.07,.42,.49),vec3(.38,.79,.84),.5+.18*wave)+glint*.24;
-    gl_FragColor=vec4(c*brightness,.76);
-   }`});
-  const surface=new T.Mesh(new T.CircleGeometry(9.4,96),this.water);surface.rotation.x=-Math.PI/2;surface.position.y=FOUNTAIN_WATER_Y;this.group.add(surface);
-  for(const [r,y] of [[2.45,1.28],[1.75,3.58],[1.02,5.73]]){const pool=new T.Mesh(new T.CircleGeometry(r,48),this.water);pool.rotation.x=-Math.PI/2;pool.position.y=y;this.group.add(pool);}
-  const flow=new T.MeshStandardMaterial({color:'#8ed9e7',transparent:true,opacity:.56,roughness:.21,metalness:.12,depthWrite:false});
+  const surface=new T.Mesh(waterPlanarUVs(new T.CircleGeometry(9.4,96)),this.water.material);surface.name='Fountain pool water';surface.rotation.x=-Math.PI/2;surface.position.y=FOUNTAIN_WATER_Y;this.group.add(surface);
+  for(const [r,y] of [[2.45,1.28],[1.75,3.58],[1.02,5.73]]){const pool=new T.Mesh(waterPlanarUVs(new T.CircleGeometry(r,48)),this.water.material);pool.name='Fountain bowl water';pool.rotation.x=-Math.PI/2;pool.position.y=y;this.group.add(pool);}
+  const flow=this.flowingWater.material;
   const streams:T.BufferGeometry[]=[];
+  const stream=(points:T.Vector3[],segments:number,radius:number,sides:number)=>{
+   const curve=new T.CatmullRomCurve3(points),jet=new T.TubeGeometry(curve,segments,radius,sides,false),uv=jet.getAttribute('uv'),length=curve.getLength();
+   // Tube U follows the arc, whereas the shared flow material runs towards -V.
+   for(let j=0;j<uv.count;j++){const u=uv.getX(j),v=uv.getY(j);uv.setXY(j,v*Math.PI*radius*2,-u*length);}streams.push(jet);
+  };
   for(let i=0;i<14;i++){
-   const a=i/14*Math.PI*2,points=Array.from({length:25},(_,j)=>this.jet(i,j/24));
-   streams.push(new T.TubeGeometry(new T.CatmullRomCurve3(points),24,.038,5,false));
+   const a=i/14*Math.PI*2,points=Array.from({length:25},(_,j)=>this.jet(i,j/24).clone());
+   stream(points,24,.038,5);
    for(const [y,r] of [[3.62,1.95],[5.8,1.2]]){
     const p=Array.from({length:17},(_,j)=>{const t=j/16;return new T.Vector3(Math.cos(a)*(r+.55*t),y-2.2*t*t,Math.sin(a)*(r+.55*t));});
-    streams.push(new T.TubeGeometry(new T.CatmullRomCurve3(p),16,.028,4,false));
+    stream(p,16,.028,4);
    }
   }
   const streamsMesh=new T.Mesh(mergeGeometries(streams),flow);streamsMesh.name='Fountain water arcs';this.group.add(streamsMesh);streams.forEach(g=>g.dispose());
-  this.drops=new T.InstancedMesh(new T.SphereGeometry(.055,6,4),new T.MeshStandardMaterial({color:'#c4ebef',roughness:.2,metalness:.1}),168);this.drops.instanceMatrix.setUsage(T.DynamicDrawUsage);this.drops.frustumCulled=false;this.group.add(this.drops);
+  this.drops=new T.InstancedMesh(new T.SphereGeometry(.055,6,4),new T.MeshStandardMaterial({color:'#b4d8dc',roughness:.42,metalness:0}),168);this.drops.instanceMatrix.setUsage(T.DynamicDrawUsage);this.drops.frustumCulled=false;this.group.add(this.drops);
   this.rings=new T.InstancedMesh(new T.TorusGeometry(1,.022,4,32),new T.MeshBasicMaterial({color:'#a2e1e5',transparent:true,opacity:.34,depthWrite:false}),28);this.rings.frustumCulled=false;this.group.add(this.rings);
   this.petals=new T.Group();this.petals.position.y=6.6;this.group.add(this.petals);
   for(let i=0;i<14;i++){
@@ -128,7 +126,7 @@ export class RainbowFountain {
   return true;
  }
  update(dt:number,day:number,camera?:T.Camera){
-  this.time+=dt;this.water.uniforms.time.value=this.time;this.water.uniforms.brightness.value=.32+.68*day;
+  this.time+=dt;this.water.phase.value=this.flowingWater.phase.value=this.time;
   this.petals.rotation.y=Math.sin(this.time*.3)*.07;
   let seen=true;
   if(camera){this.viewProjection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);this.view.setFromProjectionMatrix(this.viewProjection);seen=this.view.intersectsSphere(this.bounds);}

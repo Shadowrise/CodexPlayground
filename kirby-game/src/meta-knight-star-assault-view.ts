@@ -1,5 +1,5 @@
 import * as T from 'three';
-import type {KnightBattle,KnightPoint} from './meta-knight-battle';
+import {KNIGHT,type KnightBattle,type KnightPoint} from './meta-knight-battle';
 import {STAR_ASSAULT as A,STAR_FLIGHTS,crossPairs,crossLines,crystalPoint,ricochetCrystal,ricochetCurve,ricochetIndex,ricochetCountdown,starOpening,starImpactProgress,starProgress} from './meta-knight-star-assault';
 import {AssaultRibbon} from './meta-knight-assault-ribbon';
 import {crystalBroken} from './meta-knight-shield';
@@ -7,6 +7,7 @@ import {MetaKnightShieldView} from './meta-knight-shield-view';
 import {MetaKnightCrossZonesView} from './meta-knight-cross-zones-view';
 import {MetaKnightCrystalLightning} from './meta-knight-crystal-lightning';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
+import {knightWarningGlass,knightWarningCountdown,knightWarningArrow} from './meta-knight-warning-material';
 
 const UP=new T.Vector3(0,1,0),GOLD=new T.Color(0xffcb58),VIOLET=new T.Color(0xb58aff),WHITE=new T.Color(0xfff3c8);
 const basic=(color:number,opacity=1)=>new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:false,toneMapped:false});
@@ -48,7 +49,10 @@ export class MetaKnightStarAssaultView{
  private beaconGlints=new T.InstancedMesh(new T.OctahedronGeometry(.16),basic(0xffdeff),28);
  private beaconRings=Array.from({length:3},()=>new T.Mesh(new T.TorusGeometry(2.4,.045,5,64),basic(0xec9cff,.6)));
  private impactHalo=new T.Mesh(new T.TorusGeometry(1,.07,6,96),basic(0xffe8a1,.7));
- private disc:T.Mesh<T.PlaneGeometry,T.ShaderMaterial>;
+ private disc:T.Mesh<T.CircleGeometry,T.ShaderMaterial>;
+ private impactCountdown=knightWarningCountdown(A.impactRadius,Math.PI,true);
+ private impactRim=new T.Mesh(new T.RingGeometry(A.impactRadius-.1*KNIGHT.effectScale,A.impactRadius+.025*KNIGHT.effectScale,64),basic(KNIGHT_WARNING_STYLE.gold));
+ private impactArrows=Array.from({length:4},()=>knightWarningArrow());
  private matrix=new T.Matrix4();private q=new T.Quaternion();private p=new T.Vector3();private scale=new T.Vector3();private a=new T.Vector3();private b=new T.Vector3();private delta=new T.Vector3();
  constructor(){
   this.group.name='Meta Knight star assault';this.group.visible=false;
@@ -65,13 +69,11 @@ export class MetaKnightStarAssaultView{
   this.beam.name='Star assault crystal beam';this.beamAura.name='Star assault crystal beam aura';this.rings.frustumCulled=this.sparks.frustumCulled=this.comet.frustumCulled=false;
   this.secondBeam.name='Star assault second crystal beam';this.impactHalo.rotation.x=Math.PI/2;this.group.add(this.beam,this.beamAura,this.secondBeam,this.secondAura,this.lightning.group,this.rings,this.sparks,this.comet,this.impactHalo);
   const r=A.impactRadius;
-  this.disc=new T.Mesh(new T.PlaneGeometry(r*2+.6,r*2+.6),new T.ShaderMaterial({transparent:true,depthWrite:false,side:T.DoubleSide,toneMapped:false,
-   uniforms:{progress:{value:0},attack:{value:0},gold:{value:new T.Color(KNIGHT_WARNING_STYLE.gold)},red:{value:new T.Color(KNIGHT_WARNING_STYLE.red)},baseOpacity:{value:KNIGHT_WARNING_STYLE.opacity}},vertexShader:'varying vec2 point;void main(){point=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-   fragmentShader:`varying vec2 point;uniform float progress;uniform float attack;uniform vec3 gold;uniform vec3 red;uniform float baseOpacity;void main(){float r=length(point);if(r>1.)discard;float rim=smoothstep(.86,.96,r)*(1.-smoothstep(.97,1.,r));float a=fract(atan(point.y,point.x)/6.2831853+.75);
-    float timer=rim*step(a,progress);vec3 tint=mix(gold,red,max(attack,timer));gl_FragColor=vec4(tint,max(baseOpacity+.1*r,timer*.98));
-    #include <colorspace_fragment>
-   }`,
-  }));this.disc.name='Star assault centre impact countdown';this.disc.rotation.x=-Math.PI/2;this.disc.position.y=.12;floorWarnings.add(this.cross.mesh,this.cross2.mesh,...this.routes.map(r=>r.mesh),this.crossZones.group,this.disc);this.group.add(floorWarnings);
+  this.disc=new T.Mesh(new T.CircleGeometry(r,64),knightWarningGlass());this.disc.name='Star assault centre impact countdown';this.disc.rotation.x=-Math.PI/2;this.disc.position.y=.12;
+  this.impactCountdown.name='Star assault centre impact red timer';this.impactCountdown.rotation.x=-Math.PI/2;this.impactCountdown.position.y=.17;this.impactCountdown.material.uniforms.direction.value=1;
+  this.impactRim.name='Star assault centre impact gold rim';this.impactRim.rotation.x=-Math.PI/2;this.impactRim.position.y=.14;this.impactRim.material.side=T.DoubleSide;
+  this.impactArrows.forEach((arrow,i)=>{const a=i*Math.PI/2;arrow.name=`Star assault landing direction arrow ${i}`;arrow.scale.setScalar(1.1*KNIGHT.effectScale);arrow.position.set(Math.sin(a)*r*1.28,.15,Math.cos(a)*r*1.28);arrow.rotation.set(-Math.PI/2,0,a);});
+  floorWarnings.add(this.cross.mesh,this.cross2.mesh,...this.routes.map(r=>r.mesh),this.crossZones.group,this.disc,this.impactRim,this.impactCountdown,...this.impactArrows);this.group.add(floorWarnings);
  }
  bindCrystals(scene:T.Scene){this.nativeCrystals=Array.from({length:8},(_,i)=>scene.getObjectByName('Cosmic arena crystal '+i)).filter((o):o is T.Object3D=>!!o);}
  private line(mesh:T.Mesh,a:T.Vector3,b:T.Vector3,radius:number){
@@ -84,7 +86,7 @@ export class MetaKnightStarAssaultView{
    this.key=key;this.routes.forEach((r,i)=>r.setPath(Array.from({length:65},(_,j)=>ricochetCurve(s,i,j/64))));
   }
   this.cross.mesh.visible=this.cross2.mesh.visible=false;this.routes.forEach(r=>r.mesh.visible=false);
-  for(const mesh of [this.beam,this.beamAura,this.secondBeam,this.secondAura,this.rings,this.comet,this.impactHalo,this.disc,this.fragments])mesh.visible=false;
+  for(const mesh of [this.beam,this.beamAura,this.secondBeam,this.secondAura,this.rings,this.comet,this.impactHalo,this.disc,this.impactRim,this.impactCountdown,...this.impactArrows,this.fragments])mesh.visible=false;
   const cross=s.stage==='cross'||s.stage==='cross-warn',route=s.stage==='ricochet'||s.stage==='ricochet-warn',index=ricochetIndex(s);
   for(let i=0;i<8;i++){
    const broken=crystalBroken(s,i),selected=s.stage==='shield'&&s.activeCrystal===i;this.gems[i].visible=this.halos[i].visible=this.ornaments[i].visible=!broken;
@@ -117,13 +119,14 @@ export class MetaKnightStarAssaultView{
    }this.rings.instanceMatrix.needsUpdate=true;
   }
   if(route){
-   this.routes[index].mesh.renderOrder=4;this.routes[index].update(ricochetCountdown(s,now,index),s.stage==='ricochet',now);
+   this.routes[index].update(ricochetCountdown(s,now,index),s.stage==='ricochet',now);
    if(s.stage==='ricochet'){
     this.comet.visible=true;for(let i=0;i<48;i++){const age=i/48,t=Math.max(0,f-age*.27),p=ricochetCurve(s,index,t),a=i*2.399;this.p.set(p[0]+Math.cos(a)*age*3.2,p[1]+2.4+Math.sin(a)*age*1.4,p[2]+Math.sin(a)*age*3.2);this.scale.setScalar((1-age)*2.5);this.matrix.compose(this.p,this.q,this.scale);this.comet.setMatrixAt(i,this.matrix);}this.comet.instanceMatrix.needsUpdate=true;
    }
   }
   if(finale||impact){
-   const progress=starImpactProgress(s,now);this.disc.visible=true;this.disc.material.uniforms.progress.value=progress;this.disc.material.uniforms.attack.value=impact?1:0;
+   const progress=starImpactProgress(s,now);this.disc.visible=this.impactRim.visible=this.impactCountdown.visible=true;this.impactArrows.forEach(arrow=>arrow.visible=true);this.impactRim.material.color.setHex(impact?KNIGHT_WARNING_STYLE.red:KNIGHT_WARNING_STYLE.gold);
+   this.disc.material.uniforms.progress.value=progress;this.disc.material.uniforms.clock.value=now/1000;this.disc.material.uniforms.tint.value.setHex(impact?KNIGHT_WARNING_STYLE.red:KNIGHT_WARNING_STYLE.gold);this.impactCountdown.material.uniforms.progress.value=progress;
   }
   if(opening&&elapsed<650){const t=elapsed/650;this.impactHalo.visible=true;this.impactHalo.position.set(0,4+t*1.5,0);this.impactHalo.scale.setScalar(6+t*25);(this.impactHalo.material as T.MeshBasicMaterial).opacity=(1-t)*.7;}
  }

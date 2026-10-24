@@ -97,7 +97,7 @@ test('feeding unlocks each new character independently, persists through reload 
  for(const [id,key] of [['ugolyok',UGOLYOK_UNLOCK_KEY],['ryzhik',RYZHIK_UNLOCK_KEY]] as const){
   const name=wildPigeonName(id);assert(progress.isLocked(name));assert(progress.unlockPigeon(id));assert(!progress.unlockPigeon(id));
   assert.equal(values.get(key),'1');assert(!new CharacterUnlocks(storage).isLocked(name));assert(progress.isLocked('Пиджи'));assert(progress.isLocked('Снежок'));
-  assert.equal(achievementPoints([pigeonFriendAchievement(id)]),10);assert.match(lockedCharacterHint(name),/хлебушком/);
+  assert.equal(achievementPoints([pigeonFriendAchievement(id)]),10);assert.match(lockedCharacterHint(name),new RegExp(name));
   const denied=new CharacterUnlocks({getItem(){throw Error();},setItem(){throw Error();}});assert(denied.unlockPigeon(id));assert(!denied.isLocked(name));
   for(const locale of ['en','bg'] as const){
    setLocale(locale);for(const text of [name,lockedCharacterHint(name),pidgieFriendLog('{0}',id).text,pidgieScareLog('{0}',id).text,pidgieInterestLog('{0}',id).text])assert.notEqual(t(text),text,`${locale}/${text}`);

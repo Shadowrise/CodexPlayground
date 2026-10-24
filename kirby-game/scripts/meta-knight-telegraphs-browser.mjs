@@ -38,6 +38,18 @@ try{
    renderer.setRenderTarget(old);target.dispose();q.travel.render();return {arrows:arrows.length,changedPixels:counts};
   };
  });
+ const sharedRaster=await page.evaluate(async()=>{
+  const q=telegraphQA,T=q.THREE,{knightWarningGlass,knightWarningArrow}=await import('/src/meta-knight-warning-material.ts'),{AssaultRibbon}=await import('/src/meta-knight-assault-ribbon.ts');
+  const scene=new T.Scene();scene.background=new T.Color(0x293451);const camera=new T.OrthographicCamera(-9,9,34,-7,.1,100);camera.up.set(0,0,1);camera.position.set(0,60,0);camera.lookAt(0,0,0);camera.updateMatrixWorld();
+  const baseline=new T.Group(),glass=knightWarningGlass(undefined,true),lane=new T.Mesh(new T.PlaneGeometry(9,36),glass);lane.position.set(0,.1,13.5);lane.rotation.x=-Math.PI/2;
+  Object.assign(glass.uniforms.width,{value:9});glass.uniforms.span.value=27;glass.uniforms.progress.value=.4;glass.uniforms.clock.value=100;
+  baseline.add(lane);for(let i=0;i<8;i++){const arrow=knightWarningArrow();arrow.scale.setScalar(3);arrow.position.set(0,.15,27*(i+.5)/8);arrow.rotation.set(-Math.PI/2,0,Math.PI);baseline.add(arrow);}scene.add(baseline);
+  const ribbon=new AssaultRibbon('Raster comparison',4.5);ribbon.setPath([[0,0,0],[0,0,27]]);ribbon.update(.4,false,100000);ribbon.mesh.visible=false;scene.add(ribbon.mesh);
+  const target=new T.WebGLRenderTarget(256,512),old=q.renderer.getRenderTarget(),read=()=>{const data=new Uint8Array(256*512*4);q.renderer.render(scene,camera);q.renderer.readRenderTargetPixels(target,0,0,256,512,data);return data;};
+  q.renderer.setRenderTarget(target);const first=read();baseline.visible=false;ribbon.mesh.visible=true;const third=read();let changed=0,maxDelta=0;
+  for(let i=0;i<first.length;i+=4){const delta=Math.max(...[0,1,2,3].map(c=>Math.abs(first[i+c]-third[i+c])));maxDelta=Math.max(maxDelta,delta);if(delta>2)changed++;}
+  q.renderer.setRenderTarget(old);target.dispose();ribbon.dispose();baseline.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});q.travel.render();return {pixels:256*512,changed,maxDelta};
+ });assert(sharedRaster.changed<100,JSON.stringify(sharedRaster));checks.push({sharedRaster});
  for(const [stage,step] of [['slash-warn',0],['slash-warn',2],['slash',0],['dash-warn',0],['dash',1]]){
   const result=await page.evaluate(({stage,step})=>{const q=telegraphQA,s=q.pose(stage,step);return {stage,step,direction:q.sword.knightSwordDirection(s),...q.arrowPixels()};},{stage,step});
   assert.equal(result.arrows,stage.startsWith('slash')?3:8);
@@ -74,7 +86,7 @@ try{
   q.pose('dash-warn');const phase2={gold:v.amberLane.uniforms.tint.value.getHex(),arrow:v.arrows[0].material.color.getHex(),opacity:v.amberLane.uniforms.baseOpacity.value};
   const s=q.pose('slash-warn');Object.assign(s,{phase:3,hp:4,pattern:'star',stage:'cross-warn',step:1,cycle:1,since:100000,until:103600,from:[0,0,-9],to:[0,0,-9],starCross:{pairs:[[0,4],[2,6]],side:0}});q.starState=s;q.c.actor.position.set(2028,0,-12);
   q.thirdPose=(now=100900)=>{q.travel.soloNow=now;q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.starCameraMix=1;q.travel.placeCamera(q.c,0);q.travel.render();};q.thirdPose();
-  const u=v.assault.cross.mesh.material.uniforms,phase3={gold:u.gold.value.getHex(),arrow:u.arrowTint.value.getHex(),opacity:u.baseOpacity.value};
+  const u=v.assault.cross.mesh.material.uniforms,phase3={gold:u.tint.value.getHex(),arrow:v.assault.cross.arrows.material.color.getHex(),opacity:u.baseOpacity.value};
   const bolts=q.travel.scene.getObjectByName('Golden crystal lightning cores'),blade=q.travel.knight.actor.getObjectByName('Galaxia'),tip=blade.localToWorld(new T.Vector3(-.315,2.05,0));tip.x-=2000;
   const m=new T.Matrix4(),endpoints=q.star.crossPairs(s).flat().map((index,i)=>{bolts.getMatrixAt(i*44,m);const start=new T.Vector3(0,-.5,0).applyMatrix4(m);bolts.getMatrixAt(i*44+31,m);const end=new T.Vector3(0,.5,0).applyMatrix4(m);return {fromError:start.distanceTo(tip),toError:end.distanceTo(new T.Vector3().fromArray(q.star.crystalPoint(index)))};});
   q.cameraBounds=()=>{const camera=q.travel.camera,points=[];for(let i=0;i<256;i++){const a=i*Math.PI/128;points.push(new T.Vector3(2000+Math.sin(a)*46.25,0,Math.cos(a)*46.25).project(camera));}return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),distance:q.travel.starDistance};};
@@ -89,7 +101,8 @@ try{
   await page.screenshot({path:output+`phase-3-camera-${width}x${height}.png`});
  }
  await page.setViewportSize({width:1440,height:900});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
- const route=await page.evaluate(()=>{const q=telegraphQA,s=q.starState;Object.assign(s,{stage:'ricochet-warn',step:5,since:104000,until:105550});q.star.planStarRoute(s,[28,0,-12]);q.star.lockStarFlight(s,[28,0,-12]);q.thirdPose(104700);const u=q.travel.battleView.assault.routes[0].mesh.material.uniforms;return {gold:u.gold.value.getHex(),arrow:u.arrowTint.value.getHex(),lightning:q.travel.scene.getObjectByName('Golden crystal lightning cores').parent.visible};});
+ const route=await page.evaluate(()=>{const q=telegraphQA,s=q.starState;Object.assign(s,{stage:'ricochet-warn',step:5,since:104000,until:105550});q.star.planStarRoute(s,[28,0,-12]);q.star.lockStarFlight(s,[28,0,-12]);q.thirdPose(104700);const route=q.travel.battleView.assault.routes[0],u=route.mesh.material.uniforms;return {gold:u.tint.value.getHex(),arrow:route.arrows.material.color.getHex(),arrows:route.arrows.count,lightning:q.travel.scene.getObjectByName('Golden crystal lightning cores').parent.visible};});
  assert.equal(route.gold,third.phase1.gold);assert.equal(route.arrow,third.phase1.arrow);assert(!route.lightning);checks.push(route);await page.screenshot({path:output+'phase-3-shared-gold-route.png'});
+ const landing=await page.evaluate(()=>{const q=telegraphQA,s=q.starState;Object.assign(s,{stage:'star-warn',step:q.star.STAR_LANDING_STEP,since:106000,until:107550});q.thirdPose(106700);const view=q.travel.battleView.assault;return {gold:view.disc.material.uniforms.tint.value.getHex(),arrows:view.impactArrows.filter(a=>a.visible).length};});assert.equal(landing.gold,third.phase1.gold);assert.equal(landing.arrows,4);checks.push(landing);await page.screenshot({path:output+'phase-3-shared-gold-landing.png'});
  assert.deepEqual(errors,[]);await writeFile(output+'checks.json',JSON.stringify({checks,errors},null,2));console.log(JSON.stringify({checks,errors}));
 }finally{await browser.close();}

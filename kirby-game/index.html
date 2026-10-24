@@ -20,7 +20,7 @@
       #menu-backdrop video {opacity:0;}
       #menu-backdrop.video-ready video {opacity:1;}
       body:not(.choosing):not(.loading) #menu-backdrop {display:none;}
-      body.choosing > :not(#character-select):not(#startup-loader):not(#menu-backdrop):not(style):not(script) {display:none!important;}
+      body.choosing > :not(#character-select):not(#startup-loader):not(#menu-backdrop):not(#locked-character-tooltip):not(style):not(script) {display:none!important;}
       #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;align-items:start;justify-items:center;box-sizing:border-box;padding:clamp(32px,12svh,128px) 20px 24px;overflow-y:auto;background:#090e182e;color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
       #startup-loader[hidden] {display:none;}
       .loading-status {box-sizing:border-box;width:min(380px,100%);padding:22px 26px;border-radius:28px;background:radial-gradient(ellipse at center,#293347eb,#171e29eb 70%);}
