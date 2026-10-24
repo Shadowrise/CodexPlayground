@@ -333,6 +333,13 @@ button:disabled { cursor:default; }
 
 #meadow-chat {background:#111b2c88;border-color:#70839a33;box-shadow:0 4px 22px #0002;}
 .chat-text {color:#fff;}
+/* Keep Ugolyok's charcoal lettering readable on dark panels. */
+.ugolyok-character .stat-name,
+.ugolyok-character .festival-name,
+.chat-messages .ugolyok-character.chat-event,
+.chat-messages .ugolyok-character .chat-name {
+ text-shadow:-.75px -.75px 0 #f0f4fa,0 -1px 0 #f0f4fa,.75px -.75px 0 #f0f4fa,1px 0 0 #f0f4fa,.75px .75px 0 #f0f4fa,0 1px 0 #f0f4fa,-.75px .75px 0 #f0f4fa,-1px 0 0 #f0f4fa;
+}
 #settings-panels {position:fixed;z-index:25;top:90px;left:28px;display:flex;align-items:flex-start;gap:14px;max-width:calc(100vw - 56px);max-height:calc(100dvh - 110px);overflow:auto;pointer-events:none;}
 #settings-panels > .panel {position:static;transform:none;box-sizing:border-box;pointer-events:auto;flex-shrink:0;margin:0;max-height:calc(100dvh - 120px);overflow-y:auto;scrollbar-width:thin;}
 #settings-panels #audio-panel {width:310px;}
