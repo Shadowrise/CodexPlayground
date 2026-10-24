@@ -23,6 +23,7 @@ type PlayingVoice = {source: AudioBufferSourceNode; gain: GainNode; protected?:b
 
 export class SoundEffects {
   private context?: AudioContext;
+  private prepared=false;
   private master?: GainNode;
   private buffers = new Map<string, AudioBuffer>();
   private readonly pigeonVoiceData=preloadPigeonEmoteSounds();
@@ -72,13 +73,23 @@ export class SoundEffects {
     });
     this.sync();
   }
-  start() {
+  /** Keep the browser's gesture permission without doing synthesis before paint. */
+  unlock() {
     if (!this.enabled) return;
     try {
       if (!this.context) {
         this.context = new AudioContext();
         const {master,limiter}=createSoundOutput(this.context);
         this.master=master;limiter.connect(this.context.destination);
+      }
+      void this.context.resume().catch(() => { this.enabled = false; this.sync(); });
+    } catch { this.enabled = false; this.sync(); }
+  }
+  start() {
+    this.unlock();
+    if (!this.enabled||!this.context) return;
+    try {
+      if (!this.prepared) {
         for (const kind of ['jump', 'attack', 'death', 'revive', 'grow', 'step'] as const) this.buffers.set(kind, this.synthesize(kind, 0));
         for (let i = 0; i < 4; i++) this.buffers.set(`voice${i}`, this.synthesize('voice', i));
         this.buffers.set('hello', this.synthesize('voice', 4));
@@ -95,6 +106,7 @@ export class SoundEffects {
         void this.loadHawkCry(this.context);
         void this.loadFlowerNotes(this.context);
         this.pigeonVoices=this.pigeonVoiceData.then(()=>loadPigeonEmoteBuffers(this.context!));
+        this.prepared=true;
       }
       void this.context.resume().catch(() => { this.enabled = false; this.sync(); });
       this.sync();

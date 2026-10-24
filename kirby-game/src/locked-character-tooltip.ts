@@ -1,9 +1,11 @@
 import {onLocaleChange,t} from './i18n';
+import {wildPigeonId,wildPigeonObjectName} from './wild-pigeons';
 
 export const PIDGIE_LOCK_HINT='Пиджи — он неуловимый. Если поймаешь Пиджи, сможешь поиграть за Пиджи.';
 export const META_KNIGHT_LOCK_HINT='Кто сможет победить Метакнайта, тот станет новым метакнайтом.';
 export const SNOWBALL_LOCK_HINT='Угости Дикого Снежка хлебушком, чтобы поиграть за Снежка.';
 export function lockedCharacterHint(name:string){
+ const id=wildPigeonId(name);if(id==='ugolyok'||id==='ryzhik'){const bird=wildPigeonObjectName(id);return `Угости дикого ${bird} хлебушком, чтобы поиграть за ${bird}.`;}
  return name==='Снежок'?SNOWBALL_LOCK_HINT:name==='Meta Knight'?META_KNIGHT_LOCK_HINT:name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
 }
 

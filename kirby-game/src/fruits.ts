@@ -11,7 +11,7 @@ import { makeOrange } from './orange';
 import { makePear } from './pear';
 import { makeCherry } from './cherry';
 import { makeGrapes } from './grapes';
-import { fruitLayout,type FruitObstacle } from './fruit-layout';
+import { fruitLayout,fruitLayoutAsync,type FruitObstacle } from './fruit-layout';
 import {shadowParts,type ShadowPart} from './prepared-shadows';
 import {startupTask} from './startup-tasks';
 import {FRUIT_EATING} from './fruit-eating';
@@ -94,11 +94,11 @@ export class FruitWorld {
   static async create(obstacles:readonly FruitObstacle[]=[]){
     const templates:Group[]=[];
     for(let i=0;i<FRUIT_TYPES.length;i++){templates.push(makeFruit(i));await startupTask();}
-    return new FruitWorld(obstacles,templates);
+    const positions=await fruitLayoutAsync(obstacles);
+    return new FruitWorld(obstacles,templates,positions);
   }
-  constructor(obstacles:readonly FruitObstacle[]=[],templates=FRUIT_TYPES.map((_, i) => makeFruit(i))) {
+  constructor(obstacles:readonly FruitObstacle[]=[],templates=FRUIT_TYPES.map((_, i) => makeFruit(i)),positions=fruitLayout(obstacles)) {
     const bounds=templates.map(template=>new Box3().setFromObject(template));
-    const positions=fruitLayout(obstacles);
     for (let i = 0; i < 70; i++) {
       const kind = i % 10, object = templates[kind].clone(true);
       const mist=makeFruitVolumeMist(kind,bounds[kind]);object.add(mist);

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {startupWork} from './startup-tasks';
 
 let bark:T.MeshStandardMaterial|undefined;
 let woodland:T.MeshLambertMaterial|undefined;
@@ -8,6 +9,10 @@ export function woodlandBarkMaterial(){return woodland??=new T.MeshLambertMateri
 /** Shared opaque bark plates and relief from the approved great oak. */
 export function treeBarkMaterial(){
  if(bark)return bark;
+ const work=barkWork();for(;;){const step=work.next();if(step.done)return step.value;}
+}
+export async function prepareTreeBark(){return bark??await startupWork(barkWork());}
+function* barkWork():Generator<void,T.MeshStandardMaterial>{
  const w=256,h=512,data=new Uint8Array(w*h*4),relief=new Uint8Array(w*h*4);
  const noise=(x:number,y:number,px:number,py:number)=>{
   const ix=Math.floor(x),iy=Math.floor(y),u=x-ix,v=y-iy,s=u*u*(3-2*u),t=v*v*(3-2*v);
@@ -15,7 +20,8 @@ export function treeBarkMaterial(){
   return T.MathUtils.lerp(T.MathUtils.lerp(hash(ix,iy),hash(ix+1,iy),s),T.MathUtils.lerp(hash(ix,iy+1),hash(ix+1,iy+1),s),t);
  };
  const cellHash=(x:number,y:number,seed:number)=>{const n=Math.sin(((x%20+20)%20)*127.1+((y%9+9)%9)*311.7+seed*91.7)*43758.5453;return n-Math.floor(n);};
- for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+ for(let y=0;y<h;y++){
+ for(let x=0;x<w;x++){
   const u=x/w,v=y/h;
   // Warped, unequal bark plates form a branching crack network. There is no
   // periodic stripe function: fissures terminate, fork and change direction.
@@ -33,6 +39,8 @@ export function treeBarkMaterial(){
   const lichen=T.MathUtils.smoothstep(noise(u*9,v*13,9,13),.72,.88)*.15,i=(y*w+x)*4;
   data[i]=T.MathUtils.clamp(shade+3-lichen*20,0,255);data[i+1]=T.MathUtils.clamp(shade+lichen*8,0,255);data[i+2]=T.MathUtils.clamp(shade-7-lichen*12,0,255);data[i+3]=255;
   const height=T.MathUtils.clamp(145+rim*42+(plate-.5)*18+(flake-.5)*16-fissure*76-hairline*26-pore,0,255);relief[i]=relief[i+1]=relief[i+2]=height;relief[i+3]=255;
+ }
+ yield;
  }
  const map=new T.DataTexture(data,w,h),bump=new T.DataTexture(relief,w,h);map.name='Irregular oak bark plates and branching fissures';bump.name='Uneven oak bark relief';map.colorSpace=T.SRGBColorSpace;
  for(const t of [map,bump]){t.wrapS=t.wrapT=T.RepeatWrapping;t.generateMipmaps=true;t.minFilter=T.LinearMipmapLinearFilter;t.magFilter=T.LinearFilter;t.anisotropy=4;t.needsUpdate=true;}

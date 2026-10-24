@@ -1,5 +1,5 @@
 import {t,onLocaleChange} from './i18n';
-import { readAudioSettings, saveAudioSettings } from './audio-settings';
+import { readAudioSettings, saveAudioSettings, readMusicShuffle, saveMusicShuffle } from './audio-settings';
 export const MUSIC_TRACKS = [
   ['meadow-day', 'День на поляне'],
   ['citrus-walk', 'Цитрусовая прогулка'],
@@ -20,11 +20,12 @@ export const MUSIC_TRACKS = [
 
 const MUSIC_ASSET_REVISIONS: Partial<Record<typeof MUSIC_TRACKS[number][0] | 'meta-knight-duel', string>> = {
   'meadow-day': 'acoustic-20261021',
+  'citrus-walk': 'acoustic-soft-20261024',
   'button-swing': '2',
   'meta-knight-duel': 'orchestral-muted-20261023',
 };
 
-/** The meadow theme starts in the menu, then the playlist continues in order. */
+/** Menu and gameplay share a playlist, optionally shuffled by the saved preference. */
 export class BackgroundMusic {
   private readonly audio = new Audio();
   private eventAudio?:HTMLAudioElement;
@@ -34,18 +35,32 @@ export class BackgroundMusic {
   private mix = 1;
   private started = false;
   private track = 0;
+  private shuffle = false;
+  private trackOrder = MUSIC_TRACKS.map((_, index) => index);
   private playRequest = 0;
   private waitingForGesture = false;
   private readonly retryFromGesture = () => { if(this.started&&this.enabled)void this.play(); };
 
   constructor(private readonly button: HTMLButtonElement, volume: HTMLInputElement,
-    previous: HTMLButtonElement, next: HTMLButtonElement, private readonly trackLabel: HTMLElement) {
+    previous: HTMLButtonElement, next: HTMLButtonElement, private readonly trackLabel: HTMLElement,
+    shuffle?: HTMLInputElement) {
     this.audio.preload = 'none';
     const saved = readAudioSettings('music', .25);
     this.enabled = saved.enabled;
     this.volume = saved.volume;
     this.applyVolume();
     volume.value = String(Math.round(saved.volume * 100));
+    this.shuffle = readMusicShuffle();
+    if (this.shuffle) { this.shuffleTracks(); this.track = this.trackOrder[0]; }
+    if (shuffle) {
+      shuffle.checked = this.shuffle;
+      shuffle.addEventListener('change', () => {
+        this.shuffle = shuffle.checked;
+        saveMusicShuffle(this.shuffle);
+        if (this.shuffle) this.shuffleTracks(true);
+        else this.trackOrder = MUSIC_TRACKS.map((_, index) => index);
+      });
+    }
     this.loadTrack();
     previous.addEventListener('click', () => this.skip(-1));
     next.addEventListener('click', () => this.skip(1));
@@ -117,9 +132,25 @@ export class BackgroundMusic {
   stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false;this.mix=1;this.applyVolume(); }
 
   private skip(direction: number) {
-    this.track = (this.track + direction + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
+    let position = this.trackOrder.indexOf(this.track);
+    if (this.shuffle && direction > 0 && position === this.trackOrder.length - 1) {
+      this.shuffleTracks();
+      // A fresh pass contains every track once and never repeats the last track immediately.
+      if (this.trackOrder[0] === this.track) [this.trackOrder[0], this.trackOrder[1]] = [this.trackOrder[1], this.trackOrder[0]];
+      position = -1;
+    }
+    this.track = this.trackOrder[(position + direction + this.trackOrder.length) % this.trackOrder.length];
     this.loadTrack();
     if (this.enabled) void this.play();
+  }
+
+  private shuffleTracks(keepCurrent = false) {
+    const tracks = MUSIC_TRACKS.map((_, index) => index).filter(index => !keepCurrent || index !== this.track);
+    for (let i = tracks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tracks[i], tracks[j]] = [tracks[j], tracks[i]];
+    }
+    this.trackOrder = keepCurrent ? [this.track, ...tracks] : tracks;
   }
 
   private loadTrack() {

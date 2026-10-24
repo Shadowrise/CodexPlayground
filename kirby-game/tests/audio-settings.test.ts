@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { readAudioSettings, saveAudioSettings } from '../src/audio-settings';
+import { readAudioSettings, saveAudioSettings, readMusicShuffle, saveMusicShuffle } from '../src/audio-settings';
 
 test('audio preferences preserve false and zero independently; invalid or blocked storage is safe', () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -10,6 +10,15 @@ test('audio preferences preserve false and zero independently; invalid or blocke
     setItem: (key: string, value: string) => data.set(key, value),
   } });
   try {
+    assert.equal(readMusicShuffle(), false);
+    saveMusicShuffle(true);
+    assert.equal(readMusicShuffle(), true);
+    saveMusicShuffle(false);
+    assert.equal(readMusicShuffle(), false);
+    for (const value of ['1', 'yes', 'null', '{broken']) {
+      data.set('kirby.audio.shuffle', value);
+      assert.equal(readMusicShuffle(), false);
+    }
     assert.deepEqual(readAudioSettings('music', .25), { enabled: true, volume: .25 });
     saveAudioSettings('music', false, 0);
     saveAudioSettings('sounds', true, .73);
@@ -20,6 +29,8 @@ test('audio preferences preserve false and zero independently; invalid or blocke
     data.set('kirby.audio.music', '{"volume":200,"enabled":"false"}');
     assert.deepEqual(readAudioSettings('music', .25), { enabled: true, volume: 1 });
     Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('blocked'); } });
+    assert.equal(readMusicShuffle(), false);
+    assert.doesNotThrow(() => saveMusicShuffle(true));
     assert.doesNotThrow(() => saveAudioSettings('music', false, 0));
     assert.deepEqual(readAudioSettings('sounds', .45), { enabled: true, volume: .45 });
   } finally {

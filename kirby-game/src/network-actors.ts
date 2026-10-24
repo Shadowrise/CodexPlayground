@@ -77,7 +77,7 @@ export class RemotePlayers{
  readonly players=new Map<string,CharacterController>();
  readonly renderedStates=new Map<string,ActorState>();
  private readonly nameplates=new Map<string,PlayerNameplate>();
- constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF,private metaKnight?:GLTF,private onMetaKnight?:(model:T.Object3D)=>void,private snowball?:GLTF){}
+ constructor(private scene:T.Scene,private model:GLTF,private pigeon?:GLTF,private metaKnight?:GLTF,private onMetaKnight?:(model:T.Object3D)=>void,private snowball?:GLTF,private plumages:import('./player-model').PigeonModels={}){}
  private remove(id:string){this.nameplates.get(id)?.dispose();this.nameplates.delete(id);const c=this.players.get(id);if(c){c.setActivity('Idle');disposeActor(c);}this.players.delete(id);}
  clear(){for(const id of this.players.keys())this.remove(id);this.renderedStates.clear();}
  update(actors:Map<string,ActorState>,dt:number,snapshots?:Map<string,PlayerSnapshots>){
@@ -89,8 +89,9 @@ export class RemotePlayers{
    // An optional model may still be loading; keep the state for a later frame.
    if(isPigeonVariant(variant[0])&&!this.pigeon)continue;
    if(variant[0]==='Снежок'&&!this.snowball)continue;
+   if(variant[0]==='Уголёк'&&!this.plumages.ugolyok||variant[0]==='Рыжик'&&!this.plumages.ryzhik)continue;
    if(variant[0]==='Meta Knight'&&!this.metaKnight)continue;
-   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight,this.snowball);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;
+   const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight,this.snowball,this.plumages);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;
     if(typeof document!=='undefined')this.nameplates.set(id,new PlayerNameplate(c.actor,rig.model));
     c.actor.position.fromArray(a.p);this.players.set(id,c);this.scene.add(c.actor);const ring=makeSwimRing();ring.visible=false;c.actor.add(ring);
 

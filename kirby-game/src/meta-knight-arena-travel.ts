@@ -33,7 +33,7 @@ export class MetaKnightArenaTravel{
  private arrival?:ArenaArrival;
  private oldConstraint?:CharacterController['positionConstraint'];
  private knight?:CharacterController;
- private battleView?:MetaKnightBattleView;private soloBattle?:KnightBattle;private soloNow=Date.now();private attackHeld=false;private victoryId=0;private life=5;
+ private battleView?:MetaKnightBattleView;private soloBattle?:KnightBattle;private soloNow=Date.now();private attackHeld=false;private victoryId=0;private life=5;private lastInvulnerable=0;
  private withdrawnBattle=0;
  private soloGodMode=false;
  private playerStars?:MetaKnightDazedStars;
@@ -169,7 +169,7 @@ export class MetaKnightArenaTravel{
   battle=this.battle;
   this.constrainShield(c.actor.position,previous);
   if(!this.duelCommandsAvailable)this.setGodMode(false);
-  const life=participating?battle?.players[id]?.hp??5:5;if(life<this.life){c.setActivity('Idle');const pos=knightPosition(battle!,now),dx=c.actor.position.x-SITE.x-pos[0],dz=c.actor.position.z-pos[2],d=Math.hypot(dx,dz)||1;c.actor.position.x+=dx/d*1.1;c.actor.position.z+=dz/d*1.1;}
+  const life=participating?battle?.players[id]?.hp??5:5,invulnerable=participating?battle?.players[id]?.invulnerable??0:0;if(life<this.life&&invulnerable>this.lastInvulnerable){c.setActivity('Idle');const pos=knightPosition(battle!,now),dx=c.actor.position.x-SITE.x-pos[0],dz=c.actor.position.z-pos[2],d=Math.hypot(dx,dz)||1;c.actor.position.x+=dx/d*1.1;c.actor.position.z+=dz/d*1.1;}this.lastInvulnerable=invulnerable;
   this.life=life;c.actor.visible=knightPlayerVisible(battle,id,now,withdrawn);
   const dazed=participating&&life===0;if(dazed){c.flight.reset();if(c.state!=='Sitting')c.setActivity('Sitting');c.updateActivity(0);c.actor.visible=true;}
   c.updateDuelDazedPose(now,dazed);

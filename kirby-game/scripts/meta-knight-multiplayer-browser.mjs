@@ -35,25 +35,38 @@ try{
  }
  for(const page of pages){await page.bringToFront();await page.waitForFunction(()=>arenaQA.remotes.size===1&&[...arenaQA.remotes.values()][0].actor.parent===arenaQA.travel.scene);}
  await pages[0].bringToFront();await pages[0].keyboard.press('KeyE');await pages[0].waitForFunction(()=>Object.keys(arenaQA.travel.battle?.players??{}).length===2);await pages[0].waitForTimeout(500);
- for(const page of pages){await page.bringToFront();await page.waitForFunction(()=>document.querySelectorAll('.knight-party-row').length===2);assert.equal(await page.locator('.knight-hearts').count(),0);}
+ for(const page of pages){await page.bringToFront();await page.waitForFunction(()=>document.querySelectorAll('.knight-party-row').length===2);assert.equal(await page.locator('.knight-party-hearts').count(),1);assert.equal(await page.locator('.knight-party-row .knight-party-hearts').count(),0);assert.equal(await page.locator('.knight-party-title').textContent(),'Жизни команды');}
  const hitNow=Date.now();Object.assign(room.room.knightBattle,{stage:'slash',pattern:'sword',since:hitNow,until:hitNow+300000,checked:hitNow,from:[0,0,0],to:[0,0,0],yaw:0,height:0});
  room.broadcast({type:'room',room:room.room});await pages[1].bringToFront();await pages[1].evaluate(()=>arenaQA.c.actor.position.set(2000,0,7));
  await pages[1].waitForFunction(()=>arenaQA.travel.battle.players.p1.hp<5);await pages[0].waitForFunction(()=>arenaQA.travel.battle.players.p1.hp<5);
- const receivedDamage=room.room.knightBattle.players.p1.hp;assert(receivedDamage<5);console.log('Worker damage reached both clients');
+ const receivedDamage=room.room.knightBattle.teamHp;assert(receivedDamage<5);assert.equal(room.room.knightBattle.players.p0.hp,receivedDamage);assert.equal(room.room.knightBattle.players.p0.invulnerable,0);assert(room.room.knightBattle.players.p1.invulnerable>0);console.log('Shared Worker damage reached both clients; immunity stayed personal');
+ for(const page of pages){await page.bringToFront();await page.waitForFunction(()=>document.querySelector('.knight-party-count').textContent!=='5 / 5');}
+ await pages[0].screenshot({path:output+'shared-team-hearts.png'});
  // A frozen/resumed renderer must resume authoritative damage even at rest.
  const cdp=await pages[1].context().newCDPSession(pages[1]);await cdp.send('Page.setWebLifecycleState',{state:'frozen'});await pages[0].bringToFront();await pages[0].waitForTimeout(500);await cdp.send('Page.setWebLifecycleState',{state:'active'});await pages[1].bringToFront();
- Object.assign(room.room.knightBattle.players.p1,{hp:5,invulnerable:0});room.broadcast({type:'room',room:room.room});await pages[1].waitForFunction(()=>arenaQA.travel.battle.players.p1.hp<5);console.log('Damage resumed after frozen tab');
- const showResult=()=>{const now=Date.now();Object.assign(room.room.knightBattle,{stage:'lost',since:now,until:now+1e12});for(const p of Object.values(room.room.knightBattle.players))p.hp=0;room.broadcast({type:'room',room:room.room});};
- const resultHint='E — Завершить дуэль, Q — Ещё раз';showResult();await pages[0].bringToFront();await pages[0].waitForFunction(text=>document.querySelector('#action-hint').textContent===text,resultHint);assert.equal(await pages[0].locator('#knight-battle-hud button').count(),0);await pages[0].screenshot({path:output+'bottom-actions-result.png'});
+ room.room.knightBattle.teamHp=5;for(const p of Object.values(room.room.knightBattle.players))Object.assign(p,{hp:5,invulnerable:0});room.broadcast({type:'room',room:room.room});await pages[1].waitForFunction(()=>arenaQA.travel.battle.teamHp<5);console.log('Damage resumed after frozen tab');
+ const showResult=()=>{const now=Date.now();Object.assign(room.room.knightBattle,{stage:'lost',teamHp:0,since:now,until:now+1e12});for(const p of Object.values(room.room.knightBattle.players))p.hp=0;room.broadcast({type:'room',room:room.room});};
+ const resultHint='E — Завершить дуэль, Q — Ещё раз';showResult();await pages[0].bringToFront();await pages[0].waitForFunction(text=>document.querySelector('#action-hint').textContent===text,resultHint);await pages[0].waitForFunction(()=>arenaQA.c.state==='Sitting'&&arenaQA.remotes.get('p1').state==='Sitting');assert.equal(await pages[0].locator('.knight-party-count').textContent(),'0 / 5');assert.equal(await pages[0].locator('.knight-party-row[data-defeated=true]').count(),2);assert.equal(await pages[0].locator('#knight-battle-hud button').count(),0);await pages[0].screenshot({path:output+'bottom-actions-result.png'});
  const previousId=room.room.knightBattle.id;await pages[0].keyboard.press('KeyQ');await pages[0].waitForFunction(id=>arenaQA.travel.battle.id!==id&&arenaQA.travel.battle.stage==='intro',previousId);assert.equal(room.room.knightBattle.players.p0.hp,5);assert.equal(room.room.knightBattle.players.p0.attackAt,-1e9,'the replay key does not also attack in the new duel');
  showResult();await pages[0].waitForFunction(text=>document.querySelector('#action-hint').textContent===text,resultHint);await pages[0].keyboard.press('KeyE');await pages[0].locator('#knight-battle-hud').waitFor({state:'hidden'});assert.equal(room.room.knightBattle.stage,'lost');console.log('Bottom E/Q actions verified with real keyboard input');
  for(const page of pages)await page.evaluate(()=>{
   const q=arenaQA;q.stop();q.session.close();q.now=100000;Object.defineProperty(q.session,'serverNow',{get:()=>q.now});
   q.empty={forward:false,left:false,right:false};q.step=(s,now)=>{if(s)q.session.room.knightBattle=structuredClone(s);q.now=now;q.travel.update(0,now/1000,q.c,q.empty,0,0,false,false);q.travel.routeRemotes(q.remotes.entries());document.querySelector('#action-hint').textContent=q.travel.controlsHint('E','Q');q.travel.render();};
  });
- const state=structuredClone(room.room.knightBattle);Object.assign(state,{id:1000,stage:'dash-warn',pattern:'flight',phase:2,since:100000,until:102000,checked:100000,from:[-12,0,-20],to:[12,0,20],yaw:Math.atan2(24,40),height:0});for(const p of Object.values(state.players))Object.assign(p,{hp:5,invulnerable:0});
+ const state=structuredClone(room.room.knightBattle);Object.assign(state,{id:1000,teamHp:5,stage:'dash-warn',pattern:'flight',phase:2,since:100000,until:102000,checked:100000,from:[-12,0,-20],to:[12,0,20],yaw:Math.atan2(24,40),height:0});for(const p of Object.values(state.players))Object.assign(p,{hp:5,invulnerable:0});
  for(const page of pages)await page.evaluate(s=>{const q=arenaQA;q.c.actor.position.set(2015,0,15);[...q.remotes.values()][0].actor.position.set(2000,0,0);q.step(s,101000);},state);
  const page=pages[0];await page.bringToFront();await page.screenshot({path:output+'two-players-dash-warning.png'});
+ const personalFeedback=await page.evaluate(s=>{
+  const q=arenaQA,view=q.travel.battleView,cues=[],original=view.cue,initial=structuredClone(s);view.cue=kind=>cues.push(kind);
+  try{
+   s.stage='open';s.pattern='sword';s.since=100000;s.until=110000;s.from=s.to=[0,0,0];q.step(s,101000);
+   const before=q.c.actor.position.clone();s.teamHp=4;for(const p of Object.values(s.players))p.hp=4;s.players.p1.invulnerable=102300;q.step(s,101100);
+   const teammate={knockback:before.distanceTo(q.c.actor.position),hurt:cues.includes('hurt')};cues.length=0;
+   s.teamHp=3;for(const p of Object.values(s.players))p.hp=3;s.players.p0.invulnerable=102400;q.step(s,101200);
+   return {teammate,self:{knockback:before.distanceTo(q.c.actor.position),hurt:cues.includes('hurt')}};
+  }finally{view.cue=original;q.step(initial,101000);}
+ },state);
+ assert.equal(personalFeedback.teammate.knockback,0);assert.equal(personalFeedback.teammate.hurt,false);assert(personalFeedback.self.knockback>1);assert.equal(personalFeedback.self.hurt,true);
  const occlusion=await page.evaluate(()=>{
   const q=arenaQA,T=q.THREE,scene=q.travel.scene,remote=q.remotes.get('p1').actor,warnings=scene.getObjectByName('Meta Knight floor warnings behind characters');
   const size=q.renderer.getDrawingBufferSize(new T.Vector2()),target=new T.WebGLRenderTarget(size.x,size.y),pixels=()=>{const data=new Uint8Array(size.x*size.y*4);q.renderer.render(scene,q.travel.camera);q.renderer.readRenderTargetPixels(target,0,0,size.x,size.y,data);return data;};
@@ -71,7 +84,7 @@ try{
   for(const [o,value] of visible)o.visible=value;scene.background=background;q.renderer.setClearColor(clear,alpha);q.renderer.setRenderTarget(oldTarget);target.dispose();q.travel.render();return {compared,changed,cutoff,size:size.toArray(),mask:maskCanvas.toDataURL().split(',')[1]};
  });await writeFile(output+'peer-mask.png',Buffer.from(occlusion.mask,'base64'));delete occlusion.mask;console.log('Pixel comparison',occlusion);assert(occlusion.compared>50);assert.equal(occlusion.changed,0,'floor warnings cannot recolour the peer body or nickname');
  const flicker=await page.evaluate(s=>{
-  const q=arenaQA;s.stage='open';s.pattern='sword';s.from=s.to=[0,0,0];s.since=3000;s.until=6000;for(const p of Object.values(s.players)){p.hp=4;p.invulnerable=4000;}
+  const q=arenaQA;s.stage='open';s.pattern='sword';s.teamHp=4;s.from=s.to=[0,0,0];s.since=3000;s.until=6000;for(const p of Object.values(s.players)){p.hp=4;p.invulnerable=4000;}
   q.step(s,3040);const on=[q.c.actor.visible,q.remotes.get('p1').actor.visible];q.step(null,3135);const off=[q.c.actor.visible,q.remotes.get('p1').actor.visible];q.step(null,4100);const ended=[q.c.actor.visible,q.remotes.get('p1').actor.visible];return {on,off,ended};
  },structuredClone(state));assert.deepEqual(flicker,{on:[true,true],off:[false,false],ended:[true,true]});
  await page.evaluate(s=>{const q=arenaQA;s.stage='open';s.pattern='leap';s.phase=1;s.from=s.to=[0,0,0];s.since=100000;s.until=104000;q.step(s,100180);},state);await page.screenshot({path:output+'sword-impact-lightning-and-target.png'});
@@ -84,7 +97,7 @@ try{
   for(const elapsed of [220,236,260,300,340,380]){q.step(s,100000+elapsed);const tip=q.travel.knight.actor.getObjectByName('Galaxia').localToWorld(new q.THREE.Vector3(-.315,2.05,0)),glow=q.travel.scene.getObjectByName('Crescent launch connecting sword flash').getWorldPosition(new q.THREE.Vector3());if(elapsed<380)maxError=Math.max(maxError,tip.distanceTo(glow));}return {maxError};
  },state);assert(emitter.maxError<.001);await page.screenshot({path:output+'crescent-from-sword.png'});
  await page.evaluate(s=>{
-  const q=arenaQA,peer=q.session.actors.get('p1');for(let i=2;i<5;i++){s.players['p'+i]={...s.players.p1,hp:i===4?0:5};q.session.actors.set('p'+i,{...peer,name:['','','Пиджи','Meta Knight','Снежок'][i],variant:[0,0,17,18,19][i]});}q.step(s,101000);
+  const q=arenaQA,peer=q.session.actors.get('p1');for(let i=2;i<5;i++){s.players['p'+i]={...s.players.p1,hp:5,withdrawn:i===4};q.session.actors.set('p'+i,{...peer,name:['','','Пиджи','Meta Knight','Снежок'][i],variant:[0,0,17,18,19][i]});}q.step(s,101000);
  },state);
  const panel=await page.locator('.knight-party-list').evaluate(list=>({rows:list.children.length,scrollable:list.scrollHeight>list.clientHeight,height:list.clientHeight}));assert.equal(panel.rows,5);assert(panel.scrollable);await page.locator('.knight-party-list').evaluate(list=>list.scrollTop=list.scrollHeight);assert(await page.locator('.knight-party-list').evaluate(list=>list.scrollTop>0));await page.screenshot({path:output+'five-players-scroll.png'});
  const responsive=[];
@@ -92,9 +105,9 @@ try{
   await page.setViewportSize({width,height});await page.waitForTimeout(100);await page.evaluate(()=>arenaQA.step(null,101000));
   const layout=await page.evaluate(()=>{const panel=document.querySelector('#knight-party-hud').getBoundingClientRect(),boss=document.querySelector('#knight-battle-hud').getBoundingClientRect();return {right:panel.right,bottom:panel.bottom,left:panel.left,top:panel.top,overlap:panel.left<boss.right&&panel.right>boss.left&&panel.top<boss.bottom&&panel.bottom>boss.top};});assert(layout.left>=0&&layout.right<=width&&layout.bottom<=height&&!layout.overlap);responsive.push({width,height,...layout});await page.screenshot({path:output+`party-${width}x${height}.png`});
  }
- await page.evaluate(()=>{const q=arenaQA;q.session.room.knightBattle=undefined;q.step(null,102000);});assert.equal(await page.locator('.knight-party-row').count(),1);assert.equal(await page.locator('.knight-party-row .stat-name').textContent(),'Игрок 0');
+ await page.evaluate(()=>{const q=arenaQA;q.session.room.knightBattle=undefined;q.step(null,102000);});assert.equal(await page.locator('.knight-party-row').count(),1);assert.equal(await page.locator('.knight-party-row .stat-name').textContent(),'Игрок 0');assert.equal(await page.locator('.knight-party-title').textContent(),'Твои жизни');assert.equal(await page.locator('.knight-party-count').textContent(),'5 / 5');
  await page.evaluate(()=>arenaQA.travel.leave());assert.equal(await page.locator('#knight-party-hud').count(),0);
- assert.deepEqual(errors,[]);const report={players:2,server:'actual GameRoom',receivedDamage,resumedDamage:true,bottomActions:{topButtons:0,finish:'E',replay:'Q'},occlusion,flicker,impact,emitter,panel,responsive,errors};await writeFile(output+'checks.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+ assert.deepEqual(errors,[]);const report={players:2,server:'actual GameRoom',receivedDamage,resumedDamage:true,personalFeedback,bottomActions:{topButtons:0,finish:'E',replay:'Q'},occlusion,flicker,impact,emitter,panel,responsive,errors};await writeFile(output+'checks.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(error){
  console.log(JSON.stringify({errors,room:room.room.knightBattle,sockets:sockets.map(s=>s.data.actor&&({id:s.data.id,p:s.data.actor.p,state:s.data.actor.state,visible:s.data.visible}))}));
  for(let i=0;i<pages.length;i++)try{console.log('Client '+i,await pages[i].evaluate(()=>({position:arenaQA.c?.actor.position.toArray(),state:arenaQA.c?.state,active:arenaQA.travel.active,hidden:document.hidden,focus:document.hasFocus(),sessionClosed:arenaQA.session.closed,stage:arenaQA.travel.battle?.stage,player:arenaQA.travel.battle?.players[arenaQA.session.id]})));await pages[i].screenshot({path:output+`failure-${i}.png`,timeout:5000});}catch{}

@@ -183,10 +183,25 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   assert.equal(room.room.log.filter((m:any)=>m.text==='Friend угостил дикого Снежка хлебушком, теперь Снежок его лучший друг.').length,1);
   room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:snowPlayer},world:both,events:[]}));
   assert.equal(room.room.world.snowball.friend.by,third.data.id,'stale host frames preserve both friendships');
+  // New plumages require a real, targeted feeding and keep all previous friendships.
+  for(const [i,id] of ['ugolyok','ryzhik'].entries()){
+   now+=1000;const position=[p[0]+60+i*30,0,p[2]],checkpoint={...pidgie,p:[position[0],0,position[2]+4]};
+   const current={...room.room.world,[id]:checkpoint};
+   room.room.bread=grantBread(room.room.bread,actor(third.data.id,position),now);
+   room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:position,achievements:[id+'Friend']},world:current,events:[]}));
+   assert(!third.data.actor.achievements.includes(id+'Friend'),'clients cannot forge '+id+' friendship');
+   send(third,[position[0],0,position[2]-30],[{type:'bread',action:{kind:'feed',bird:id}}]);assert(!third.data.actor.achievements.includes(id+'Friend'),'feeding from far away fails');
+   send(third,position,[{type:'bread',action:{kind:'feed',bird:id}}]);
+   assert(third.data.actor.achievements.includes(id+'Friend'));assert.equal(room.room.world[id].friend.target,id);
+   room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:position},world:current,events:[]}));
+   assert.equal(room.room.world[id].friend.by,third.data.id,'stale host frames preserve '+id+' friendship');
+   assert.equal(room.room.world.snowball.friend.by,third.data.id);assert.equal(room.room.world.pidgie.friend.by,first.data.id);
+  }
   const late=await join('Snow watcher',19);assert.equal(late.messages[0].room.world.snowball.friend.by,third.data.id);
   await room.webSocketClose(third);assert.equal(room.room.host,late.data.id);
   const afterSnow=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();
-  assert.equal(afterSnow.room.world.snowball.friend.by,third.data.id);assert.equal(breadLoaves(afterSnow.room.bread).length,2);
+  assert.equal(afterSnow.room.world.snowball.friend.by,third.data.id);assert.equal(breadLoaves(afterSnow.room.bread).length,4);
+  for(const id of ['ugolyok','ryzhik'])assert.equal(afterSnow.room.world[id].friend.by,third.data.id);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 

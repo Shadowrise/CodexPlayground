@@ -14,15 +14,19 @@ export function craftedUVs(g:T.BufferGeometry){
 
 /** Assign after batching, so material keys never serialize texture pixels per tiny part. */
 export function applyCraftedSurfaces(root:T.Object3D){
- root.traverse(o=>{
-  if(!(o instanceof T.Mesh)||!(o.material instanceof T.MeshStandardMaterial))return;
-  const m=o.material,finish=m.userData.craftedFinish;
+ for(const _ of craftedSurfaceWork(root)){}
+}
+export function* craftedSurfaceWork(root:T.Object3D){
+ const meshes:T.Mesh[]=[];root.traverse(o=>{if(o instanceof T.Mesh&&o.material instanceof T.MeshStandardMaterial)meshes.push(o);});
+ for(const o of meshes){
+  const m=o.material as T.MeshStandardMaterial,finish=m.userData.craftedFinish;
   if(['oak','stone','paint','leather','linen','wicker','plaster','rope'].includes(finish)){
    const kind=finish==='leather'?'paint':finish as Surface;
    m.map=m.bumpMap=surfaceTexture(kind);
    m.bumpScale=finish==='oak'?.025:finish==='stone'?.045:finish==='linen'?.018:finish==='wicker'?.025:finish==='rope'?.008:.012;
   }
- });
+  yield;
+ }
 }
 
 type Surface='oak'|'stone'|'paint'|'linen'|'wicker'|'plaster'|'rope';

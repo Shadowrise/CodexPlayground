@@ -31,6 +31,7 @@ import { DurableObject } from 'cloudflare:workers';
 import {PROTOCOL,BUILD,validActor,validWorld,validResourceKey,type ActorState,type WorldState,type RoomState,type Event} from '../../kirby-game/src/network-protocol';
 import {stepBodySize} from '../../kirby-game/src/body-size';
 import {FruitSpeedBoost} from '../../kirby-game/src/fruit-speed';
+import {INITIAL_DAY_PHASE} from '../../kirby-game/src/day-cycle';
 const MAX_PLAYERS=14,ROOM_NAME='main';
 type OnlineVisit={id:string;startedAt:number;activeMs:number;tick:number;lastWrite:number;startScore:number;seq:number;device:DeviceInfo;finished?:boolean};
 type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;adminSize?:number;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;lastFlower?:number;lastNumber?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
@@ -79,7 +80,7 @@ export class GameRoom extends DurableObject<Env>{
  private restoreSeals(){if(this.room){this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};}}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
- private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:Math.random(),fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
+ private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:INITIAL_DAY_PHASE,fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
  private chatStorage(){
   if(this.room&&this.chatRoom!==this.room.id){initRoomChat(this.ctx.storage.sql,this.room.log);this.chatRoom=this.room.id;}
   return this.ctx.storage.sql;
@@ -110,7 +111,7 @@ export class GameRoom extends DurableObject<Env>{
   if(r.festival?.results)return {ok:false,error:'Игра уже завершена.'};
   const a=this.players().map(s=>s.deserializeAttachment() as Attachment).find(a=>a.id===playerId);
   if(!a?.actor)return {ok:false,error:'Игрок отключился или ещё загружается.'};
-  const flock=r.pigeonFlock??=[],bird:SummonedPigeon={id:crypto.randomUUID(),playerId,skin:Math.random()<.5?'pidgie':'snowball',seed:(Math.random()*0x100000000)>>>0,order:(flock.at(-1)?.order??-1)+1};
+  const flock=r.pigeonFlock??=[],bird:SummonedPigeon={id:crypto.randomUUID(),playerId,skin:WILD_PIGEONS[Math.floor(Math.random()*WILD_PIGEONS.length)],seed:(Math.random()*0x100000000)>>>0,order:(flock.at(-1)?.order??-1)+1};
   await this.ctx.storage.put(`pigeon:${r.id}:${bird.id}`,bird);
   (r.pigeonFlock??=[]).push(bird);this.log(a,'получил голубиную почту от Ветерка.');this.changed();return {ok:true};
   }catch(error){console.error('Pigeon summon failed',error);return {ok:false,error:'Не удалось прислать голубя. Попробуй ещё раз.'};}
@@ -336,7 +337,7 @@ export class GameRoom extends DurableObject<Env>{
   if(saved&&!occupied.has(saved.actor.variant))variant=saved.actor.variant;
   if(occupied.has(variant))return this.reject('Этот цвет уже занят. Выбери другого Кирби.');
   const id=saved?.id??crypto.randomUUID();
-  if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.restoreSeals();this.room.host=id;}
+  if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.room.epoch=Date.now();this.room.dayPhase=INITIAL_DAY_PHASE;this.restoreSeals();this.room.host=id;}
   const resume=saved?{...saved.actor,name,variant,star:Math.max(0,saved.actor.star-(Date.now()-saved.savedAt)/1000)}:undefined;
   if(resume){const boost=new FruitSpeedBoost();boost.restore(resume.fruitBoost);boost.update(Math.max(0,(Date.now()-saved!.savedAt)/1000));resume.fruitBoost=boost.snapshot();}
   let device=deviceInfo(request.headers.get('User-Agent')??'');try{const raw=url.searchParams.get('device');if(raw&&raw.length<1024)device=sanitizeDevice(JSON.parse(raw));}catch{}
@@ -366,7 +367,7 @@ export class GameRoom extends DurableObject<Env>{
     bird.checkpoint=c;pigeons.push(c);this.pigeonDirty.set(bird.id,bird);
    }
   }
-  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'].includes(id));for(const id of ['millQuest','centipede','flowers','numbers','pidgieFriend','snowballFriend'])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
+  if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers',...WILD_PIGEONS.map(pigeonFriendAchievement)].includes(id));for(const id of ['millQuest','centipede','flowers','numbers',...WILD_PIGEONS.map(pigeonFriendAchievement)])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(actor?.location==='meta-knight-arena'){
    const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
    const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];

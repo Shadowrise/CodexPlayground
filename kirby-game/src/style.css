@@ -2,7 +2,7 @@
 :root { color-scheme: dark; --ui-bg: #171e29; --ui-raised: #253142; --ui-hover: #33435a; --ui-border: #52647c; --ui-text: #f0f4fa; --ui-muted: #bdcadb; --ui-accent: #a6edbf; --ui-focus: #ffd782; font-family: 'Manrope', system-ui, sans-serif; color: var(--ui-text); font-synthesis: none; }
 .choosing .title, .choosing .status, .choosing .controls, .choosing .player-stats, .choosing .music-controls { visibility: hidden; }
 .choosing #game { visibility: hidden; }
-#character-select { position: fixed; inset: 0; z-index: 10; display: grid; place-items: safe center; overflow-y: auto; padding: 24px; background: #a5e0ef url('/images/loading-meadow.webp') center / cover no-repeat; backdrop-filter: blur(9px); }
+#character-select { position: fixed; inset: 0; z-index: 10; display: grid; place-items: safe center; overflow-y: auto; padding: 24px; background: #090e182e; }
 #character-select[hidden] { display: none; }
 .selection-card { width: min(650px, 100%); padding: 30px; background: #171e29fa; border: 1px solid var(--ui-border); border-radius: 28px; box-shadow: 0 24px 100px #00000066; }
 .selection-card h2 { font-size: 33px; letter-spacing: -1.4px; margin: 12px 0 8px; }
@@ -31,6 +31,8 @@
 .pigeon-character .mini-kirby::before { content: ''; position: absolute; inset: 0; background: url('/icons/pidgie.svg?v=6') center / contain no-repeat; }
 .pigeon-character .mini-kirby > i { visibility: hidden; }
 .snowball-character .mini-kirby::before { background-image: url('/icons/snowball.svg'); }
+.ugolyok-character .mini-kirby::before { background-image: url('/icons/ugolyok.svg'); }
+.ryzhik-character .mini-kirby::before { background-image: url('/icons/ryzhik.svg?v=2'); }
 .meta-knight-character .mini-kirby::before { content: ''; position: absolute; inset: 7px 0 5px; background: linear-gradient(100deg,#191c43,#58548d 44%,#23244f 70%); clip-path: polygon(20% 0,50% 15%,80% 0,100% 90%,77% 75%,65% 100%,50% 82%,35% 100%,23% 75%,0 90%); }
 .meta-knight-character .mini-body { top: 6px; background: linear-gradient(115deg,#f0f5ff,#c9d3e2 42%,#8294b1); border: 1px solid #687a98; border-radius: 46% 46% 43% 43%; box-shadow: inset 3px 2px 0 #ffffff66,inset -4px -4px 0 #6c7d9c66,0 2px 3px #0b103980; }
 .meta-knight-character .mini-body::before,.meta-knight-character .mini-body::after { width: 16px; height: 18px; top: 26px; background: linear-gradient(120deg,#e0e8f5,#8c9fbb); border: 1px solid #536382; }
@@ -108,7 +110,9 @@ header.title { left: 92px; }
 .music-controls { left: 28px; top: 172px; display: flex; flex-direction: column; gap: 7px; padding: 10px 13px; border-radius: 15px; }
 .audio-row { display: flex; align-items: center; gap: 12px; }
 .audio-row button { min-width: 120px; }
-.music-controls input { width: 80px; accent-color: var(--ui-accent); cursor: pointer; }
+.music-controls input[type="range"] { width: 80px; accent-color: var(--ui-accent); cursor: pointer; }
+.music-shuffle { display: flex; align-items: center; gap: 8px; padding: 2px 0 5px; font-size: 11px; cursor: pointer; }
+.music-shuffle input { margin: 0; cursor: pointer; }
 .music-library { display: grid; gap: 7px; padding-top: 8px; border-top: 1px solid var(--ui-border); }
 .music-library select { max-width: 100%; padding: 8px; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--ui-raised); color: var(--ui-text); font: inherit; font-size: 11px; }
 #music-track { font-size: 10px; color: var(--ui-muted); max-width: 235px; }

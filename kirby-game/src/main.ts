@@ -43,7 +43,7 @@ import {startNumberGame,advanceNumberGame,pressNumberGame,nearNumberButton,type 
 import {MusicalFlowerGameView} from './musical-flower-game-view';
 import {startFlowerGame,replayFlowerGame,advanceFlowerGame,playFlowerGame,nearFlowerButton,type FlowerGame,type FlowerActor} from './musical-flower-game';
 import {MUSICAL_FLOWERS,MUSICAL_FLOWER_SITE} from './musical-flower-site';
-import {cyclePhase,daylight,phaseAtHour} from './day-cycle';
+import {cyclePhase,daylight,phaseAtHour,INITIAL_DAY_PHASE} from './day-cycle';
 import {SkyTrail} from './sky-trail';
 import {MountainLedges} from './mountain-ledges';
 import {StarfallView} from './starfall-view';
@@ -51,9 +51,9 @@ import {allTasks,createStarfall,collectStar,finishStarfall,RESULTS_MS} from './s
 import {NpcSnapshots} from './npc-snapshots';
 import {PidgieNpc,type PidgiePlayer} from './pidgie-npc';
 import {PigeonFlock} from './pigeon-flock';
-import {pigeonPalette} from './pigeon-crowd';
+import {preparePigeonPalette} from './pigeon-crowd';
 import type {PidgieState} from './pidgie-state';
-import {WILD_PIGEONS,pigeonFriendAchievement,type WildPigeonId} from './wild-pigeons';
+import {WILD_PIGEONS,isWildPigeonId,pigeonFriendAchievement,wildPigeonName,wildPigeonObjectName,type WildPigeonId} from './wild-pigeons';
 import {isPigeonVariant} from './variant-palette';
 import {MeadowIndex} from './meadow-index';
 import {sceneryClearance} from './landmarks';
@@ -110,7 +110,7 @@ import { MEADOW_HALF_SIZE, MOUNTAIN_WIDTH, constrainToMeadow } from './world-bou
 import {createBossArena} from './boss-arena';
 import {preloadGameAssets} from './game-assets';
 import {restoreEnvironment,unpackEnvironment} from './prepared-environment';
-import {startupTask,startupFrame} from './startup-tasks';
+import {startupTask,startupPaint,prioritizeStartupUI} from './startup-tasks';
 import {prepareStartupGraphics} from './startup-graphics';
 import { createNpcs, type KirbyNpc } from './npcs';
 import { KIRBY_VARIANTS, styleVariant, type KirbyVariant } from './variants';
@@ -176,14 +176,14 @@ settingsToggle.addEventListener('click', () => {
   if(open)audioPanel.querySelector<HTMLElement>('select, button, input')?.focus();
   else if(playing)canvas.focus();
 });
-const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!);
+const music = new BackgroundMusic(document.querySelector<HTMLButtonElement>('#music-toggle')!, document.querySelector<HTMLInputElement>('#music-volume')!, document.querySelector<HTMLButtonElement>('#music-previous')!, document.querySelector<HTMLButtonElement>('#music-next')!, document.querySelector<HTMLElement>('#music-track')!, document.querySelector<HTMLInputElement>('#music-shuffle')!);
 music.enterMenu();
 const sounds = new SoundEffects(document.querySelector<HTMLButtonElement>('#sounds-toggle')!, document.querySelector<HTMLInputElement>('#sounds-volume')!);
 let unlockStorage:Storage|undefined;try{unlockStorage=localStorage;}catch{}
 const characterUnlocks=new CharacterUnlocks(unlockStorage);
 const unlockView=new CharacterUnlockView(()=>sounds.playCharacterUnlock());
 const lockedCharacterTooltip=new LockedCharacterTooltip();
-const unlockAnnouncements:('Бандана'|'Пиджи'|'Снежок'|'Meta Knight')[]=[];
+const unlockAnnouncements:KirbyVariant[0][]=[];
 const localLog:LogEntry[]=[];
 const chat=new MeadowChat(text=>{if(network)network.event({type:'chat',text});else addLocalLog(text,true);});
 function addLocalLog(text:string,isChat=false){localLog.push({id:crypto.randomUUID(),name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),text,chat:isChat});if(localLog.length>10)localLog.shift();}
@@ -198,6 +198,7 @@ let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
 let loadedPigeon: GLTF | undefined;
 let loadedSnowball: GLTF | undefined;
+let loadedPlumages:Record<WildPigeonId,GLTF>;
 let loadedMetaKnight: GLTF | undefined;
 let startupComplete=false;
 let startupFailed=false,entryPending=false;
@@ -286,8 +287,7 @@ loadButton.addEventListener('click',async()=>{
   try {
     const raw=localStorage.getItem(SAVE_KEY);if(!raw)throw Error('Сохранение не найдено.');
     pendingSave=parseSave(raw);
-    if(pendingSave.player.achievements?.includes('pidgieFriend')&&characterUnlocks.unlockPidgie())unlockAnnouncements.push('Пиджи');
-    if(pendingSave.player.achievements?.includes('snowballFriend')&&characterUnlocks.unlockSnowball())unlockAnnouncements.push('Снежок');
+    for(const id of WILD_PIGEONS)if(pendingSave.player.achievements?.includes(pigeonFriendAchievement(id))&&characterUnlocks.unlockPigeon(id))unlockAnnouncements.push(wildPigeonName(id));
     if(characterUnlocks.complete(pendingSave.player.achievements??[]))unlockAnnouncements.push('Бандана');
     resetVariantAvailability();
     selected=KIRBY_VARIANTS.find(v=>v[0]===pendingSave!.player.variant)!;
@@ -301,7 +301,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride},wildBirds.get('snowball')?.npc.networkState())));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState()})));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -313,9 +313,11 @@ async function startGame(){
  entryPending=true;
  const generation=selectionGeneration,waiting=!startupComplete;
  try{
-  // Unlock audio in the click handler, before waiting for background preparation.
-  music.start();sounds.start();lockedCharacterTooltip.hide();
   if(waiting)document.dispatchEvent(new Event('kirby-entry-loading'));
+  // Only unlock audio in the gesture. Paint feedback before synthesizing sounds.
+  music.start();sounds.unlock();lockedCharacterTooltip.hide();
+  if(waiting)await startupPaint();
+  sounds.start();
   await ready;
   if(generation!==selectionGeneration)return;
   await enterGame();
@@ -326,8 +328,8 @@ async function startGame(){
   if(waiting&&!startupFailed)document.dispatchEvent(new Event('kirby-entry-settled'));
  }
 }
-let dayStart=Date.now(),dayStartPhase=Math.random();
-const currentDayPhase=()=>network?cyclePhase(network.room.dayPhase??.25,network.room.epoch,network.serverNow):cyclePhase(dayStartPhase,dayStart,Date.now());
+let dayStart=Date.now(),dayStartPhase=INITIAL_DAY_PHASE;
+const currentDayPhase=()=>network?cyclePhase(network.room.dayPhase??INITIAL_DAY_PHASE,network.room.epoch,network.serverNow):cyclePhase(dayStartPhase,dayStart,Date.now());
 const timeDial=document.querySelector<HTMLElement>('#time-dial')!;
 const timeNeedle=document.querySelector<SVGGElement>('#time-needle')!;
 const variantGrid = document.querySelector<HTMLDivElement>('#variant-grid')!;
@@ -415,8 +417,9 @@ function pollEarlyMenu(time:number){
 }
 document.addEventListener('kirby-startup-failed',()=>{startupFailed=true;rejectStartup(new Error('Game startup failed'));cancelAnimationFrame(earlyMenuFrame);earlyMenuFrame=0;},{once:true});
 earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
+prioritizeStartupUI();
 localizeDOM();document.dispatchEvent(new Event('kirby-menu-ready'));
-await startupFrame();await startupTask();
+await startupPaint();
 const scene = new THREE.Scene();
 const meadowPortal=createMetaKnightPortal();meadowPortal.group.position.set(META_KNIGHT_PORTAL.x,0,META_KNIGHT_PORTAL.z);meadowPortal.setWorking(false);scene.add(meadowPortal.group);
 const prankEffects=new PrankEffects((kind,gain)=>sounds.playPrank(kind,gain));scene.add(prankEffects.group);
@@ -494,6 +497,7 @@ performance.mark('kirby-environment-ready');
 const arenaEnvironment=createBossArena();environmentRoots.push(arenaEnvironment);scene.add(arenaEnvironment);await startupTask();
 const meadowWind=environmentRoots.find(root=>root.name==='Biome meadow details')!.userData.windTime as {value:number};
 const ponds=new Ponds((scene.getObjectByName('Biome ground') as THREE.Mesh).material as THREE.Material);scene.add(ponds.group);
+await startupTask();
 const npcSwimming=new NpcSwimming();
 const fountain=new RainbowFountain();scene.add(fountain.group);
 const musicalFlowers=new MusicalFlowers();scene.add(musicalFlowers.group);
@@ -501,9 +505,10 @@ const numberGarden=new NumberGarden();scene.add(numberGarden.group);let soloNumb
 const numberGameView=new NumberGardenView(kind=>sounds.playNumber(kind));scene.add(numberGameView.group);
 let soloFlowerGame:FlowerGame|undefined;
 const flowerGameView=new MusicalFlowerGameView((index,transpose)=>{musicalFlowers.play(index,performance.now()/1000);playFlowerSound(index,transpose);},kind=>{if(kind==='finish')sounds.playMill('finish');else if(kind==='round')sounds.playTaskComplete();else sounds.playMill('wrong');});scene.add(flowerGameView.group);
-const coaster=new Coaster();scene.add(coaster.group);
+const coaster=await Coaster.create();scene.add(coaster.group);
 await startupTask();
 const mountainLedges=new MountainLedges((scene.getObjectByName('Continuous square mountain range') as THREE.Mesh<THREE.BufferGeometry,THREE.MeshStandardMaterial>).material,kind=>{if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(mountainLedges.group);
+await startupTask();
 const bread=new BreadWorld();scene.add(bread.group);let lastBreadRequest=0;
 const sealLocations=new MetaKnightSealLocations();scene.add(sealLocations.group);
 const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
@@ -517,14 +522,16 @@ let soloPortalOverride:boolean|undefined;
 function metaKnightPortalReady(){return playing&&(network?network.room.metaKnightPortalOpen===true||allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
+await startupTask();
 const boatTime=()=>network?(network.serverNow-network.room.epoch)/1000:performance.now()/1000;
 const millHud=new MillQuestHud();
-const watermill=new Watermill();scene.add(watermill.group);
+const watermill=await Watermill.create();scene.add(watermill.group);
 await startupTask();
-const treehouse=new Treehouse(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
+const treehouse=await Treehouse.create(kind=>sounds.playTreehouse(kind));scene.add(treehouse.group);
 await startupTask();
 const benches=new Benches();
 const skyTrail=new SkyTrail(kind=>{if(kind==='star')sounds.playStarPickup();else if(kind==='checkpoint')sounds.playTaskComplete();else if(kind==='leaves')sounds.playTreehouse('leaves');else sounds.playBalloon('departure',.8);});scene.add(skyTrail.group);
+await startupTask();
 const home=new KirbyHome();scene.add(home.group);
 await startupTask();
 const dogSoundPosition=new THREE.Vector3();
@@ -570,8 +577,8 @@ chat.configureCommands({
   if(command.kind==='time'){dayStart=Date.now();dayStartPhase=phaseAtHour(command.hour);return;}
   if(command.kind==='portal'){soloPortalOverride=command.open;meadowPortal.setWorking(metaKnightPortalReady());return;}
   if(command.kind==='unlock'){
-   const name=command.character==='snowball'?'Снежок':command.character==='meta-knight'?'Meta Knight':command.character==='pidgie'?'Пиджи':'Бандана';
-   const unlocked=command.character==='snowball'?characterUnlocks.unlockSnowball():command.character==='meta-knight'?characterUnlocks.unlockMetaKnight():command.character==='pidgie'?characterUnlocks.unlockPidgie():characterUnlocks.unlockBandana();
+   const name=isWildPigeonId(command.character)?wildPigeonName(command.character):command.character==='meta-knight'?'Meta Knight':'Бандана';
+   const unlocked=isWildPigeonId(command.character)?characterUnlocks.unlockPigeon(command.character):command.character==='meta-knight'?characterUnlocks.unlockMetaKnight():characterUnlocks.unlockBandana();
    if(unlocked){unlockAnnouncements.push(name);lockedCharacterTooltip.hide();updateVariantLocks();}
    return;
   }
@@ -644,9 +651,12 @@ scene.getObjectByName('Meadow grass')?.traverse(object=>{
 });
 scene.add(fruits.group);
 const preparedShadows=new WorldShadows(scene,coaster);
+preparedShadows.deferPreparation();
 preparedShadows.prepareFruits(fruits.fruits);
 preparedShadows.grass.visible=new URLSearchParams(location.search).get('grassShadows')!=='0';
 setupShadowMaterials();
+await preparedShadows.finishPreparation();
+await startupTask();
 const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
 const sceneryVisibility=new SceneryVisibility(environmentRoots);
@@ -840,7 +850,7 @@ async function loadCharacter() {
   try {
     const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
     for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
-    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel,snowballModel]=models;
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel,snowballModel,ugolyokModel,ryzhikModel]=models;
     metaKnightReflections=createMetaKnightReflections(renderer,metaKnightModel.scene);
     for(const seal of seals)metaKnightReflections.add(seal.model);
     metaKnightReflections.update(daylight(currentDayPhase()));
@@ -851,12 +861,14 @@ async function loadCharacter() {
     await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);
     await startupTask();
-    fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);setupShadowMaterials();
+    fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);
+    preparedShadows.deferPreparation();setupShadowMaterials();await preparedShadows.finishPreparation();
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
     loadedSnowball = snowballModel;
+    loadedPlumages={pidgie:pigeonModel,snowball:snowballModel,ugolyok:ugolyokModel,ryzhik:ryzhikModel};
     loadedMetaKnight = metaKnightModel;
-    pigeonPalette(pigeonModel);await startupTask();pigeonPalette(snowballModel);await startupTask();
+    for(const model of Object.values(loadedPlumages)){await preparePigeonPalette(model);await startupTask();}
   } catch (error) {
     console.error(error);
     selectionMessage.textContent = t('Не удалось загрузить персонажей. Обновите страницу.');selectionMessage.hidden=false;
@@ -891,14 +903,14 @@ async function enterGame(){
   npcs = createNpcs(template, animations, network?KIRBY_VARIANTS[0]:selected);
   coaster.addKirbyPassengers(template,animations,network?KIRBY_VARIANTS[0]:selected);
   boats.addPassengers(template,animations);
-  const playerModel=createPlayerModel(loadedModel,selected,loadedPigeon,false,loadedMetaKnight,loadedSnowball);
+  const playerModel=createPlayerModel(loadedModel,selected,loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);
   if(playerModel.character==='meta-knight')metaKnightReflections?.add(playerModel.model);
   character = new CharacterController(playerModel.model, playerModel.clips);
   character.actor.name='Игрок';
   const spawn=randomSpawn([...(scene.getObjectByName('Four woodland biomes')?.userData.treePositions ?? []),...npcs.map(n=>n.actor.position)]);
   character.actor.position.set(spawn.x,0,spawn.z);
-  dayStart=Date.now();dayStartPhase=Math.random();
-  const savedBirds={pidgie:pendingSave?.pidgie,snowball:pendingSave?.snowball};
+  dayStart=Date.now();dayStartPhase=INITIAL_DAY_PHASE;
+  const savedBirds=Object.fromEntries(WILD_PIGEONS.map(id=>[id,pendingSave?.[id]]));
   const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
   soloPortalOverride=pendingSave?.portal?.override;
@@ -913,13 +925,13 @@ async function enterGame(){
   home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);
   for(const npc of npcs){maze.constrain(npc.actor.position,npc.actor.scale.x);constrainNpcOutsideArena(npc.actor.position,npc.actor.scale.x);}
   for(const id of WILD_PIGEONS){
-   const npc=new PidgieNpc(id==='snowball'?loadedSnowball!:loadedPigeon!,{kind:id,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare',id),onInterest:person=>logPidgieReaction(person,'pidgie-interest',id),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p)),...Array.from(wildBirds.values(),b=>b.npc.actor.position)]});
+   const npc=new PidgieNpc(loadedPlumages[id],{kind:id,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:person=>logPidgieReaction(person,'pidgie-scare',id),onInterest:person=>logPidgieReaction(person,'pidgie-interest',id),people:[character.actor.position,...npcs.map(n=>n.actor.position),...Array.from(network?.actors.values()??[],a=>new THREE.Vector3().fromArray(a.p)),...Array.from(wildBirds.values(),b=>b.npc.actor.position)]});
    const checkpoint=network?.world?.[id]??savedBirds[id];if(checkpoint)npc.applyNetworkState(checkpoint,true);
    wildBirds.set(id,{npc,ready:!network||network.host||!!network.world?.[id],fearSeen:npc.fearCount,joySeen:npc.state==='Joy',helloSeen:npc.state==='Hello'});
   }
   pidgieNpc=wildBirds.get('pidgie')!.npc;pidgieReady=wildBirds.get('pidgie')!.ready;
   if(network){
-   pigeonFlock=new PigeonFlock({pidgie:loadedPigeon!,snowball:loadedSnowball!},{prepare:setupShadowMaterials,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:position=>{
+   pigeonFlock=new PigeonFlock(loadedPlumages,{prepare:setupShadowMaterials,safeGround:pidgieSafeGround,walkGround:pidgieSafeWalk,flightHeight:pidgieFlightHeight,onScare:position=>{
     if(!character||cosmicArena.engaged)return;const listener=character.actor.position;
     void sounds.playPigeonEmoteAt('Fear',position.x-listener.x,position.z-listener.z,followCamera.azimuth);
    }},position=>{
@@ -941,7 +953,7 @@ async function enterGame(){
   styleVariant(document.querySelector<HTMLElement>('#player-avatar')!,selected);
   const nameLabel=document.querySelector<HTMLElement>('#player-name')!;nameLabel.textContent=nameInput.value;nameLabel.title=nameInput.value;
   if(network){
-    remotePlayers=new RemotePlayers(scene,loadedModel,loadedPigeon,loadedMetaKnight,model=>metaKnightReflections?.add(model),loadedSnowball);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
+    remotePlayers=new RemotePlayers(scene,loadedModel,loadedPigeon,loadedMetaKnight,model=>metaKnightReflections?.add(model),loadedSnowball,loadedPlumages);saveButton.hidden=saveMessage.hidden=true;leaveOnline.hidden=false;onlineRoster.hidden=true;
     knownFruits=new Set(network.room.fruits.flatMap((owner,i)=>owner?[i]:[]));fruits.restore(network.room.fruits.map(Boolean),network.room.fruits.filter(x=>x?.startsWith('npc:')).length);
     fruits.claim=(index,eater)=>network!.event({type:'fruit',index,...(eater===character?{}:{npc:npcs.indexOf(eater as KirbyNpc)})});
     network.onDisconnect=reason=>{tutorial.cancel();if(network?.room.festival&&network.serverNow>=network.room.festival.endsAt){leaveOnline.click();return;}playerHostBadge.hidden=true;keys.clear();stopDragging();playing=false;onlineRoster.textContent=t(reason);onlineRoster.hidden=false;audioPanel.hidden=false;controlsPanel.hidden=false;};
@@ -974,8 +986,7 @@ async function enterGame(){
 
 function checkCharacterUnlock(){
  if(!character||!playing)return;
- if(character.achievements.has('pidgieFriend')&&characterUnlocks.unlockPidgie()){unlockAnnouncements.push('Пиджи');updateVariantLocks();}
- if(character.achievements.has('snowballFriend')&&characterUnlocks.unlockSnowball()){unlockAnnouncements.push('Снежок');updateVariantLocks();}
+ for(const id of WILD_PIGEONS)if(character.achievements.has(pigeonFriendAchievement(id))&&characterUnlocks.unlockPigeon(id)){unlockAnnouncements.push(wildPigeonName(id));updateVariantLocks();}
  if(characterUnlocks.complete(character.achievements)){unlockAnnouncements.push('Бандана');updateVariantLocks();}
  if(unlockAnnouncements.length&&!tutorial.active&&unlockView.element.hidden){const name=unlockAnnouncements.shift()!;unlockView.show(KIRBY_VARIANTS.find(v=>v[0]===name)!);}
 }
@@ -1042,10 +1053,12 @@ function navigateSettings(direction:number, adjust:number, confirm:boolean) {
   let index=elements.indexOf(document.activeElement as HTMLElement);
   if(direction || index<0) {index=index<0?0:(index+direction+elements.length)%elements.length;elements[index].focus();}
   const element=elements[index];
-  if(adjust && element instanceof HTMLSelectElement) {
+  if((adjust||confirm) && element instanceof HTMLInputElement && element.type==='checkbox') {
+    element.click();
+  } else if(adjust && element instanceof HTMLSelectElement) {
     element.selectedIndex=(element.selectedIndex+adjust+element.options.length)%element.options.length;
     element.dispatchEvent(new Event('change'));
-  } else if(adjust && element instanceof HTMLInputElement) {
+  } else if(adjust && element instanceof HTMLInputElement && element.type==='range') {
     element.value=String(Math.max(0,Math.min(100,Number(element.value)+adjust*5)));
     element.dispatchEvent(new Event('input'));
   } else if(adjust && element.getAttribute('role')==='radio') {
@@ -1465,7 +1478,7 @@ function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;
     if(canFeedPidgie(bread.state,breadActor(c),bird)){
       const midpoint=c.actor.position.clone().add(new THREE.Vector3().fromArray(bird.p)).multiplyScalar(.5);
       const clear=Array.from({length:9},(_,i)=>new THREE.Vector3().fromArray(bird.p).lerp(midpoint,i/8)).every(p=>pidgieSafeWalk(p.x,p.z));
-      if(clear)return {text:id==='snowball'?'E — Угостить дикого Снежка':'E — Угостить дикого Пиджи',run:()=>sendBread({kind:'feed',bird:id}),target:{key:npc.npc,root:npc.npc.actor}};
+      if(clear)return {text:`E — Угостить дикого ${wildPigeonObjectName(id)}`,run:()=>sendBread({kind:'feed',bird:id}),target:{key:npc.npc,root:npc.npc.actor}};
     }
    }
     return {text:'E — Бросить хлебушек',run:()=>sendBread({kind:'drop'})};

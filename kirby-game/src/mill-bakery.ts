@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {batchRigidMeshes} from './rigid-batch';
+import {rigidMeshWork} from './rigid-batch';
+import {startupWork} from './startup-tasks';
 import {MILL_BAKERY_TABLE,MILL_BAKERY_OVEN,MILL_BAKERY_FOOTPRINTS} from './mill-bakery-site';
 import {MILL_BAKE_MS,MILL_HOPPER,type MillQuest} from './mill-quest';
 import {pigeonCarryGrip} from './pigeon-carry';
@@ -18,12 +19,14 @@ export class MillBakery {
  private readonly mixture=new T.Mesh(new T.SphereGeometry(1,24,12),new T.MeshStandardMaterial({color:'#f3e1ba',roughness:.95}));
  private readonly dough=new T.Group();
  private readonly ovenBread=new T.Group();
- private readonly steam:T.InstancedMesh;
+ private steam!:T.InstancedMesh;
  private readonly scratch=new T.Vector3();
  private readonly dummy=new T.Object3D();
  private readonly pitcherRest=new T.Vector3();
 
- constructor(){
+ constructor(deferred=false){if(!deferred)for(const _ of this.build()){};}
+ static async create(){const bakery=new MillBakery(true);await startupWork(bakery.build());return bakery;}
+ private *build(){
   this.group.name='Watermill bakery';this.table.name='Oak kneading table';
   this.bowl.name='Turquoise mixing bowl';this.pitcher.name='Glazed water pitcher';this.oven.name='Vaulted bread oven';this.fire.name='Bread oven fire';
   this.table.position.set(MILL_BAKERY_TABLE.x,0,MILL_BAKERY_TABLE.z);
@@ -202,7 +205,7 @@ export class MillBakery {
 
   // Batch compatible details once. Glaze, oak, plaster, iron and embers keep their finishes.
   const parents:T.Group[]=[];this.group.traverse(o=>{if(o instanceof T.Group)parents.push(o);});
-  for(const parent of parents)batchRigidMeshes(parent);
+  for(const parent of parents)yield* rigidMeshWork(parent);
   // Attach surface maps after batching: serializing texture pixels per tiny source
   // part would add seconds to startup. Cloned materials retain the finish marker.
   this.group.traverse(o=>{

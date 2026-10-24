@@ -6,6 +6,7 @@ import ts from 'typescript';
 import {BUILD,validActor} from '../src/network-protocol';
 import {playerNameKey} from '../src/player-name';
 import {createStarfall,validStarfall,RESULTS_MS} from '../src/starfall';
+import {cyclePhase,phaseAtHour,DAY_CYCLE_MS} from '../src/day-cycle';
 
 test('room restores disconnected players by name, rejects online duplicates, and forgets an empty session',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
@@ -35,9 +36,12 @@ test('room restores disconnected players by name, rejects online duplicates, and
   const join=async(name:string,variant:number)=>{await room.fetch(new Request(`https://test/ws?build=${BUILD}&variant=${variant}&name=${encodeURIComponent(name)}`,{headers:{Upgrade:'websocket'}}));return lastServer!;};
   const send=(s:Socket,actor?:any,events:any[]=[])=>room.webSocketMessage(s,JSON.stringify({type:'frame',actor,events}));
   const first=await join('  Кирби   Друг  ',0),id=first.data.id,roomId=room.room.id;
+  assert.equal(cyclePhase(room.room.dayPhase,room.room.epoch,now),phaseAtHour(9),'a new online game starts at 09:00');
   const duplicate=await join('КИРБИ ДРУГ',1);assert.equal(duplicate.messages[0].type,'error');assert.match(duplicate.messages[0].message,/именем/);assert.equal(room.info().players,1);
   assert.equal((await join('\u200b ',1)).messages[0].type,'error');
+  now+=DAY_CYCLE_MS/24;
   const second=await join('Другой',1);
+  assert(Math.abs(cyclePhase(second.messages[0].room.dayPhase,second.messages[0].room.epoch,now)-phaseAtHour(10))<1e-9,'late joining preserves the advancing room clock');
   const actor={p:[12,8,-16],q:[0,0,0,1],s:2,state:'Fly',pose:[],fruits:0,achievements:['mill','bench'],name:'Попытка сменить имя',variant:7,star:30,progress:{size:2.2,checkpoint:2,ground:4}};
   send(first,actor,[{type:'fruit',index:0},{type:'lock',key:'bug:0'}]);
   assert.equal(first.data.actor.name,'Кирби Друг');assert.equal(first.data.actor.variant,0);assert.equal(first.data.actor.fruits,1);assert.equal(writes,0);
@@ -110,7 +114,9 @@ test('room restores disconnected players by name, rejects online duplicates, and
   assert.equal((await room.adminOnline()).room.id,reset.roomId);assert.equal((await room.adminOnline()).players.length,0);
   assert.deepEqual((await room.adminChat(reset.roomId)).entries,[]);assert.equal((await room.adminChatMessage(reset.roomId,'Нет игроков')).ok,false);assert.equal((await room.adminChat(activeId)).ok,false);
   assert.equal((await room.adminRecreate(activeId)).ok,false);assert.equal((await room.adminFestival(reset.roomId,false)).ok,false);
+  now+=DAY_CYCLE_MS/2;
   const nextPlayer=await join('Кирби Друг',0);assert.equal(nextPlayer.messages[0].room.id,reset.roomId);assert(!nextPlayer.messages[0].resume);assert.deepEqual([...storage.keys()],['room-state']);
+  assert.equal(cyclePhase(nextPlayer.messages[0].room.dayPhase,nextPlayer.messages[0].room.epoch,now),phaseAtHour(9),'a prepared room starts its clock when the first player joins');
   assert.equal((await room.adminChat(reset.roomId)).entries.length,0);assert.equal((await room.adminChatMessage(reset.roomId,'Новая комната')).ok,true);
   // The admin uses the normal starfall, including immediate results and their deadline.
   send(nextPlayer,{...actor,achievements:['bench'],fruits:0});

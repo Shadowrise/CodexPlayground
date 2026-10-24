@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { BackgroundMusic, MUSIC_TRACKS } from '../src/music';
 import { readFileSync } from 'node:fs';
 
-test('all fifteen stereo tracks exist, main uses the approved full arrangement, audio has headroom', () => {
+test('all fifteen stereo tracks exist, first two use approved arrangements, audio has headroom', () => {
   assert.equal(MUSIC_TRACKS.length,15);
   for (const [index, [file]] of MUSIC_TRACKS.entries()) {
     const wav = readFileSync(new URL(`../public/audio/${file}.wav`, import.meta.url));
@@ -13,6 +13,11 @@ test('all fifteen stereo tracks exist, main uses the approved full arrangement, 
     assert(duration > 100 && duration < 130);
     if (index === 0) {
       assert(Math.abs(duration - 118.4) < .001);
+      assert.equal(wav.readUInt32LE(24), 44100);
+      assert.equal(wav.readUInt16LE(34), 16);
+    }
+    if (file === 'citrus-walk') {
+      assert(Math.abs(duration - 118.555555556) < .001, 'approved soft version begins with the theme and keeps its ending');
       assert.equal(wav.readUInt32LE(24), 44100);
       assert.equal(wav.readUInt16LE(34), 16);
     }
@@ -56,6 +61,9 @@ test('tracks preserve mute and configured volume, including temporary ducking an
       assert(audio!.src.split('?')[0].endsWith(`${MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0]}.wav`));
       if (MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0] === 'meadow-day') {
         assert(audio!.src.endsWith('?v=acoustic-20261021'), 'load the approved arrangement instead of cached legacy audio');
+      }
+      if (MUSIC_TRACKS[(first + i) % MUSIC_TRACKS.length][0] === 'citrus-walk') {
+        assert(audio!.src.endsWith('?v=acoustic-soft-20261024'), 'load the approved soft arrangement without the removed introduction');
       }
       audio!.dispatchEvent(new Event('ended'));
     }
@@ -128,5 +136,54 @@ test('menu autoplay keeps the music preference and retries on activation without
   button.dispatchEvent(new Event('click'));assert(background.paused);music.enterMenu();doc.dispatchEvent(new Event('pointerup'));await Promise.resolve();assert(background.paused,'menu entry respects mute');
   music.stop();
  }finally{for(const [key,descriptor] of saved){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}}
+});
+
+test('shuffle persists, plays complete random passes, supports navigation and returns to sequential playback',async()=>{
+ class Element extends EventTarget{value='';textContent='';title='';hidden=false;checked=false;setAttribute(){} }
+ const audios:AudioStub[]=[];
+ class AudioStub extends EventTarget{
+  src='';preload='';volume=1;loop=false;paused=true;plays=0;
+  constructor(){super();audios.push(this);}
+  pause(){this.paused=true;}
+  async play(){this.paused=false;this.plays++;}
+ }
+ const saved=new Map(['Audio','document','localStorage'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)])),random=Math.random;
+ const storage=new Map<string,string>(),doc=new Element();
+ Object.defineProperty(globalThis,'Audio',{configurable:true,value:AudioStub});
+ Object.defineProperty(globalThis,'document',{configurable:true,value:doc});
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:(key:string)=>storage.get(key)??null,setItem:(key:string,value:string)=>storage.set(key,value)}});
+ Math.random=()=>0;
+ const create=()=>{
+  const button=new Element(),volume=new Element(),previous=new Element(),next=new Element(),label=new Element(),shuffle=new Element();
+  const music=new BackgroundMusic(button as unknown as HTMLButtonElement,volume as unknown as HTMLInputElement,previous as unknown as HTMLButtonElement,next as unknown as HTMLButtonElement,label as unknown as HTMLElement,shuffle as unknown as HTMLInputElement);
+  return {music,button,volume,previous,next,shuffle,audio:audios.at(-1)!};
+ };
+ const track=(audio:AudioStub)=>MUSIC_TRACKS.findIndex(([file])=>audio.src.split('?')[0].endsWith(`${file}.wav`));
+ try{
+  const {music,button,volume,previous,next,shuffle,audio}=create();music.start();
+  assert.equal(shuffle.checked,false);assert.equal(track(audio),0);
+  const plays=audio.plays,source=audio.src;
+  shuffle.checked=true;shuffle.dispatchEvent(new Event('change'));
+  assert.equal(storage.get('kirby.audio.shuffle'),'true');assert.equal(audio.plays,plays);assert.equal(audio.src,source,'changing the order keeps the current song playing');
+  const first=[track(audio)];
+  for(let i=1;i<MUSIC_TRACKS.length;i++){audio.dispatchEvent(new Event('ended'));first.push(track(audio));}
+  assert.equal(new Set(first).size,MUSIC_TRACKS.length);assert.notDeepEqual(first,MUSIC_TRACKS.map((_,i)=>i));
+  previous.dispatchEvent(new Event('click'));assert.equal(track(audio),first.at(-2));
+  next.dispatchEvent(new Event('click'));assert.equal(track(audio),first.at(-1));
+  const second:number[]=[];
+  for(let i=0;i<MUSIC_TRACKS.length;i++){audio.dispatchEvent(new Event('ended'));second.push(track(audio));}
+  assert.equal(new Set(second).size,MUSIC_TRACKS.length);assert.notEqual(first.at(-1),second[0],'the cycle boundary cannot immediately repeat a song');
+  volume.value='42';volume.dispatchEvent(new Event('input'));button.dispatchEvent(new Event('click'));
+  assert.equal(storage.get('kirby.audio.shuffle'),'true');assert(audio.paused);
+  next.dispatchEvent(new Event('click'));assert(audio.paused,'shuffle respects mute');
+  music.stop();const restored=create();assert.equal(restored.shuffle.checked,true);assert.notEqual(track(restored.audio),0,'saved shuffle also randomizes the first menu song');
+  restored.shuffle.checked=false;restored.shuffle.dispatchEvent(new Event('change'));
+  const current=track(restored.audio);restored.next.dispatchEvent(new Event('click'));assert.equal(track(restored.audio),(current+1)%MUSIC_TRACKS.length);
+  restored.previous.dispatchEvent(new Event('click'));assert.equal(track(restored.audio),current);
+  assert.equal(storage.get('kirby.audio.shuffle'),'false');restored.music.stop();
+  const sequential=create();assert.equal(sequential.shuffle.checked,false);assert.equal(track(sequential.audio),0);sequential.music.stop();
+ }finally{
+  Math.random=random;for(const [key,descriptor] of saved){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}
+ }
 });
 

@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {startupWork} from './startup-tasks';
 
 // Multi-draw is optional (notably on some phones). Keep ordinary instancing on
 // those devices: BatchedMesh's per-object fallback would produce more draws.
@@ -12,6 +13,10 @@ export function scenerySources(mesh:T.BatchedMesh){return sources.get(mesh)??[];
  * continue choosing their own levels/ranges; only the submission is combined.
  * Buffers contain each prototype once, never one geometry copy per plant. */
 export function batchScenery(root:T.Object3D){
+ for(const _ of sceneryWork(root)){}
+}
+export function batchSceneryAsync(root:T.Object3D){return startupWork(sceneryWork(root));}
+function* sceneryWork(root:T.Object3D){
  if(!multiDraw)return;
  root.updateMatrixWorld(true);
  const inverse=root.matrixWorld.clone().invert(),groups=new Map<string,T.InstancedMesh[]>(),families=new Map<T.InstancedMesh,string>();
@@ -92,5 +97,6 @@ export function batchScenery(root:T.Object3D){
    }
    T.BatchedMesh.prototype.onBeforeRender.apply(this,args);
   };
+  yield;
  }
 }

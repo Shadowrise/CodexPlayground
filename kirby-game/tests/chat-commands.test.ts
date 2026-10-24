@@ -129,7 +129,7 @@ test('Pidgie unlock requires its complete Latin name; partial names remain sugge
   const result=parseChatCommand(text,true,places);assert(result?.error,text);
   assert.match(result.error,/\/unlock bandana/);assert.match(result.error,/\/unlock pidgie/);
  }
- assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball']);
+ assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball','/unlock ugolyok','/unlock ryzhik']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);
   for(const prefix of ['p','PI','pidg','pidgie']){
@@ -172,6 +172,21 @@ test('Snowball unlock accepts its full alias and localizes suggestions and usage
    }]);
    const error=parseChatCommand('/unlock',true,places)!.error!;
    assert.match(t(error),/\/unlock snowball/);if(locale!=='ru')assert.notEqual(t(error),error);
+  }
+ }finally{setLocale('ru');}
+});
+
+test('Ugolyok and Ryzhik unlock commands require full aliases, stay solo-only, and localize autocomplete and usage',()=>{
+ try{
+  for(const [id,names] of [['ugolyok',['Уголёк','Ugolyok','Въгленчо']],['ryzhik',['Рыжик','Ryzhik','Рижко']]] as const){
+   for(const text of [`/unlock ${id}`,` /UNLOCK   ${id.toUpperCase()} `])assert.deepEqual(parseChatCommand(text,true,places),{command:{kind:'unlock',character:id}});
+   for(const text of [`/unlock ${id.slice(0,3)}`,`/unlock ${names[0]}`,`/unlock ${id} extra`])assert(parseChatCommand(text,true,places)?.error,text);
+   assert(parseChatCommand(`/unlock ${id}`,false,places)?.error);assert.deepEqual(commandSuggestions(`/unlock ${id}`,false,places),[]);
+   for(const [i,locale] of (['ru','en','bg'] as const).entries()){
+    setLocale(locale);
+    for(const prefix of [id[0],id.slice(0,3).toUpperCase(),id])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{value:`/unlock ${id}`,label:id,description:names[i],complete:true}]);
+    const error=parseChatCommand('/unlock',true,places)!.error!;assert.match(t(error),new RegExp('/unlock '+id));if(locale!=='ru')assert.notEqual(t(error),error);
+   }
   }
  }finally{setLocale('ru');}
 });

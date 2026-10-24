@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
-import {batchRigidMeshes} from './rigid-batch';
-import {craftedUVs,applyCraftedSurfaces} from './crafted-surfaces';
+import {rigidMeshWork} from './rigid-batch';
+import {craftedUVs,craftedSurfaceWork} from './crafted-surfaces';
 
 type Finish='oak'|'stone'|'paint'|'linen'|'wicker'|'plaster'|'ceramic'|'metal'|'leaf'|'rope';
 const roughness:Record<Finish,number>={oak:.86,stone:.93,paint:.72,linen:.98,wicker:.84,plaster:.96,ceramic:.31,metal:.42,leaf:.9,rope:.94};
@@ -46,7 +46,10 @@ export class CraftedProps{
   const mesh=this.cylinder(c,(a.x+b.x)/2,(a.y+b.y)/2,(a.z+b.z)/2,r,r,a.distanceTo(b),finish,6);mesh.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),b.clone().sub(a).normalize());return mesh;
  }
  finish(name:string,preserve:ReadonlySet<T.Object3D>=new Set()){
-  batchRigidMeshes(this.group,preserve);applyCraftedSurfaces(this.group);this.group.name=name;
+  const work=this.finishWork(name,preserve);for(;;){const step=work.next();if(step.done)return step.value;}
+ }
+ *finishWork(name:string,preserve:ReadonlySet<T.Object3D>=new Set()):Generator<void,T.Group>{
+  yield* rigidMeshWork(this.group,preserve);yield* craftedSurfaceWork(this.group);this.group.name=name;
   this.group.traverse(o=>{if(o instanceof T.Mesh){o.geometry.computeBoundingSphere();o.userData.craftedProp=true;
    if(o.material instanceof T.MeshStandardMaterial&&['linen','leaf','ceramic','metal'].includes(o.material.userData.craftedFinish))o.castShadow=false;
   }});

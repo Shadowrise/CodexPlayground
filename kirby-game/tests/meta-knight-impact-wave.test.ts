@@ -16,7 +16,7 @@ test('a dive opens at impact, accepts an immediate counter, and leaves its wave 
  advanceKnightBattle(s,[a,b],s.until);assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a,b],s.until);assert.equal(s.stage,'approach');
  assert(knightPressureWave(s,s.since));assert.deepEqual(JSON.parse(JSON.stringify(s)).impactWave,wave,'room snapshots retain the independent launch');
  const contact=landing+41.7/.014;advanceKnightBattle(s,[a,b],contact-25);advanceKnightBattle(s,[a,b],contact);
- assert.equal(s.players.b.hp,4,'the far player still takes wave damage after the boss resumes');assert.deepEqual(s.impactWave,wave);
+ assert.equal(s.teamHp,3,'the landing hit and the far player’s wave contact each cost the team a life');assert.equal(s.players.b.hp,3);assert.deepEqual(s.impactWave,wave);
  const end=knightPressureWave(s,contact)!.until;s.players.a.invulnerable=s.players.b.invulnerable=1e12;advanceKnightBattle(s,[a,b],end);
  assert.equal(s.impactWave,undefined);assert(!knightPressureWave(s,end));
 });
@@ -26,12 +26,12 @@ test('the outgoing ring keeps its ground contact after a hit advances the boss i
  advanceKnightBattle(s,[a,b],s.until);advanceKnightBattle(s,[a,b],s.until);assert.equal(s.stage,'transition');advanceKnightBattle(s,[a,b],s.until);
  assert.equal(s.phase,3);assert.equal(s.stage,'star-rise');const contact=landing+41.7/.014;
  assert(knightDanger(s,b,contact,contact-25));assert(!knightDanger(s,{...b,p:[0,1.2,41.7]},contact,contact-25));
- advanceKnightBattle(s,[a,b],contact-25);advanceKnightBattle(s,[a,b],contact);assert.equal(s.players.b.hp,4);
+ advanceKnightBattle(s,[a,b],contact-25);advanceKnightBattle(s,[a,b],contact);assert.equal(s.teamHp,3);assert.equal(s.players.b.hp,3);
 });
 
 test('a counter by the first fighter cannot skip a second fighter hit by the ring on the same tick',()=>{
  const {s,a,b,landing}=fixture();b.p=[0,0,4.2];assert(knightAttack(s,a,landing+160));advanceKnightBattle(s,[a,b],landing+300);
- assert.equal(s.hp,7);assert.equal(s.stage,'stunned');assert.equal(s.players.b.hp,4);
+ assert.equal(s.hp,7);assert.equal(s.stage,'stunned');assert.equal(s.teamHp,3);assert.equal(s.players.b.hp,3);
 });
 
 test('cancellation, terminal outcomes and explicit phase resets clear the outgoing hazard',()=>{

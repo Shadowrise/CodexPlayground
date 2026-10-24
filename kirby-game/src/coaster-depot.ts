@@ -2,14 +2,17 @@ import * as T from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {DEPOT_PLATFORM,DEPOT_STEPS,DEPOT_BENCHES} from './depot-floor';
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
-import {batchRigidMeshes} from './rigid-batch';
+import {rigidMeshWork} from './rigid-batch';
 import {makeOakBench} from './bench-model';
-import {OAK_TONES as oak,craftedUVs,applyCraftedSurfaces} from './crafted-surfaces';
+import {OAK_TONES as oak,craftedUVs,craftedSurfaceWork} from './crafted-surfaces';
 
 type Finish='oak'|'stone'|'paint'|'iron'|'brass'|'leather'|'ceramic'|'lamp';
 
 /** Open-air station: all fine detail is static, with a clear approach and boarding edge. */
 export function makeCoasterDepot(){
+ const work=coasterDepotWork();for(;;){const step=work.next();if(step.done)return step.value;}
+}
+export function* coasterDepotWork():Generator<void,T.Group>{
  const root=new T.Group();root.name='Handcrafted coaster depot';root.position.z=DEPOT_PLATFORM.z;
  const materials=new Map<string,T.MeshStandardMaterial>(),geometries=new Map<string,T.BufferGeometry>();
  const material=(color:string,finish:Finish)=>{
@@ -62,6 +65,7 @@ export function makeCoasterDepot(){
    box(floor,oak[(row*3+i)%oak.length],'oak',(a+b)/2,.615,z,b-a,.17,.525,.02);
    for(const x of [a+.13,b-.13])for(const dz of [-.16,.16])bolt(floor,x,.704,z+dz);
   }
+  yield;
  }
  for(const side of [-1,1])box(floor,'#c4b89c','stone',side*11.78,.605,0,.44,.19,10,.035);
  box(floor,'#c7b99a','stone',0,.605,-4.8,23.2,.19,.4,.03);
@@ -250,7 +254,7 @@ export function makeCoasterDepot(){
 
  // Preserve named prop groups but merge their rigid pieces by material finish.
  const parents:T.Group[]=[];root.traverse(o=>{if(o instanceof T.Group)parents.push(o);});
- for(const parent of parents)batchRigidMeshes(parent);
- applyCraftedSurfaces(root);
+ for(const parent of parents)yield* rigidMeshWork(parent);
+ yield* craftedSurfaceWork(root);
  return root;
 }

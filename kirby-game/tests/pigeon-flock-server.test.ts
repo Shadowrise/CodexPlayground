@@ -34,7 +34,7 @@ test('admin pigeons accumulate independently of pranks, validate host checkpoint
   assert.equal((await room.adminPrank('room','target','gift')).ok,true);
   for(let i=0;i<300;i++)assert.equal((await room.adminPigeon('room','target')).ok,true);
   assert.equal(room.room.pigeonFlock.length,300);assert.equal(new Set(room.room.pigeonFlock.map((b:any)=>b.id)).size,300);
-  assert.deepEqual(new Set(room.room.pigeonFlock.map((b:any)=>b.skin)),new Set(['pidgie','snowball']));
+  assert.deepEqual(new Set(room.room.pigeonFlock.map((b:any)=>b.skin)),new Set(['pidgie','snowball','ugolyok','ryzhik']));
   const bird=room.room.pigeonFlock[0],checkpoint={id:bird.id,bird:{...pidgieFixture(),seed:bird.seed},helloIn:4,helloRemaining:0,helloCount:1};
   room.webSocketMessage(guest,JSON.stringify({type:'frame',pigeons:[checkpoint]}));assert.equal(bird.checkpoint,undefined);
   room.webSocketMessage(host,JSON.stringify({type:'frame',pigeons:[{...checkpoint,bird:{...checkpoint.bird,seed:1}}]}));assert.equal(bird.checkpoint,undefined);

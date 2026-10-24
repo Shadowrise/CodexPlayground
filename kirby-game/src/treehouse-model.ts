@@ -20,8 +20,12 @@ function rope(b:CraftedProps,points:T.Vector3[],r=.043){
 /** Static building parts use a handful of merged finishes. Swing ropes, knots
  * and planks share the existing pivot and exact rider contact surface. */
 export function makeTreehouseModel(swing:T.Group){
+ const work=treehouseModelWork(swing);for(;;){const step=work.next();if(step.done)return step.value;}
+}
+export function* treehouseModelWork(swing:T.Group):Generator<void,T.Group>{
  const root=new T.Group(),b=new CraftedProps(),ladder=new CraftedProps(),s=new CraftedProps();
  const oak=makeGreatOak();
+ yield;
  for(const [name,g] of [['Great oak trunk and branches',oak.wood],['Organic oak swing bough',oak.bough]] as const){const m=new T.Mesh(g,greatOakBark());m.name=name;m.castShadow=m.receiveShadow=true;root.add(m);}
  const canopy=new T.Mesh(oak.leaves,treeLeafMaterial().clone());canopy.name='Oak leaf canopy';canopy.material.color.set('#518245');canopy.position.z=-6;root.add(canopy);
  const boughLeaves=new T.Mesh(oak.boughLeaves,canopy.material);boughLeaves.name='Leafy twigs on the swing bough';root.add(boughLeaves);
@@ -30,6 +34,7 @@ export function makeTreehouseModel(swing:T.Group){
  for(let i=0;i<30;i++){
   const x=-5.8+i*.4;b.box(OAK_TONES[i%6],x,DECK-.13,2,.37,.26,12,'oak');
   for(const z of [-3.6,1.8,7.6])b.cylinder('#68553e',x,DECK+.009,z,.026,.026,.016,'metal',6);
+  yield;
  }
  for(const x of [-5,0,5]){b.box('#765536',x,DECK-.46,2,.33,.6,12.4,'oak',true);timber(b,[x,DECK-.6,6],[0,13,-6],.18);}
  for(const z of [-4.15,8.15]){b.box('#9b734a',0,DECK-.2,z,12.3,.43,.19,'oak',true);b.box('#d0ac76',0,DECK+.01,z,12.37,.08,.22,'oak',true);}
@@ -121,7 +126,7 @@ export function makeTreehouseModel(swing:T.Group){
   const y=.3+i*.37,z=11-y*3.7/18.8;timber(ladder,[-4.95,y,z],[-3.05,y,z],.095,'#c4a16d');
   for(const x of [-4.9,-3.1])ladder.cylinder('#c8b48c',x,y,z,.14,.14,.16,'rope',8).rotation.x=-.195;
  }
- const ladderGroup=ladder.finish('Bound oak ladder');ladderGroup.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=false;});root.add(ladderGroup);
+ const ladderGroup=yield* ladder.finishWork('Bound oak ladder');ladderGroup.traverse(o=>{if(o instanceof T.Mesh)o.castShadow=false;});root.add(ladderGroup);
  const ladderShadow=new T.Mesh(new T.BoxGeometry(2.1,Math.hypot(18.8,3.7),.22),new T.MeshBasicMaterial({colorWrite:false,depthWrite:false}));ladderShadow.name='Stable ladder shadow';ladderShadow.position.set(-4,9.4,9.15);ladderShadow.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),new T.Vector3(0,18.8,-3.7).normalize());ladderShadow.castShadow=true;root.add(ladderShadow);
  // Saddles sit on the organic limb; the rope pivot is unchanged for networking.
  for(const [i,x] of [-12.45,-9.55].entries()){
@@ -135,6 +140,6 @@ export function makeTreehouseModel(swing:T.Group){
   s.box('#967045',x,-5.87,0,.18,.16,1.7,'oak',true);s.ball('#b79b61',x,-5.596,.45,.035,.012,.035,'metal');
  }
  for(let i=0;i<5;i++)s.box(OAK_TONES[i%6],0,-5.7,-.65+i*.32,3.3,.18,.28,'oak',true);
- swing.add(s.finish('Worn oak swing seat and braided ropes'));root.add(swing);
- root.add(b.finish('Crafted oak lookout'));return root;
+ swing.add(yield* s.finishWork('Worn oak swing seat and braided ropes'));root.add(swing);
+ root.add(yield* b.finishWork('Crafted oak lookout'));return root;
 }

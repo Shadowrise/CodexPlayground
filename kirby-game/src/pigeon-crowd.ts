@@ -4,6 +4,7 @@ import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {PIDGIE_CLIPS,type PidgieClip} from './pidgie-state';
 import {PIGEON_CLIP_BY_NAME} from './pigeon-clips';
 import {SimplifyModifier} from 'three/addons/modifiers/SimplifyModifier.js';
+import {startupWork} from './startup-tasks';
 
 type Template=Pick<GLTF,'scene'|'animations'>;
 type Clip={start:number;frames:number;duration:number;loop:boolean};
@@ -30,8 +31,15 @@ function bodyGeometry(source:T.BufferGeometry){
 /** Bake the native rig once. Only small bone/part matrices are stored, not vertices. */
 export function pigeonPalette(template:Template):PigeonPalette{
  const cached=palettes.get(template.scene);if(cached)return cached;
+ const work=bakePalette(template);for(;;){const step=work.next();if(step.done)return step.value;}
+}
+export async function preparePigeonPalette(template:Template){
+ const cached=palettes.get(template.scene);return cached??await startupWork(bakePalette(template));
+}
+function* bakePalette(template:Template):Generator<void,PigeonPalette>{
  const root=cloneSkeleton(template.scene),parts:Part[]=[],clips=new Map<PidgieClip,Clip>();let matrices=0,rows=0;
- root.traverse(node=>{if(node instanceof T.Mesh){
+ const meshes:T.Mesh[]=[];root.traverse(node=>{if(node instanceof T.Mesh)meshes.push(node);});
+ for(const node of meshes){
   const bones=node instanceof T.SkinnedMesh?node.skeleton.bones.length:0,morphCount=node.morphTargetInfluences?.length??0,base=matrices,morphBase=base+(bones||1);
   let morph:T.DataTexture|undefined;
   if(morphCount){
@@ -48,7 +56,8 @@ export function pigeonPalette(template:Template):PigeonPalette{
   const geometry=bones&&/^Continuous[ _]pigeon[ _]body$/.test(node.name)?bodyGeometry(node.geometry):!bones&&!morphCount&&(node.geometry.index?.count??0)>1800
    ?new SimplifyModifier().modify(node.geometry,Math.floor(node.geometry.attributes.position.count*.9)):node.geometry;
   parts.push({mesh:node,geometry,base,bones,morphBase,morphCount,morph});matrices+= (bones||1)+Math.ceil(morphCount/16);
- }});
+  yield;
+ }
  for(const name of PIDGIE_CLIPS){const source=template.animations.find(c=>c.name===name);if(!source)throw Error('Missing flock animation '+name);const frames=Math.ceil(source.duration*FPS)+1;clips.set(name,{start:rows,frames,duration:source.duration,loop:PIGEON_CLIP_BY_NAME[name].loop});rows+=frames;}
  const width=T.MathUtils.ceilPowerOfTwo(matrices*4),height=T.MathUtils.ceilPowerOfTwo(rows),data=new Float32Array(width*height*4),mixer=new T.AnimationMixer(root),matrix=new T.Matrix4(),bone=new T.Matrix4();
  for(const [name,clip] of clips){
@@ -67,6 +76,7 @@ export function pigeonPalette(template:Template):PigeonPalette{
     }else mesh.matrixWorld.toArray(data,((clip.start+frame)*width+4*part.base)*4);
     if(part.morphCount)data.set(mesh.morphTargetInfluences!,((clip.start+frame)*width+4*part.morphBase)*4);
    }
+   yield;
   }
  }
  mixer.stopAllAction();mixer.uncacheRoot(root);

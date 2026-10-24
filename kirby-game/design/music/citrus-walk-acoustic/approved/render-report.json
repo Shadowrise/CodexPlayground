@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-24",
+  "revision": 4,
+  "status": "approved_by_user_no_introduction",
+  "title": "Цитрусовая прогулка — мягкая гитара, без вступления",
+  "base_revision": 3,
+  "base_artifact": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/citrus-walk-soft-v3",
+  "source_sha256": "d67dd5979e2969c2e302b0208edefbea38801acdcb8a659b7056a2dc00b561ab",
+  "bpm": 108,
+  "key": "E major",
+  "duration_seconds": 118.55555555555556,
+  "intro_bars": 0,
+  "source_bars": 48,
+  "coda_bars": 4,
+  "main_melody_start_seconds": 0,
+  "flute_middle_start_seconds": 35.55555555555556,
+  "guitar_return_seconds": 71.11111111111111,
+  "coda_start_seconds": 106.66666666666667,
+  "main_melody_notes_preserved": 308,
+  "original_complete_events_preserved": 1828,
+  "source_pitches_registers_onsets_unchanged": true,
+  "other_original_note_velocities_unchanged": true,
+  "piano_parts": 0,
+  "soft_guitar": {
+    "velocity_scale": 0.8,
+    "attack_rounding_ms": 28,
+    "lead_overall_level_change_db": -1.0,
+    "eq_frequencies_hz": [
+      0,
+      700,
+      1300,
+      1900,
+      2600,
+      3600,
+      5500,
+      9000,
+      22050
+    ],
+    "eq_gains_db": [
+      0,
+      0,
+      -0.5,
+      -2,
+      -4.5,
+      -7,
+      -9,
+      -11,
+      -11
+    ],
+    "opening_2500_6500_hz_change_vs_revision_2_db": -6.68
+  },
+  "stem_balance": [
+    {
+      "name": "guitar-lead",
+      "gain": 3.4606790884575167,
+      "source_target_rms_dbfs": -31.05
+    },
+    {
+      "name": "flute-lead",
+      "gain": 1.1737152591064266,
+      "source_target_rms_dbfs": -33.06
+    },
+    {
+      "name": "flute-counter",
+      "gain": 1.5001312157954683,
+      "source_target_rms_dbfs": -38.31
+    },
+    {
+      "name": "guitar-chords",
+      "gain": 1.5831842300125678,
+      "source_target_rms_dbfs": -40.95
+    },
+    {
+      "name": "guitar-counter",
+      "gain": 2.8272936681256438,
+      "source_target_rms_dbfs": -40.12
+    },
+    {
+      "name": "marimba",
+      "gain": 1.216507031800918,
+      "source_target_rms_dbfs": -41.53
+    },
+    {
+      "name": "bass",
+      "gain": 2.0526173293542027,
+      "source_target_rms_dbfs": -36.39
+    },
+    {
+      "name": "string-bed",
+      "gain": 1.6671013055375479,
+      "source_target_rms_dbfs": -38.8
+    }
+  ],
+  "master_gain": 3.167782400967446,
+  "sample_rate": 44100,
+  "channels": 2,
+  "bits": 16,
+  "rms_dbfs": -17.78,
+  "body_rms_dbfs": -17.51,
+  "peak_dbfs": -2.38,
+  "maximum_peak_reduction_db": 0.66,
+  "clipped_samples": 0,
+  "intro_harmony": [],
+  "ending_harmony": [
+    "A",
+    "B7",
+    "E",
+    "E"
+  ],
+  "soundfont": "GeneralUser GS v2.0.3",
+  "renderer": "FluidSynth 2.6.1",
+  "audio_sha256": "786e5c3f9e125618d185138f1bb7444c27f9e70162467322998f4191f79ddafb",
+  "source_render_sha256": "a6f9709a6bde802248815558679c8d9b0f32ba1349956890d21dd37de800bc71",
+  "removed_intro_seconds": 8.88888888888889,
+  "removed_intro_frames": 392000,
+  "start_safety_ramp_frames": 220,
+  "start_safety_ramp_seconds": 0.004988662131519274,
+  "body_and_ending_after_start_ramp_exactly_preserved": true,
+  "score_note_events": 1897,
+  "midi_sha256": "6f89521186c31d641f8b5fffd4614157118407033255b975ec90d0299759a4d9"
+}

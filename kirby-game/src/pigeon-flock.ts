@@ -8,6 +8,7 @@ import type {NpcConstraint} from './npcs';
 import {insideMeadow} from './world-bounds';
 import {PigeonSnapshots} from './pigeon-snapshots';
 import {PigeonCrowd} from './pigeon-crowd';
+import type {WildPigeonId} from './wild-pigeons';
 
 // Full model bounds include the head's height above the feet. Ground spacing
 // instead uses the measured horizontal envelope, including the Hello wing.
@@ -54,10 +55,10 @@ export class PigeonFlock{
  readonly birds=new Map<string,Bird>();
  private cursor=0;
  private now=0;private pathBudget=0;private goalBudget=0;
- private crowds=new Map<'pidgie'|'snowball',PigeonCrowd>();
- constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>,private options:FlockOptions,private onHello:(position:T.Vector3)=>void=()=>{}){
+ private crowds=new Map<WildPigeonId,PigeonCrowd>();
+ constructor(private templates:Record<'pidgie'|'snowball',Pick<GLTF,'scene'|'animations'>>&Partial<Record<WildPigeonId,Pick<GLTF,'scene'|'animations'>>>,private options:FlockOptions,private onHello:(position:T.Vector3)=>void=()=>{}){
   this.group.name='Голубиная почта Ветерка';
-  if(options.renderMode!=='individual')for(const skin of ['pidgie','snowball'] as const)this.crowds.set(skin,new PigeonCrowd(templates[skin],options.prepare));
+  if(options.renderMode!=='individual')for(const skin of Object.keys(templates) as WildPigeonId[])this.crowds.set(skin,new PigeonCrowd(templates[skin]!,options.prepare));
  }
 
  private landingClear(point:T.Vector3,bird:Bird,world?:NpcConstraint,occupied=true){
@@ -108,7 +109,7 @@ export class PigeonFlock{
    const index=slots.get(spec.playerId)??0;slots.set(spec.playerId,index+1);
    const player=players.find(p=>p.id===spec.playerId);let bird=this.birds.get(spec.id);
    if(!bird){
-    const npc=new PidgieNpc(this.templates[spec.skin],{...this.options,clockOnly:this.crowds.size>0,kind:spec.skin,seed:spec.seed,summoned:true,canPlanFollow:()=>this.pathBudget>0&&!!this.pathBudget--});
+    const npc=new PidgieNpc(this.templates[spec.skin]!,{...this.options,clockOnly:this.crowds.size>0,kind:spec.skin,seed:spec.seed,summoned:true,canPlanFollow:()=>this.pathBudget>0&&!!this.pathBudget--});
     npc.model.traverse(node=>{if(node instanceof T.Mesh){node.castShadow=false;if(node instanceof T.SkinnedMesh)node.boundingSphere=new T.Sphere(new T.Vector3(0,1.2,0),6);}});
     if(!this.crowds.size)this.options.prepare?.(npc.actor);
     bird={spec,npc,helloIn:1+(spec.seed%3000)/1000,helloRemaining:0,helloCount:0,snapshots:new PigeonSnapshots(),goalNext:0,stalled:0,searchOffset:0};

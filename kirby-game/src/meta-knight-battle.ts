@@ -8,9 +8,11 @@ export type KnightStage='intro'|'approach'|'slash-warn'|'slash'|'jump-warn'|'jum
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3;hp:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross};
+export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
+/** Old room snapshots inherit the lowest remaining health, never extra lives. */
+export function knightPartyHearts(s:KnightBattle|undefined){return Math.max(0,Math.min(KNIGHT.hearts,s?.teamHp??Math.min(KNIGHT.hearts,...Object.values(s?.players??{}).map(p=>p.hp))));}
 /** Server time keeps the local and remote damage flicker in the same phase. */
 export function knightPlayerVisible(s:KnightBattle|undefined,id:string,now:number,withdrawn=false){const p=s?.players[id];return !knightBattleActive(s)||!p||p.hp<=0||p.withdrawn||withdrawn||now>=p.invulnerable||Math.floor(now/95)%2===0;}
 /** The start snapshot keeps both sides of the gate fixed until the whole duel ends. */
@@ -83,7 +85,14 @@ export function startKnightBattle(actors:KnightActor[],owner:string,now:number):
  const a=actors.find(a=>a.id===owner&&a.available&&distance(a.p,[0,0,-9])<9&&a.p[1]<1);
  if(!a)return;
  const players:KnightBattle['players']={};for(const actor of actors)if(actor.available&&insideKnightFightingArea(actor.p))players[actor.id]={hp:5,invulnerable:0,attackAt:-1e9,handled:-1e9,hits:0,reflects:0};
- return {id:now,revision:1,stage:'intro',since:now,until:now+KNIGHT.introMs,checked:now,phase:1,hp:12,players,target:owner,from:[0,0,-9],to:[0,0,-9],yaw:0,height:0,cycle:0,step:-1,pattern:'sword',openHit:false};
+ return {id:now,revision:1,stage:'intro',since:now,until:now+KNIGHT.introMs,checked:now,phase:1,hp:12,...(Object.keys(players).length>1?{teamHp:KNIGHT.hearts}:{}),players,target:owner,from:[0,0,-9],to:[0,0,-9],yaw:0,height:0,cycle:0,step:-1,pattern:'sword',openHit:false};
+}
+/** Health is shared; contact immunity and hit feedback belong to the struck player. */
+function damageKnightPlayer(s:KnightBattle,id:string,now:number){
+ const p=s.players[id];if(p.hp<=0||p.withdrawn||now<p.invulnerable)return;
+ if(s.teamHp!==undefined){s.teamHp=Math.max(0,s.teamHp-1);for(const player of Object.values(s.players))player.hp=s.teamHp;}
+ else p.hp=Math.max(0,p.hp-1);
+ p.invulnerable=now+KNIGHT.invulnerableMs;s.revision++;
 }
 /** One fresh press; holding and repeated packets cannot keep a reflection active. */
 export function knightAttack(s:KnightBattle|undefined,actor:KnightActor,now:number){
@@ -196,7 +205,7 @@ function resolveCrescent(s:KnightBattle,alive:KnightActor[],actors:KnightActor[]
  }
  for(const a of touching)if(now>=s.players[a.id].invulnerable&&contacts[a.id]===undefined){contacts[a.id]=now;s.revision++;}
  for(const a of alive)if(contacts[a.id]!==undefined&&contacts[a.id]>=0&&now-contacts[a.id]>=KNIGHT.parryGraceMs&&now>=s.players[a.id].invulnerable){
-  const p=s.players[a.id];if(a.id!==protectedPlayer){p.hp--;p.invulnerable=now+KNIGHT.invulnerableMs;}contacts[a.id]=-1;s.revision++;
+  if(a.id!==protectedPlayer)damageKnightPlayer(s,a.id,now);contacts[a.id]=-1;s.revision++;
  }
 }
 function segmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){
@@ -221,6 +230,9 @@ export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=no
 /** Mutates only encounter state; returns true for state changes worth broadcasting. */
 export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:number,protectedPlayer?:string){
  const revision=s.revision;if(!knightBattleActive(s))return false;
+ if(s.teamHp===undefined&&Object.keys(s.players).length>1){s.teamHp=knightPartyHearts(s);s.revision++;}
+ // Keep player health as a projection for movement, defeat poses and older clients.
+ if(s.teamHp!==undefined)for(const p of Object.values(s.players))if(p.hp!==s.teamHp){p.hp=s.teamHp;s.revision++;}
  if(s.impactWave&&!knightPressureWave(s,now)&&now>=s.impactWave.at){delete s.impactWave;s.revision++;}
  const alive=living(s,actors);if(!alive.length){enter(s,'lost',1e12,now,actors);return true;}
  // Never replay unseen damage after a background tab, reconnect or Worker wakeup.
@@ -233,8 +245,9 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
  if(s.stage==='shot')resolveCrescent(s,alive,actors,now,previous,protectedPlayer);
  for(const a of alive){
   const p=s.players[a.id];
-  if(a.id!==protectedPlayer&&knightDanger(s,a,now,previous)&&now>=p.invulnerable){p.hp--;p.invulnerable=now+KNIGHT.invulnerableMs;s.revision++;}
+  if(a.id!==protectedPlayer&&knightDanger(s,a,now,previous)&&now>=p.invulnerable)damageKnightPlayer(s,a.id,now);
  }
+ if(!living(s,actors).length){enter(s,'lost',1e12,now,actors);return true;}
  // A counterattack must not skip another fighter's independent wave contact.
  for(const a of alive){
   const p=s.players[a.id];

@@ -7,6 +7,24 @@ import {createShrubGeometry} from '../src/shrub-model';
 import {groundShadowOpacity} from '../src/ground-shadow-style';
 import {treeShadows,updateTreeShadows} from '../src/tree-shadows';
 
+test('cooperative preparation paints the identical atlas and keeps moving/static registrations',async()=>{
+ const geometry=new T.BoxGeometry(2,3,1),sync=new PreparedShadows(),asyncShadows=new PreparedShadows(),scene=new T.Scene(),moving=new T.Group();
+ scene.add(asyncShadows.group,moving);asyncShadows.deferPreparation();
+ const register=(shadows:PreparedShadows)=>{
+  const profile=shadows.geometryProfile(geometry);shadows.add(profile,new T.Matrix4().makeTranslation(4,0,8));shadows.addMoving(moving,profile);shadows.commit();return profile;
+ };
+ const expected=register(sync),actual=register(asyncShadows);
+ assert.equal(asyncShadows.material.map,null,'deferred registration does not rasterize an atlas in the input task');
+ let ticks=0;const timer=setInterval(()=>ticks++,0);
+ try{await asyncShadows.finishPreparation();}finally{clearInterval(timer);}
+ assert(ticks>0,'the browser can service other tasks while masks are prepared');
+ assert.deepEqual(actual,expected);assert.deepEqual(asyncShadows.material.map!.image,sync.material.map!.image);
+ assert.equal(asyncShadows.material.map!.format,T.RedFormat);
+ const image=asyncShadows.material.map!.image;assert.equal(image.data.length,image.width*image.height,'coverage uses one byte per texel');
+ assert(asyncShadows.group.getObjectByName('Prepared scenery cell'));assert(asyncShadows.group.getObjectByName('Prepared moving object shadows'));
+ const atlas=asyncShadows.material.map;asyncShadows.commit();assert.equal(asyncShadows.material.map,atlas,'unchanged registrations reuse their atlas');
+});
+
 test('distance fields retain holes and interpolate one moving contour instead of two translucent copies',()=>{
  const size=32,rectangle=(from:number,to:number)=>Uint8Array.from({length:size*size},(_,i)=>i%size>=from&&i%size<=to?255:0);
  const a=shadowDistanceMask(rectangle(4,14),size),b=shadowDistanceMask(rectangle(10,20),size);

@@ -5,8 +5,8 @@ import {createGrassMaterial} from './grass-model';
 import {createShrubMaterial} from './shrub-model';
 import {restoreTreeShadowMaterial} from './tree-shadows';
 import {restoreBoundsLod} from './instanced-lod';
-import {batchScenery} from './scenery-batch';
-import {startupTask} from './startup-tasks';
+import {batchSceneryAsync} from './scenery-batch';
+import {startupTask,startupBudget} from './startup-tasks';
 
 export function unpackEnvironment(buffer:ArrayBuffer){
  return new Promise<EnvironmentDocument>((resolve,reject)=>{
@@ -20,7 +20,28 @@ export function unpackEnvironment(buffer:ArrayBuffer){
 
 /** Geometry, placement, maps and bounds are identical to the procedural build. */
 export async function restoreEnvironment(doc:EnvironmentDocument){
- const loader=new T.ObjectLoader(),world=loader.parse(doc.scene);
+ const loader=new T.ObjectLoader(),budget=startupBudget();
+ // ObjectLoader.parse/parseAsync both construct the whole scene synchronously.
+ // Restore shared resources once, then build nodes from the leaves upward so
+ // even a large forest cannot hold input behind one recursive parse.
+ const geometries:Record<string,T.BufferGeometry>={},images:Record<string,T.Source>={},textures:Record<string,T.Texture>={},materials:Record<string,T.Material>={};
+ for(const data of doc.scene.geometries??[]){Object.assign(geometries,loader.parseGeometries([data]));const pause=budget();if(pause)await pause;}
+ for(const data of doc.scene.images??[]){Object.assign(images,loader.parseImages([data]));const pause=budget();if(pause)await pause;}
+ for(const data of doc.scene.textures??[]){Object.assign(textures,loader.parseTextures([data],images));const pause=budget();if(pause)await pause;}
+ for(const data of doc.scene.materials??[]){Object.assign(materials,loader.parseMaterials([data],textures));const pause=budget();if(pause)await pause;}
+ const animations=loader.parseAnimations(doc.scene.animations);
+ // The upstream declaration omits the textures argument used by Three r180.
+ const parse=loader.parseObject.bind(loader) as unknown as (data:unknown,geometries:unknown,materials:unknown,textures:unknown,animations:unknown)=>T.Object3D;
+ const parseObject=async(data:Record<string,any>):Promise<T.Object3D>=>{
+  const children:T.Object3D[]=[];
+  for(const child of data.children??[])children.push(await parseObject(child));
+  const object=parse({...data,children:undefined,levels:data.type==='LOD'?[]:data.levels},geometries,materials,textures,animations);
+  if(children.length)object.add(...children);
+  if(object instanceof T.LOD)for(const level of data.levels??[]){const child=object.getObjectByProperty('uuid',level.object);if(child)object.addLevel(child,level.distance,level.hysteresis);}
+  const pause=budget();if(pause)await pause;
+  return object;
+ };
+ const world=await parseObject(doc.scene.object);
  const materialMap=new Map<string,T.Material>();
  const wind=world.getObjectByName('Biome meadow details')!.userData.windTime as {value:number};
  const bound=(object:{boundingSphere:T.Sphere|null;boundingBox:T.Box3|null},id:string)=>{
@@ -54,6 +75,6 @@ export async function restoreEnvironment(doc:EnvironmentDocument){
   material.onBeforeCompile=source.onBeforeCompile;material.customProgramCacheKey=source.customProgramCacheKey;
  }
  const roots=[...world.children];
- for(const root of roots){batchScenery(root);await startupTask();}
+ for(const root of roots){await batchSceneryAsync(root);await startupTask();}
  return roots;
 }

@@ -22,7 +22,7 @@ export async function prepareStartupGraphics(renderer:T.WebGLRenderer,scene:T.Sc
  performance.mark('kirby-shaders-ready');
  const textures=new Set<T.Texture>();
  scene.traverse(object=>{if(object instanceof T.Mesh||object instanceof T.Sprite||object instanceof T.Points||object instanceof T.Line)for(const material of Array.isArray(object.material)?object.material:[object.material])for(const value of Object.values(material))if(value instanceof T.Texture)textures.add(value);});
- let count=0;for(const texture of textures){renderer.initTexture(texture);if(++count%4===0)await startupTask();}
+ for(const texture of textures){renderer.initTexture(texture);await startupTask();}
  performance.mark('kirby-textures-ready');
  // A one-pixel scissor retains the screen's tone mapping and colour space.
  // An offscreen target would compile a second, unused set of shader variants.

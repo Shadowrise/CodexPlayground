@@ -22,15 +22,19 @@ try{
   assert(await page.locator('#game canvas').isHidden());
   assert(await page.locator('#start-game').isEnabled());
   assert.equal(await page.evaluate(()=>performance.getEntriesByName('kirby-first-frame').length),0);
-  assert((await page.locator('#character-select').evaluate(el=>getComputedStyle(el).backgroundImage)).includes('loading-meadow.webp'));
+  assert(await page.locator('#menu-backdrop img').isVisible());
+  assert.equal(await page.locator('#menu-backdrop canvas').count(),0);
+  assert.equal(await page.locator('.hud-corner').isVisible(),false);
+  assert.equal(await page.locator('#settings-toggle').isVisible(),false);
   await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Загрузка');await page.locator('#start-game').click();
   await page.waitForFunction(()=>!document.body.classList.contains('choosing')&&performance.getEntriesByName('kirby-first-frame').length>0);
   const report=await page.evaluate(()=>{
    const marks=Object.fromEntries(performance.getEntriesByType('mark').map(entry=>[entry.name,Math.round(entry.startTime)]));
    const models=performance.getEntriesByType('resource').filter(entry=>entry.name.includes('/models/')&&entry.name.includes('.glb')).map(entry=>({file:entry.name.split('/').at(-1),startMs:Math.round(entry.startTime),downloadMs:Math.round(entry.duration)}));
-   return {marks,models,firstFrameMs:Math.round(performance.getEntriesByName('kirby-first-frame')[0].duration),longTasks:window.startupLongTasks.map(entry=>({startMs:Math.round(entry.start),ms:Math.round(entry.ms)}))};
+   return {marks,models,backdropPaintMs:Math.round(performance.getEntriesByName('kirby-menu-backdrop-paint')[0].duration),firstFrameMs:Math.round(performance.getEntriesByName('kirby-first-frame')[0].duration),longTasks:window.startupLongTasks.map(entry=>({startMs:Math.round(entry.start),ms:Math.round(entry.ms)}))};
   });
   assert(report.marks['kirby-menu-ready']<report.marks['kirby-environment-ready']);
+  assert(report.marks['kirby-menu-backdrop-ready']<report.marks['kirby-menu-ready']);
   assert.equal(report.models.length,GAME_MODEL_FILES.length);assert(report.models.every(model=>model.startMs<report.marks['kirby-menu-ready']));
   await page.waitForTimeout(500);assert.deepEqual(errors,[]);
   const cache=new URL('../node_modules/.cache/',import.meta.url);await mkdir(cache,{recursive:true});
@@ -38,5 +42,5 @@ try{
   reports.push({viewport,...report});await context.close();
  }
  console.log(JSON.stringify(reports,null,2));
- console.log('PASS: early menu, immediate transfers, static backdrop until requested and desktop/touch game entry');
+ console.log('PASS: video backdrop first paint, hidden game HUD, background loading and desktop/touch entry');
 }finally{await browser.close();}

@@ -1,8 +1,13 @@
 import { LANDMARKS,sceneryClearance } from './landmarks';
 import { inWater } from './pond-layout';
 import {MeadowIndex} from './meadow-index';
+import {startupWork} from './startup-tasks';
 export type FruitObstacle={x:number;z:number;radius?:number};
 export function fruitLayout(obstacles:readonly FruitObstacle[]=[]){
+ const work=layoutWork(obstacles);for(;;){const step=work.next();if(step.done)return step.value;}
+}
+export function fruitLayoutAsync(obstacles:readonly FruitObstacle[]=[]){return startupWork(layoutWork(obstacles));}
+function* layoutWork(obstacles:readonly FruitObstacle[]):Generator<void,{x:number;z:number}[]>{
  let seed=9913;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const placed:{x:number;z:number}[]=[];
  const blocked=new MeadowIndex(24,obstacles),neighbours=new MeadowIndex<{x:number;z:number}>(16);
@@ -21,6 +26,7 @@ export function fruitLayout(obstacles:readonly FruitObstacle[]=[]){
   }
   if(!best){for(let r=5;r<150&&!best;r+=5)for(let j=0;j<60;j++){const a=j*Math.PI/30,x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r;if(safe(x,z)){best={x,z};break;}}}
   if(!best)throw new Error('No clear fruit location');placed.push(best);neighbours.add(best);
+  yield;
  }
  return placed;
 }

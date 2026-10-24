@@ -18,12 +18,17 @@ try{
   await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
   assert(await page.locator('#new-game').isEnabled());assert(await page.locator('#start-game').isEnabled());assert(await page.locator('#load-game').isEnabled());
   assert(!(await page.locator('#character-select').evaluate(el=>el.inert)));
-  assert((await page.locator('#character-select').evaluate(el=>getComputedStyle(el).backgroundImage)).includes('loading-meadow.webp'));
+  await page.locator('#menu-backdrop[data-state="ready"] img').waitFor({state:'visible'});
+  assert.equal(await page.locator('#menu-backdrop button, #menu-backdrop .panel').count(),0);
+  assert.equal(await page.locator('.hud-corner').isVisible(),false);
+  assert.equal(await page.locator('#settings-toggle').isVisible(),false);
  };
  const waitPlaying=async()=>{
   await page.locator('#startup-loader').waitFor({state:'hidden',timeout:120000});
   await page.waitForFunction(()=>!document.body.classList.contains('choosing'),null,{timeout:120000});
   assert(await page.locator('#game canvas').isVisible());assert.equal(await page.locator('body').getAttribute('aria-busy'),'false');
+  await page.waitForFunction(()=>document.querySelector('#menu-backdrop video').paused);
+  assert(await page.locator('#menu-backdrop').isHidden());
  };
  const exit=async()=>{await page.locator('#settings-toggle').click();await page.locator('#exit-to-menu').click();await waitMenu();assert(await page.locator('#game canvas').isHidden());};
  const waitForEntry=async()=>{
@@ -54,12 +59,12 @@ try{
  console.log('PASS early menu/gamepad, name validation, one pending entry and new game during environment download');
  await exit();
 
- // A warm world stays behind the static menu and enters without showing a loader.
+ // A warm world stays behind the lightweight menu and enters without a loader.
  await page.evaluate(()=>{window.loaderShows=0;new MutationObserver(()=>{if(document.body.classList.contains('loading'))window.loaderShows++;}).observe(document.body,{attributes:true,attributeFilter:['class']});});
  await page.locator('#load-game').click();await waitPlaying();
  assert.equal(await page.evaluate(()=>window.loaderShows),0);await page.waitForFunction(()=>document.querySelector('#player-size').textContent==='140%');
  await exit();
- console.log('PASS static menu after exit and immediate saved-game entry when the world is ready');
+ console.log('PASS lightweight menu restored after exit and immediate saved-game entry when ready');
 
  // Saved games also accept a request while models are still downloading.
  let releaseModel;const modelGate=new Promise(resolve=>releaseModel=resolve);
@@ -74,5 +79,5 @@ try{
  await page.reload({waitUntil:'domcontentloaded'});await page.locator('#loading-retry').waitFor({state:'visible',timeout:120000});
  assert(await page.locator('#startup-loader').isVisible());assert(await page.locator('.loading-orbit').isHidden());
  assert.deepEqual(errors,[]);
- console.log('PASS recoverable background load failure on the illustrated backdrop');
+ console.log('PASS recoverable background load failure over the lightweight meadow');
 }finally{await browser.close();}

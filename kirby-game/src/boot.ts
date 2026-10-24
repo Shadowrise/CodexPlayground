@@ -1,6 +1,6 @@
 import {initializeLocale,localizeDOM,onLocaleChange,t} from './i18n';
 import {preloadGameAssets} from './game-assets';
-preloadGameAssets(import.meta.env.BASE_URL);
+import {createMenuBackdrop} from './menu-backdrop';
 let languageStorage:Storage|undefined;try{languageStorage=localStorage;}catch{}
 initializeLocale(languageStorage,navigator.languages?.length?navigator.languages:[navigator.language]);
 const updateTitle=()=>{document.title=t('Кирби: Полянка друзей');};
@@ -31,6 +31,12 @@ const showMenu=()=>{
 document.addEventListener('kirby-menu-ready',showMenu,{once:true});
 try {
  await frame();await frame();
+ try{
+  createMenuBackdrop(document.querySelector<HTMLElement>('#menu-backdrop')!);
+ }catch(error){console.warn('Menu backdrop unavailable',error);}
+ await frame();
+ // Give the small backdrop the first paint and network priority over world assets.
+ preloadGameAssets(import.meta.env.BASE_URL);
  const game=await import('./main');
  await game.ready;
  blocked.forEach(el=>el.inert=false);

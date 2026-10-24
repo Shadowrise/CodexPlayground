@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-24",
+  "revision": 4,
+  "status": "approved_by_user_installed_in_game",
+  "track_id": "citrus-walk",
+  "playlist_position": 2,
+  "intro_bars": 0,
+  "renderer": "finalize_no_intro.py",
+  "approved_source_revision": 3,
+  "approved_source_artifact": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/citrus-walk-soft-v3",
+  "audio_path": "C:/repos/codex-playground/kirby-game/public/audio/citrus-walk.wav",
+  "midi_path": "C:/repos/codex-playground/kirby-game/design/music/citrus-walk-acoustic/approved/citrus-walk.mid",
+  "report_path": "C:/repos/codex-playground/kirby-game/design/music/citrus-walk-acoustic/approved/render-report.json",
+  "rejected_revision": 1,
+  "rejected_audio_path": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/citrus-walk-acoustic-v1/citrus-walk-acoustic.wav",
+  "notes": "User approves revision 3 and requests removal of its entire introduction, immediate original-theme start, unchanged soft instruments/body and retained ending. Trim the approved mastered audio by exactly four bars; only the first 5 ms receive a click-prevention ramp. Shift retained MIDI notes by 16 beats. No further remix or re-render.",
+  "game_installation": {
+    "date": "2026-10-24",
+    "track_id": "citrus-walk",
+    "playlist_position": 2,
+    "audio": "public/audio/citrus-walk.wav",
+    "midi": "design/music/citrus-walk-acoustic/approved/citrus-walk.mid",
+    "license": "public/audio/citrus-walk-LICENSE.txt",
+    "sha256": "786e5c3f9e125618d185138f1bb7444c27f9e70162467322998f4191f79ddafb",
+    "duration_seconds": 118.55555555555556,
+    "sample_rate": 44100,
+    "channels": 2,
+    "bits": 16,
+    "cache_revision": "acoustic-soft-20261024",
+    "approved_ending_exactly_preserved": true,
+    "validation": {
+      "music_and_audio_tests": "8 passed",
+      "production_build": "passed",
+      "public_and_dist_audio_match_approved_sha256": true,
+      "midi_note_on_off_pairs_verified": 1897,
+      "approved_ending_pcm_exact": true
+    }
+  }
+}

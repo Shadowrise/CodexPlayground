@@ -1,6 +1,8 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import { LeafPile } from './leaf-pile';
-import {makeTreehouseModel} from './treehouse-model';
+import {treehouseModelWork} from './treehouse-model';
+import {prepareTreeBark} from './tree-bark';
+import {startupWork} from './startup-tasks';
 import { awardFirst } from './score';
 import * as T from 'three';
 import type { CharacterController, Input } from './controller';
@@ -29,10 +31,12 @@ export class Treehouse {
   get active(){return !!this.rider;}
   get canSit(){return !!this.rider && this.activity==='deck';}
   onBalcony(character:CharacterController){return this.rider===character&&this.activity==='deck';}
-  constructor(private sound:(kind:TreehouseSound)=>void=()=>{}) {
+  constructor(private sound:(kind:TreehouseSound)=>void=()=>{},deferred=false) {if(!deferred)for(const _ of this.build()){};}
+  static async create(sound:(kind:TreehouseSound)=>void=()=>{}){await prepareTreeBark();const tree=new Treehouse(sound,true);await startupWork(tree.build());return tree;}
+  private *build() {
     const root=this.group;root.name='Oak treehouse, lookout, swing and leaf pile';root.position.copy(TREEHOUSE_SITE);
     this.swing.name='Prepared swing source';
-    root.add(makeTreehouseModel(this.swing));
+    root.add(yield* treehouseModelWork(this.swing));
     this.leafPile.group.position.set(8,0,13);root.add(this.leafPile.group);
     if(typeof document!=='undefined'){
       const canvas=document.createElement('canvas');canvas.width=768;canvas.height=192;const ctx=canvas.getContext('2d');

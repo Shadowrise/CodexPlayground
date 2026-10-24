@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "world:bake": "tsx scripts/bake-environment.ts",
+    "background:record": "node --import tsx scripts/record-menu-backdrop.mjs",
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
-import {batchRigidMeshes} from './rigid-batch';
+import {rigidMeshWork} from './rigid-batch';
+import {startupWork} from './startup-tasks';
 import {roofTilePitch,roofTileSpan,roofTileLength} from './roof-tiles';
 import * as T from 'three';
 import {MillQuestDecor} from './mill-quest-decor';
@@ -49,7 +50,7 @@ export class Watermill {
   quest:MillQuest=newMillQuest();
   private readonly water=createMillWaterMaterial();
   readonly decor=new MillQuestDecor(this.water);
-  readonly bakery=new MillBakery();
+  readonly bakery:MillBakery;
   now=0;
   get running(){return millWorking(this.quest);}
   private requestedAt=0;
@@ -99,11 +100,13 @@ export class Watermill {
   private openness = 0;
   private speed = 0;
   private elapsed = 0;
-  private readonly waterfall: T.Mesh;
-  private readonly splashes: T.InstancedMesh;
+  private waterfall!: T.Mesh;
+  private splashes!: T.InstancedMesh;
   private readonly dummy = new T.Object3D();
 
-  constructor() {
+  constructor(deferred=false,bakery=new MillBakery()) {this.bakery=bakery;if(!deferred)for(const _ of this.build()){};}
+  static async create(){const mill=new Watermill(true,await MillBakery.create());await startupWork(mill.build());return mill;}
+  private *build() {
     const root = this.group;root.name='Interactive watermill';root.position.copy(MILL_SITE);
     const geometries={box:new T.BoxGeometry(1,1,1),ball:new T.SphereGeometry(1,12,8),
       cylinder:new T.CylinderGeometry(1,1,1,12),ring:new T.TorusGeometry(1,.045,8,64)};
@@ -278,13 +281,13 @@ export class Watermill {
       }
     }
     // Batch the hundreds of decorative pieces, including the moving wheel.
-    const batch=(parent:T.Group)=>{
+    const batch=function*(parent:T.Group){
       for(const child of [...parent.children])if(child instanceof T.Mesh && child.material instanceof T.MeshStandardMaterial) {
         child.castShadow=child.receiveShadow=true;
       }
-      batchRigidMeshes(parent);
+      yield* rigidMeshWork(parent);
     };
-    batch(root);batch(this.wheel);batch(this.gate);batch(leverMount);batch(this.handle);
+    for(const parent of [root,this.wheel,this.gate,leverMount,this.handle])yield* batch(parent);
     const race=new T.Mesh(new T.PlaneGeometry(1.9,8.2),this.water);race.name='Raised millrace water';race.rotation.x=-Math.PI/2;race.position.set(10.8,7.05,-8.95);root.add(race);
     const lip=new T.Mesh(new T.PlaneGeometry(1.9,2.2),this.water);lip.rotation.x=-Math.PI/2;lip.position.set(10.8,7.05,-3.75);root.add(lip);
     this.waterfall=new T.Mesh(createWheelWaterGeometry(),this.water);this.waterfall.name='Water over wheel scoops';this.waterfall.position.x=10.8;root.add(this.waterfall);this.waterfall.visible=false;

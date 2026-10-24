@@ -8,24 +8,30 @@
     <meta name="apple-mobile-web-app-title" content="Кирби" />
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%kirby-icon.svg" />
-    <link rel="preload" as="image" type="image/webp" href="%BASE_URL%images/loading-meadow.webp" fetchpriority="high" />
     <title>Кирби: Полянка друзей</title>
+    <link rel="preload" as="image" href="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=3" fetchpriority="high" />
   </head>
   <body class="choosing loading" aria-busy="true">
     <style>
-      body.loading {margin:0;background:#a5e0ef;overflow:hidden;}
-      body.loading > :not(#startup-loader) {visibility:hidden!important;}
-      #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;align-items:start;justify-items:center;box-sizing:border-box;padding:clamp(32px,12svh,128px) 20px 24px;overflow-y:auto;background:#a5e0ef url('%BASE_URL%images/loading-meadow.webp') center / cover no-repeat;color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
+      body.loading {margin:0;background:#b3d9ef;overflow:hidden;}
+      body.loading > :not(#startup-loader):not(#menu-backdrop) {visibility:hidden!important;}
+      #menu-backdrop {position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:linear-gradient(#b3d9ef,#d8e9eb 43%,#80b654 44%);}
+      #menu-backdrop img,#menu-backdrop video {position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;filter:blur(4px);transform:scale(1.04);}
+      #menu-backdrop video {opacity:0;}
+      #menu-backdrop.video-ready video {opacity:1;}
+      body:not(.choosing):not(.loading) #menu-backdrop {display:none;}
+      body.choosing > :not(#character-select):not(#startup-loader):not(#menu-backdrop):not(style):not(script) {display:none!important;}
+      #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;align-items:start;justify-items:center;box-sizing:border-box;padding:clamp(32px,12svh,128px) 20px 24px;overflow-y:auto;background:#090e182e;color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
       #startup-loader[hidden] {display:none;}
       .loading-status {box-sizing:border-box;width:min(380px,100%);padding:22px 26px;border-radius:28px;background:radial-gradient(ellipse at center,#293347eb,#171e29eb 70%);}
       .loading-orbit {width:68px;height:68px;margin:0 auto 24px;border:5px solid #ffffff18;border-top-color:#ff8fbb;border-right-color:#a6edcf;border-radius:50%;animation:loading-spin 1.1s linear infinite;will-change:transform;}
       #startup-loader p {color:#bfc9da;font-size:14px;font-weight:400;}
       #loading-retry {background:#ff8fbb;color:#241923;border:0;border-radius:12px;padding:12px 24px;font:inherit;cursor:pointer;}
       @keyframes loading-spin {to {transform:rotate(360deg);}}
-      @media(max-aspect-ratio:3/4){#startup-loader{background-position:53% center;}}
       @media(max-height:500px){#startup-loader{padding-top:16px;}.loading-status{padding:14px 22px;border-radius:22px;}.loading-orbit{width:30px;height:30px;margin-bottom:8px;border-width:4px;}}
       @media(prefers-reduced-motion:reduce){.loading-orbit{animation:none;}}
     </style>
+    <div id="menu-backdrop" aria-hidden="true" inert><img src="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=3" alt="" fetchpriority="high" /><video data-src="%BASE_URL%backgrounds/meadow-menu.mp4?v=3" muted loop playsinline preload="none" disablepictureinpicture></video></div>
     <div id="startup-loader" role="status" aria-live="polite"><div class="loading-status"><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
     <section id="character-select" aria-labelledby="select-title">
       <div class="selection-card">
@@ -55,7 +61,12 @@
     </div>
     </div>
     <div id="combat-message" class="panel combat-message" role="status" hidden></div>
-    <div id="audio-panel" class="panel music-controls" hidden><div class="audio-row"><button id="music-toggle" type="button" aria-pressed="true">♫ Музыка: вкл</button><input id="music-volume" type="range" min="0" max="100" value="25" aria-label="Громкость музыки" /></div><div class="audio-row"><button id="sounds-toggle" type="button" aria-pressed="true">♪ Звуки: вкл</button><input id="sounds-volume" type="range" min="0" max="100" value="45" aria-label="Громкость звуков" /></div><div class="music-library"><span class="label">ПЛЕЙЛИСТ · 15 МЕЛОДИЙ</span><div class="track-navigation"><button id="music-previous" type="button" aria-label="Предыдущий трек" title="Предыдущий трек">←</button><span id="music-track" role="status"></span><button id="music-next" type="button" aria-label="Следующий трек" title="Следующий трек">→</button></div></div></div>
+    <div id="audio-panel" class="panel music-controls" hidden>
+      <div class="audio-row"><button id="music-toggle" type="button" aria-pressed="true">♫ Музыка: вкл</button><input id="music-volume" type="range" min="0" max="100" value="25" aria-label="Громкость музыки" /></div>
+      <label class="music-shuffle"><input id="music-shuffle" type="checkbox" /><span>Проигрывать случайно</span></label>
+      <div class="audio-row"><button id="sounds-toggle" type="button" aria-pressed="true">♪ Звуки: вкл</button><input id="sounds-volume" type="range" min="0" max="100" value="45" aria-label="Громкость звуков" /></div>
+      <div class="music-library"><span class="label">ПЛЕЙЛИСТ · 15 МЕЛОДИЙ</span><div class="track-navigation"><button id="music-previous" type="button" aria-label="Предыдущий трек" title="Предыдущий трек">←</button><span id="music-track" role="status"></span><button id="music-next" type="button" aria-label="Следующий трек" title="Следующий трек">→</button></div></div>
+    </div>
     <footer id="controls-panel" class="panel controls" hidden>
       <div data-controls="keyboard"><span class="label">КЛАВИАТУРА И МЫШЬ</span><ul class="hotkey-list"><li><kbd>W / S</kbd><span>Вперёд / назад</span></li><li><kbd>Shift + W</kbd><span>Спринт</span></li><li><kbd>A / D</kbd><span>Поворот персонажа</span></li><li><kbd>Пробел</kbd><span>Прыжок; второй пробел до падения — левитация на 2 с</span></li><li><kbd>Q</kbd><span>Толчок</span></li><li><kbd>E</kbd><span>Взаимодействие</span></li><li><kbd>1 / 2 / 3 / 4 / 5</kbd><span>Привет / радость / испуг / гнев / грусть</span></li><li><kbd>6</kbd><span>Клевать с земли (Пиджи)</span></li><li><kbd>Enter</kbd><span>Открыть чат / отправить сообщение</span></li><li><kbd>Стрелки</kbd><span>Вращать камеру</span></li><li><kbd>ЛКМ + мышь</kbd><span>Обзор</span></li><li><kbd>ПКМ + мышь</kbd><span>Поворот Кирби</span></li><li><kbd>ЛКМ + ПКМ</kbd><span>Бежать вперёд и поворачивать мышью</span></li><li><kbd>Колёсико</kbd><span>Приблизить / отдалить</span></li><li><kbd>Escape</kbd><span>Настройки / отменить ввод в чат</span></li></ul></div>
       <div data-controls="gamepad" hidden><span class="label">ГЕЙМПАД</span><ul class="hotkey-list"><li><kbd>Левый стик</kbd><span>Движение и поворот</span></li><li><kbd>Правый стик</kbd><span>Вращать камеру</span></li><li><kbd>A</kbd><span>Полёт</span></li><li><kbd>X</kbd><span>Толчок</span></li><li><kbd>Y</kbd><span>Взаимодействие</span></li><li><kbd>RT</kbd><span>Спринт</span></li><li><kbd>Удерживать LB</kbd><span>Открыть меню эмоций</span></li><li><kbd>Стик + отпустить LB</kbd><span>Выбрать и показать эмоцию</span></li><li><kbd>B</kbd><span>Отменить / закрыть настройки</span></li><li><kbd>Крестовина ← / →</kbd><span>Выбрать точку интереса</span></li><li><kbd>Крестовина ↑ / ↓</kbd><span>Приблизить / отдалить</span></li><li><kbd>Start / Menu</kbd><span>Открыть / закрыть настройки</span></li><li><kbd>В настройках: ↑ / ↓</kbd><span>Выбрать пункт</span></li><li><kbd>В настройках: ← / →</kbd><span>Изменить значение</span></li><li><kbd>В настройках: A</kbd><span>Подтвердить</span></li></ul></div>

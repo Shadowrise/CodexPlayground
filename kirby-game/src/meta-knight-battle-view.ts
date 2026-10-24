@@ -97,7 +97,7 @@ export class MetaKnightBattleView{
  private dazedStars=new MetaKnightDazedStars();private assault=new MetaKnightStarAssaultView();
  private bossTarget=new CentipedeTargetCue();private crystalTarget=new CentipedeTargetCue();
  private particles=new T.InstancedMesh(new T.OctahedronGeometry(.11*FX),material(CYAN),22);private burstAt=-1e9;private burstPosition=new T.Vector3();
- private lastStage='';private lastHealth=12;private lastLife=5;private lastReflects=0;private lastBattle=0;private lastKey='';
+ private lastStage='';private lastHealth=12;private lastLife=5;private lastInvulnerable=0;private lastReflects=0;private lastBattle=0;private lastKey='';
  private shotSoundAt=-1;private lastCount='';
  private lastShieldPulse='';
  private matrix=new T.Matrix4();private position=new T.Vector3();private scale=new T.Vector3();private quaternion=new T.Quaternion();
@@ -204,8 +204,8 @@ export class MetaKnightBattleView{
     if(stage==='shot'&&this.shotSoundAt!==s.since){this.shotSoundAt=s.since;this.cue('shot');}
     this.projectile.visible=true;this.projectile.position.fromArray(shot);const a=stage==='return'?Math.atan2(s.to[0]-shot[0],s.to[2]-shot[2]):s.yaw;this.projectile.rotation.set(0,a-Math.PI/2,0);this.crescent.update(now,stage==='return');
    }
-   if(this.lastBattle===s.id){if(s.hp<this.lastHealth){this.cue('hit');this.burst(now,new T.Vector3(p[0],FX,p[2]));}if(hp<this.lastLife&&participating)this.cue('hurt');if(reflects>this.lastReflects){const shot=knightProjectile(s,now);this.burst(now,shot?new T.Vector3().fromArray(shot):new T.Vector3(...p));}}
-   this.lastHealth=s.hp;this.lastLife=hp;this.lastReflects=reflects;
+   if(this.lastBattle===s.id){if(s.hp<this.lastHealth){this.cue('hit');this.burst(now,new T.Vector3(p[0],FX,p[2]));}if(hp<this.lastLife&&participating&&(player?.invulnerable??0)>this.lastInvulnerable)this.cue('hurt');if(reflects>this.lastReflects){const shot=knightProjectile(s,now);this.burst(now,shot?new T.Vector3().fromArray(shot):new T.Vector3(...p));}}
+   this.lastHealth=s.hp;this.lastLife=hp;this.lastInvulnerable=player?.invulnerable??0;this.lastReflects=reflects;
   }
   this.lastBattle=s?.id??0;
   this.particles.visible=now-this.burstAt<700;for(let i=0;i<22&&this.particles.visible;i++){const life=(now-this.burstAt)/700,a=i*2.399;this.position.copy(this.burstPosition).add(new T.Vector3(Math.cos(a)*life*2*FX,(life*2-life*life*1.5)*FX,Math.sin(a)*life*2*FX));this.scale.setScalar(1-life);this.matrix.compose(this.position,this.quaternion,this.scale);this.particles.setMatrixAt(i,this.matrix);}this.particles.instanceMatrix.needsUpdate=true;

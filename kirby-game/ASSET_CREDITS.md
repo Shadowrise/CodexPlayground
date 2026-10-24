@@ -9,6 +9,14 @@
 - Original arrangement, synthesized warm pad and mixing: `design/music/meadow-day-acoustic/`. Approved MIDI and score: `design/music/meadow-day-acoustic/approved/`.
 - Selected intro 3, ending 2, sparse middle drums without shaker, and a gradual piano fade under the pad from 1:36. Installed on 2026-10-21.
 
+## Citrus Walk background music
+
+- Game file: `public/audio/citrus-walk.wav` — approved soft acoustic arrangement of the original second playlist melody; 118.556 seconds, 108 BPM, E major, stereo 44.1 kHz PCM 16-bit.
+- Sampled nylon guitars, flute, marimba, acoustic bass and strings: **GeneralUser GS v2.0.3**, S. Christian Collins, rendered with FluidSynth 2.6.1. Original synthesized warm chord bed and quiet percussion retained.
+- Sound bank source: https://schristiancollins.com/generaluser and https://github.com/mrbumpy409/GeneralUser-GS. Bank license v2.0: `public/audio/citrus-walk-LICENSE.txt`; the bank itself is not distributed with the game.
+- Editable MIDI, full score and render metadata: `design/music/citrus-walk-acoustic/approved/`. Original generator archived as `design/music/citrus-walk-acoustic/original-make-music.cjs`.
+- Approved on 2026-10-24: softer nylon-guitar attack and upper partials, original theme starts immediately without an introduction, chosen four-bar ending retained. All 1828 original events and 308 theme notes preserved.
+
 ## Musical flower bells
 
 - Game file: `public/audio/flower-bells.wav` — seven notes, one cached download.

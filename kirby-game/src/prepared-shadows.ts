@@ -3,6 +3,7 @@ import type {Daylight} from './day-cycle';
 import {CELESTIAL_MAX_HEIGHT} from './day-cycle';
 import {scenerySources} from './scenery-batch';
 import {GROUND_SHADOW_OPACITY,groundShadowOpacity} from './ground-shadow-style';
+import {startupTask,startupBudget} from './startup-tasks';
 
 export const SHADOW_MASK_SIZE=128;
 const SIZE=SHADOW_MASK_SIZE,PADDING=8,TILE=SIZE+PADDING*2,DIRECTIONS=8,SLOPE=1.35,MAX_STRETCH=1.55;
@@ -20,6 +21,7 @@ export const GRASS_SHADOW_FADE={near:24,far:52};
 export const SCENERY_SHADOW_FADE={near:145,far:205};
 export type ShadowPart={geometry:T.BufferGeometry;matrix:T.Matrix4};
 export type ShadowProfile={index:number;center:T.Vector3;radius:number;masks:Uint8Array[]};
+const distanceMasks=new WeakMap<Uint8Array,Uint8Array>();
 type Stamp={profile:ShadowProfile;matrix:T.Matrix4;receiver:number;strength:number;grass:boolean};
 type MovingStamp={root:T.Object3D;profile:ShadowProfile;receiver:()=>number;strength:number};
 type ShadowOptions={receiver?:number;strength?:number;grass?:boolean};
@@ -71,15 +73,8 @@ export function shadowParts(root:T.Object3D,include:(mesh:T.Mesh)=>boolean=()=>t
 /** Bake eight fixed silhouettes once. Only the small masks survive; source
  * triangles never enter a shadow pass or get projected again during play. */
 export function bakeShadowProfile(parts:readonly ShadowPart[],index=0,slope=SLOPE):ShadowProfile{
- const bounds=new T.Box3(),partBounds=new T.Box3(),vertex=new T.Vector3();
- for(const part of parts){
-  if(!part.geometry.boundingBox)part.geometry.computeBoundingBox();
-  partBounds.copy(part.geometry.boundingBox!).applyMatrix4(part.matrix);bounds.union(partBounds);
- }
- if(bounds.isEmpty())throw new Error('Cannot prepare an empty shadow');
- const center=bounds.getCenter(new T.Vector3());center.y=bounds.min.y;
- const size=bounds.getSize(new T.Vector3());
- const radius=Math.max(.08,Math.hypot(size.x,size.z)/2+size.y*slope)*1.08;
+ const {center,radius}=shadowProfileBounds(parts,slope);
+ const vertex=new T.Vector3();
  const masks:Uint8Array[]=[],points:Float32Array[]=[];
  for(const part of parts){
   const p=part.geometry.attributes.position,positions=new Float32Array(p.count*3);
@@ -88,6 +83,25 @@ export function bakeShadowProfile(parts:readonly ShadowPart[],index=0,slope=SLOP
  }
  const edge=(ax:number,ay:number,bx:number,by:number,x:number,y:number)=>(x-ax)*(by-ay)-(y-ay)*(bx-ax);
  for(let direction=0;direction<DIRECTIONS;direction++){
+  masks.push(bakeDirection(parts,points,radius,direction,slope,edge));
+ }
+ return {index,center,radius,masks};
+}
+
+function shadowProfileBounds(parts:readonly ShadowPart[],slope=SLOPE){
+ const bounds=new T.Box3(),partBounds=new T.Box3();
+ for(const part of parts){
+  if(!part.geometry.boundingBox)part.geometry.computeBoundingBox();
+  partBounds.copy(part.geometry.boundingBox!).applyMatrix4(part.matrix);bounds.union(partBounds);
+ }
+ if(bounds.isEmpty())throw new Error('Cannot prepare an empty shadow');
+ const center=bounds.getCenter(new T.Vector3());center.y=bounds.min.y;
+ const size=bounds.getSize(new T.Vector3());
+ const radius=Math.max(.08,Math.hypot(size.x,size.z)/2+size.y*slope)*1.08;
+ return {center,radius};
+}
+
+function bakeDirection(parts:readonly ShadowPart[],points:Float32Array[],radius:number,direction:number,slope:number,edge:(ax:number,ay:number,bx:number,by:number,x:number,y:number)=>number){
   const angle=direction*Math.PI*2/DIRECTIONS,dx=Math.sin(angle)*slope,dz=Math.cos(angle)*slope,mask=new Uint8Array(SIZE*SIZE);
   for(let partIndex=0;partIndex<parts.length;partIndex++){
    const geometry=parts[partIndex].geometry,p=points[partIndex],uv=new Float32Array(p.length/3*2);
@@ -110,9 +124,7 @@ export function bakeShadowProfile(parts:readonly ShadowPart[],index=0,slope=SLOP
   const temp=new Uint8Array(mask.length),soft=new Uint8Array(mask.length);
   for(let y=1;y<SIZE-1;y++)for(let x=1;x<SIZE-1;x++){const i=y*SIZE+x;temp[i]=(mask[i-1]+2*mask[i]+mask[i+1])/4;}
   for(let y=1;y<SIZE-1;y++)for(let x=1;x<SIZE-1;x++){const i=y*SIZE+x;soft[i]=(temp[i-SIZE]+2*temp[i]+temp[i+SIZE])/4;}
-  masks.push(soft);
- }
- return {index,center,radius,masks};
+  return soft;
 }
 
 /** Blend the boundary of adjacent silhouettes, rather than their opacity.
@@ -163,6 +175,7 @@ export class PreparedShadows{
  private lastProfileCount=0;
  private cullCells:{mesh:T.InstancedMesh;bounds:T.Box2;distance:number}[]=[];
  private cullEye=new T.Vector2();
+ private pendingProfiles?:{profile:ShadowProfile;parts:readonly ShadowPart[]}[];
  constructor(){
   this.group.name='Prepared scenery shadows';this.group.userData.preparedShadow=true;
   this.grass.name='Prepared grass shadows';this.group.add(this.grass);
@@ -210,14 +223,38 @@ export class PreparedShadows{
     .replace('#include <map_fragment>',`float frame=mod(floor(vPreparedFrame),8.);
      // Align both baked rays with the current single light before morphing
      // their distance fields. Tall objects keep one continuous shadow.
-     float boundary=mix(texture2D(map,preparedUv(frame,vPreparedRotations.xy)).a,texture2D(map,preparedUv(mod(frame+1.,8.),vPreparedRotations.zw)).a,fract(vPreparedFrame));
+     float boundary=mix(texture2D(map,preparedUv(frame,vPreparedRotations.xy)).r,texture2D(map,preparedUv(mod(frame+1.,8.),vPreparedRotations.zw)).r,fract(vPreparedFrame));
      float feather=min(.49,max(fwidth(boundary)*.75,vPreparedFeather));
      float mask=smoothstep(.5-feather,.5+feather,boundary);
      diffuseColor.a*=pow(mask,.8)*vPrepared.y*vPrepared.z;if(diffuseColor.a<.003)discard;`);
   };
   const uv=this.geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setY(i,1-uv.getY(i));
  }
- profile(parts:readonly ShadowPart[]){const profile=bakeShadowProfile(parts,this.profiles.length);this.profiles.push(profile);return profile;}
+ /** Registration can remain synchronous while its raster work yields to input. */
+ deferPreparation(){this.pendingProfiles??=[];}
+ async finishPreparation(){
+  if(!this.pendingProfiles)return;
+  const budget=startupBudget(),vertex=new T.Vector3();
+  for(const {profile,parts} of this.pendingProfiles){
+   const points:Float32Array[]=[];
+   for(const part of parts){
+    const p=part.geometry.attributes.position,positions=new Float32Array(p.count*3);
+    for(let i=0;i<p.count;i++){vertex.fromBufferAttribute(p,i).applyMatrix4(part.matrix).sub(profile.center);vertex.toArray(positions,i*3);}
+    points.push(positions);const pause=budget();if(pause)await pause;
+   }
+   const edge=(ax:number,ay:number,bx:number,by:number,x:number,y:number)=>(x-ax)*(by-ay)-(y-ay)*(bx-ax);
+   for(let direction=0;direction<DIRECTIONS;direction++){
+    const mask=bakeDirection(parts,points,profile.radius,direction,SLOPE,edge);profile.masks.push(mask);
+    let pause=budget();if(pause)await pause;
+    distanceMasks.set(mask,shadowDistanceMask(mask));pause=budget();if(pause)await pause;
+   }
+  }
+  this.pendingProfiles=undefined;await startupTask();this.commit();
+ }
+ profile(parts:readonly ShadowPart[]){
+  const profile=this.pendingProfiles?{index:this.profiles.length,...shadowProfileBounds(parts),masks:[]}:bakeShadowProfile(parts,this.profiles.length);
+  this.profiles.push(profile);this.pendingProfiles?.push({profile,parts});return profile;
+ }
  geometryProfile(geometry:T.BufferGeometry){
   let profile=this.geometryProfiles.get(geometry);
   if(!profile){profile=this.profile([{geometry,matrix:new T.Matrix4()}]);this.geometryProfiles.set(geometry,profile);}
@@ -251,15 +288,18 @@ export class PreparedShadows{
  /** Commit after registration. Static transforms are uploaded only here;
   * subsequent frames update shared uniforms and the small transport batch. */
  commit(){
+  if(this.pendingProfiles)return;
   if(this.group.parent)this.moving=this.moving.filter(stamp=>{for(let p:T.Object3D|null=stamp.root;p;p=p.parent)if(p===this.group.parent)return true;return false;});
   if(this.profiles.length!==this.lastProfileCount){
    const columns=Math.max(1,Math.ceil(Math.sqrt(this.profiles.length/2))),rows=Math.ceil(this.profiles.length/columns),width=columns*TILE*4,height=rows*TILE*2;
-   const pixels=new Uint8Array(width*height*4);
+   // Coverage is one scalar. Avoid uploading three unused colour channels.
+   const pixels=new Uint8Array(width*height);
    for(const profile of this.profiles)for(let d=0;d<DIRECTIONS;d++){
-    const ox=(profile.index%columns*4+d%4)*TILE+PADDING,oy=(Math.floor(profile.index/columns)*2+Math.floor(d/4))*TILE+PADDING,mask=shadowDistanceMask(profile.masks[d]);
-    for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++)pixels[((oy+y)*width+ox+x)*4+3]=mask[y*SIZE+x];
+    const source=profile.masks[d],mask=distanceMasks.get(source)??shadowDistanceMask(source);distanceMasks.set(source,mask);
+    const ox=(profile.index%columns*4+d%4)*TILE+PADDING,oy=(Math.floor(profile.index/columns)*2+Math.floor(d/4))*TILE+PADDING;
+    for(let y=0;y<SIZE;y++)pixels.set(mask.subarray(y*SIZE,(y+1)*SIZE),(oy+y)*width+ox);
    }
-   const map=new T.DataTexture(pixels,width,height);map.generateMipmaps=true;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.anisotropy=4;map.needsUpdate=true;
+   const map=new T.DataTexture(pixels,width,height,T.RedFormat);map.generateMipmaps=true;map.magFilter=T.LinearFilter;map.minFilter=T.LinearMipmapLinearFilter;map.anisotropy=4;map.needsUpdate=true;
    this.material.map?.dispose();this.material.map=map;this.material.needsUpdate=true;this.atlasLayout.value.set(columns,width,height);this.lastProfileCount=this.profiles.length;
   }
   const cells=new Map<string,Stamp[]>();

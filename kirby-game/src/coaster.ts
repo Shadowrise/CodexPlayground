@@ -1,11 +1,12 @@
 import {fitRider,restoreRider} from './rider-size';
-import {makeCoasterDepot} from './coaster-depot';
+import {coasterDepotWork} from './coaster-depot';
 import { awardFirst } from './score';
 import * as T from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeLuigi, updateLuigiIdle } from './luigi';
 import {batchRigidMeshes} from './rigid-batch';
 import {CosmeticClock} from './cosmetic-clock';
+import {startupWork} from './startup-tasks';
 import { cloneVariant, remainingVariants, type KirbyVariant } from './variants';
 import type { CharacterController } from './controller';
 import {META_KNIGHT_BODY,metaKnightPaint,makeMetaKnightEmblem,makeSeatedMetaKnight} from './meta-knight-passenger';
@@ -48,7 +49,9 @@ export class Coaster {
   private sampleCount=2400;
   get riding(){return !!this.rider;}
   readonly rideMotion={speed:0,slope:0,inverted:false,turn:0};
-  constructor() {
+  constructor(deferred=false) {if(!deferred)for(const _ of this.build()){};}
+  static async create(){const coaster=new Coaster(true);await startupWork(coaster.build());return coaster;}
+  private *build() {
     this.group.name='Mountain circuit roller coaster';
     const nearest=(p:T.Vector3)=>{let best=0,d=Infinity;for(let i=0;i<=this.sampleCount;i++){const n=this.curve.getPointAt(i/this.sampleCount).distanceToSquared(p);if(n<d){d=n;best=i;}}return best;};
     const worldUp=new T.Vector3(0,1,0),forward=new T.Vector3(0,0,1);
@@ -61,6 +64,7 @@ export class Coaster {
       const stationFade=T.MathUtils.smoothstep(Math.min(distance,this.length-distance),0,35);
       const bank=phase<.55?Math.sin(phase/.55*Math.PI)**2*Math.sin(distance/220*Math.PI)*.28*stationFade:0;
       q.multiply(new T.Quaternion().setFromAxisAngle(forward,bank));this.frames.push(q);
+      if(i%64===0)yield;
     }
     // Transport orientation only through each vertical loop, then meet the upright track smoothly.
     for(const [from,to] of [
@@ -95,10 +99,12 @@ export class Coaster {
     for(const offset of [-1.2,1.2]) {
       const points=Array.from({length:this.sampleCount+1},(_,i)=>this.curve.getPointAt(i/this.sampleCount).add(new T.Vector3(offset,0,0).applyQuaternion(this.frames[i])));
       const rail=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(points,true),2400,.13,6,true),material('#becbd0'));rail.name='Detailed coaster rail';rail.castShadow=false;this.group.add(rail);
+      yield;
     }
     for(let d=0;d<this.length;d+=2.4) {
       const pose=this.pose(d);add(box,'#307f88',pose.p,new T.Vector3(3,.18,.32),pose.q,false);
       for(const x of [-1.2,1.2])add(box,'#596671',pose.p.clone().add(new T.Vector3(x,.15,0).applyQuaternion(pose.q)),new T.Vector3(.25,.15,.4),pose.q,false);
+      yield;
     }
     // Continuous shadow envelope replaces the sub-texel rails and repeated ties.
     const vertices:number[]=[],indices:number[]=[];
@@ -113,7 +119,8 @@ export class Coaster {
     shadowGeometry.setIndex(indices);shadowGeometry.computeVertexNormals();shadowGeometry.computeBoundingSphere();
     const trackShadow=new T.Mesh(shadowGeometry,new T.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:T.DoubleSide}));
     trackShadow.name='Stable continuous coaster shadow';trackShadow.castShadow=true;this.group.add(trackShadow);
-    this.group.add(makeCoasterDepot());
+    this.group.add(yield* coasterDepotWork());
+    yield;
     const batches=new Map<string,T.Mesh[]>();
     for(const m of parts){const k=m.geometry.uuid+(m.material as T.Material).uuid+m.castShadow;if(!batches.has(k))batches.set(k,[]);batches.get(k)!.push(m);}
     for(const list of batches.values()){const m=new T.InstancedMesh(list[0].geometry,list[0].material,list.length);list.forEach((p,i)=>m.setMatrixAt(i,p.matrix));m.castShadow=list[0].castShadow;m.receiveShadow=list[0].castShadow;m.name=m.castShadow?'Coaster structure':'Detailed coaster ties';this.group.add(m);}
@@ -152,6 +159,7 @@ export class Coaster {
       }
       batchRigidMeshes(g,new Set([...wheels,...g.children.filter(o=>!!o.name)]));
       this.group.add(g);this.carts.push({group:g,distance:i*this.length/COASTER_CART_COUNT,wait:i===0?2.5:0,speed:i===0?0:64,wheels,occupied:i%2===1 || i===10 || i===META_KNIGHT_CART});
+      yield;
     }
   }
   addKirbyPassengers(template:T.Object3D,clips:T.AnimationClip[],selected:KirbyVariant) {

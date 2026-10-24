@@ -8,17 +8,26 @@ export function rigidComponents(mesh:T.Mesh){return components.get(mesh);}
  * surfaces, morphs and materials with different lighting/texture properties.
  * Colours are baked in linear space; geometry, normals and UVs stay intact. */
 export function batchRigidMeshes(parent:T.Object3D,preserve:ReadonlySet<T.Object3D>=new Set()){
+ for(const _ of rigidMeshWork(parent,preserve)){}
+}
+export function* rigidMeshWork(parent:T.Object3D,preserve:ReadonlySet<T.Object3D>=new Set()){
  const batches=new Map<string,T.Mesh[]>();
+ const metadata:T.JSONMeta={geometries:{},materials:{},textures:{},images:{},shapes:{},skeletons:{},animations:{},nodes:{}},materialKeys=new Map<T.Material,string>();
  for(const child of parent.children){
   if(!(child instanceof T.Mesh)||child instanceof T.SkinnedMesh||preserve.has(child)||child.children.length||child.morphTargetInfluences||Array.isArray(child.material))continue;
   const m=child.material;
   if(!(m instanceof T.MeshStandardMaterial)||m.transparent||!m.visible||!child.visible||m.onBeforeCompile!==T.Material.prototype.onBeforeCompile)continue;
   if(child.customDepthMaterial||child.customDistanceMaterial||child.geometry.drawRange.start!==0||Number.isFinite(child.geometry.drawRange.count)||child.geometry.getAttribute('color')?.itemSize===4)continue;
-  const properties=m.toJSON() as unknown as Record<string,unknown>;
-  for(const key of ['uuid','name','color','vertexColors','metadata','userData'])delete properties[key];
+  let properties=materialKeys.get(m);
+  if(properties===undefined){
+   const data=m.toJSON(metadata) as unknown as Record<string,unknown>;
+   for(const key of ['uuid','name','color','vertexColors','metadata','userData'])delete data[key];
+   properties=JSON.stringify(data);materialKeys.set(m,properties);
+  }
   const attributes=Object.keys(child.geometry.attributes).filter(name=>name!=='color').sort().map(name=>{const a=child.geometry.getAttribute(name);return [name,a.itemSize,a.normalized];});
   const key=JSON.stringify([properties,attributes,child.castShadow,child.receiveShadow,child.renderOrder,child.layers.mask,child.frustumCulled]);
   const batch=batches.get(key)??[];batch.push(child);batches.set(key,batch);
+  yield;
  }
  const matrix=new T.Matrix4(),instance=new T.Matrix4(),colour=new T.Color(),vertex=new T.Color(),vertexColour=new T.Color();
  for(const sources of batches.values()){
@@ -41,6 +50,7 @@ export function batchRigidMeshes(parent:T.Object3D,preserve:ReadonlySet<T.Object
      colors.set([vertex.r,vertex.g,vertex.b],j*3);
     }
     g.setAttribute('color',new T.BufferAttribute(colors,3));g.clearGroups();geometries.push(g);
+    yield;
    }
   }
   const geometry=mergeGeometries(geometries);geometries.forEach(g=>g.dispose());

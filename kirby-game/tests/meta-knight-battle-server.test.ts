@@ -79,5 +79,17 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   send(a,actor());assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,1);
   assert(!a.data.room?.knightBattle,'large encounter is stored outside socket attachments');
   send(a,actor(),[{type:'knight',action:'start'}]);send(a,actor(),[{type:'knight',action:'cancel'}]);send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert.equal(room.room.knightBattle.stage,'cancelled');assert.equal(a.data.actor.location,'meta-knight-arena');assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,1);
+  // The actual authority owns the team's five lives across frames and wakeups.
+  send(a,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.teamHp,5);
+  Object.assign(room.room.knightBattle,{stage:'slash',pattern:'sword',since:now,until:now+100000,checked:now,from:[0,0,0],to:[0,0,0],yaw:0});
+  send(b,actor([2000,0,8]));assert.equal(room.room.knightBattle.teamHp,4);
+  assert.equal(room.room.knightBattle.players[aid].hp,4);assert.equal(room.room.knightBattle.players[aid].invulnerable,0);
+  send(a,actor(),[],{knightBattle:{teamHp:5,players:{[aid]:{hp:5}}}});assert.equal(room.room.knightBattle.teamHp,4,'client health cannot refill the bank');
+  send(b,actor([2025,0,20]),[{type:'knight',action:'cancel'}]);assert.equal(room.room.knightBattle.teamHp,4);
+  await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.equal(room.room.knightBattle.teamHp,4);
+  for(const p of [[2020,0,-20],[2020,0,20],[2008,0,12]])send(a,actor(p));
+  for(let i=0;i<4;i++){now+=1300;send(a,actor([2000,0,8]));assert.equal(room.room.knightBattle.teamHp,3-i);}
+  assert.equal(room.room.knightBattle.stage,'lost');assert(Object.values(room.room.knightBattle.players).every((p:any)=>p.hp===0));
+  send(a,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.teamHp,5);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;sql.close();}
 });

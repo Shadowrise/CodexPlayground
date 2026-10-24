@@ -12,3 +12,12 @@ export function saveAudioSettings(channel: Channel, enabled: boolean, volume: nu
   try { localStorage.setItem(`kirby.audio.${channel}`, JSON.stringify({ enabled, volume })); }
   catch { /* Audio controls still work when storage is unavailable. */ }
 }
+
+export function readMusicShuffle(): boolean {
+  try { return localStorage.getItem('kirby.audio.shuffle') === 'true'; }
+  catch { return false; }
+}
+export function saveMusicShuffle(enabled: boolean) {
+  try { localStorage.setItem('kirby.audio.shuffle', String(enabled)); }
+  catch { /* Shuffling still works when storage is unavailable. */ }
+}
