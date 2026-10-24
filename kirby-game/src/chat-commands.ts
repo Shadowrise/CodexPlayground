@@ -24,7 +24,15 @@ const commands=[
  {name:'time',description:'Установить час в игре: 0–23'},
  {name:'portal',description:'Портал Метакнайта: 1 — открыть, 0 — закрыть'},
 ];
-const unlockCharacters=[{character:'bandana',name:'Бандана'},{character:'pidgie',name:'Пиджи'},{character:'meta-knight',name:'Meta Knight'},{character:'snowball',name:'Снежок'},{character:'ugolyok',name:'Уголёк'},{character:'ryzhik',name:'Рыжик'}] as const;
+// English command aliases are independent of stable save/network character IDs.
+const unlockCharacters=[
+ {character:'bandana',alias:'bandana',name:'Бандана'},
+ {character:'pidgie',alias:'pidgie',name:'Пиджи'},
+ {character:'meta-knight',alias:'meta-knight',name:'Meta Knight'},
+ {character:'snowball',alias:'snowball',name:'Снежок'},
+ {character:'ugolyok',alias:'cinder',name:'Уголёк'},
+ {character:'ryzhik',alias:'ginger',name:'Рыжик'},
+] as const;
 const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–3'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
@@ -58,8 +66,8 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   return destination?{command:{kind:'tele',destination}}:{error:'Выбери место из подсказок или введи его сокращение после /tele.'};
  }
  if(name==='unlock'){
-  const target=unlockCharacters.find(entry=>entry.character===argument.toLowerCase());
-  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock ugolyok или /unlock ryzhik, чтобы открыть персонажа.'};
+  const target=unlockCharacters.find(entry=>entry.alias===argument.toLowerCase());
+  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock cinder или /unlock ginger, чтобы открыть персонажа.'};
  }
  return {error:duelActive?'Доступные команды: /size, /tele, /unlock, /time, /portal, /phase и /godmode.':'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }
@@ -73,7 +81,7 @@ export function commandSuggestions(text:string,enabled:boolean,destinations:read
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,
  }));
- if(name==='unlock')return unlockCharacters.filter(entry=>entry.character.startsWith(argument)).map(entry=>({value:`/unlock ${entry.character}`,label:entry.character,description:t(entry.name),complete:true}));
+ if(name==='unlock')return unlockCharacters.filter(entry=>entry.alias.startsWith(argument)).map(entry=>({value:`/unlock ${entry.alias}`,label:entry.alias,description:t(entry.name),complete:true}));
  if(match[2]!==undefined)return [];
  return [...commands,...(duelActive?duelCommands:[])].filter(c=>c.name.startsWith(name)).map(c=>({value:`/${c.name}${c.name==='godmode'?'':' '}`,label:`/${c.name}`,description:t(c.description),complete:c.name==='godmode'}));
 }

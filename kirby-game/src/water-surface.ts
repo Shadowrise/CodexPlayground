@@ -89,16 +89,24 @@ export function createWaterSurface({flow=false,opacity=1}:{flow?:boolean;opacity
   shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',`
    #include <lights_fragment_end>
    #ifdef USE_LIGHT_PROBES
-    // Broad sky reflection from the existing day/night probe. No scene capture,
-    // reflection render target or extra lights; the ripple normal breaks it up.
-    float waterFresnel=.0204+.9796*pow(1.-saturate(dot(normal,geometryViewDir)),5.);
-    // The probe stores irradiance; convert to radiance so grazing reflections
-    // retain the water colour instead of washing the whole surface white.
-    vec3 waterSky=max(vec3(0.),lightProbe[0]*.886227+lightProbe[1]*1.023328)*RECIPROCAL_PI;
-    reflectedLight.indirectSpecular+=waterSky*waterFresnel*(1.-roughnessFactor*.55);
+    // Each wave facet sees a different part of the sky. Facets reflecting below
+    // the horizon are masked; using a constant zenith colour made low views icy.
+    vec3 waterRay=reflect(-geometryViewDir,normal);
+    float waterRayHeight=dot(waterRay,viewMatrix[1].xyz);
+    float waterSkyVisible=smoothstep(-.015,.18,waterRayHeight);
+    float waterFacetTilt=dot(normal-nonPerturbedNormal,geometryViewDir);
+    float waterFacetFacing=smoothstep(-.035,.045,waterFacetTilt);
+    float waterGrazing=1.-saturate(dot(normal,geometryViewDir));
+    float waterGrazing2=waterGrazing*waterGrazing;
+    // A bounded, rough-water approximation: grazing must not turn every facet
+    // into a mirror, even after distant mip levels average away the small waves.
+    float waterFresnel=.0204+.22*waterGrazing2*waterGrazing2*waterGrazing;
+    vec3 waterSky=max(vec3(0.),lightProbe[0]*.886227+lightProbe[1]*(1.023328*saturate(waterRayHeight)))*RECIPROCAL_PI;
+    reflectedLight.indirectSpecular+=waterSky*waterFresnel*waterSkyVisible
+     *(.12+.88*waterFacetFacing)*(1.-roughnessFactor*.55);
    #endif
   `);
  };
- material.customProgramCacheKey=()=> 'packed-water-ripples-v4-'+(flow?'flow':'surface');
+ material.customProgramCacheKey=()=> 'packed-water-ripples-v5-'+(flow?'flow':'surface');
  return {texture,material,phase};
 }

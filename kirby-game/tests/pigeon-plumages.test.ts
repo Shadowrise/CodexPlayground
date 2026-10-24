@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {Group,Mesh,Scene,Texture,Vector3} from 'three';
 import {GLTFLoader,type GLTF} from 'three/addons/loaders/GLTFLoader.js';
-import {WILD_PIGEONS,pigeonFriendAchievement,wildPigeonName,type WildPigeonId} from '../src/wild-pigeons';
+import {WILD_PIGEONS,pigeonFriendAchievement,wildPigeonName,wildPigeonObjectName,type WildPigeonId} from '../src/wild-pigeons';
 import {KIRBY_VARIANTS,isPigeonVariant} from '../src/variant-palette';
 import {createPlayerModel} from '../src/player-model';
 import {CharacterController} from '../src/controller';
@@ -100,7 +100,12 @@ test('feeding unlocks each new character independently, persists through reload 
   assert.equal(achievementPoints([pigeonFriendAchievement(id)]),10);assert.match(lockedCharacterHint(name),new RegExp(name));
   const denied=new CharacterUnlocks({getItem(){throw Error();},setItem(){throw Error();}});assert(denied.unlockPigeon(id));assert(!denied.isLocked(name));
   for(const locale of ['en','bg'] as const){
-   setLocale(locale);for(const text of [name,lockedCharacterHint(name),pidgieFriendLog('{0}',id).text,pidgieScareLog('{0}',id).text,pidgieInterestLog('{0}',id).text])assert.notEqual(t(text),text,`${locale}/${text}`);
+   setLocale(locale);const translated=id==='ugolyok'?(locale==='en'?'Cinder':'Въгленчо'):(locale==='en'?'Ginger':'Рижко');
+   assert.equal(t(name),translated);
+   for(const text of [`Дикий ${name}`,`E — Угостить дикого ${wildPigeonObjectName(id)}`,lockedCharacterHint(name),pidgieFriendLog('Рыжик $&',id).text,pidgieScareLog('Рыжик $&',id).text,pidgieInterestLog('Рыжик $&',id).text]){
+    assert.notEqual(t(text),text,`${locale}/${text}`);assert(t(text).includes(translated),`${locale}/${text}`);
+    if(text.includes('Рыжик $&'))assert(t(text).includes('Рыжик $&'));
+   }
   }setLocale('ru');
  }
 });

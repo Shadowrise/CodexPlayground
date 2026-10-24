@@ -22,24 +22,29 @@ window.plumageQA={get c(){return character},get playing(){return playing},get se
  });
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>window.plumageQA?.models&&document.querySelector('#start-game')?.disabled===false,undefined,{timeout:120000});
- console.log('Game loaded');await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Пекарь');
- for(const id of ['ugolyok','ryzhik']){
-  const button=page.locator(`#variant-grid .${id}-character`);assert.equal(await button.getAttribute('aria-disabled'),'true');await button.click({force:true});
-  assert.match(await page.locator('#locked-character-tooltip').innerText(),/хлебушком/);assert.equal(await page.evaluate(()=>plumageQA.selected[0]),'Классический');
+ console.log('Game loaded');
+ for(const [locale,cinder,ginger] of [['en','Cinder','Ginger'],['bg','Въгленчо','Рижко'],['ru','Уголёк','Рыжик']]){
+  await page.locator(`#startup-menu [data-language="${locale}"]`).click();await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Пекарь');
+  for(const [id,name] of [['ugolyok',cinder],['ryzhik',ginger]]){
+   const button=page.locator(`#variant-grid .${id}-character`);assert.equal(await button.getAttribute('aria-disabled'),'true');assert.equal(await button.getAttribute('aria-label'),name);assert((await button.innerText()).includes(name));await button.click({force:true});
+   assert((await page.locator('#locked-character-tooltip').innerText()).includes(name));assert.equal(await page.evaluate(()=>plumageQA.selected[0]),'Классический');
+  }
+  await page.screenshot({path:output+`/locked-menu-${locale}.png`});await page.locator('#character-back').click();
  }
+ await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Пекарь');
  await page.screenshot({path:output+'/locked-menu.png'});await page.locator('#variant-grid .variant-button').first().click();await page.locator('#start-game').click();
  await page.waitForFunction(()=>plumageQA.playing&&plumageQA.birds.size===4);
  const world=await page.evaluate(async()=>{const {validWorld}=await import('/src/network-protocol.ts'),w=plumageQA.captureWorld();return {valid:validWorld(w),bytes:JSON.stringify(w).length,keys:Object.keys(w)};});assert(world.valid,JSON.stringify(world));
  if(process.argv.includes('--commands-only')){
   const achievements=await page.evaluate(()=>[...plumageQA.c.achievements]);
-  for(const id of ['ugolyok','ryzhik']){
-   await page.evaluate(()=>{plumageQA.online=true;plumageQA.chat.show();});await page.locator('#chat-input').fill(`/unlock ${id}`);await page.keyboard.press('Enter');
+  for(const [id,alias,name] of [['ugolyok','cinder','Уголёк'],['ryzhik','ginger','Рыжик']]){
+   await page.evaluate(()=>{plumageQA.online=true;plumageQA.chat.show();});await page.locator('#chat-input').fill(`/unlock ${alias}`);await page.keyboard.press('Enter');
    assert(await page.locator('#chat-command-error').isVisible());assert.equal(await page.evaluate(id=>localStorage.getItem(`kirby-${id}-unlocked-v1`),id),null);
-   await page.evaluate(()=>{plumageQA.online=false;});await page.locator('#chat-input').fill(`/unlock ${id.slice(0,3)}`);
-   assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),[id]);await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+   await page.evaluate(()=>{plumageQA.online=false;});await page.locator('#chat-input').fill(`/unlock ${alias.slice(0,3)}`);
+   assert.deepEqual(await page.locator('#chat-command-list code').allTextContents(),[alias]);await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
    await page.waitForFunction(id=>localStorage.getItem(`kirby-${id}-unlocked-v1`)==='1',id);
-   await page.locator('#character-unlock').waitFor({state:'visible'});await page.locator('#character-unlock').click();await page.locator('#character-unlock').waitFor({state:'hidden'});
-   await page.evaluate(()=>plumageQA.chat.show());await page.locator('#chat-input').fill(`/unlock ${id}`);await page.keyboard.press('Enter');assert(await page.locator('#character-unlock').isHidden());
+   await page.locator('#character-unlock').waitFor({state:'visible'});assert((await page.locator('#character-unlock').innerText()).includes(name));await page.locator('#character-unlock').click();await page.locator('#character-unlock').waitFor({state:'hidden'});
+   await page.evaluate(()=>plumageQA.chat.show());await page.locator('#chat-input').fill(`/unlock ${alias}`);await page.keyboard.press('Enter');assert(await page.locator('#character-unlock').isHidden());
    assert.deepEqual(await page.evaluate(()=>[...plumageQA.c.achievements]),achievements);
   }
   await page.evaluate(()=>plumageQA.returnToMenu());await page.reload();await page.waitForFunction(()=>window.plumageQA?.models,undefined,{timeout:120000});await page.locator('#new-game').click();
