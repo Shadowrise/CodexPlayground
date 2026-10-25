@@ -1,0 +1,22 @@
+[
+  {
+    "file": "public/audio/meta-knight-cosmic/cosmic-meteor-draw.wav",
+    "duration": 1.5,
+    "peak": 0.47
+  },
+  {
+    "file": "public/audio/meta-knight-cosmic/cosmic-meteor-throw.wav",
+    "duration": 1.75,
+    "peak": 0.61
+  },
+  {
+    "file": "public/audio/meta-knight-cosmic/cosmic-meteor-reflect.wav",
+    "duration": 0.75,
+    "peak": 0.58
+  },
+  {
+    "file": "public/audio/meta-knight-cosmic/cosmic-meteor-impact.wav",
+    "duration": 1.4,
+    "peak": 0.7
+  }
+]

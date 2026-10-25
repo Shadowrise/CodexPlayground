@@ -110,7 +110,7 @@ export class MeadowChat{
    const positions=new Map([...oldRows].map(([id,row])=>[id,row.getBoundingClientRect().top]));
    this.list.replaceChildren(...latest.map(e=>{
     const row=oldRows.get(e.id)??document.createElement('p');row.dataset.id=e.id;
-    row.style.color=KIRBY_VARIANTS[e.variant]?.[1]??'#e4edf7';
+    row.style.setProperty('--chat-color',KIRBY_VARIANTS[e.variant]?.[1]??'#e4edf7');
     row.classList.toggle('ugolyok-character',KIRBY_VARIANTS[e.variant]?.[0]==='Уголёк');
     row.classList.toggle('chat-event',!e.chat);
     if(!oldRows.has(e.id)){

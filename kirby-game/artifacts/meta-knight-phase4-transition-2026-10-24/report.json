@@ -1,0 +1,435 @@
+{
+  "frames": [
+    {
+      "stage": "cosmic-charge",
+      "ms": 2000,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 78,
+      "tipNdc": [
+        0.0017173502219193554,
+        0.12530854197609717,
+        0.9895062135007765
+      ],
+      "bossNdc": [
+        0,
+        -0.08832912740062852,
+        0.9917537662149398
+      ],
+      "arenaNdc": [
+        0,
+        -0.08832912740062852,
+        0.9917537662149398
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 395050,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/01-charge-start.png",
+      "label": "Начало заряда"
+    },
+    {
+      "stage": "cosmic-charge",
+      "ms": 4000,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 162,
+      "tipNdc": [
+        -0.018528274339316943,
+        0.3461578838469209,
+        0.989796266813429
+      ],
+      "bossNdc": [
+        4.696309470637634e-15,
+        -0.08812817397436791,
+        0.9917539922068893
+      ],
+      "arenaNdc": [
+        4.696309470637634e-15,
+        -0.08812817397436791,
+        0.9917539922068893
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 397738,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/02-charge-full.png",
+      "label": "Глаза и меч под напряжением"
+    },
+    {
+      "stage": "cosmic-strike",
+      "ms": 4700,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 78,
+      "tipNdc": [
+        -0.07285466256941803,
+        -0.03954901314773908,
+        0.989009750712046
+      ],
+      "bossNdc": [
+        0,
+        -0.0881267560319079,
+        0.9917539944106871
+      ],
+      "arenaNdc": [
+        0,
+        -0.0881267560319079,
+        0.9917539944106871
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 395050,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/03-sword-plunge.png",
+      "label": "Удар мечом"
+    },
+    {
+      "stage": "cosmic-surge",
+      "ms": 5350,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 798,
+      "tipNdc": [
+        -4.691427497385731e-15,
+        -0.09190844843116143,
+        0.9917629355405909
+      ],
+      "bossNdc": [
+        0,
+        -0.08812649608260459,
+        0.991753994815616
+      ],
+      "arenaNdc": [
+        0,
+        -0.08812649608260459,
+        0.991753994815616
+      ],
+      "arenaVisible": true,
+      "drawCalls": 107,
+      "triangles": 419626,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/04-lightning-spread.png",
+      "label": "Молнии расходятся по арене"
+    },
+    {
+      "stage": "cosmic-surge",
+      "ms": 6550,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 798,
+      "tipNdc": [
+        -4.691427427599572e-15,
+        -0.09190837910697472,
+        0.9917629356684331
+      ],
+      "bossNdc": [
+        0,
+        -0.08812642986488818,
+        0.9917539949188098
+      ],
+      "arenaNdc": [
+        0,
+        -0.08812642986488818,
+        0.9917539949188098
+      ],
+      "arenaVisible": true,
+      "drawCalls": 107,
+      "triangles": 419626,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/05-arena-charged.png",
+      "label": "Арена заряжена"
+    },
+    {
+      "stage": "cosmic-lift",
+      "ms": 7870,
+      "height": 0,
+      "bossHeight": 0,
+      "flight": false,
+      "state": "Idle",
+      "hp": 6,
+      "life": 5,
+      "bolts": 798,
+      "tipNdc": [
+        -0.057872965292041924,
+        0.25179962736545425,
+        0.9887513391995375
+      ],
+      "bossNdc": [
+        -4.696307986974097e-15,
+        -0.08812642600423026,
+        0.991753994924827
+      ],
+      "arenaNdc": [
+        -4.696307986974097e-15,
+        -0.08812642600423026,
+        0.991753994924827
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 418090,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/06-sword-raised.png",
+      "label": "Меч снова поднят"
+    },
+    {
+      "stage": "cosmic-rise",
+      "ms": 9550,
+      "height": 20.368035252636705,
+      "bossHeight": 20.368035252636705,
+      "flight": true,
+      "state": "Fly",
+      "hp": 6,
+      "life": 5,
+      "bolts": 190,
+      "tipNdc": [
+        -0.01895606722958416,
+        0.3949229435955206,
+        0.9896795016453982
+      ],
+      "bossNdc": [
+        0,
+        -0.08573001632191107,
+        0.9917587880789287
+      ],
+      "arenaNdc": [
+        0,
+        -0.5867074815995522,
+        0.9929535852534862
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 398270,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/07-ascent-start.png",
+      "label": "Общий взлёт"
+    },
+    {
+      "stage": "cosmic-rise",
+      "ms": 11100,
+      "height": 102.01263563762653,
+      "bossHeight": 102.01263563762653,
+      "flight": true,
+      "state": "Fly",
+      "hp": 6,
+      "life": 5,
+      "bolts": 190,
+      "tipNdc": [
+        -0.021409125535662942,
+        0.41797394336994736,
+        0.9899648542649093
+      ],
+      "bossNdc": [
+        0,
+        0.08436498742509965,
+        0.9923373622815124
+      ],
+      "arenaNdc": [
+        0,
+        -0.9162634626398433,
+        0.9965836040018652
+      ],
+      "arenaVisible": true,
+      "drawCalls": 98,
+      "triangles": 393940,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/08-ascent-high.png",
+      "label": "Арена остаётся внизу"
+    },
+    {
+      "stage": "cosmic-rise",
+      "ms": 13200,
+      "height": 178.88425722486738,
+      "bossHeight": 178.88425722486738,
+      "flight": true,
+      "state": "Fly",
+      "hp": 6,
+      "life": 5,
+      "bolts": 190,
+      "tipNdc": [
+        -0.02409825051119587,
+        0.34940710898860006,
+        0.991366702393472
+      ],
+      "bossNdc": [
+        -3.1748889469041564e-15,
+        0.16913275491920193,
+        0.9933757676326503
+      ],
+      "arenaNdc": [
+        -1.0093316706237047e-15,
+        -0.5964041908741117,
+        0.9981377313746493
+      ],
+      "arenaVisible": true,
+      "drawCalls": 107,
+      "triangles": 396490,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/09-arrival.png",
+      "label": "Торможение в космосе"
+    },
+    {
+      "stage": "cosmic-flight",
+      "ms": 16000,
+      "height": 180,
+      "bossHeight": 180,
+      "flight": true,
+      "state": "Fly",
+      "hp": 6,
+      "life": 5,
+      "bolts": 78,
+      "tipNdc": [
+        -0.01137231626135322,
+        0.169931745098736,
+        0.9918240803005682
+      ],
+      "bossNdc": [
+        3.1654009386860014e-15,
+        0.16981324387534322,
+        0.9933966284686734
+      ],
+      "arenaNdc": [
+        1.0024587261264521e-15,
+        -0.5915756790966762,
+        0.9981528437636554
+      ],
+      "arenaVisible": true,
+      "drawCalls": 106,
+      "triangles": 392906,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-transition-2026-10-24\\screenshots/10-cosmic-flight.png",
+      "label": "Свободный полёт в одной плоскости"
+    }
+  ],
+  "flight": {
+    "height": 180,
+    "after": 180,
+    "moved": 8.159999999998774,
+    "active": true,
+    "state": "Fly",
+    "stage": "cosmic-flight"
+  },
+  "mobile": {
+    "height": 180,
+    "boss": 180,
+    "glError": 0
+  },
+  "reset": {
+    "phaseReset": {
+      "height": 0,
+      "flight": false,
+      "visible": false,
+      "sky": false,
+      "phase": 2
+    },
+    "cancel": {
+      "height": 0,
+      "flight": false,
+      "visible": false,
+      "stage": "cancelled"
+    }
+  },
+  "video": {
+    "frames": 1274,
+    "elapsed": 17.003199999999865,
+    "wallSeconds": 17.292799999952315,
+    "medianMs": 13.30000000000291,
+    "p95Ms": 13.400000000001455,
+    "stage": "cosmic-flight"
+  },
+  "errors": [],
+  "cues": [
+    {
+      "kind": "phase",
+      "at": 1000016.6666666666
+    },
+    {
+      "kind": "cosmic-charge",
+      "at": 1001516.6666666631
+    },
+    {
+      "kind": "cosmic-impact",
+      "at": 1005166.6666666546
+    },
+    {
+      "kind": "cosmic-draw",
+      "at": 1007066.6666666502
+    },
+    {
+      "kind": "cosmic-ascent",
+      "at": 1008103.3333333144
+    },
+    {
+      "kind": "cosmic-arrive",
+      "at": 1013716.6666666347
+    },
+    {
+      "kind": "phase",
+      "at": 1020016.6666666201
+    },
+    {
+      "kind": "hit",
+      "at": 1020033.3333332867
+    },
+    {
+      "kind": "cosmic-charge",
+      "at": 1021533.3333332832
+    },
+    {
+      "kind": "cosmic-impact",
+      "at": 1025183.3333332747
+    },
+    {
+      "kind": "cosmic-draw",
+      "at": 1027083.3333332703
+    },
+    {
+      "kind": "cosmic-ascent",
+      "at": 1028133.3333332678
+    },
+    {
+      "kind": "phase",
+      "at": 1030034.3333332634
+    },
+    {
+      "kind": "cosmic-charge",
+      "at": 1031541.133333267
+    },
+    {
+      "kind": "cosmic-impact",
+      "at": 1035194.9333332744
+    },
+    {
+      "kind": "cosmic-draw",
+      "at": 1037088.633333278
+    },
+    {
+      "kind": "cosmic-ascent",
+      "at": 1038142.1333332799
+    },
+    {
+      "kind": "cosmic-arrive",
+      "at": 1043742.8333332919
+    }
+  ]
+}

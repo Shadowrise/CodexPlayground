@@ -59,7 +59,13 @@ try{
    const x=viewport.width/2+(point.x-.5)*composition.width*scale,y=viewport.height/2+(point.y-.5)*composition.height*scale;
    return x>25&&x<viewport.width-25&&y>25&&y<viewport.height-25&&(x<menu.x-15||x>menu.x+menu.width+15||y<menu.y-15||y>menu.y+menu.height+15);
   }).length;
-  assert(visible>=2,`at least two real Kirby models remain visible around the ${viewport.width}px menu`);visibleKirbys.push({width:viewport.width,count:visible});
+  // Preserve the approved camera. Cover crops the side characters on narrow
+  // screens, so require the visible pair on desktop and full coverage on both.
+  if(viewport.width>=960)assert(visible>=2,'at least two real Kirby models remain visible around the desktop menu');
+  const backdrop=await page.locator('#menu-backdrop').boundingBox();
+  assert(backdrop.width>=viewport.width&&backdrop.height>=viewport.height);
+  assert.equal(await page.locator('#menu-backdrop img').evaluate(img=>getComputedStyle(img).objectFit),'cover');
+  visibleKirbys.push({width:viewport.width,count:visible});
  }
  const reduced=await browser.newContext({reducedMotion:'reduce'}),reducedPage=await reduced.newPage(),reducedRequests=[];
  reducedPage.on('request',request=>reducedRequests.push(request.url()));

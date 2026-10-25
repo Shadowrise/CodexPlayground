@@ -2,6 +2,9 @@ import {t} from './i18n';
 import {numberSound,type NumberSound} from './number-garden-sounds';
 import {centipedeSound} from './centipede-sounds';
 import {knightSound,KNIGHT_SOUND_RATE,type KnightSound} from './meta-knight-sounds';
+import {COSMIC_SOUNDS,isCosmicSound} from './meta-knight-cosmic-sounds';
+import {METEOR_SOUNDS,isMeteorSound} from './meta-knight-cosmic-meteor-sounds';
+import {isRefugeSound} from './meta-knight-cosmic-refuge-sounds';
 import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
 import type { Emote, PlayerEmote } from './emotes';
@@ -276,14 +279,38 @@ export class SoundEffects {
       for(let i=0;i<data.length;i++){const t=i/rate,u=t/.62;phase+=2*Math.PI*(170+240*Math.exp(-t*5)+110*Math.sin(t*43)*Math.exp(-t*5))/rate;data[i]=(Math.sin(phase)+.12*Math.sin(phase*2))*Math.min(1,t/.012)*Math.sin(Math.PI*u)*Math.exp(-u*2)*.32;}this.buffers.set('push-boing',buffer);}
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
+  private knightCosmicSources=new Set<AudioBufferSourceNode>();
+  private knightCosmicLoad?:Promise<void>;
+  private knightBuffer(kind:KnightSound){
+    const ctx=this.context!,key='knight-v2-'+kind;
+    if(!this.buffers.has(key)){
+      const samples=knightSound(kind),buffer=ctx.createBuffer(2,samples.left.length,KNIGHT_SOUND_RATE);
+      // Reuse the credited Tesla, air rush and impact recordings under each layer.
+      const bed=kind==='cosmic-spin'||kind==='cosmic-refuge-pull'?'cosmic-charge':kind==='cosmic-refuge-roll'||kind==='cosmic-fall'?'cosmic-ascent':kind==='cosmic-refuge-break'||kind==='cosmic-landing'?'cosmic-meteor-impact':undefined;
+      const tesla=bed?this.buffers.get('knight-v2-'+bed):undefined;
+      for(const [channel,data] of [samples.left,samples.right].entries()){
+        if(tesla){const recorded=tesla.getChannelData(Math.min(channel,tesla.numberOfChannels-1));for(let i=0;i<data.length;i++){const t=i/KNIGHT_SOUND_RATE,u=i/data.length,edge=Math.min(1,t/.10,(data.length-1-i)/(KNIGHT_SOUND_RATE*.10));const at=t*(1.1+.45*u)*tesla.sampleRate;data[i]+=recorded[Math.floor(at)%recorded.length]*.30*edge;}}
+        buffer.getChannelData(channel).set(data);
+      }this.buffers.set(key,buffer);
+    }
+    return this.buffers.get(key)!;
+  }
+  prepareKnightCosmic(){
+    const context=this.context;if(!context||!this.enabled)return Promise.resolve();
+    return this.knightCosmicLoad??=Promise.all([...COSMIC_SOUNDS,...METEOR_SOUNDS].map(async kind=>{
+      try{
+        const response=await fetch(`${import.meta.env.BASE_URL}audio/meta-knight-cosmic/${kind}.wav`);if(!response.ok)return;
+        const buffer=await context.decodeAudioData(await response.arrayBuffer());this.buffers.set('knight-v2-'+kind,buffer);
+      }catch{/* The generated effect remains available if a sample cannot load. */}
+    })).then(()=>{});
+  }
+  stopKnightCosmic(){for(const source of this.knightCosmicSources){try{source.stop();}catch{/* A source may have ended in the same audio quantum. */}}this.knightCosmicSources.clear();}
   playKnight(kind:KnightSound){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
-    const key='knight-v2-'+kind;
-    if(!this.buffers.has(key)){
-      const samples=knightSound(kind),buffer=ctx.createBuffer(2,samples.left.length,KNIGHT_SOUND_RATE);buffer.getChannelData(0).set(samples.left);buffer.getChannelData(1).set(samples.right);
-      this.buffers.set(key,buffer);
-    }
-    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get(key)!;gain.gain.value=.85;source.connect(gain);gain.connect(this.master!);this.begin(source,gain,undefined,undefined,true);
+    if(isCosmicSound(kind)||isMeteorSound(kind)||isRefugeSound(kind))void this.prepareKnightCosmic();
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.knightBuffer(kind);gain.gain.value=kind==='cosmic-orb'?.50:kind==='cosmic-spin'?.70:.85;source.connect(gain);gain.connect(this.master!);
+    if(kind.startsWith('cosmic-')){this.knightCosmicSources.add(source);source.addEventListener('ended',()=>this.knightCosmicSources.delete(source),{once:true});}
+    this.begin(source,gain,undefined,undefined,true);
   }
   playPrank(kind:import('./prank-effects').PrankSound,volume:number){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||volume<=0)return;

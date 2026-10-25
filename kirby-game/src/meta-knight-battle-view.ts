@@ -18,6 +18,15 @@ import {crystalPoint} from './meta-knight-shield';
 import type {KnightSound} from './meta-knight-sounds';
 import {MetaKnightPartyHud,type KnightProfile} from './meta-knight-party-hud';
 import {MetaKnightImpactLightning} from './meta-knight-impact-lightning';
+import {MetaKnightCosmicView} from './meta-knight-cosmic-view';
+import {MetaKnightCosmicOrbs} from './meta-knight-cosmic-orbs';
+import {cosmicAirborne,cosmicStage,cosmicCombat,cosmicOpening,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
+import {MetaKnightCosmicFinale} from './meta-knight-cosmic-finale';
+import {cosmicSpinAngle,cosmicOrbs} from './meta-knight-cosmic-spin';
+import {MetaKnightCosmicMeteorView} from './meta-knight-cosmic-meteor-view';
+import {cosmicMeteorStage,meteorPoint} from './meta-knight-cosmic-meteor';
+import {MetaKnightCosmicRefugeView} from './meta-knight-cosmic-refuge-view';
+import {cosmicRefugeStage,refugeAngle} from './meta-knight-cosmic-refuge';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 import {knightWarningGlass as glass,knightWarningCountdown as swordCountdown,knightWarningArrow} from './meta-knight-warning-material';
 import './meta-knight-battle.css';
@@ -57,19 +66,27 @@ export class MetaKnightBattleView{
  private bossTarget=new CentipedeTargetCue();private crystalTarget=new CentipedeTargetCue();
  private particles=new T.InstancedMesh(new T.OctahedronGeometry(.11*FX),material(CYAN),22);private burstAt=-1e9;private burstPosition=new T.Vector3();
  private lastStage='';private lastHealth=12;private lastLife=5;private lastInvulnerable=0;private lastReflects=0;private lastBattle=0;private lastKey='';
+ private lastSince=-1;private lastNow=-Infinity;
  private shotSoundAt=-1;private lastCount='';
  private lastShieldPulse='';
  private matrix=new T.Matrix4();private position=new T.Vector3();private scale=new T.Vector3();private quaternion=new T.Quaternion();
  private swordSwing:MetaKnightSwordSwing;
  private motion:MetaKnightBattleMotion;
  private dashSparks:MetaKnightDashSparks;
- constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void){
+ private cosmic:MetaKnightCosmicView;private cosmicOrbs=new MetaKnightCosmicOrbs();private cosmicAudio=false;private cosmicFacing?:number;private lastOrbSound='';
+ private meteor:MetaKnightCosmicMeteorView;private meteorLaunch='';
+ private refuge:MetaKnightCosmicRefugeView;private refugeActivation='';
+ private finale=new MetaKnightCosmicFinale();private fallKey='';
+ constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{}){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
   this.motion=new MetaKnightBattleMotion(knight.actor);this.impactCountdown.name='Meta Knight impact countdown';
   this.dashSparks=new MetaKnightDashSparks(knight.actor.getObjectByName('Galaxia')!);
   this.lane.name='Meta Knight dash countdown lane';
   this.group.name='Meta Knight duel telegraphs and effects';this.group.position.x=SITE.x;scene.add(this.group);
+  this.cosmic=new MetaKnightCosmicView(knight.actor,scene);this.group.add(this.cosmic.group,this.cosmicOrbs.group);
+  this.meteor=new MetaKnightCosmicMeteorView(knight.actor.getObjectByName('Galaxia')!);this.group.add(this.meteor.group);
+  this.refuge=new MetaKnightCosmicRefugeView(scene,knight.actor.getObjectByName('Galaxia')!);this.group.add(this.refuge.group,this.finale.group);
   this.floorWarnings.name='Meta Knight floor warnings behind characters';this.floorWarnings.renderOrder=-1;this.group.add(this.floorWarnings);
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.floorWarnings.add(mesh);}this.group.add(this.wave.group,this.lightning.group);
   // Draw chevrons after the transparent warning glass, within the floor group.
@@ -86,6 +103,7 @@ export class MetaKnightBattleView{
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
+  if(now<this.lastNow||this.lastBattle!==(s?.id??0))this.burstAt=-1e9;this.lastNow=now;
   const participant=!!s?.players[id]&&!s.players[id].withdrawn&&!withdrawn,active=participant&&!!s&&!['won','lost','cancelled'].includes(s.stage);
   const enabled=active&&visible&&!document.hidden&&document.hasFocus();
   const confirmed=this.cancelHold.update(enabled?s?.id:undefined,enabled?cancelSource:undefined,dt);
@@ -95,30 +113,47 @@ export class MetaKnightBattleView{
   const beat=s&&count?`${s.id}:${count}`:'';
   if(beat&&beat!==this.lastCount&&visible&&participant){this.lastCount=beat;this.cue(count==='fight'?'start':'count');}
   if(label&&this.countdown.textContent!==label){this.countdown.textContent=label;this.countdown.dataset.fight=String(count==='fight');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)this.countdown.animate([{transform:'translate(-50%,-50%) scale(1.15)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:180,easing:'ease-out'});}
-  this.hud.hidden=!visible||withdrawn&&!!s&&['won','lost'].includes(s.stage);this.group.visible=visible;if(!visible){this.dashSparks.update(0,false);this.knight.updateKnightBladeGlow(now,false,false);return;}
+  this.hud.hidden=!visible||withdrawn&&!!s&&['won','lost'].includes(s.stage);this.group.visible=visible;if(!visible){this.dashSparks.update(0,false);this.knight.updateKnightBladeGlow(now,false,false);this.cosmic.update(undefined,now);this.cosmicOrbs.update(undefined,now);this.meteor.update(undefined,now);this.refuge.update(undefined,now);this.finale.update(undefined,now);this.clearCosmicAudio();return;}
   const p:KnightPoint=s?knightPosition(s,now):[0,0,-9],stage=s?.stage??'idle',f=s?knightProgress(s,now):0;
   const landed=!!s&&knightJumpOpening(s),impact=stage==='slam'||landed&&now-s!.since<180;
   const player=s?.players[id],participating=!!player&&!withdrawn&&!player.withdrawn,hp=player?.hp??5,reflects=player?.reflects??0;
-  this.knight.actor.position.set(SITE.x+p[0],p[1],p[2]);this.knight.yaw=s?starFacing(s,now):0;this.knight.actor.rotation.y=this.knight.yaw;
+  this.knight.actor.position.set(SITE.x+p[0],p[1],p[2]);
+  const facing=s?s.phase===4&&stage==='transition'?s.yaw*(1-easeCosmic((f-.65)/.35)):starFacing(s,now):0;
+  if(s?.phase===4&&(stage==='cosmic-descent'||stage==='won')&&s.cosmicFall){this.knight.yaw=s.cosmicFall.yaw;this.cosmicFacing=this.knight.yaw;}
+  else if(cosmicRefugeStage(s)&&s?.cosmicRefuge){const yaw=refugeAngle(s,s.cosmicRefuge.impactAt??now);this.cosmicFacing??=yaw;this.cosmicFacing+=Math.atan2(Math.sin(yaw-this.cosmicFacing),Math.cos(yaw-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*6):1);this.knight.yaw=this.cosmicFacing;}
+  else if(cosmicMeteorStage(s)&&s?.cosmicMeteor){const yaw=s.cosmicMeteor.yaw;this.cosmicFacing??=yaw;this.cosmicFacing+=Math.atan2(Math.sin(yaw-this.cosmicFacing),Math.cos(yaw-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*8):1);this.knight.yaw=this.cosmicFacing;}
+  else if(s?.stage==='cosmic-spin'&&s.cosmicSpin){this.knight.yaw=s.cosmicSpin.yaw+cosmicSpinAngle((now-s.cosmicSpin.at)/1000);this.cosmicFacing=this.knight.yaw;}
+  else if(s?.stage==='cosmic-spin-warn'){this.cosmicFacing??=s.yaw;this.cosmicFacing+=Math.atan2(Math.sin(s.yaw-this.cosmicFacing),Math.cos(s.yaw-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*4):1);this.knight.yaw=this.cosmicFacing;}
+  else if(cosmicStage(s)&&camera){const world=this.knight.actor.getWorldPosition(new T.Vector3()),toward=Math.atan2(camera.position.x-world.x,camera.position.z-world.z);this.cosmicFacing??=facing;this.cosmicFacing+=Math.atan2(Math.sin(toward-this.cosmicFacing),Math.cos(toward-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*4):1);this.knight.yaw=this.cosmicFacing;}
+  else{this.cosmicFacing=undefined;this.knight.yaw=facing;}this.knight.actor.rotation.y=this.knight.yaw;
+  if(s?.stage==='cosmic-descent'){const key=`${s.id}:${s.since}`;if(key!==this.fallKey){this.fallKey=key;this.motion.beginCosmicFall();}}
   this.motion.clear();if(this.lastBattle!==(s?.id??0))this.swordSwing.reset();else this.swordSwing.clear();
-  const clip=['won','open','stunned','crystal-break'].includes(stage)?'Sitting':stage==='get-up'||s&&starOpening(s)?'Idle':stage==='approach'?'Run':stage==='jump'?'Jump':s?.pattern==='star'||['dash','dash-warn','dive','dive-warn','shot','shot-warn','return'].includes(stage)||stage==='rest'&&s?.pattern==='crescent'?'Fly':'Idle';
-  if(this.lastStage!==stage||this.lastBattle!==(s?.id??0)){
-   this.knight.setActivity(clip);
+  const clip=s?.phase===4&&stage==='transition'?'Walk':cosmicAirborne(s)?'Fly':['won','open','stunned','crystal-break'].includes(stage)?'Sitting':stage==='get-up'||s&&starOpening(s)?'Idle':stage==='approach'?'Run':stage==='jump'?'Jump':s?.pattern==='star'||['dash','dash-warn','dive','dive-warn','shot','shot-warn','return'].includes(stage)||stage==='rest'&&s?.pattern==='crescent'?'Fly':'Idle';
+  if(cosmicMeteorStage(s))this.cosmicAudio=true;
+  if(this.lastStage!==stage||this.lastBattle!==(s?.id??0)||this.lastSince!==(s?.since??0)){
+   this.knight.setActivity(clip);if(stage==='cosmic-descent'){this.clearCosmicAudio();this.cosmicAudio=true;this.cue('cosmic-fall');}
    if(stage.endsWith('-warn'))this.cue('warn');if(stage==='won')this.cue('win');if(stage==='return')this.cue('reflect');
    if(stage==='slash')this.cue('slash');if(stage==='dash')this.cue('thrust');if(stage==='dive')this.cue('dash');if(stage==='slam'||landed)this.cue('slam');if(stage==='shot')this.cue('slash');if(stage==='transition')this.cue('phase');
    if(stage==='cross')this.cue('crystal');if(stage==='ricochet')this.cue('thrust');if(stage==='star-rise'||stage==='star-fall')this.cue('constellation');if(stage==='shield')this.cue('slam');
    if(stage==='shield')this.cue('shield');if(stage==='crystal-break')this.cue('shatter');
-   this.lastStage=stage;
+   if(stage==='cosmic-meteor-draw')this.cue('cosmic-meteor-draw');if(stage==='cosmic-meteor-return')this.cue('cosmic-meteor-reflect');
+   if(cosmicRefugeStage(s)){this.cosmicAudio=true;if(stage==='cosmic-star-draw')this.cue('cosmic-refuge-call');if(stage==='cosmic-planet-draw')this.cue('cosmic-refuge-pull');if(stage==='cosmic-planet-sweep')this.cue('cosmic-refuge-roll');if(stage==='cosmic-planet-break'||stage==='cosmic-star-strike')this.cue('cosmic-refuge-break');}
+   const cosmicCue:Partial<Record<typeof stage,KnightSound>>={'cosmic-charge':'cosmic-charge','cosmic-surge':'cosmic-impact','cosmic-lift':'cosmic-draw','cosmic-rise':'cosmic-ascent','cosmic-flight':'cosmic-arrive','cosmic-spin':'cosmic-spin','cosmic-open':'cosmic-tired'};
+   if(cosmicCue[stage]){this.cosmicAudio=true;this.cue(cosmicCue[stage]!);}
+   if(!cosmicStage(s)&&this.cosmicAudio){if(stage!=='won')this.clearCosmicAudio();this.cosmicAudio=false;}
+   this.lastStage=stage;this.lastSince=s?.since??0;
   }
   this.knight.updateActivity(dt);this.knight.actor.scale.setScalar(KNIGHT.modelScale);
+  if(s?.cosmicRefuge?.activatedAt!==undefined){const key=`${s.id}:${s.cosmicRefuge.at}:${s.cosmicRefuge.activatedAt}`;if(key!==this.refugeActivation){this.refugeActivation=key;this.cue('cosmic-refuge-shield');}}
+  if(s?.stage==='cosmic-meteor-cast'&&s.cosmicMeteor&&now>=s.cosmicMeteor.at){const key=`${s.id}:${s.cosmicMeteor.at}`;if(key!==this.meteorLaunch){this.meteorLaunch=key;this.cue('cosmic-meteor-throw');}}
   if(s?.stage==='shield'&&now-s.since>=SHIELD.interval){const pulse=`${s.id}:${s.since}:${Math.floor((now-s.since)/SHIELD.interval)}`;if(pulse!==this.lastShieldPulse){this.lastShieldPulse=pulse;this.cue('wave');}}
-  if(s){this.swordSwing.apply(s,f);this.motion.apply(s,f);}this.dazedStars.update(p,now,stage==='won'||stage==='stunned'||stage==='crystal-break');
-  this.knight.updateDuelDazedPose(now,stage==='won'||stage==='stunned'||stage==='crystal-break',false);
-  this.bossTarget.group.visible=stage==='open'&&s?.phase!==3&&!s?.openHit;this.crystalTarget.group.visible=stage==='shield'&&s?.activeCrystal!==undefined;
+  if(s){this.swordSwing.apply(s,f);this.motion.apply(s,f);}this.dazedStars.update(p,now,(['won','stunned','crystal-break','cosmic-hit','cosmic-star-stun'].includes(stage)||!!cosmicDescent(s,now)?.landed));
+  this.knight.updateDuelDazedPose(now,(['won','stunned','crystal-break','cosmic-hit','cosmic-star-stun'].includes(stage)||!!cosmicDescent(s,now)?.landed),false);
+  this.bossTarget.group.visible=(stage==='open'&&s?.phase!==3||cosmicOpening(s))&&!s?.openHit;this.crystalTarget.group.visible=stage==='shield'&&s?.activeCrystal!==undefined;
   if(this.bossTarget.group.visible){this.bossTarget.update([p[0],p[1]+3.2,p[2]],now,camera,true,f);this.bossTarget.arrow.position.y=1.4+.04*Math.sin(now*.003);}
   if(this.crystalTarget.group.visible){const target=crystalPoint(s!.activeCrystal!);target[1]=3.2;this.crystalTarget.update(target,now,camera,true);this.crystalTarget.arrow.position.y=1.4+.04*Math.sin(now*.003);}
   this.dashSparks.update(s?now-s.since:0,stage==='dash'||stage==='ricochet');
-  this.knight.updateKnightBladeGlow(now,s?.pattern==='star'&&stage!=='open'||['slash-warn','slash','jump-warn','jump','dash-warn','dash','shot-warn','shot','dive-warn','dive'].includes(stage));
+  this.knight.updateKnightBladeGlow(now,s?.pattern==='star'&&stage!=='open'||['slash-warn','slash','jump-warn','jump','dash-warn','dash','shot-warn','shot','dive-warn','dive','cosmic-spin-warn','cosmic-spin'].includes(stage));
   const blade=this.knight.actor.getObjectByName('Galaxia')!;
   if(s&&(knightJumpOpening(s)||stage==='slam'||stage==='shield')){
    const key=`${s.id}:${s.since}:${stage}`;if(key!==this.impactKey){
@@ -129,7 +164,9 @@ export class MetaKnightBattleView{
    }
   }
   blade.localToWorld(this.position.set(-.315,2.05,0));this.position.x-=SITE.x;this.assault.update(s,now,this.position);this.lightning.update(s,now,this.impactPoint);this.crescentLaunch.update(s,now,this.position);
-  this.shadow.position.set(p[0],.075,p[2]);this.shadow.scale.setScalar(1+Math.max(0,p[1])*.1);
+  this.cosmic.update(s,now);this.cosmicOrbs.update(s,now);this.meteor.update(s,now);this.refuge.update(s,now,camera);if(this.finale.update(s,now))this.cue('cosmic-landing');
+  if(s?.stage==='cosmic-spin'&&cosmicOrbs(s,now).length){const key=`${s.id}:${s.since}:${Math.floor((now-s.since)/220)}`;if(key!==this.lastOrbSound){this.lastOrbSound=key;this.cue('cosmic-orb');}}
+  this.shadow.visible=s?.phase!==4;this.shadow.position.set(p[0],.075,p[2]);this.shadow.scale.setScalar(1+Math.max(0,p[1])*.1);
   for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane])m.uniforms.clock.value=now/1000;
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.projectile,...this.arrows])mesh.visible=false;this.wave.group.visible=false;
   if(s){
@@ -163,18 +200,23 @@ export class MetaKnightBattleView{
     if(stage==='shot'&&this.shotSoundAt!==s.since){this.shotSoundAt=s.since;this.cue('shot');}
     this.projectile.visible=true;this.projectile.position.fromArray(shot);const a=stage==='return'?Math.atan2(s.to[0]-shot[0],s.to[2]-shot[2]):s.yaw;this.projectile.rotation.set(0,a-Math.PI/2,0);this.crescent.update(now,stage==='return');
    }
-   if(this.lastBattle===s.id){if(s.hp<this.lastHealth){this.cue('hit');this.burst(now,new T.Vector3(p[0],FX,p[2]));}if(hp<this.lastLife&&participating&&(player?.invulnerable??0)>this.lastInvulnerable)this.cue('hurt');if(reflects>this.lastReflects){const shot=knightProjectile(s,now);this.burst(now,shot?new T.Vector3().fromArray(shot):new T.Vector3(...p));}}
+   if(this.lastBattle===s.id){if(s.hp<this.lastHealth){this.cue('hit');if(s.cosmicPart===2)this.cue('cosmic-meteor-impact');if(s.cosmicPart!==3)this.burst(now,new T.Vector3(p[0],p[1]+FX,p[2]));}if(hp<this.lastLife&&participating&&(player?.invulnerable??0)>this.lastInvulnerable)this.cue('hurt');if(reflects>this.lastReflects){const shot=knightProjectile(s,now)??meteorPoint(s,now);this.burst(now,shot?new T.Vector3().fromArray(shot):new T.Vector3(...p));}}
    this.lastHealth=s.hp;this.lastLife=hp;this.lastInvulnerable=player?.invulnerable??0;this.lastReflects=reflects;
   }
   this.lastBattle=s?.id??0;
-  this.particles.visible=now-this.burstAt<700;for(let i=0;i<22&&this.particles.visible;i++){const life=(now-this.burstAt)/700,a=i*2.399;this.position.copy(this.burstPosition).add(new T.Vector3(Math.cos(a)*life*2*FX,(life*2-life*life*1.5)*FX,Math.sin(a)*life*2*FX));this.scale.setScalar(1-life);this.matrix.compose(this.position,this.quaternion,this.scale);this.particles.setMatrixAt(i,this.matrix);}this.particles.instanceMatrix.needsUpdate=true;
+  this.particles.visible=now>=this.burstAt&&now-this.burstAt<700;for(let i=0;i<22&&this.particles.visible;i++){const life=(now-this.burstAt)/700,a=i*2.399;this.position.copy(this.burstPosition).add(new T.Vector3(Math.cos(a)*life*2*FX,(life*2-life*life*1.5)*FX,Math.sin(a)*life*2*FX));this.scale.setScalar(1-life);this.matrix.compose(this.position,this.quaternion,this.scale);this.particles.setMatrixAt(i,this.matrix);}this.particles.instanceMatrix.needsUpdate=true;
   const key=[s?.id??0,s?.revision??0,stage,hp,near,withdrawn,attackKey,t('Метакнайт')].join(':');if(key===this.lastKey)return;this.lastKey=key;
   const finished=stage==='won'||stage==='lost'||stage==='cancelled';
   this.hud.querySelector('strong')!.textContent=t('Метакнайт');this.health.setAttribute('aria-label',t('Здоровье Метакнайта'));this.health.hidden=!s||finished;
-  this.hud.dataset.phase=String(s?.phase??0);this.phase.textContent=s?t(['Дуэль','Крылья','Звёздный натиск'][s.phase-1]):t('Вызов рыцаря');this.fill.style.width=`${(s?.hp??12)/12*100}%`;this.health.setAttribute('aria-valuenow',String(s?.hp??12));
+  const maximum=s?.phase===4?6:12;
+  this.hud.dataset.phase=String(s?.phase??0);this.phase.textContent=s?t(s.phase===4&&cosmicCombat(s)?s.cosmicPart===3?'Звёздное убежище':s.cosmicPart===2?'Гравитационный удар':'Грозовой вихрь':['Дуэль','Крылья','Звёздный натиск','Космический подъём'][s.phase-1]):t('Вызов рыцаря');this.fill.style.width=`${(s?.hp??12)/maximum*100}%`;this.health.setAttribute('aria-valuemax',String(maximum));this.health.setAttribute('aria-valuenow',String(s?.hp??12));
   const hints:Partial<Record<typeof stage,string>>={'intro':'Увидеть замах → уклониться → ответить','approach':'Следи за мечом и держись рядом','slash-warn':'Выйди из сектора взмаха','slash':'Дождись конца связки','jump-warn':'Выйди из отмеченного круга','jump':'Выйди из отмеченного круга','wave':'Прыгай или перелетай низкую волну','dash-warn':'Уходи поперёк золотой полосы','dash':'Следующий заход готовится отдельно','dive-warn':'Выйди из отмеченного круга','dive':'Пикирование!','shot-warn':'Золотой полумесяц можно отбить атакой','shot':'Нажми {0} перед касанием полумесяца','return':'Отбито! Полумесяц летит в Метакнайта','open':'Защита открыта! Подойди и нажми {0}','transition':'Новая фаза — приготовься','won':'Победа! Метакнайт уважает твоё мастерство','lost':'Попытка окончена. Попробуем ещё раз?'};
   Object.assign(hints,{'star-rise':'Кристаллы пробуждаются — следи за лучами','cross-warn':'Выйди из жёлтых треугольников','cross':'Следующий кристалл уже заряжается','ricochet-warn':'Три прицельных перелёта — уходи с полосы','ricochet':'Уходи с отмеченной полосы','star-warn':'Выйди из круга — рыцарь создаёт щит','star-fall':'Приземление! Купол закроет центр','shield':'Волны идут к щиту! Пройди в разрыв и ударь фиолетовый кристалл · {1}/4','crystal-break':'Кристалл разбит! Приготовься к новому заходу','stunned':'Попадание! Метакнайт потерял здоровье','get-up':'Метакнайт поднимается — приготовься'});
+  Object.assign(hints,{'cosmic-charge':'Сила собирается в мече…','cosmic-strike':'Удар в сердце арены!','cosmic-surge':'Молнии охватывают арену','cosmic-lift':'Меч тянет всех к звёздам','cosmic-rise':'Выше, за пределы арены!','cosmic-flight':'Лети в любом направлении — высота удерживается'});
+  Object.assign(hints,{'cosmic-spin-warn':'Меч заряжается! Отлети от клинка и приготовься двигаться','cosmic-spin':'Уворачивайся между шарами · удерживай пробел для рывка','cosmic-open':'Метакнайт устал! Подлети к зелёной метке и нажми {0}','cosmic-hit':'Попадание! Метакнайт приходит в себя','cosmic-recover':'Рыцарь восстанавливает силы — готовься к новому вихрю','cosmic-descent':'Бой окончен — возвращаемся на арену'});
+  Object.assign(hints,{'cosmic-meteor-draw':'Метеорит притягивается! Следи за боковым замахом','cosmic-meteor-cast':'Отбей метеорит ударом {0} перед касанием или уклонись','cosmic-meteor-return':'Отбито! Метеорит летит в Метакнайта','cosmic-meteor-gap':'Следующий метеорит — новая цель','cosmic-meteor-settle':'Три броска завершены — приготовься к вихрю'});
+  Object.assign(hints,{'cosmic-star-draw':'Синие лучи притягивают звёздочку','cosmic-star-open':'Общий купол открыт — следуй за звёздочкой','cosmic-planet-draw':'Огромная планета приближается — войди в движущийся купол','cosmic-planet-sweep':'Оставайся внутри золотого купола!','cosmic-planet-break':'Купол остановил планету!','cosmic-star-strike':'Звёздочка летит в Метакнайта','cosmic-star-stun':'Попадание в лоб! Метакнайт оглушён','cosmic-star-retreat':'Звёздочка возвращается — начинается новый цикл','cosmic-planet-release':'Звезда не активирована — планета наносит урон'});
   this.hint.textContent=stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(4-(s?.hp??4)));
  }
- dispose(){this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+ dispose(){this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

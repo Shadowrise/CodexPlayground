@@ -66,9 +66,9 @@ test('a player facing the boss can still parry a point-blank release during its 
  }
 });
 
-test('phase commands select 12/8/4 health, clear pending attacks and restart that phase without healing the player',()=>{
+test('phase commands select 12/8/4/6 health, clear pending attacks and restart that phase without healing the player',()=>{
  const s=battle(),a=actor();s.players.a.hp=2;
- for(const [phase,hp] of [[3,4],[2,8],[1,12]] as const){
+ for(const [phase,hp] of [[3,4],[2,8],[1,12],[4,6]] as const){
   setStage(s,'shot');s.shotContacts={a:1900};s.returnFrom=[0,1,20];s.players.a.attackAt=1950;s.players.a.handled=0;
   assert(setKnightPhase(s,phase,[a],2100));assert.equal(s.phase,phase);assert.equal(s.hp,hp);assert.equal(s.stage,'transition');
   assert.equal(s.checked,2100);assert.equal(s.players.a.hp,2);assert.equal(s.shotContacts,undefined);assert.equal(s.returnFrom,undefined);
@@ -190,8 +190,8 @@ test('accurate reflection damages the boss once on arrival without a melee openi
  advanceKnightBattle(good,[a],contact+451);assert.equal(good.hp,11,'one reflected crescent deals exactly one damage');
 });
 
-test('returned crescents can trigger either phase transition or finish the duel',()=>{
- for(const [hp,phase,after,stage] of [[9,1,2,'transition'],[5,2,3,'transition'],[1,3,3,'won']] as const){
+test('returned crescents can trigger each phase transition, including the cosmic ascent',()=>{
+ for(const [hp,phase,after,stage] of [[9,1,2,'transition'],[5,2,3,'transition'],[1,3,4,'transition']] as const){
   const s=battle(),a=actor();setStage(s,'return');Object.assign(s,{hp,phase,pattern:'crescent',step:1,until:2450,returnFrom:[0,1.2,20]});s.players.a.reflects=1;
   advanceKnightBattle(s,[a],2449);assert.equal(s.hp,hp);advanceKnightBattle(s,[a],2450);assert.equal(s.hp,hp-1);assert.equal(s.phase,phase);assert.equal(s.stage,'stunned');assert.equal(s.players.a.hits,0);
   assert.equal(s.until,3450);advanceKnightBattle(s,[a],3449);assert.equal(s.stage,'stunned');assert.equal(s.hp,hp-1);
@@ -280,7 +280,7 @@ test('crescent charge tracks the player, locks the aim, takes flight, and produc
  const shots=new Set<number>();for(let now=lock+1;now<14000;now+=25){advanceKnightBattle(s,[a],now);const stage=s.stage as KnightBattle['stage'];if(stage==='shot')shots.add(s.since);if(stage==='rest')break;}
  assert.equal(shots.size,3);assert.equal(s.stage,'rest');
 });
-test('eight normal openings and four selected crystals win; spam and distant hits fail',()=>{
+test('eight normal openings and four selected crystals unlock phase four; spam and distant hits fail',()=>{
  const s=battle(),a=actor();let now=2000;const phases=new Set<number>();
  for(let i=0;i<12;i++){
   setStage(s,i<8?'open':'shield',now);a.p=[0,0,2];a.yaw=Math.PI;
@@ -288,7 +288,7 @@ test('eight normal openings and four selected crystals win; spam and distant hit
   assert(knightAttack(s,a,now+10));advanceKnightBattle(s,[a],now+160);phases.add(s.phase);
   const health=s.hp;advanceKnightBattle(s,[a],now+180);assert.equal(s.hp,health);advanceKnightBattle(s,[a],s.until);if(s.stage==='get-up')advanceKnightBattle(s,[a],s.until);phases.add(s.phase);now+=3000;
  }
- assert.deepEqual([...phases],[1,2,3]);assert.equal(s.hp,0);assert.equal(s.stage,'won');assert.equal(s.players.a.hits,12);
+ assert.deepEqual([...phases],[1,2,3,4]);assert.equal(s.hp,6);assert.equal(s.stage,'transition');assert.equal(s.players.a.hits,12);
  const miss=battle();setStage(miss,'open');a.p=[0,0,12];knightAttack(miss,a,2010);advanceKnightBattle(miss,[a],2200);assert.equal(miss.hp,12);
 });
 

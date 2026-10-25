@@ -1,0 +1,3025 @@
+{
+  "frames": [
+    {
+      "stage": "cosmic-flight",
+      "elapsed": 15999.999999962747,
+      "since": 1013700,
+      "until": 1017700,
+      "yaw": 0.7853981633974427,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375747522031537,
+      "glError": 0,
+      "drawCalls": 125,
+      "triangles": 413026,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/01-arrival.png",
+      "label": "Прибытие · обычный полёт"
+    },
+    {
+      "stage": "cosmic-spin-warn",
+      "elapsed": 19199.999999955297,
+      "since": 1017700,
+      "until": 1020500,
+      "yaw": 0.7853981633974456,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 126,
+      "triangles": 413282,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/02-two-handed-windup.png",
+      "label": "Две руки на мече · подготовка вихря"
+    },
+    {
+      "stage": "cosmic-spin",
+      "elapsed": 21700,
+      "since": 1020500,
+      "until": 1030500,
+      "yaw": 2.5874157094965518,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 7,
+      "bolts": 306,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 132,
+      "triangles": 418824,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/03-slow-rotation.png",
+      "label": "Медленное начало вращения"
+    },
+    {
+      "stage": "cosmic-spin",
+      "elapsed": 25499.999999991152,
+      "since": 1020500,
+      "until": 1030500,
+      "yaw": 12.173671532631262,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 28,
+      "bolts": 1020,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 132,
+      "triangles": 433818,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/04-rising-spiral.png",
+      "label": "Разгон · электрическая спираль"
+    },
+    {
+      "stage": "cosmic-spin",
+      "elapsed": 30099.999999980442,
+      "since": 1020500,
+      "until": 1030500,
+      "yaw": 31.668510585145285,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 47,
+      "bolts": 1665,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 132,
+      "triangles": 447376,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/06-fast-rotation.png",
+      "label": "Максимальная скорость · последние разряды"
+    },
+    {
+      "stage": "cosmic-open",
+      "elapsed": 31199.99999997788,
+      "since": 1030500,
+      "until": 1048500,
+      "yaw": 32.2968449222926,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 38,
+      "bolts": 1290,
+      "green": true,
+      "arrowY": 187.0624613706366,
+      "window": 0.03888888888766006,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 134,
+      "triangles": 440880,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/07-exhaustion.png",
+      "label": "Метакнайт устал · зелёная метка и стрелка"
+    },
+    {
+      "stage": "cosmic-open",
+      "elapsed": 33499.999999972526,
+      "since": 1030500,
+      "until": 1048500,
+      "yaw": 32.2013343506016,
+      "height": 180,
+      "radius": 40.99999999999993,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": true,
+      "arrowY": 187.0069235347839,
+      "window": 0.16666666666514032,
+      "cameraAngle": 10.375699563139927,
+      "glError": 0,
+      "drawCalls": 128,
+      "triangles": 413764,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-spin-2026-10-24\\screenshots/08-open-clear.png",
+      "label": "Последние шары ушли · можно подлетать"
+    }
+  ],
+  "close": {
+    "shot": {
+      "id": 25,
+      "at": 1023932.5652691211,
+      "angle": 7.504915783575616,
+      "p": [
+        29.726957071980205,
+        181.5,
+        10.819727529510004
+      ],
+      "from": [
+        29.726957071980205,
+        181.5,
+        10.819727529510004
+      ],
+      "distance": 31.63476695934697
+    },
+    "glError": 0
+  },
+  "approach": {
+    "stage": "cosmic-open",
+    "elapsed": 40199.999999956926,
+    "since": 1030500,
+    "until": 1048500,
+    "yaw": 32.20132469929479,
+    "height": 180,
+    "radius": 4.551999999985364,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": true,
+    "arrowY": 186.8892090581311,
+    "window": 0.5388888888864959,
+    "cameraAngle": 10.375699563140953,
+    "glError": 0,
+    "drawCalls": 128,
+    "triangles": 413764,
+    "distance": 36.44800000001456,
+    "seconds": 6.7
+  },
+  "hit": {
+    "stage": "cosmic-hit",
+    "elapsed": 40416.66666662309,
+    "since": 1040366.6666666232,
+    "until": 1041366.6666666232,
+    "yaw": 32.20132469929479,
+    "height": 180,
+    "radius": 4.551999999985364,
+    "bossHeight": 180,
+    "hp": 5,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 186.87280670509566,
+    "window": 0.5472222222198099,
+    "cameraAngle": 10.375699563140953,
+    "glError": 0,
+    "drawCalls": 133,
+    "triangles": 415406
+  },
+  "repeat": {
+    "stage": "cosmic-spin-warn",
+    "elapsed": 42266.66666661878,
+    "since": 1042166.6666666232,
+    "until": 1044966.6666666232,
+    "yaw": 32.20132469929394,
+    "height": 180,
+    "radius": 4.551999999985364,
+    "bossHeight": 180,
+    "hp": 5,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 186.87280670509566,
+    "window": 0.5472222222198099,
+    "cameraAngle": 10.375699563140953,
+    "glError": 0,
+    "drawCalls": 126,
+    "triangles": 413282
+  },
+  "stationary": {
+    "stage": "cosmic-open",
+    "elapsed": 33516.66666663636,
+    "since": 1030500,
+    "until": 1048500,
+    "yaw": 31.415940079194502,
+    "height": 180,
+    "radius": 41,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 4,
+    "orbs": 0,
+    "bolts": 0,
+    "green": true,
+    "arrowY": 187.00166255288025,
+    "window": 0.1675925925909089,
+    "cameraAngle": 10.375699563140854,
+    "glError": 0,
+    "drawCalls": 119,
+    "triangles": 401998,
+    "lowest": 4,
+    "moved": 0,
+    "duration": 12999.999999969732
+  },
+  "dodging": {
+    "stage": "cosmic-open",
+    "elapsed": 33516.66666663636,
+    "since": 1030500,
+    "until": 1048500,
+    "yaw": 32.01541297242547,
+    "height": 180,
+    "radius": 33.661118381885856,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": true,
+    "arrowY": 187.00166255288025,
+    "window": 0.1675925925909089,
+    "cameraAngle": 10.580495820358957,
+    "glError": 0,
+    "drawCalls": 36,
+    "triangles": 304002,
+    "duration": 12999.999999969732,
+    "moved": 58.64533333334102,
+    "route": [
+      {
+        "at": 16.66666666662786,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 149.99999999965075,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 283.33333333267365,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 416.66666666569654,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 549.9999999987194,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 683.3333333317423,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 816.6666666647652,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 949.9999999977881,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1083.333333330811,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1216.666666663834,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1349.9999999968568,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1483.3333333298797,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1616.6666666629026,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1749.9999999959255,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 1883.3333333289484,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 2016.6666666619712,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 2149.999999994994,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 2283.333333328017,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 2416.66666666104,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 2549.999999994063,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 2683.3333333270857,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 2816.6666666601086,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 2949.9999999931315,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 3083.3333333261544,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 3216.6666666591773,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 3349.9999999922,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 3483.333333325223,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 3616.666666658246,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 3749.999999991269,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 3883.3333333242917,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4016.6666666573146,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4149.9999999903375,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4283.33333332336,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4416.666666656383,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4549.999999989406,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 4683.333333322429,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 4816.666666655452,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 4949.999999988475,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 5083.333333321498,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 5216.666666654521,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 5349.999999987544,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 5483.333333320566,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 5616.666666653589,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 5749.999999986612,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 5883.333333319635,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6016.666666652658,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6149.999999985681,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6283.333333318704,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6416.666666651727,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6549.99999998475,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6683.3333333177725,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6816.666666650795,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 6949.999999983818,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 7083.333333316841,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 7216.666666649864,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 7349.999999982887,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 7483.33333331591,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 7616.666666648933,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 7749.999999981956,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 7883.3333333149785,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 8016.666666648001,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 8149.999999981024,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 8283.333333314047,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 8416.66666664707,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 8549.999999980093,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 8683.333333313116,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 8816.666666646139,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 8949.999999979162,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9083.333333312185,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9216.666666645207,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9349.99999997823,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9483.333333311253,
+        "input": {
+          "forward": false,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9616.666666644276,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 1
+        }
+      },
+      {
+        "at": 9749.999999977299,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 9883.333333310322,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 10016.666666643345,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 10149.999999976368,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 10283.33333330939,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 10416.666666642413,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 10549.999999975436,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 10683.33333330846,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 10816.666666641482,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 10949.999999974505,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11083.333333307528,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11216.66666664055,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11349.999999973574,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11483.333333306597,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11616.66666663962,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11749.999999972642,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -0.35
+        }
+      },
+      {
+        "at": 11883.333333305665,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 12016.666666638688,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0.35
+        }
+      },
+      {
+        "at": 12149.999999971711,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 12283.333333304734,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 12416.666666637757,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 12549.99999997078,
+        "input": {
+          "forward": false,
+          "backward": true,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": -1
+        }
+      },
+      {
+        "at": 12683.333333303803,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 12816.666666636826,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      },
+      {
+        "at": 12949.999999969848,
+        "input": {
+          "forward": true,
+          "backward": false,
+          "left": false,
+          "right": false,
+          "jump": false,
+          "jumpPressed": false,
+          "dashHeld": false,
+          "sprint": false,
+          "attack": false,
+          "attackPressed": false,
+          "steer": 0
+        }
+      }
+    ]
+  },
+  "dash": {
+    "stage": "cosmic-spin",
+    "elapsed": 21116.66666666523,
+    "since": 1020500,
+    "until": 1030500,
+    "yaw": 1.6379784130251207,
+    "height": 180,
+    "radius": 36.585410840722446,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 4,
+    "bolts": 204,
+    "green": false,
+    "arrowY": 187.00166255288025,
+    "window": 0.1675925925909089,
+    "cameraAngle": 10.471210234540113,
+    "glError": 0,
+    "drawCalls": 120,
+    "triangles": 404784,
+    "state": "Dash",
+    "moved": 4.414589159277554
+  },
+  "camera": {
+    "stage": "cosmic-spin",
+    "elapsed": 22283.33333332918,
+    "since": 1020500,
+    "until": 1030500,
+    "yaw": 3.6758248476476236,
+    "height": 180,
+    "radius": 28.99999999999998,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 11,
+    "bolts": 441,
+    "green": false,
+    "arrowY": 187.00166255288025,
+    "window": 0.1675925925909089,
+    "cameraAngle": 10.551099678833872,
+    "glError": 0,
+    "drawCalls": 83,
+    "triangles": 374966,
+    "orbit": 1.5747378037707183
+  },
+  "reset": {
+    "old": {
+      "stage": "transition",
+      "elapsed": 35516.6666666317,
+      "since": 1035499.9999999651,
+      "until": 1036999.9999999651,
+      "yaw": 0.7853981633974464,
+      "height": 0,
+      "radius": 41,
+      "bossHeight": 0,
+      "hp": 8,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 187.03507531877025,
+      "window": 0.2777777777758375,
+      "cameraAngle": 39.667841118340455,
+      "glError": 0,
+      "drawCalls": 106,
+      "triangles": 370978
+    },
+    "cancel": {
+      "stage": "cancelled",
+      "elapsed": 35549.99999996496,
+      "since": 1035533.3333332983,
+      "until": 1000001035533.3334,
+      "yaw": 0,
+      "height": 0,
+      "radius": 41,
+      "bossHeight": 0,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 187.03507531877025,
+      "window": 0.2777777777758375,
+      "cameraAngle": 14.323944878270582,
+      "glError": 0,
+      "drawCalls": 94,
+      "triangles": 378914
+    }
+  },
+  "video": {
+    "elapsed": 25.00430000000006,
+    "frames": 1876,
+    "wallSeconds": 25.4215,
+    "medianMs": 13.30000000000291,
+    "p95Ms": 13.400000000008731,
+    "stage": "cosmic-spin-warn",
+    "hp": 5,
+    "life": 5,
+    "height": 180
+  },
+  "errors": [],
+  "cues": [
+    {
+      "kind": "phase",
+      "at": 1000016.6666666666
+    },
+    {
+      "kind": "cosmic-charge",
+      "at": 1001516.6666666631
+    },
+    {
+      "kind": "cosmic-impact",
+      "at": 1005166.6666666546
+    },
+    {
+      "kind": "cosmic-draw",
+      "at": 1007066.6666666502
+    },
+    {
+      "kind": "cosmic-ascent",
+      "at": 1008116.6666666478
+    },
+    {
+      "kind": "cosmic-arrive",
+      "at": 1013716.6666666347
+    },
+    {
+      "kind": "warn",
+      "at": 1017716.6666666254
+    },
+    {
+      "kind": "cosmic-spin",
+      "at": 1020501
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020501
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020734.3333333328
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020950.999999999
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021167.6666666651
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021384.3333333313
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021600.9999999974
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021833.333333333
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022049.9999999992
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022266.6666666653
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022483.3333333315
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022716.6666666643
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022933.3333333305
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023149.9999999966
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023366.6666666628
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023583.333333329
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023816.6666666617
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024033.3333333279
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024249.9999999941
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024466.6666666602
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024683.3333333264
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024916.6666666592
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025133.3333333253
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025349.9999999915
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025566.6666666577
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025783.3333333238
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026016.6666666566
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026233.3333333228
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026449.9999999889
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026666.6666666551
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026883.3333333213
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027116.666666654
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027333.3333333202
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027549.9999999864
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027766.6666666525
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027983.3333333187
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028216.6666666515
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028433.3333333177
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028649.9999999838
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028866.66666665
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029083.3333333161
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029316.6666666489
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029533.3333333151
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029749.9999999813
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029966.6666666474
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030183.3333333136
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030416.6666666464
+    },
+    {
+      "kind": "cosmic-tired",
+      "at": 1030516.6666666461
+    },
+    {
+      "kind": "hit",
+      "at": 1040366.6666666232
+    },
+    {
+      "kind": "warn",
+      "at": 1042183.3333332856
+    },
+    {
+      "kind": "cosmic-spin",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020733.3333333328
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020949.999999999
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021166.6666666651
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021383.3333333313
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021616.6666666641
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021833.3333333302
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022049.9999999964
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022266.6666666626
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022483.3333333287
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022716.6666666615
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022933.3333333277
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023149.9999999938
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023366.66666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023583.3333333262
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023816.666666659
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024033.3333333251
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024249.9999999913
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024466.6666666574
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024683.3333333236
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024916.6666666564
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025133.3333333225
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025349.9999999887
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025566.6666666549
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025783.333333321
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026016.6666666538
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026233.33333332
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026449.9999999861
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026666.6666666523
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026883.3333333185
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027116.6666666513
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027333.3333333174
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027549.9999999836
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027766.6666666497
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027983.3333333159
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028216.6666666487
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028433.3333333149
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028649.999999981
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028866.6666666472
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029083.3333333133
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029316.6666666461
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029533.3333333123
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029749.9999999785
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029966.6666666446
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030183.3333333108
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030416.6666666436
+    },
+    {
+      "kind": "cosmic-tired",
+      "at": 1030516.6666666433
+    },
+    {
+      "kind": "hurt",
+      "at": 1032233.333333306
+    },
+    {
+      "kind": "cosmic-spin",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020733.3333333328
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020949.999999999
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021166.6666666651
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021383.3333333313
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021616.6666666641
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021833.3333333302
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022049.9999999964
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022266.6666666626
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022483.3333333287
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022716.6666666615
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022933.3333333277
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023149.9999999938
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023366.66666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023583.3333333262
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023816.666666659
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024033.3333333251
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024249.9999999913
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024466.6666666574
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024683.3333333236
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024916.6666666564
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025133.3333333225
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025349.9999999887
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025566.6666666549
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025783.333333321
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026016.6666666538
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026233.33333332
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026449.9999999861
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026666.6666666523
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026883.3333333185
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027116.6666666513
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027333.3333333174
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027549.9999999836
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027766.6666666497
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027983.3333333159
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028216.6666666487
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028433.3333333149
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028649.999999981
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028866.6666666472
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029083.3333333133
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029316.6666666461
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029533.3333333123
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029749.9999999785
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029966.6666666446
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030183.3333333108
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030416.6666666436
+    },
+    {
+      "kind": "cosmic-tired",
+      "at": 1030516.6666666433
+    },
+    {
+      "kind": "cosmic-spin",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020733.3333333328
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020949.999999999
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021166.6666666651
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021383.3333333313
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021616.6666666641
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021833.3333333302
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022049.9999999964
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022266.6666666626
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020516.6666666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020733.3333333328
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020949.999999999
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021166.6666666651
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021383.3333333313
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021616.6666666641
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021833.3333333302
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022049.9999999964
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022266.6666666626
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022483.3333333287
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022716.6666666615
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022933.3333333277
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023149.9999999938
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023366.66666666
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023583.3333333262
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023816.666666659
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024033.3333333251
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024249.9999999913
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024466.6666666574
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024683.3333333236
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024916.6666666564
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025133.3333333225
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025349.9999999887
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025566.6666666549
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025783.333333321
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026016.6666666538
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026233.33333332
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026449.9999999861
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026666.6666666523
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026883.3333333185
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027116.6666666513
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027333.3333333174
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027549.9999999836
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027766.6666666497
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027983.3333333159
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028216.6666666487
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028433.3333333149
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028649.999999981
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028866.6666666472
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029083.3333333133
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029316.6666666461
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029533.3333333123
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029749.9999999785
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029966.6666666446
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030183.3333333108
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030416.6666666436
+    },
+    {
+      "kind": "cosmic-tired",
+      "at": 1030516.6666666433
+    },
+    {
+      "kind": "phase",
+      "at": 1035516.6666666317
+    },
+    {
+      "kind": "hit",
+      "at": 1035533.3333332983
+    },
+    {
+      "kind": "warn",
+      "at": 1017700
+    },
+    {
+      "kind": "cosmic-spin",
+      "at": 1020501.4000000061
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020501.4000000061
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020728.1000000064
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1020941.5000000068
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021168.1000000073
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021381.5000000077
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021608.2000000083
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1021821.5000000087
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022048.2000000094
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022261.7000000097
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022488.3000000102
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022701.7000000107
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1022928.4000000112
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023141.8000000117
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023368.500000012
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023581.9000000125
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1023808.5000000129
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024021.9000000134
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024248.6000000137
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024461.9000000141
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024688.6000000143
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1024902.0000000149
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025128.7000000152
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025342.1000000156
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025568.7000000161
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1025782.2000000165
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026008.8000000169
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026222.1000000174
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026448.8000000179
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026662.3000000183
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1026888.9000000189
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027102.2000000193
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027329.0000000197
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027542.3000000203
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027769.0000000207
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1027982.5000000212
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028209.1000000215
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028422.500000022
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028649.2000000225
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1028862.5000000229
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029089.2000000235
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029302.5000000236
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029529.3000000243
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029742.6000000247
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1029969.300000025
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030182.7000000253
+    },
+    {
+      "kind": "cosmic-orb",
+      "at": 1030409.3000000258
+    },
+    {
+      "kind": "cosmic-tired",
+      "at": 1030502.700000026
+    },
+    {
+      "kind": "hit",
+      "at": 1039370.5000000406
+    },
+    {
+      "kind": "warn",
+      "at": 1041170.7000000435
+    }
+  ]
+}

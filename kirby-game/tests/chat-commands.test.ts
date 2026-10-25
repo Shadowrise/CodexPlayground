@@ -11,24 +11,31 @@ const places:Destination[]=[
 ];
 
 test('phase and godmode require both solo play and a current duel; godmode has no space or arguments',()=>{
- for(const phase of [1,2,3] as const)assert.deepEqual(parseChatCommand(`/phase ${phase}`,true,places,true),{command:{kind:'phase',phase}});
+ for(const phase of [1,2,3,4] as const)assert.deepEqual(parseChatCommand(`/phase ${phase}`,true,places,true),{command:{kind:'phase',phase}});
  assert.deepEqual(parseChatCommand(' /GODMODE ',true,places,true),{command:{kind:'godmode'}});
- for(const text of ['/phase 1','/phase 2','/phase 3','/godmode']){
+ for(const text of ['/phase 1','/phase 2','/phase 3','/phase 4','/godmode']){
   assert(parseChatCommand(text,true,places,false)?.error,text);
   assert(parseChatCommand(text,false,places,true)?.error,text);
   assert.deepEqual(commandSuggestions(text,false,places,true),[]);
  }
- for(const text of ['/phase','/phase 0','/phase 4','/phase 01','/phase 1.0','/phase 2 extra','/god mode','/godmode 1','/godmode on'])assert(parseChatCommand(text,true,places,true)?.error,text);
+ for(const text of ['/phase','/phase 0','/phase 5','/phase 01','/phase 1.0','/phase 2 extra','/god mode','/godmode 1','/godmode on'])assert(parseChatCommand(text,true,places,true)?.error,text);
  assert.deepEqual(commandSuggestions('/ph',true,places,false),[]);
  assert.deepEqual(commandSuggestions('/god',true,places,false),[]);
  assert.deepEqual(commandSuggestions('/',true,places,true).slice(-2).map(s=>s.value),['/phase ','/godmode']);
- assert.deepEqual(commandSuggestions('/phase ',true,places,true).map(s=>s.value),['/phase 1','/phase 2','/phase 3']);
+ assert.deepEqual(commandSuggestions('/phase ',true,places,true).map(s=>s.value),['/phase 1','/phase 2','/phase 3','/phase 4','/phase 4-1','/phase 4-2','/phase 4-3']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);assert.equal(commandSuggestions('/phase 2',true,places,true)[0].description,locale==='en'?'Phase 2':'Фаза 2');
   const option=commandSuggestions('/godmode',true,places,true)[0];assert.equal(option.value,'/godmode');assert(option.complete);
   const error=parseChatCommand('/phase 2',true,places,false)!.error!;if(locale!=='ru')assert.notEqual(t(error),error);
  }
  setLocale('ru');
+});
+
+test('direct cosmic subphases use hyphens, keep the full phase command, and stay solo/duel gated',()=>{
+ for(const subphase of [1,2,3] as const){const text=`/phase 4-${subphase}`;assert.deepEqual(parseChatCommand(text,true,places,true),{command:{kind:'phase',phase:4,subphase}});assert(parseChatCommand(text,false,places,true)?.error);assert(parseChatCommand(text,true,places,false)?.error);}
+ for(const text of ['/phase 4/1','/phase 4/2','/phase 4-0','/phase 4-4','/phase 1-1','/phase 4 - 1','/phase 4-1 extra'])assert(parseChatCommand(text,true,places,true)?.error,text);
+ assert.deepEqual(commandSuggestions('/phase 4-',true,places,true).map(s=>s.value),['/phase 4-1','/phase 4-2','/phase 4-3']);
+ assert.deepEqual(parseChatCommand('/phase 4',true,places,true),{command:{kind:'phase',phase:4}});
 });
 test('size parses full numbers within 30–1000%, never partial or non-finite values',()=>{
  for(const [input,size] of [['/size 30',.3],['/size 1000',10],[' /SIZE   125 ',1.25],['/size 30.5',.305],['/size 30,5',.305]] as const){

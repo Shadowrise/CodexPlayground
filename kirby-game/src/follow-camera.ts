@@ -31,6 +31,9 @@ export class FollowCamera {
     this.targetDistance = Math.max(5, Math.min(24, this.targetDistance * Math.exp(Math.max(-1000, Math.min(1000, pixels)) * .0015)));
   }
 
+  /** A short encounter shot owns the heading while retaining orbit distance/tilt. */
+  face(yaw:number){this.offset=0;this.manualGrace=0;this.previousYaw=yaw;this.azimuth=yaw+Math.PI;}
+
   update(dt: number, yaw: number, movingOrTurning: boolean, horizontal: number, vertical: number, dragging = false) {
     this.targetElevation = Math.max(0, Math.min(1.25, this.targetElevation + vertical * dt));
     if (dragging) this.offset = wrapAngle(this.offset - wrapAngle(yaw - this.previousYaw));

@@ -22,7 +22,7 @@ import {KirbyDashMotion} from './kirby-dash-motion';
 import {FruitEatingPose} from './fruit-eating';
 import {TURN_RATE} from './movement-input';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number; moveYaw?:number };
+export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number; moveYaw?:number; movementMultiplier?:number };
 
 export class CharacterController {
   readonly actor = new Group();
@@ -272,12 +272,13 @@ export class CharacterController {
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
-    this.play(this.hasNativeAnimations && this.actions.has(name)?name:'Idle');this.state=name;
+    this.play((this.hasNativeAnimations||name==='Fly'||name==='Jump')&&this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
   }
 
   private move(dt: number, input: Input, factor = 1) {
     if(this.swimming)factor*=.55;
+    factor*=input.movementMultiplier??1;
     const direction = Number(input.forward) - Number(!!input.backward);
     const speed = direction > 0 ? this.speed * (input.sprint ? 2 : 1) : this.backwardSpeed;
     const yaw=input.moveYaw??this.yaw;

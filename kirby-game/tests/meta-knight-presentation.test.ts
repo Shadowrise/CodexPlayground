@@ -4,6 +4,7 @@ import * as T from 'three';
 import {KNIGHT,startKnightBattle,knightPlayerVisible} from '../src/meta-knight-battle';
 import {constrainKnightBody,knightBody} from '../src/meta-knight-body';
 import {MetaKnightImpactLightning} from '../src/meta-knight-impact-lightning';
+import {MetaKnightCrystalLightning} from '../src/meta-knight-crystal-lightning';
 import {CentipedeTargetCue} from '../src/centipede-target-cue';
 import {NetworkSession} from '../src/network';
 import type {ActorState} from '../src/network-protocol';
@@ -54,6 +55,8 @@ test('sword lightning grows out of the contact point, fades across stage changes
   const before=JSON.stringify(s),fx=new MetaKnightImpactLightning(),tip=new T.Vector3(3,-.2,7);
   fx.update(s,2000,tip);assert(fx.group.visible);assert.equal(fx.group.position.x,3);assert.equal(fx.group.position.z,7);
   fx.update(s,2250,tip);const cores=fx.group.getObjectByName('Sword impact lightning cores') as T.InstancedMesh;assert.equal(cores.count,176);const data=cores.instanceMatrix.array.slice();
+  const crystals=new MetaKnightCrystalLightning();assert((cores.material as T.MeshBasicMaterial).color.equals((crystals.cores.material as T.MeshBasicMaterial).color));crystals.dispose();
+  let reach=0;const transform=new T.Matrix4(),end=new T.Vector3();for(let i=0;i<cores.count;i++){cores.getMatrixAt(i,transform);end.set(0,.5,0).applyMatrix4(transform);reach=Math.max(reach,Math.hypot(end.x,end.z));}assert(reach>20&&reach<34,'decorative rays extend twice as far in every impact phase');
   const other=new MetaKnightImpactLightning();other.update(structuredClone(s),2250,tip);assert.deepEqual((other.group.getObjectByName(cores.name) as T.InstancedMesh).instanceMatrix.array,data,'network snapshots produce the same branches');other.dispose();
   assert.equal(JSON.stringify(s),before);s.stage='wave';s.since=2180;fx.update(s,2400,tip);assert(fx.group.visible);fx.update(s,2800,tip);assert(!fx.group.visible);fx.dispose();
  }

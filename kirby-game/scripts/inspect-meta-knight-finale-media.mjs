@@ -1,0 +1,12 @@
+import {chromium} from 'playwright';
+import {writeFile} from 'node:fs/promises';
+import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
+const folder=new URL('../artifacts/meta-knight-finale-2026-10-25/',import.meta.url),base=process.env.GAME_URL??'http://127.0.0.1:5173/';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--autoplay-policy=no-user-gesture-required']});
+try{
+ const page=await browser.newPage({viewport:{width:1600,height:1000}});await page.route('**/__finale_media_check',r=>r.fulfill({contentType:'text/html',body:'<style>body{margin:0;background:#080d20}video{width:100vw;height:100vh;object-fit:contain}</style><video controls preload="auto" src="/artifacts/meta-knight-finale-2026-10-25/victory-fall-in-game.webm"></video>'}));await page.goto(new URL('__finale_media_check',base).href);await page.waitForFunction(()=>document.querySelector('video').readyState>=2);
+ const audio=await page.evaluate(async()=>{const video=document.querySelector('video'),ctx=new AudioContext(),buffer=await ctx.decodeAudioData(await (await fetch(video.src)).arrayBuffer());let peak=0,energy=0,count=0;const windows=[];for(let k=0;k<6;k++){let sum=0,n=0;for(let c=0;c<buffer.numberOfChannels;c++){const data=buffer.getChannelData(c);for(let i=Math.floor(k*buffer.sampleRate);i<Math.min(data.length,Math.floor((k+1)*buffer.sampleRate));i++){const v=data[i];sum+=v*v;n++;peak=Math.max(peak,Math.abs(v));energy+=v*v;count++;}}windows.push(Math.sqrt(sum/Math.max(1,n)));}await ctx.close();return {channels:buffer.numberOfChannels,seconds:buffer.duration,width:video.videoWidth,height:video.videoHeight,peak,rms:Math.sqrt(energy/count),secondsRms:windows};});assert.equal(audio.channels,2);assert(audio.seconds>6&&audio.peak>.01&&audio.peak<1);assert.equal(audio.width,2000);assert.equal(audio.height,1250);
+ for(const [seconds,name]of [[1.65,'lost-balance'],[2.5,'fall'],[3.35,'brace'],[3.6,'impact'],[4.4,'seated']]){await page.evaluate(seconds=>new Promise(resolve=>{const v=document.querySelector('video');v.pause();v.addEventListener('seeked',resolve,{once:true});v.currentTime=seconds;}),seconds);await page.screenshot({path:fileURLToPath(new URL(`video-${name}.png`,folder))});}
+ await writeFile(new URL('video-inspection.json',folder),JSON.stringify(audio,null,2));console.log(JSON.stringify(audio));
+}finally{await browser.close();}

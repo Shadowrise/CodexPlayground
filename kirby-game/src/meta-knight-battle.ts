@@ -2,13 +2,17 @@
 import {META_KNIGHT_ARENA,insideKnightFightingArea,type KnightArenaSide} from './meta-knight-arena-site';
 import {STAR_SEQUENCE,starSequence,starPosition,starDanger,STAR_ASSAULT,planStarRoute,lockStarFlight,lockStarCross,crossWarningDuration} from './meta-knight-star-assault';
 import {SHIELD,crystalPoint,chooseShieldCrystal} from './meta-knight-shield';
+import {COSMIC,cosmicStage,cosmicHeight,cosmicNext,cosmicOpening,type CosmicStage,type CosmicLaunch,type CosmicFall} from './meta-knight-cosmic';
+import {COSMIC_SPIN,cosmicSpinDanger,type CosmicSpin} from './meta-knight-cosmic-spin';
+import {COSMIC_METEOR as METEOR,meteorPoint,meteorPath,meteorContact,updateMeteorTracking,type CosmicMeteor} from './meta-knight-cosmic-meteor';
+import {COSMIC_REFUGE as REFUGE,REFUGE_WORLDS,refugeActive,insideRefuge,refugeAngle,refugeDanger,type CosmicRefuge} from './meta-knight-cosmic-refuge';
 export type KnightPoint=[number,number,number];
 export type KnightActor={id:string;p:KnightPoint;yaw:number;available:boolean};
-export type KnightStage='intro'|'approach'|'slash-warn'|'slash'|'jump-warn'|'jump'|'slam'|'wave'|'dash-warn'|'dash'|'dive-warn'|'dive'|'shot-warn'|'shot'|'return'|'open'|'rest'|'stunned'|'get-up'|'transition'|'won'|'lost'|'cancelled'|'star-rise'|'cross-warn'|'cross'|'ricochet-warn'|'ricochet'|'star-warn'|'star-fall'|'shield'|'crystal-break';
+export type KnightStage=CosmicStage|'intro'|'approach'|'slash-warn'|'slash'|'jump-warn'|'jump'|'slam'|'wave'|'dash-warn'|'dash'|'dive-warn'|'dive'|'shot-warn'|'shot'|'return'|'open'|'rest'|'stunned'|'get-up'|'transition'|'won'|'lost'|'cancelled'|'star-rise'|'cross-warn'|'cross'|'ricochet-warn'|'ricochet'|'star-warn'|'star-fall'|'shield'|'crystal-break';
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross};
+export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Old room snapshots inherit the lowest remaining health, never extra lives. */
@@ -17,7 +21,7 @@ export function knightPartyHearts(s:KnightBattle|undefined){return Math.max(0,Ma
 export function knightPlayerVisible(s:KnightBattle|undefined,id:string,now:number,withdrawn=false){const p=s?.players[id];return !knightBattleActive(s)||!p||p.hp<=0||p.withdrawn||withdrawn||now>=p.invulnerable||Math.floor(now/95)%2===0;}
 /** The start snapshot keeps both sides of the gate fixed until the whole duel ends. */
 export function knightArenaSide(s:KnightBattle|undefined,id:string):KnightArenaSide|undefined{return knightBattleActive(s)?s!.players[id]?'arena':'annex':undefined;}
-export const KNIGHT_PHASE_HEALTH={1:12,2:8,3:4} as const;
+export const KNIGHT_PHASE_HEALTH={1:12,2:8,3:4,4:COSMIC.health} as const;
 export function knightDashHalfWidth(s:KnightBattle){return KNIGHT.laneHalfWidth*(s.phase===2?1.5:1);}
 /** The landing ring keeps its own origin and clock while the duel continues. */
 export function knightPressureWave(s:KnightBattle,now:number){
@@ -35,6 +39,8 @@ const smooth=(t:number)=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 const warningDuration=(ms:number,phase:number)=>Math.max(1300,(ms-(phase===3?180:0))*1.6);
 export function knightProgress(s:KnightBattle,now:number){return Math.max(0,Math.min(1,(now-s.since)/Math.max(1,s.until-s.since)));}
 export function knightPosition(s:KnightBattle,now:number):KnightPoint{
+ if(cosmicStage(s))return [0,cosmicHeight(s,now),0];
+ if(s.phase===4&&s.stage==='transition')return mix(s.from,[0,0,0],smooth(knightProgress(s,now)));
  const star=starPosition(s,now);if(star)return star;
  const t=knightProgress(s,now),p=['approach','jump','dash','dive','return'].includes(s.stage)?mix(s.from,s.to,t):[...s.from] as KnightPoint;
  if(s.stage==='cancelled')return [0,0,-9];
@@ -94,9 +100,15 @@ function damageKnightPlayer(s:KnightBattle,id:string,now:number){
  else p.hp=Math.max(0,p.hp-1);
  p.invulnerable=now+KNIGHT.invulnerableMs;s.revision++;
 }
+function damageRefugePlayer(s:KnightBattle,id:string,now:number,protectedPlayer?:string){
+ const r=s.cosmicRefuge,p=s.players[id];if(!r||r.contacts[id]!==undefined||!p||p.hp<=0||p.withdrawn)return;
+ r.contacts[id]=now;s.revision++;if(id===protectedPlayer||now<p.invulnerable)return;
+ if(s.teamHp!==undefined&&r.partyDamaged){p.invulnerable=now+KNIGHT.invulnerableMs;return;}
+ damageKnightPlayer(s,id,now);if(s.teamHp!==undefined)r.partyDamaged=true;
+}
 /** One fresh press; holding and repeated packets cannot keep a reflection active. */
 export function knightAttack(s:KnightBattle|undefined,actor:KnightActor,now:number){
- const p=s?.players[actor.id];if(!s||!p||p.hp<=0||p.withdrawn||!actor.available||['won','lost','cancelled','transition','intro'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
+ const p=s?.players[actor.id];if(!s||!p||p.hp<=0||p.withdrawn||!actor.available||cosmicStage(s)&&!['cosmic-flight','cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-recover','cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-gap','cosmic-meteor-settle','cosmic-star-open'].includes(s.stage)||['won','lost','cancelled','transition','intro'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
  p.attackAt=now;return true;
 }
 /** Leaving the duel never teleports the player or grants a victory. Friends can continue. */
@@ -109,6 +121,21 @@ export function cancelKnightBattle(s:KnightBattle|undefined,id:string,now:number
 function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:KnightActor[]){
  const p=knightPosition(s,now),a=target(s,actors);s.from=[...p];s.to=[...s.from];s.stage=stage;s.since=now;s.until=now+ms;s.openHit=false;delete s.shotContacts;s.revision++;
  if(['won','lost','cancelled'].includes(stage))delete s.impactWave;
+ if(stage==='cosmic-surge')s.cosmicLaunch={at:now,players:Object.fromEntries(living(s,actors).sort((a,b)=>a.id.localeCompare(b.id)).map((actor,i)=>[actor.id,{from:[...actor.p] as KnightPoint,angle:Math.hypot(actor.p[0],actor.p[2])>.1?Math.atan2(actor.p[0],actor.p[2]):actor.yaw+Math.PI+i*2.399963}]))};
+ if(stage==='cosmic-descent'){s.cosmicFall={at:now,yaw:s.cosmicPart===3&&s.cosmicRefuge?refugeAngle(s,s.cosmicRefuge.impactAt??now):s.cosmicPart===2&&s.cosmicMeteor?s.cosmicMeteor.yaw:a?angle([0,COSMIC.height,0],a.p):s.yaw};s.yaw=s.cosmicFall.yaw;}
+ if(stage==='cosmic-spin-warn'){s.cosmicPart=1;s.cycle++;s.yaw=(a?angle([0,COSMIC.height,0],a.p):s.yaw)+(s.cycle%3)*.071;delete s.cosmicSpin;delete s.cosmicMeteor;delete s.cosmicRefuge;}
+ if(stage==='cosmic-spin')s.cosmicSpin={at:now,yaw:s.yaw};
+ if(stage==='cosmic-meteor-draw'){
+  const index=s.cosmicPart===2?(s.cosmicMeteor?.index??-1)+1:0,alive=living(s,actors).sort((a,b)=>a.id.localeCompare(b.id)),last=alive.findIndex(a=>a.id===s.target),aimed=alive[(last+1)%Math.max(1,alive.length)]??a;
+  s.cosmicPart=2;delete s.cosmicSpin;
+  if(aimed){s.target=aimed.id;s.yaw=angle([0,COSMIC.height,0],aimed.p);s.cosmicMeteor={index,target:aimed.id,aim:[aimed.p[0],COSMIC.height+METEOR.height,aimed.p[2]],yaw:s.yaw,at:now+METEOR.drawMs+METEOR.releaseMs};}
+ }
+ if(stage==='cosmic-meteor-cast'&&s.cosmicMeteor){s.cosmicMeteor.at=now+METEOR.releaseMs;s.until=s.cosmicMeteor.at+meteorPath(s.cosmicMeteor).duration+METEOR.graceMs+25;}
+ if(stage==='cosmic-star-draw'){
+  s.cosmicPart=3;delete s.cosmicSpin;delete s.cosmicMeteor;
+  s.cosmicRefuge={at:now,angle:a?angle([0,COSMIC.height,0],a.p):s.yaw,world:REFUGE_WORLDS[Math.max(0,s.cycle-1)%REFUGE_WORLDS.length],contacts:{}};
+ }
+ if(stage==='cosmic-star-open'&&s.cosmicRefuge)s.cosmicRefuge.activatedAt??=now;
  if(!a||s.pattern==='star')return;
  if(stage.endsWith('-warn')){
   s.yaw=angle(s.from,a.p);s.height=stage==='shot-warn'?KNIGHT.hoverHeight:stage==='dash-warn'?Math.max(.5,Math.min(3,a.p[1])):0;
@@ -126,6 +153,7 @@ function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:Knig
  }
 }
 function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
+ if(s.phase===4){const [stage,ms]=cosmicNext('transition');s.cycle=1;s.step=0;s.pattern='sword';enter(s,stage,ms,now,actors);s.from=s.to=[0,0,0];s.yaw=0;return;}
  const alive=living(s,actors);s.target=alive[s.cycle%Math.max(1,alive.length)]?.id??s.target;
  if(s.phase===3){s.pattern='star';s.cycle++;s.step=0;delete s.starCross;enter(s,'star-rise',STAR_SEQUENCE[0][1],now,actors);planStarRoute(s,target(s,actors)?.p??[0,0,1]);s.to=crystalPoint(s.starRoute![0],STAR_ASSAULT.ricochetRadius,STAR_ASSAULT.hover);s.yaw=angle(s.from,s.to);return;}
  const order:KnightBattle['pattern'][]=s.phase===1?['sword','leap','crescent']:['flight','dive','crescent'];
@@ -135,28 +163,53 @@ function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
 }
 /** Both melee and returned crescents use the same phase and victory boundaries. */
 function finishKnightDamage(s:KnightBattle,now:number,actors:KnightActor[]){
+ if(s.phase===3&&s.hp<=0){setKnightPhase(s,4,actors,now);return true;}
  if(s.hp<=0){enter(s,'won',1e12,now,actors);return true;}
+ if(s.phase===4)return false;
  const phase=s.hp<=4?3:s.hp<=8?2:1;
  if(phase!==s.phase){s.phase=phase;enter(s,'transition',1500,now,actors);return true;}
  return false;
 }
 function damageKnight(s:KnightBattle,now:number,actors:KnightActor[],reaction?:'stunned'|'crystal-break'){
  s.hp--;s.revision++;
+ if(s.phase===4){enter(s,s.hp<=0?'cosmic-descent':'cosmic-hit',s.hp<=0?COSMIC_SPIN.descentMs:COSMIC_SPIN.hitMs,now,actors);s.from=s.to=[0,COSMIC.height,0];return true;}
  if(reaction){enter(s,reaction,KNIGHT.hitStunMs,now,actors);s.from[1]=s.to[1]=s.height=0;return true;}
  return finishKnightDamage(s,now,actors);
 }
 /** Local duel command: replace the phase without carrying an old attack across. */
-export function setKnightPhase(s:KnightBattle,phase:1|2|3,actors:KnightActor[],now:number){
- if(!knightBattleActive(s)||![1,2,3].includes(phase)||!living(s,actors).length)return false;
+export function setKnightPhase(s:KnightBattle,phase:1|2|3|4,actors:KnightActor[],now:number,subphase?:1|2|3){
+ if(!knightBattleActive(s)||![1,2,3,4].includes(phase)||!living(s,actors).length)return false;
+ const wasCosmic=s.phase===4;
  enter(s,'transition',1500,now,actors);s.phase=phase;s.hp=KNIGHT_PHASE_HEALTH[phase];
+ if(phase===4){s.from[1]=0;s.to=[0,0,0];s.yaw=Math.atan2(-s.from[0],-s.from[2]);}else if(wasCosmic){s.from=s.to=[0,0,-9];}
  s.checked=now;s.cycle=0;s.step=-1;s.pattern='sword';s.height=0;
  delete s.returnFrom;delete s.shotContacts;
  delete s.impactWave;
+ delete s.cosmicLaunch;delete s.cosmicFall;
+ delete s.cosmicSpin;
+ delete s.cosmicMeteor;delete s.cosmicPart;delete s.cosmicRefuge;
  delete s.activeCrystal;delete s.lastCrystal;delete s.starRoute;delete s.starAims;delete s.starCross;s.brokenCrystals=0;
  for(const p of Object.values(s.players))p.handled=p.attackAt;
+ if(phase===4&&subphase){
+  // Debug shortcuts start in the existing cosmic world, without replaying takeoff.
+  s.cosmicLaunch={at:now-COSMIC.surgeMs-COSMIC.liftMs-COSMIC.riseMs-4000,players:Object.fromEntries(living(s,actors).map(actor=>[actor.id,{from:[actor.p[0],0,actor.p[2]] as KnightPoint,angle:Math.hypot(actor.p[0],actor.p[2])>.1?Math.atan2(actor.p[0],actor.p[2]):actor.yaw+Math.PI}]))};
+  s.from=s.to=[0,COSMIC.height,0];enter(s,subphase===1?'cosmic-spin-warn':subphase===2?'cosmic-meteor-draw':'cosmic-star-draw',subphase===1?COSMIC_SPIN.warnMs:subphase===2?METEOR.drawMs:REFUGE.drawMs,now,actors);s.from=s.to=[0,COSMIC.height,0];
+ }
  return true;
 }
-function nextStep(s:KnightBattle,now:number,actors:KnightActor[]){
+function nextStep(s:KnightBattle,now:number,actors:KnightActor[],protectedPlayer?:string){
+ if(cosmicStage(s)){
+  if(s.stage==='cosmic-meteor-return'){damageKnight(s,now,actors);return;}
+  if(s.stage==='cosmic-planet-sweep'&&!refugeActive(s))for(const a of living(s,actors))damageRefugePlayer(s,a.id,now,protectedPlayer);
+  if(s.stage==='cosmic-star-strike'){
+   for(const id of s.cosmicRefuge?.counterBy??(s.cosmicRefuge?.activator?[s.cosmicRefuge.activator]:[]))if(s.players[id])s.players[id].hits++;
+   s.cosmicRefuge!.hitAt=now;damageKnight(s,now,actors);enter(s,'cosmic-star-stun',REFUGE.stunMs,now,actors);return;
+  }
+  if(s.stage==='cosmic-planet-sweep'&&refugeActive(s)){s.cosmicRefuge!.counterBy=living(s,actors).filter(a=>insideRefuge(s,a.p,now)).map(a=>a.id);s.cosmicRefuge!.impactAt=now;enter(s,'cosmic-star-strike',REFUGE.strikeMs,now,actors);return;}
+  if(s.stage==='cosmic-star-stun'){enter(s,s.hp<=0?'cosmic-descent':'cosmic-star-retreat',s.hp<=0?COSMIC_SPIN.descentMs:REFUGE.retreatMs,now,actors);return;}
+  const next:Partial<Record<CosmicStage,[KnightStage,number]>>={'cosmic-flight':['cosmic-spin-warn',COSMIC_SPIN.warnMs],'cosmic-spin-warn':['cosmic-spin',COSMIC_SPIN.spinMs],'cosmic-spin':['cosmic-open',COSMIC_SPIN.openMs],'cosmic-open':['cosmic-recover',COSMIC_SPIN.recoverMs],'cosmic-hit':['cosmic-recover',COSMIC_SPIN.recoverMs],'cosmic-recover':s.cosmicPart===2?['cosmic-star-draw',REFUGE.drawMs]:s.cosmicPart===3?['cosmic-spin-warn',COSMIC_SPIN.warnMs]:['cosmic-meteor-draw',METEOR.drawMs],'cosmic-meteor-draw':['cosmic-meteor-cast',1000],'cosmic-meteor-cast':(s.cosmicMeteor?.index??0)<2?['cosmic-meteor-gap',METEOR.gapMs]:['cosmic-meteor-settle',METEOR.settleMs],'cosmic-meteor-gap':['cosmic-meteor-draw',METEOR.drawMs],'cosmic-meteor-settle':['cosmic-star-draw',REFUGE.drawMs],'cosmic-star-draw':['cosmic-star-open',REFUGE.openMs],'cosmic-star-open':['cosmic-planet-draw',REFUGE.pullMs],'cosmic-planet-draw':['cosmic-planet-sweep',REFUGE.sweepMs],'cosmic-planet-sweep':refugeActive(s)?['cosmic-planet-break',REFUGE.breakMs]:['cosmic-planet-release',REFUGE.breakMs],'cosmic-planet-break':['cosmic-star-strike',REFUGE.strikeMs],'cosmic-planet-release':['cosmic-star-retreat',REFUGE.retreatMs],'cosmic-star-retreat':['cosmic-spin-warn',COSMIC_SPIN.warnMs],'cosmic-descent':['won',1e12]};
+  const [stage,ms]=next[s.stage]??cosmicNext(s.stage);s.step++;enter(s,stage,ms,now,actors);s.from=s.to=[0,cosmicHeight(s,now),0];return;
+ }
  const old=s.stage,oldFrom=[...s.from] as KnightPoint,oldTo=[...s.to] as KnightPoint,oldHeight=s.height;
  const starFrom=s.pattern==='star'?knightPosition(s,now):undefined;
  if(old==='stunned'||old==='crystal-break'){if(s.hp<=0){finishKnightDamage(s,now,actors);return;}enter(s,'get-up',KNIGHT.getUpMs,now,actors);return;}
@@ -212,7 +265,21 @@ function segmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){
  const dx=b[0]-a[0],dy=b[1]-a[1],dz=b[2]-a[2],n=dx*dx+dy*dy+dz*dz,t=n?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy+(p[2]-a[2])*dz)/n)):0;
  return Math.hypot(p[0]-a[0]-dx*t,p[1]-a[1]-dy*t,p[2]-a[2]-dz*t);
 }
+function resolveMeteor(s:KnightBattle,alive:KnightActor[],actors:KnightActor[],now:number,previous:number,protectedPlayer?:string){
+ const meteor=s.cosmicMeteor,point=meteorPoint(s,now);if(!meteor||!point||now<meteor.at)return;
+ const contacts=s.shotContacts??={},touching=alive.filter(a=>meteorContact(s,a.p,now,previous,KNIGHT.bodyRadius));
+ const reflector=alive.find(a=>{
+  const player=s.players[a.id],contact=contacts[a.id],facing=Math.cos(angle(a.p,point)-a.yaw)>-.25||Math.cos(angle(a.p,[0,COSMIC.height,0])-a.yaw)>.25;
+  return contact!==-1&&(touching.includes(a)||contact!==undefined&&now-contact<=METEOR.graceMs)&&now>=player.attackAt&&now-player.attackAt<=METEOR.reflectMs&&facing;
+ });
+ if(reflector){
+  s.players[reflector.id].reflects++;meteor.returned={at:now,from:[...point],by:reflector.id};enter(s,'cosmic-meteor-return',METEOR.returnMs,now,actors);return;
+ }
+ for(const a of touching)if(contacts[a.id]===undefined&&now>=s.players[a.id].invulnerable){contacts[a.id]=now;s.revision++;}
+ for(const a of alive)if(contacts[a.id]!==undefined&&contacts[a.id]>=0&&now-contacts[a.id]>=METEOR.graceMs){if(a.id!==protectedPlayer)damageKnightPlayer(s,a.id,now);contacts[a.id]=-1;s.revision++;}
+}
 export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=now){
+ if(s.phase===4)return cosmicSpinDanger(s,a.p,now,previous,KNIGHT.bodyRadius);
  const wave=knightPressureWave(s,now);
  if(wave){const d=distance(wave.origin,a.p),old=Math.max(0,previous-wave.at)*KNIGHT.waveSpeed;
   if(a.p[1]<KNIGHT.waveHeight&&d>=old-SHIELD.waveHalfWidth-KNIGHT.bodyRadius&&d<=wave.radius+SHIELD.waveHalfWidth+KNIGHT.bodyRadius)return true;
@@ -237,12 +304,18 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
  const alive=living(s,actors);if(!alive.length){enter(s,'lost',1e12,now,actors);return true;}
  // Never replay unseen damage after a background tab, reconnect or Worker wakeup.
  const previous=Math.max(s.checked,now-150);s.checked=now;
- let guard=0;while(now>=s.until&&guard++<32)nextStep(s,s.until,actors);
+ let guard=0;while(now>=s.until&&guard++<32)nextStep(s,s.until,actors,protectedPlayer);
+ if(s.stage==='cosmic-star-open'&&s.cosmicRefuge&&!refugeActive(s)){s.cosmicRefuge.activatedAt=s.since;s.revision++;}
  if(guard>=32){nextPattern(s,now,actors);return true;}
  if(s.stage==='shot-warn'&&now<s.until-KNIGHT.aimLockMs){
   const a=target(s,actors);if(a){const aim=clamp([...a.p],META_KNIGHT_ARENA.radius),yaw=angle(s.from,a.p);if(distance(aim,s.to)>.02||Math.abs(yaw-s.yaw)>.005||Math.abs(aim[1]-s.to[1])>.02){s.to=aim;s.yaw=yaw;s.revision++;}}
  }
+ if(s.cosmicMeteor&&(s.stage==='cosmic-meteor-draw'||s.stage==='cosmic-meteor-cast')){
+  const a=alive.find(a=>a.id===s.cosmicMeteor!.target);if(a&&updateMeteorTracking(s,a.p,now)){s.yaw=s.cosmicMeteor.yaw;if(s.stage==='cosmic-meteor-cast')s.until=s.cosmicMeteor.at+meteorPath(s.cosmicMeteor).duration+METEOR.graceMs+25;s.revision++;}
+ }
  if(s.stage==='shot')resolveCrescent(s,alive,actors,now,previous,protectedPlayer);
+ if(s.stage==='cosmic-meteor-cast')resolveMeteor(s,alive,actors,now,previous,protectedPlayer);
+ if(s.stage==='cosmic-planet-sweep')for(const a of alive)if(refugeDanger(s,a.p,now,previous))damageRefugePlayer(s,a.id,now,protectedPlayer);
  for(const a of alive){
   const p=s.players[a.id];
   if(a.id!==protectedPlayer&&knightDanger(s,a,now,previous)&&now>=p.invulnerable)damageKnightPlayer(s,a.id,now);
@@ -262,7 +335,7 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
     }
    }
    // Scale vertical melee reach with the enlarged boss so jumps and normal flight can connect.
-   if(s.phase!==3&&s.stage==='open'&&!s.openHit&&now-p.attackAt<550&&distance(a.p,pos)<KNIGHT.meleeReach&&Math.abs(a.p[1]-pos[1])<1.6*KNIGHT.effectScale&&Math.cos(angle(a.p,pos)-a.yaw)>-.15){
+   if(s.phase!==3&&(s.stage==='open'||cosmicOpening(s))&&!s.openHit&&now-p.attackAt<550&&distance(a.p,pos)<KNIGHT.meleeReach&&Math.abs(a.p[1]-pos[1])<1.6*KNIGHT.effectScale&&Math.cos(angle(a.p,pos)-a.yaw)>-.15){
     p.hits++;damageKnight(s,now,actors,'stunned');return true;
    }
   }

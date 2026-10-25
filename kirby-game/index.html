@@ -9,7 +9,7 @@
     <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%kirby-icon.svg" />
     <title>Кирби: Полянка друзей</title>
-    <link rel="preload" as="image" href="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=3" fetchpriority="high" />
+    <link rel="preload" as="image" href="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=5" fetchpriority="high" />
   </head>
   <body class="choosing loading" aria-busy="true">
     <style>
@@ -31,7 +31,7 @@
       @media(max-height:500px){#startup-loader{padding-top:16px;}.loading-status{padding:14px 22px;border-radius:22px;}.loading-orbit{width:30px;height:30px;margin-bottom:8px;border-width:4px;}}
       @media(prefers-reduced-motion:reduce){.loading-orbit{animation:none;}}
     </style>
-    <div id="menu-backdrop" aria-hidden="true" inert><img src="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=3" alt="" fetchpriority="high" /><video data-src="%BASE_URL%backgrounds/meadow-menu.mp4?v=3" muted loop playsinline preload="none" disablepictureinpicture></video></div>
+    <div id="menu-backdrop" aria-hidden="true" inert><img src="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=5" alt="" fetchpriority="high" /><video data-src="%BASE_URL%backgrounds/meadow-menu.mp4?v=5" muted loop playsinline preload="none" disablepictureinpicture></video></div>
     <div id="startup-loader" role="status" aria-live="polite"><div class="loading-status"><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
     <section id="character-select" aria-labelledby="select-title">
       <div class="selection-card">

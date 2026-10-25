@@ -40,6 +40,8 @@ export class Flight {
   }
   /** The charged sword dash sustains its current flight level independently. */
   sustain() {this.hold=FLIGHT_HOVER_SECONDS;if(!this.rising)this.velocity=0;}
+  /** Encounter-owned plane: keep the flying pose without integrating a jump. */
+  holdPlane() {this.active=true;this.height=this.target=this.velocity=this.dash=0;this.level=2;this.hold=FLIGHT_HOVER_SECONDS;this.rising=false;}
   reset() {this.height=this.level=this.target=this.hold=this.dash=this.velocity=0;this.active=this.rising=false;}
   update(dt:number) {
     if(!this.active)return;

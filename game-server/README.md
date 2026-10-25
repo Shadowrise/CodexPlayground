@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-32`) is shared with the browser in
+Protocol 2 (`build=meadow-network-34`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -205,6 +205,12 @@ rendering was checked in daylight, at night and on a mobile viewport.
 Public `/health` returned HTTP 200 with status `ok` and protocol version 2.
 Worker version: `3ef29fc7-afc2-4384-a992-fed159fc39f6`.
 Credentials and `.wrangler/` are not tracked.
+
+The fourth Meta Knight phase uses `meadow-network-34` on both sides. It adds
+the shared cosmic ascent, radial launch, three repeating attack stages and
+the accelerated finale. Participant positions, meteor guidance, the moving
+star refuge and the fall clock are authoritative and survive room wakeup.
+Build 33 clients must refresh before joining this version.
 
 ## Topotushka play event
 

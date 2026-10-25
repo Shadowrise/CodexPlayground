@@ -41,7 +41,7 @@ try{
   for(let i=0;i<100;i++){q.watermill.update(.1);q.ponds.update(.1);q.fountain.update(.1,1);}
   q.c.actor.visible=false;q.npcs.forEach(n=>n.actor.visible=false);
   document.querySelectorAll('body > :not(#game)').forEach(el=>el.style.visibility='hidden');
-  return {pond:[PONDS[1].x,0,PONDS[1].z],river:RIVERS[0][Math.floor(RIVERS[0].length*.45)].toArray(),mill:q.watermill.group.position.toArray(),fountain:[FOUNTAIN_SITE.x,0,FOUNTAIN_SITE.z]};
+  return {pond:[PONDS[1].x,0,PONDS[1].z],moonPond:[PONDS[2].x,0,PONDS[2].z],river:RIVERS[0][Math.floor(RIVERS[0].length*.45)].toArray(),mill:q.watermill.group.position.toArray(),fountain:[FOUNTAIN_SITE.x,0,FOUNTAIN_SITE.z]};
  });
  if(process.env.WATER_COMPARE_SOURCE)await page.evaluate(async()=>{
   const q=waterQA,T=q.THREE,{createWaterSurface}=await import('/water-baseline/water-surface.js'),materials=new Map(),group=new T.Group();q.waterPairs=[];
@@ -95,7 +95,21 @@ try{
    return row;
   },{base,eye,look,phase});
   assert.equal(row.glError,0);if(stage!=='before')assert.equal(row.waterTextures,1);report.views.push({name,...row});await page.screenshot({path:out+stage+'-'+name+'.png'});
+  if(process.env.WATER_CAPTURE_BASELINE==='1'&&row.paired){
+   await page.evaluate(()=>{const q=waterQA;for(const p of q.waterPairs){p.mesh.material=p.legacy.material;p.mesh.geometry=p.legacy.geometry;}q.renderer.render(q.scene,q.camera);});
+   await page.screenshot({path:out+stage+'-'+name+'-before.png'});
+   await page.evaluate(()=>{const q=waterQA;for(const p of q.waterPairs){p.mesh.material=p.current.material;p.mesh.geometry=p.current.geometry;}q.renderer.render(q.scene,q.camera);});
+  }
  };
+ const moonPhoto=async(name,base,phase,y,distance)=>{
+  if(selectedViews&&!selectedViews.includes(name))return;
+  const eye=await page.evaluate(async({phase,y,distance})=>{const {daylight}=await import('/src/day-cycle.ts'),d=daylight(phase).shadowDirection,l=Math.hypot(d[0],d[2]);return [d[0]/l*distance,y+1.5,d[2]/l*distance];},{phase,y,distance});
+  await photo(name,base,eye,[0,y,0],phase);
+ };
+ await moonPhoto('pond-moon-rise',sites.moonPond,.55,-.42,14);
+ await moonPhoto('pond-moon-midnight',sites.moonPond,.75,-.42,14);
+ await moonPhoto('fountain-moon-rise',sites.fountain,.55,.27,11);
+ await moonPhoto('fountain-moon-midnight',sites.fountain,.75,.27,11);
  await photo('pond',sites.pond,[10,9,19],[0,-.3,0]);
  await photo('river',sites.river,[6,4.2,9],[0,-.42,0]);
  await photo('river-low',sites.river,[5,1,14],[0,-.42,0]);

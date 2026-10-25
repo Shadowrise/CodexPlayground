@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3}|{kind:'godmode'};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3|4;subphase?:1|2|3}|{kind:'godmode'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -33,7 +33,7 @@ const unlockCharacters=[
  {character:'ugolyok',alias:'cinder',name:'Уголёк'},
  {character:'ryzhik',alias:'ginger',name:'Рыжик'},
 ] as const;
-const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–3'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
+const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–4'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
 
 export function parseChatCommand(text:string,enabled:boolean,destinations:readonly Destination[],duelActive=false):CommandResult|undefined{
@@ -44,7 +44,8 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  if(name==='phase'||name==='godmode'){
   if(!duelActive)return {error:'Эта команда доступна только во время дуэли с Метакнайтом.'};
   if(name==='godmode')return argument?{error:'Введи /godmode без аргументов.'}:{command:{kind:'godmode'}};
-  return /^[123]$/.test(argument)?{command:{kind:'phase',phase:Number(argument) as 1|2|3}}:{error:'Введи /phase 1, /phase 2 или /phase 3.'};
+  if(/^4-[123]$/.test(argument))return {command:{kind:'phase',phase:4,subphase:Number(argument[2]) as 1|2|3}};
+  return /^[1234]$/.test(argument)?{command:{kind:'phase',phase:Number(argument) as 1|2|3|4}}:{error:'Введи /phase 1, /phase 2, /phase 3, /phase 4, /phase 4-1, /phase 4-2 или /phase 4-3.'};
  }
  if(name==='portal'){
   if(argument!=='0'&&argument!=='1')return {error:'Введи /portal 1, чтобы открыть портал, или /portal 0, чтобы закрыть.'};
@@ -76,7 +77,7 @@ export function commandSuggestions(text:string,enabled:boolean,destinations:read
  if(!enabled)return [];
  const match=parts(text);if(!match)return [];
  const name=match[1].toLowerCase(),argument=match[2]?.trim().toLowerCase()??'';
- if(name==='phase')return duelActive?[1,2,3].filter(phase=>String(phase).startsWith(argument)).map(phase=>({value:`/phase ${phase}`,label:String(phase),description:t('Фаза {0}',[phase]),complete:true})):[];
+ if(name==='phase')return duelActive?['1','2','3','4','4-1','4-2','4-3'].filter(phase=>phase.startsWith(argument)).map(phase=>({value:`/phase ${phase}`,label:phase,description:phase==='4-1'?t('Грозовой вихрь'):phase==='4-2'?t('Гравитационный удар'):phase==='4-3'?t('Звёздное убежище'):t('Фаза {0}',[phase]),complete:true})):[];
  if(name==='portal')return [{value:'1',description:'Открыть портал'},{value:'0',description:'Закрыть портал'}].filter(option=>option.value.startsWith(argument)).map(option=>({value:`/portal ${option.value}`,label:option.value,description:t(option.description),complete:true}));
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,

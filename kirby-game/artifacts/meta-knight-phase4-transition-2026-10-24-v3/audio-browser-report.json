@@ -1,0 +1,40 @@
+{
+  "samples": {
+    "output": {
+      "charge": {
+        "duration": 2.8,
+        "peak": 0.48494112491607666,
+        "rate": 48000
+      },
+      "impact": {
+        "duration": 1.9,
+        "peak": 0.7201459407806396,
+        "rate": 48000
+      },
+      "draw": {
+        "duration": 1.05,
+        "peak": 0.44851523637771606,
+        "rate": 48000
+      },
+      "ascent": {
+        "duration": 5.6,
+        "peak": 0.4797137379646301,
+        "rate": 48000
+      },
+      "arrive": {
+        "duration": 3.2,
+        "peak": 0.3753206729888916,
+        "rate": 48000
+      }
+    },
+    "playing": 1,
+    "afterCancel": 0
+  },
+  "missing": {
+    "before": false,
+    "duration": 1.9,
+    "playing": 1,
+    "afterCancel": 0
+  },
+  "errors": []
+}

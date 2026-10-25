@@ -1,6 +1,7 @@
 import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,knightArenaSide,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
 import {constrainKnightShield} from '../../kirby-game/src/meta-knight-shield';
 import {constrainKnightBody} from '../../kirby-game/src/meta-knight-body';
+import {cosmicAirborne,cosmicHeight,cosmicControlsLocked,cosmicPlayerPush} from '../../kirby-game/src/meta-knight-cosmic';
 import {META_KNIGHT_ARENA,constrainMetaKnightArena} from '../../kirby-game/src/meta-knight-arena-site';
 import {metaKnightVictoryLog,metaKnightSealLogs} from '../../kirby-game/src/world-log';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
@@ -256,7 +257,18 @@ export class GameRoom extends DurableObject<Env>{
  }
  private knightActors(current?:Attachment):KnightActor[]{return this.players().map(socket=>{const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor;if(!c)return undefined;const q=c.q;return {id:a.id,p:[c.p[0]-META_KNIGHT_ARENA.x,c.p[1],c.p[2]] as [number,number,number],yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),available:c.location==='meta-knight-arena'&&!c.ride};}).filter((a):a is KnightActor=>!!a);}
  private advanceKnight(now:number,current?:Attachment){
-  const s=this.room?.knightBattle;if(!s)return false;const changed=advanceKnightBattle(s,this.knightActors(current),now);
+  const s=this.room?.knightBattle;if(!s)return false;const previousLaunch=s.cosmicLaunch,changed=advanceKnightBattle(s,this.knightActors(current),now);
+  // The persisted launch owns all participants, including those sending no
+  // movement packets while the electrical front crosses the arena.
+  if(s.phase===4)for(const socket of this.players()){
+   const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor,p=s.players[a.id];
+   if(c?.location!=='meta-knight-arena'||!p||p.hp<=0||p.withdrawn)continue;
+   const push=cosmicPlayerPush(s,a.id,now);
+   if(push&&(cosmicControlsLocked(s)||previousLaunch!==s.cosmicLaunch)){c.p[0]=META_KNIGHT_ARENA.x+push.point[0];c.p[2]=push.point[2];}
+   if(cosmicControlsLocked(s)&&!cosmicAirborne(s))c.p[1]=0;
+   if(cosmicAirborne(s))c.p[1]=cosmicHeight(s,now);
+   socket.serializeAttachment(a);
+  }
   if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&!p.withdrawn&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??''));}}return true;}
   return changed;
  }
@@ -370,6 +382,9 @@ export class GameRoom extends DurableObject<Env>{
   if(validActor(m.actor)){actor=m.actor as ActorState;const earned=a.actor?.achievements??[];actor.achievements=actor.achievements.filter(id=>!['millQuest','centipede','flowers','numbers',...WILD_PIGEONS.map(pigeonFriendAchievement)].includes(id));for(const id of ['millQuest','centipede','flowers','numbers',...WILD_PIGEONS.map(pigeonFriendAchievement)])if(earned.includes(id))actor.achievements.push(id);actor.eventPoints=a.actor?.eventPoints??0;actor.variant=a.variant;actor.name=a.name??a.actor?.name??actor.name;if(actor.ride&&r.locks[actor.ride.key]!==a.id)delete actor.ride;reportedSize=actor.progress?.size??actor.s;if(a.adminSize!==undefined){if(Math.abs(reportedSize-a.adminSize)<.001||actor.progress?.speed===a.adminSize)delete a.adminSize;else{actor.s=a.adminSize;if(actor.progress){actor.progress.size=a.adminSize;actor.progress.speed=a.adminSize;}}}a.actor=actor;}
   if(actor?.location==='meta-knight-arena'){
    const position={x:actor.p[0],y:actor.p[1],z:actor.p[2]};constrainMetaKnightArena(position,actor.s,knightArenaSide(r.knightBattle,a.id));
+   const push=cosmicPlayerPush(r.knightBattle,a.id,now),participant=r.knightBattle?.players[a.id];
+   if(push&&cosmicControlsLocked(r.knightBattle)&&participant&&participant.hp>0&&!participant.withdrawn){position.x=META_KNIGHT_ARENA.x+push.point[0];position.z=push.point[2];position.y=0;}
+   if(cosmicAirborne(r.knightBattle)&&r.knightBattle?.players[a.id]&&!r.knightBattle.players[a.id].withdrawn)position.y=cosmicHeight(r.knightBattle,now);
    const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;

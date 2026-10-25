@@ -1,0 +1,881 @@
+{
+  "frames": [
+    {
+      "stage": "cosmic-open",
+      "hp": 1,
+      "life": 5,
+      "hits": 0,
+      "height": 180,
+      "bossHeight": 180,
+      "position": [
+        2000,
+        180,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.3,
+        0,
+        -0.015500272091338241,
+        "XYZ"
+      ],
+      "cape": [
+        0.9032821570644065,
+        -0.0029146830547668893,
+        0.018979870261111684,
+        "XYZ"
+      ],
+      "lightning": 158,
+      "light": 3.5935803642774817,
+      "stars": false,
+      "green": true,
+      "camera": [
+        2000,
+        185.84807918509046,
+        -216.43035466558032
+      ],
+      "glError": 0,
+      "drawCalls": 94,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/01-last-opening.png",
+      "label": "Осталось одно попадание"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 179.88560129934325,
+      "bossHeight": 179.88560129934325,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 60,
+        "progress": 0.025210084033613446,
+        "landed": false,
+        "landAge": 0,
+        "release": 0.103515625,
+        "brace": 0,
+        "settle": 0,
+        "bodyY": 1.1602468503976573,
+        "bodyZ": 0,
+        "height": 179.88560129934325,
+        "speed": 3.8132900218911097,
+        "pitch": 0.11397715342675165,
+        "roll": 0.011711164373288696
+      },
+      "position": [
+        2000,
+        179.88560129934325,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.2973371089466264,
+        0.00007761844742979763,
+        -0.017158193272089353,
+        "XYZ"
+      ],
+      "cape": [
+        0.8745599847406319,
+        0.010489653231327575,
+        0.009572662859153891,
+        "XYZ"
+      ],
+      "lightning": 16,
+      "light": 0,
+      "stars": false,
+      "green": false,
+      "camera": [
+        2000,
+        185.7449342964263,
+        -216.22165153783973
+      ],
+      "glError": 0,
+      "drawCalls": 93,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/02-power-loss.png",
+      "label": "Последний удар · сила гаснет"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 170.3873314031495,
+      "bossHeight": 170.3873314031495,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 550,
+        "progress": 0.23109243697478993,
+        "landed": false,
+        "landAge": 0,
+        "release": 1,
+        "brace": 0,
+        "settle": 0,
+        "bodyY": 1.14,
+        "bodyZ": 0,
+        "height": 170.3873314031495,
+        "speed": 34.95515853400184,
+        "pitch": 0.3447229837214804,
+        "roll": -0.09578731396427356
+      },
+      "position": [
+        2000,
+        170.3873314031495,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.3447229837214804,
+        -0.0422906339092359,
+        -0.09578731396427356,
+        "XYZ"
+      ],
+      "cape": [
+        2.05,
+        -0.03401660742906373,
+        0.026321273680129275,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "stars": false,
+      "green": false,
+      "camera": [
+        2000,
+        178.53866655604767,
+        -196.66807635517196
+      ],
+      "glError": 0,
+      "drawCalls": 88,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/03-lost-balance.png",
+      "label": "Потеря равновесия · крылья пытаются удержать Кнайта"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 122.08565779268858,
+      "bossHeight": 122.08565779268858,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 1349.9999999981374,
+        "progress": 0.5672268907555199,
+        "landed": false,
+        "landAge": 0,
+        "release": 1,
+        "brace": 0,
+        "settle": 0,
+        "bodyY": 1.14,
+        "bodyZ": 0,
+        "height": 122.08565779268858,
+        "speed": 85.79902549243158,
+        "pitch": 0.42018922132702696,
+        "roll": 0.07978852782419366
+      },
+      "position": [
+        2000,
+        122.08565779268858,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.42018922132702696,
+        -0.0016392587334905868,
+        0.07978852782419366,
+        "XYZ"
+      ],
+      "cape": [
+        2.05,
+        -0.014155533800256498,
+        0.017156272125712177,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "stars": false,
+      "green": false,
+      "camera": [
+        2000,
+        130.40378957753737,
+        -67.1371278404843
+      ],
+      "glError": 0,
+      "drawCalls": 83,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/04-free-fall.png",
+      "label": "Падение с ускорением · плащ и ноги подхвачены воздухом"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 33.108890615578595,
+      "bossHeight": 33.108890615578595,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 2149.9999999962747,
+        "progress": 0.9033613445362498,
+        "landed": false,
+        "landAge": 0,
+        "release": 1,
+        "brace": 0.30838579150447176,
+        "settle": 0,
+        "bodyY": 1.1153291366796423,
+        "bodyZ": -0.055509442470804915,
+        "height": 33.108890615578595,
+        "speed": 136.64289245086132,
+        "pitch": 0.24828443187002014,
+        "roll": 0.0204257393035657
+      },
+      "position": [
+        2000,
+        33.108890615578595,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.24828443187002014,
+        0.027490231507002506,
+        0.0204257393035657,
+        "XYZ"
+      ],
+      "cape": [
+        2.05,
+        0.01161464550670008,
+        0.004882164715931477,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "stars": false,
+      "green": false,
+      "camera": [
+        2000,
+        41.42729954258428,
+        21.109111567525343
+      ],
+      "glError": 0,
+      "drawCalls": 91,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/05-brace.png",
+      "label": "Арена приближается · подготовка к удару"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 2399.9999999956926,
+        "progress": 1,
+        "landed": true,
+        "landAge": 19.999999995692633,
+        "release": 1,
+        "brace": 1,
+        "settle": 0.00031963923743966605,
+        "bodyY": 1.0230009626610455,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.07538681764991366,
+        "roll": 0.015464721637630801
+      },
+      "position": [
+        2000,
+        0,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.07538681764991366,
+        0,
+        0.015464721637630801,
+        "XYZ"
+      ],
+      "cape": [
+        2.049325561209002,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2000.0167663852915,
+        8.328775535764017,
+        22.97329273310875
+      ],
+      "glError": 0,
+      "drawCalls": 109,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/06-impact.png",
+      "label": "Одновременное приземление · пыль и удар"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 2599.999999995227,
+        "progress": 1,
+        "landed": true,
+        "landAge": 219.99999999522697,
+        "release": 1,
+        "brace": 1,
+        "settle": 0.24272990140900363,
+        "bodyY": 0.9309264524828,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.11767418572351862,
+        "roll": -0.010827120767802453
+      },
+      "position": [
+        2000,
+        0,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.11767418572351862,
+        0,
+        -0.010827120767802453,
+        "XYZ"
+      ],
+      "cape": [
+        1.5378399080270022,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2000.003393743979,
+        8.320923427260475,
+        22.973292715886835
+      ],
+      "glError": 0,
+      "drawCalls": 109,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/07-landing-recovery.png",
+      "label": "Кнайт оседает после удара"
+    },
+    {
+      "stage": "won",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 3099.999999994063,
+        "progress": 1,
+        "landed": true,
+        "landAge": 719.9999999940628,
+        "release": 1,
+        "brace": 1,
+        "settle": 1,
+        "bodyY": 0.9202009009513773,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.10012387413396955,
+        "roll": 0.0004827370003899068
+      },
+      "position": [
+        2000,
+        0,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.10012387413396955,
+        0,
+        0.0004827370003899068,
+        "XYZ"
+      ],
+      "cape": [
+        -0.06,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2000.0000613719435,
+        8.311171860712284,
+        22.96340287737435
+      ],
+      "glError": 0,
+      "drawCalls": 109,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/08-victory.png",
+      "label": "Победа · Кнайт остаётся сидеть в dazed"
+    },
+    {
+      "stage": "won",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1010916.6666666645,
+        "elapsed": 4499.999999990803,
+        "progress": 1,
+        "landed": true,
+        "landAge": 2119.999999990803,
+        "release": 1,
+        "brace": 1,
+        "settle": 1,
+        "bodyY": 0.9200000004072653,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.09999988394346666,
+        "roll": -7.921034522847893e-8
+      },
+      "position": [
+        2000,
+        0,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.09999988394346666,
+        0,
+        -7.921034522847893e-8,
+        "XYZ"
+      ],
+      "cape": [
+        -0.06,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2000,
+        3.374039592545229,
+        14.089124217106448
+      ],
+      "glError": 0,
+      "drawCalls": 94,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/09-seated.png",
+      "label": "Камера возвращается к обычному управлению"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 126.29616552503356,
+      "bossHeight": 126.29616552503356,
+      "fall": {
+        "at": 1062675.166666664,
+        "elapsed": 1300,
+        "progress": 0.5462184873949579,
+        "landed": false,
+        "landAge": 0,
+        "release": 1,
+        "brace": 0,
+        "settle": 0,
+        "bodyY": 1.14,
+        "bodyZ": 0,
+        "height": 126.29616552503356,
+        "speed": 82.6212838076407,
+        "pitch": 0.40100835184133204,
+        "roll": 0.05447792133876654
+      },
+      "position": [
+        2019.4455889651156,
+        126.29616552503356,
+        6.384190661227775
+      ],
+      "yaw": 2.8245200302293068,
+      "playerClip": "Fly",
+      "flying": true,
+      "body": [
+        0.40100835184133204,
+        0.02074139355270789,
+        0.05447792133876654,
+        "XYZ"
+      ],
+      "cape": [
+        2.05,
+        -0.026669425437166126,
+        0.041795785533475814,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": false,
+      "stars": false,
+      "green": false,
+      "camera": [
+        2037.0922686659972,
+        134.61416081181451,
+        111.49773882080709
+      ],
+      "glError": 0,
+      "drawCalls": 84,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/10-star-fall.png",
+      "label": "Последнее попадание звезды · падение с дистанции"
+    },
+    {
+      "stage": "cosmic-descent",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1062675.166666664,
+        "elapsed": 2450,
+        "progress": 1,
+        "landed": true,
+        "landAge": 70,
+        "release": 1,
+        "brace": 1,
+        "settle": 0.012064660946459782,
+        "bodyY": 0.9285117680072531,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.056959209506699124,
+        "roll": 0.028631437471611607
+      },
+      "position": [
+        2019.4455889651156,
+        0,
+        6.384190661227775
+      ],
+      "yaw": 2.8245200302293068,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.056959209506699124,
+        0,
+        0.028631437471611607,
+        "XYZ"
+      ],
+      "cape": [
+        2.0245435654029698,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2037.0935135097689,
+        8.3253934771489,
+        12.177748777419726
+      ],
+      "glError": 0,
+      "drawCalls": 110,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/11-star-landing.png",
+      "label": "Кнайт и игрок у купола приземляются одновременно"
+    },
+    {
+      "stage": "won",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1062675.166666664,
+        "elapsed": 3250,
+        "progress": 1,
+        "landed": true,
+        "landAge": 870,
+        "release": 1,
+        "brace": 1,
+        "settle": 1,
+        "bodyY": 0.9200403413968874,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.0998884969557744,
+        "roll": -0.00019432850938185618
+      },
+      "position": [
+        2019.4455889651156,
+        0,
+        6.384190661227775
+      ],
+      "yaw": 2.8245200302293068,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.0998884969557744,
+        0,
+        -0.00019432850938185618,
+        "XYZ"
+      ],
+      "cape": [
+        -0.06,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2036.8803120280072,
+        8.156327370442964,
+        12.108189335163136
+      ],
+      "glError": 0,
+      "drawCalls": 110,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-finale-2026-10-25\\screenshots/12-star-victory.png",
+      "label": "Победа после автоматического ответа звезды"
+    }
+  ],
+  "cues": [
+    {
+      "kind": "cosmic-tired",
+      "at": 1010000
+    },
+    {
+      "kind": "cosmic-fall",
+      "at": 1010916.6666666645
+    },
+    {
+      "kind": "hit",
+      "at": 1010916.6666666645
+    },
+    {
+      "kind": "cosmic-landing",
+      "at": 1013299.9999999936
+    },
+    {
+      "kind": "win",
+      "at": 1013933.3333333255
+    }
+  ],
+  "video": {
+    "elapsed": 6.508500000000001,
+    "wallSeconds": 6.616100000023842,
+    "medianMs": 13.30000000000291,
+    "p95Ms": 13.5,
+    "stages": [
+      "cosmic-open",
+      "cosmic-descent",
+      "won"
+    ],
+    "final": {
+      "stage": "won",
+      "hp": 0,
+      "life": 5,
+      "hits": 1,
+      "height": 0,
+      "bossHeight": 0,
+      "fall": {
+        "at": 1027314.4666666556,
+        "elapsed": 5360.700000010082,
+        "progress": 1,
+        "landed": true,
+        "landAge": 2980.7000000100816,
+        "release": 1,
+        "brace": 1,
+        "settle": 1,
+        "bodyY": 0.9200000000000246,
+        "bodyZ": -0.18,
+        "height": 0,
+        "speed": 0,
+        "pitch": -0.09999999938821086,
+        "roll": 2.782632792518783e-11
+      },
+      "position": [
+        2000,
+        0,
+        4.4
+      ],
+      "yaw": 3.141592653589793,
+      "playerClip": "Idle",
+      "flying": false,
+      "body": [
+        -0.09999999938821086,
+        0,
+        2.782632792518783e-11,
+        "XYZ"
+      ],
+      "cape": [
+        -0.06,
+        0,
+        0,
+        "XYZ"
+      ],
+      "lightning": 0,
+      "light": 0,
+      "dazed": true,
+      "stars": true,
+      "green": false,
+      "camera": [
+        2000,
+        3.374039592545229,
+        14.089124217106448
+      ],
+      "glError": 0,
+      "drawCalls": 94
+    }
+  },
+  "starFinish": {
+    "stage": "cosmic-descent",
+    "hp": 0,
+    "life": 5,
+    "hits": 1,
+    "height": 180,
+    "bossHeight": 180,
+    "fall": {
+      "at": 1062675.166666664,
+      "elapsed": 5.3551048040390015e-8,
+      "progress": 2.250044035310505e-11,
+      "landed": false,
+      "landAge": 0,
+      "release": 1.1108878044689394e-28,
+      "brace": 0,
+      "settle": 0,
+      "bodyY": 1.1400000000185058,
+      "bodyZ": 0,
+      "height": 180,
+      "speed": 3.403427952570512e-9,
+      "pitch": 0.08,
+      "roll": 1.237375488639671e-38
+    },
+    "position": [
+      2019.4455889651156,
+      180,
+      6.384190661227775
+    ],
+    "yaw": 2.8245200302293068,
+    "playerClip": "Fly",
+    "flying": true,
+    "body": [
+      0.08,
+      0,
+      -0.015030900264656219,
+      "XYZ"
+    ],
+    "cape": [
+      0.9582732845024023,
+      -0.018675332807192024,
+      0.0028043239736563093,
+      "XYZ"
+    ],
+    "lightning": 16,
+    "light": 0,
+    "dazed": false,
+    "stars": false,
+    "green": false,
+    "camera": [
+      2036.5177289057046,
+      185.84807918509046,
+      255.46640981611785
+    ],
+    "glError": 0,
+    "drawCalls": 121
+  },
+  "starWon": {
+    "stage": "won",
+    "hp": 0,
+    "life": 5,
+    "hits": 1,
+    "height": 0,
+    "bossHeight": 0,
+    "fall": {
+      "at": 1062675.166666664,
+      "elapsed": 3250,
+      "progress": 1,
+      "landed": true,
+      "landAge": 870,
+      "release": 1,
+      "brace": 1,
+      "settle": 1,
+      "bodyY": 0.9200403413968874,
+      "bodyZ": -0.18,
+      "height": 0,
+      "speed": 0,
+      "pitch": -0.0998884969557744,
+      "roll": -0.00019432850938185618
+    },
+    "position": [
+      2019.4455889651156,
+      0,
+      6.384190661227775
+    ],
+    "yaw": 2.8245200302293068,
+    "playerClip": "Idle",
+    "flying": false,
+    "body": [
+      -0.0998884969557744,
+      0,
+      -0.00019432850938185618,
+      "XYZ"
+    ],
+    "cape": [
+      -0.06,
+      0,
+      0,
+      "XYZ"
+    ],
+    "lightning": 0,
+    "light": 0,
+    "dazed": true,
+    "stars": true,
+    "green": false,
+    "camera": [
+      2036.8803120280072,
+      8.156327370442964,
+      12.108189335163136
+    ],
+    "glError": 0,
+    "drawCalls": 110
+  },
+  "errors": []
+}

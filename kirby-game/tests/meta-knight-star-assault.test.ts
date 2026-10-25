@@ -84,14 +84,14 @@ test('all three route timers count to their own launch and future routes never b
  const s=battle();stage(s,5);assert.equal(ricochetCountdown(s,s.since,0),0);assert.equal(ricochetCountdown(s,s.until,0),1);assert.equal(ricochetCountdown(s,s.until,1),0);assert.equal(ricochetCountdown(s,s.until,2),0);
  for(let index=1;index<STAR_FLIGHTS;index++){stage(s,5+index*2);assert.equal(ricochetCountdown(s,s.until,index),1);}
 });
-test('four different random crystals, each broken once, drain the last four health and win',()=>{
+test('four different random crystals, each broken once, finish phase three and begin the cosmic transition',()=>{
  const s=battle(),a:KnightActor={...actor,p:[36,0,0]};s.players.a.invulnerable=1e12;advanceKnightBattle(s,[a],2500);const seen=new Set<number>();
  for(let cycle=0;cycle<4;cycle++){
   for(let guard=0;s.stage!=='shield'&&guard<32;guard++)advanceKnightBattle(s,[a],s.until);
   assert.equal(s.stage,'shield');const index=s.activeCrystal!;assert(!seen.has(index));seen.add(index);assert(!crystalBroken(s,index));
   const p=crystalPoint(index),d=Math.hypot(p[0],p[2]);a.p=[p[0]*(d-3)/d,0,p[2]*(d-3)/d];a.yaw=Math.atan2(p[0]-a.p[0],p[2]-a.p[2]);
   const now=s.since+900;assert(knightAttack(s,a,now));advanceKnightBattle(s,[a],now+150);assert.equal(s.hp,3-cycle);assert(crystalBroken(s,index));assert.equal(s.activeCrystal,undefined);
-  assert.equal(s.stage,'crystal-break');assert.equal(s.until-s.since,1000);advanceKnightBattle(s,[a],s.until);if(cycle<3){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'star-rise');}else assert.equal(s.stage,'won');
+  assert.equal(s.stage,'crystal-break');assert.equal(s.until-s.since,1000);advanceKnightBattle(s,[a],s.until);if(cycle<3){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'star-rise');}else{assert.equal(s.stage,'transition');assert.equal(s.phase,4);assert.equal(s.hp,6);}
  }
  assert.equal(s.players.a.hits,4);assert.equal(seen.size,4);
 });

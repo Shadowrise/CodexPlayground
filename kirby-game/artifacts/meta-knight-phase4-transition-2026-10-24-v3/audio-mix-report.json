@@ -1,0 +1,67 @@
+{
+  "output": {
+    "cosmic-charge": {
+      "duration": 2.8,
+      "peak": 0.46
+    },
+    "cosmic-impact": {
+      "duration": 1.9,
+      "peak": 0.72
+    },
+    "cosmic-draw": {
+      "duration": 1.05,
+      "peak": 0.45
+    },
+    "cosmic-ascent": {
+      "duration": 5.6,
+      "peak": 0.48000000000000004
+    },
+    "cosmic-arrive": {
+      "duration": 3.2,
+      "peak": 0.38
+    }
+  },
+  "info": {
+    "tesla-spark": {
+      "duration": 0.33668934240362813,
+      "channels": 1,
+      "rate": 44100
+    },
+    "tesla-continuous": {
+      "duration": 0.21768707482993196,
+      "channels": 1,
+      "rate": 44100
+    },
+    "charge": {
+      "duration": 4.133333333333334,
+      "channels": 2,
+      "rate": 44100
+    },
+    "crackle": {
+      "duration": 0.5003174603174603,
+      "channels": 2,
+      "rate": 44100
+    },
+    "boom": {
+      "duration": 6.924172335600907,
+      "channels": 2,
+      "rate": 44100
+    },
+    "powerup": {
+      "duration": 2.1096145124716554,
+      "channels": 2,
+      "rate": 44100
+    },
+    "turbo": {
+      "duration": 6.413854875283446,
+      "channels": 2,
+      "rate": 44100
+    },
+    "thunder": {
+      "duration": 22.943083900226757,
+      "channels": 1,
+      "rate": 44100
+    }
+  },
+  "thunderStart": 0.520702947845805
+}

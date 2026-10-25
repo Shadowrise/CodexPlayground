@@ -1,0 +1,795 @@
+{
+  "R": {
+    "drawMs": 1200,
+    "openMs": 5000,
+    "pullMs": 2400,
+    "sweepMs": 9000,
+    "breakMs": 1400,
+    "strikeMs": 800,
+    "retreatMs": 1500,
+    "orbit": 20.5,
+    "starSpeed": 0.08,
+    "domeRadius": 5.2,
+    "planetOrbit": 22.5,
+    "planetRadius": 19,
+    "starHeight": 181.25
+  },
+  "frames": [
+    {
+      "stage": "cosmic-star-draw",
+      "elapsed": 649.9999999984866,
+      "since": 1001000,
+      "until": 1002200,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 131,
+      "triangles": 424162,
+      "marker": false,
+      "dome": false,
+      "activated": false,
+      "star": [
+        0,
+        181.25,
+        20.5
+      ],
+      "planet": [
+        -327.3470736572454,
+        110,
+        -149.81286115697128
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/01-star-pull.png",
+      "label": "Синие лучи вытягивают фоновую звёздочку"
+    },
+    {
+      "stage": "cosmic-star-open",
+      "elapsed": 1799.999999995809,
+      "since": 1002200,
+      "until": 1007200,
+      "yaw": 0.03566862810399383,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 134,
+      "triangles": 424900,
+      "marker": true,
+      "dome": false,
+      "activated": false,
+      "star": [
+        0.983622187519758,
+        181.25,
+        20.476388533924112
+      ],
+      "planet": [
+        -327.3470736572454,
+        110,
+        -149.81286115697128
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/02-green-target.png",
+      "label": "Пять секунд · зелёная стрелка и кольцо"
+    },
+    {
+      "stage": "cosmic-star-open",
+      "elapsed": 4583.333333322662,
+      "since": 1002200,
+      "until": 1007200,
+      "yaw": 0.25798889075883497,
+      "height": 180,
+      "radius": 23.30337652151949,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.376220065724777,
+      "glError": 0,
+      "drawCalls": 127,
+      "triangles": 417138,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        5.481164771602339,
+        181.25,
+        19.753653655629012
+      ],
+      "planet": [
+        -327.3470736572454,
+        110,
+        -149.81286115697128
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/03-shared-dome.png",
+      "label": "Удар Q · общий купол движется вместе со звездой"
+    },
+    {
+      "stage": "cosmic-planet-draw",
+      "elapsed": 7448,
+      "since": 1007200,
+      "until": 1009600,
+      "yaw": 0.4871556960408229,
+      "height": 180,
+      "radius": 20.488557511489926,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.376618265365638,
+      "glError": 0,
+      "drawCalls": 130,
+      "triangles": 418098,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        9.825344944794182,
+        181.25,
+        17.992014804234888
+      ],
+      "planet": [
+        108.22417573060125,
+        148.294026368,
+        -222.2788007518627
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/04-planet-pull.png",
+      "label": "Огромная планета притягивается из фона"
+    },
+    {
+      "stage": "cosmic-planet-sweep",
+      "elapsed": 8900,
+      "since": 1009600,
+      "until": 1018600,
+      "yaw": 0.6033153556766105,
+      "height": 180,
+      "radius": 20.47810684351925,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.378836325836382,
+      "glError": 0,
+      "drawCalls": 130,
+      "triangles": 418098,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        11.844387645897099,
+        181.25,
+        16.73201964180416
+      ],
+      "planet": [
+        20.976384892459652,
+        181.25,
+        -8.138874421158647
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/05-roll-start.png",
+      "label": "Планета справа от движущегося купола"
+    },
+    {
+      "stage": "cosmic-planet-sweep",
+      "elapsed": 13099.999999990221,
+      "since": 1009600,
+      "until": 1018600,
+      "yaw": 0.9393222240728804,
+      "height": 180,
+      "radius": 20.477209724437355,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.376200416902044,
+      "glError": 0,
+      "drawCalls": 114,
+      "triangles": 403624,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        16.698833488916964,
+        181.25,
+        11.891129471560946
+      ],
+      "planet": [
+        -18.327987975585366,
+        181.25,
+        -13.05123966398588
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/06-roll-middle.png",
+      "label": "Прокатывание против часовой стрелки"
+    },
+    {
+      "stage": "cosmic-planet-sweep",
+      "elapsed": 17499.999999979977,
+      "since": 1009600,
+      "until": 1018600,
+      "yaw": 1.2913222240720614,
+      "height": 180,
+      "radius": 20.47716501272999,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.376208937602183,
+      "glError": 0,
+      "drawCalls": 107,
+      "triangles": 393542,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        19.774719623166273,
+        181.25,
+        5.404670556579993
+      ],
+      "planet": [
+        1.4747523665558098,
+        181.25,
+        22.45161698981474
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/07-roll-end.png",
+      "label": "Планета подходит к другой стороне купола"
+    },
+    {
+      "stage": "cosmic-planet-break",
+      "elapsed": 17930,
+      "since": 1018600,
+      "until": 1020000,
+      "yaw": 1.3257122803704735,
+      "height": 180,
+      "radius": 20.47712127885368,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.377286821331706,
+      "glError": 0,
+      "drawCalls": 127,
+      "triangles": 387686,
+      "marker": false,
+      "dome": true,
+      "activated": true,
+      "star": [
+        19.948904471630325,
+        181.25,
+        4.721356836945039
+      ],
+      "planet": [
+        3.2120184563412173,
+        181.25,
+        22.26955180141988
+      ],
+      "chunks": true,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/08-planet-shatter.png",
+      "label": "Планета разбивается о купол"
+    },
+    {
+      "stage": "cosmic-star-strike",
+      "elapsed": 19400,
+      "since": 1020000,
+      "until": 1020800,
+      "yaw": 1.4433118730744685,
+      "height": 180,
+      "radius": 20.477164910947796,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.379679311278636,
+      "glError": 0,
+      "drawCalls": 96,
+      "triangles": 367598,
+      "marker": false,
+      "dome": false,
+      "activated": true,
+      "star": [
+        20.365071757977105,
+        181.25,
+        2.348159341365761
+      ],
+      "planet": [
+        5.802700326273026,
+        181.25,
+        21.738874601125765
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/09-star-counter.png",
+      "label": "Звезда летит в Метакнайта"
+    },
+    {
+      "stage": "cosmic-star-retreat",
+      "elapsed": 20299.999999997905,
+      "since": 1020800,
+      "until": 1022300,
+      "yaw": 1.5153221773223695,
+      "height": 180,
+      "radius": 20.477222427784824,
+      "bossHeight": 180,
+      "hp": 5,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.376216363307385,
+      "glError": 0,
+      "drawCalls": 97,
+      "triangles": 367774,
+      "marker": false,
+      "dome": false,
+      "activated": true,
+      "star": [
+        20.481229727846895,
+        181.25,
+        0.8770569167166917
+      ],
+      "planet": [
+        6.495254867293579,
+        181.25,
+        21.542090525501443
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/10-star-return.png",
+      "label": "Попадание · звёздочка возвращается на фон"
+    },
+    {
+      "stage": "cosmic-descent",
+      "elapsed": 21300,
+      "since": 1064666.6666666144,
+      "until": 1067666.6666666144,
+      "yaw": 1.4407202747251169,
+      "height": 90,
+      "radius": 20.47720291838984,
+      "bossHeight": 90,
+      "hp": 0,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.37570075129318,
+      "glError": 0,
+      "drawCalls": 106,
+      "triangles": 380370,
+      "marker": false,
+      "dome": false,
+      "activated": true,
+      "star": [
+        20.48581447498655,
+        181.25,
+        -0.7624993747089298
+      ],
+      "planet": [
+        6.466526314993554,
+        181.25,
+        21.55073171420163
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/11-descent.png",
+      "label": "Последний удар · все возвращаются на арену"
+    },
+    {
+      "stage": "won",
+      "elapsed": 22900,
+      "since": 1067666.6666666144,
+      "until": 1000001067666.6666,
+      "yaw": -3.141592653589793,
+      "height": 0,
+      "radius": 20.47720291838984,
+      "bossHeight": 0,
+      "hp": 0,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 14.323944878270511,
+      "glError": 0,
+      "drawCalls": 85,
+      "triangles": 355694,
+      "marker": false,
+      "dome": false,
+      "activated": true,
+      "star": [
+        20.22089006230801,
+        181.25,
+        -3.3712913086906773
+      ],
+      "planet": [
+        6.466526314993554,
+        181.25,
+        21.55073171420163
+      ],
+      "chunks": false,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-refuge-2026-10-25\\screenshots/12-dazed-finish.png",
+      "label": "Бой окончен · Метакнайт dazed на арене"
+    }
+  ],
+  "approach": {
+    "stage": "cosmic-star-open",
+    "elapsed": 4066.666666657198,
+    "since": 1002200,
+    "until": 1007200,
+    "yaw": 0.21665555783595117,
+    "height": 180,
+    "radius": 23.30337652151949,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.381344757179589,
+    "glError": 0,
+    "drawCalls": 131,
+    "triangles": 414596,
+    "marker": true,
+    "dome": false,
+    "activated": false,
+    "star": [
+      4.660231420812618,
+      181.25,
+      19.963272354613377
+    ],
+    "planet": [
+      -327.3470736572454,
+      110,
+      -149.81286115697128
+    ],
+    "chunks": false,
+    "distance": 3.5933977564829336
+  },
+  "activated": {
+    "stage": "cosmic-star-open",
+    "elapsed": 4583.333333322662,
+    "since": 1002200,
+    "until": 1007200,
+    "yaw": 0.25798889075883497,
+    "height": 180,
+    "radius": 23.30337652151949,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.376220065724777,
+    "glError": 0,
+    "drawCalls": 127,
+    "triangles": 417138,
+    "marker": false,
+    "dome": true,
+    "activated": true,
+    "star": [
+      5.481164771602339,
+      181.25,
+      19.753653655629012
+    ],
+    "planet": [
+      -327.3470736572454,
+      110,
+      -149.81286115697128
+    ],
+    "chunks": false
+  },
+  "repeat": {
+    "stage": "cosmic-spin-warn",
+    "elapsed": 21349.99999999546,
+    "since": 1022300,
+    "until": 1025100,
+    "yaw": 1.574064142441868,
+    "height": 180,
+    "radius": 20.477222427784824,
+    "bossHeight": 180,
+    "hp": 5,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.379282334560298,
+    "glError": 0,
+    "drawCalls": 107,
+    "triangles": 387274,
+    "marker": false,
+    "dome": false,
+    "activated": false,
+    "planet": [
+      6.495254867293579,
+      181.25,
+      21.542090525501443
+    ],
+    "chunks": false
+  },
+  "failed": {
+    "stage": "cosmic-spin-warn",
+    "elapsed": 20516.666666618898,
+    "since": 1043849.9999999955,
+    "until": 1046649.9999999955,
+    "yaw": 1.4325626369514919,
+    "height": 180,
+    "radius": 36.1,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 4,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.375699563140854,
+    "glError": 0,
+    "drawCalls": 128,
+    "triangles": 423266,
+    "marker": false,
+    "dome": false,
+    "activated": false,
+    "planet": [
+      -331.46052119110254,
+      110,
+      -380.4774817959186
+    ],
+    "chunks": false
+  },
+  "descent": {
+    "stage": "cosmic-descent",
+    "elapsed": 19850,
+    "since": 1064666.6666666144,
+    "until": 1067666.6666666144,
+    "yaw": 1.4482669087160334,
+    "height": 179.99187361111112,
+    "radius": 20.47720291838984,
+    "bossHeight": 179.99187361111112,
+    "hp": 0,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.42987846064358,
+    "glError": 0,
+    "drawCalls": 103,
+    "triangles": 369862,
+    "marker": false,
+    "dome": false,
+    "activated": true,
+    "star": [
+      20.436392094830843,
+      181.25,
+      1.61365366368852
+    ],
+    "planet": [
+      6.466526314993554,
+      181.25,
+      21.55073171420163
+    ],
+    "chunks": false
+  },
+  "won": {
+    "stage": "won",
+    "elapsed": 22900,
+    "since": 1067666.6666666144,
+    "until": 1000001067666.6666,
+    "yaw": -3.141592653589793,
+    "height": 0,
+    "radius": 20.47720291838984,
+    "bossHeight": 0,
+    "hp": 0,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 14.323944878270511,
+    "glError": 0,
+    "drawCalls": 85,
+    "triangles": 355694,
+    "marker": false,
+    "dome": false,
+    "activated": true,
+    "star": [
+      20.22089006230801,
+      181.25,
+      -3.3712913086906773
+    ],
+    "planet": [
+      6.466526314993554,
+      181.25,
+      21.55073171420163
+    ],
+    "chunks": false
+  },
+  "video": {
+    "elapsed": 21.289799999952127,
+    "wallSeconds": 21.681299999952316,
+    "medianMs": 13.30000000000291,
+    "p95Ms": 13.400000000001455,
+    "hp": 5,
+    "life": 5,
+    "height": 180,
+    "stages": [
+      "cosmic-star-draw",
+      "cosmic-star-open",
+      "cosmic-planet-draw",
+      "cosmic-planet-sweep",
+      "cosmic-planet-break",
+      "cosmic-star-strike",
+      "cosmic-star-retreat"
+    ],
+    "hits": 1,
+    "pressed": true
+  },
+  "errors": [],
+  "cues": [
+    {
+      "kind": "cosmic-refuge-call",
+      "at": 1001000
+    },
+    {
+      "kind": "cosmic-refuge-shield",
+      "at": 1005233.3333333235
+    },
+    {
+      "kind": "cosmic-refuge-pull",
+      "at": 1007216.6666666522
+    },
+    {
+      "kind": "cosmic-refuge-roll",
+      "at": 1009614.666666664
+    },
+    {
+      "kind": "cosmic-refuge-break",
+      "at": 1018616.6666666464
+    },
+    {
+      "kind": "hit",
+      "at": 1020816.6666666657
+    },
+    {
+      "kind": "warn",
+      "at": 1022316.6666666622
+    },
+    {
+      "kind": "cosmic-refuge-call",
+      "at": 1023349.9999999955
+    },
+    {
+      "kind": "cosmic-refuge-pull",
+      "at": 1029566.6666666477
+    },
+    {
+      "kind": "cosmic-refuge-roll",
+      "at": 1031966.6666666421
+    },
+    {
+      "kind": "hurt",
+      "at": 1039666.6666666241
+    },
+    {
+      "kind": "warn",
+      "at": 1043866.6666666144
+    },
+    {
+      "kind": "cosmic-refuge-call",
+      "at": 1044866.6666666144
+    },
+    {
+      "kind": "hit",
+      "at": 1044866.6666666144
+    },
+    {
+      "kind": "cosmic-refuge-shield",
+      "at": 1048783.3333332734
+    },
+    {
+      "kind": "cosmic-refuge-pull",
+      "at": 1051066.6666666174
+    },
+    {
+      "kind": "cosmic-refuge-roll",
+      "at": 1053466.6666666286
+    },
+    {
+      "kind": "cosmic-refuge-break",
+      "at": 1062466.6666666705
+    },
+    {
+      "kind": "hit",
+      "at": 1064666.6666666807
+    },
+    {
+      "kind": "win",
+      "at": 1067666.6666666213
+    },
+    {
+      "kind": "cosmic-refuge-call",
+      "at": 1068766.6666666144
+    },
+    {
+      "kind": "cosmic-refuge-shield",
+      "at": 1072310.733333231
+    },
+    {
+      "kind": "cosmic-refuge-pull",
+      "at": 1074977.8333332276
+    },
+    {
+      "kind": "cosmic-refuge-roll",
+      "at": 1077378.1333332255
+    },
+    {
+      "kind": "cosmic-refuge-break",
+      "at": 1086379.333333216
+    },
+    {
+      "kind": "hit",
+      "at": 1088579.533333213
+    },
+    {
+      "kind": "warn",
+      "at": 1090073.133333211
+    }
+  ]
+}

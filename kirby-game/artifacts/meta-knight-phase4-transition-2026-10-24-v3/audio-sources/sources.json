@@ -1,0 +1,82 @@
+[
+  {
+    "name": "tesla-spark",
+    "file": "spark.wav",
+    "author": "Brian MacIntosh (BMacZero)",
+    "page": "https://opengameart.org/content/electricity-sound-effects-0",
+    "url": "https://opengameart.org/sites/default/files/spark.wav",
+    "sha256": "9a3d987bdf7f405570aa015f6da42596ce84c5073c18c0561be7cd3ae401bc97",
+    "license": "CC0-1.0",
+    "bytes": 29740
+  },
+  {
+    "name": "tesla-continuous",
+    "file": "continuousspark.wav",
+    "author": "Brian MacIntosh (BMacZero)",
+    "page": "https://opengameart.org/content/electricity-sound-effects-0",
+    "url": "https://opengameart.org/sites/default/files/continuousspark.wav",
+    "sha256": "4ec24045b4fb6a88b958d00f16cc39b8aa992cd6e6a5edb4ecb0f34b36ddb18b",
+    "license": "CC0-1.0",
+    "bytes": 19244
+  },
+  {
+    "name": "charge",
+    "file": "charge.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/charge.wav",
+    "sha256": "397e4a4da793558cc541d9fce3da5791cb21dddadf31c02442e67f3a58cbe1c8",
+    "license": "CC0-1.0",
+    "bytes": 729164
+  },
+  {
+    "name": "crackle",
+    "file": "crackleelectricityloop.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/crackleelectricityloop.wav",
+    "sha256": "c872ff9719f9bdf503e5d87fe9b1b128255fe2f9506e3a380ff022b83e0b7be8",
+    "license": "CC0-1.0",
+    "bytes": 88300
+  },
+  {
+    "name": "boom",
+    "file": "deathboom.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/deathboom.wav",
+    "sha256": "fa7943c117f367b205bf808486d249c22e894f19e5641608a1a25c25d6d7ad39",
+    "license": "CC0-1.0",
+    "bytes": 1221468
+  },
+  {
+    "name": "powerup",
+    "file": "powerup.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/powerup.wav",
+    "sha256": "83995e33a847656ec6120e111de27293be962437ff79b7d85ca061ba374bfb4c",
+    "license": "CC0-1.0",
+    "bytes": 372180
+  },
+  {
+    "name": "turbo",
+    "file": "turbo.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/turbo.wav",
+    "sha256": "427067b54b65d2f4c34850e94834cc4e96eb25d44443ee48087110253bfba802",
+    "license": "CC0-1.0",
+    "bytes": 1131448
+  },
+  {
+    "name": "thunder",
+    "file": "thunder.wav",
+    "url": "https://lasonotheque.org/UPLOAD/bwf-fr/2718.wav",
+    "author": "Joseph SARDIN / LaSonotheque",
+    "page": "https://lasonotheque.org/tonnerre-1-s2718.html",
+    "sha256": "d92f7f7395bd1292f46206e7eaaee8b43b37a255d5a260ae68d0d30b0d5fb40c",
+    "license": "CC0-1.0",
+    "bytes": 3306600
+  }
+]

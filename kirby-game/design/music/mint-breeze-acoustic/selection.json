@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-25",
+  "revision": 1,
+  "status": "review_only_not_installed",
+  "track_id": "mint-breeze",
+  "playlist_position": 3,
+  "audio_path": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/mint-breeze-acoustic-v1/mint-breeze-acoustic.wav",
+  "midi_path": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/mint-breeze-acoustic-v1/mint-breeze-acoustic.mid",
+  "report_path": "C:/Users/VE/.codex/visualizations/2026/10/21/01a15fcd-2df2-7871-91c0-7c77a3f55601/mint-breeze-acoustic-v1/render-report.json",
+  "renderer": "arrange_mint.py",
+  "notes": "Faithful track-3 source form with sampled soft flute, softened nylon guitars, marimba, acoustic bass, quiet strings and brushed drums. No added introduction, piano part, new rhythm or rewritten melody. All 1779 original events and 307 main melody pitches/onsets preserved. Game audio remains unchanged until the user chooses this version."
+}

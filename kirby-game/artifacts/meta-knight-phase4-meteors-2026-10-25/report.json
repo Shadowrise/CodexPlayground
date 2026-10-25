@@ -1,0 +1,477 @@
+{
+  "frames": [
+    {
+      "stage": "cosmic-meteor-draw",
+      "elapsed": 549.9999999987194,
+      "since": 1000000,
+      "until": 1001500,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 136,
+      "triangles": 438502,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/01-attraction.png",
+      "label": "Метеорит притягивается из космоса"
+    },
+    {
+      "stage": "cosmic-meteor-draw",
+      "elapsed": 1099.9999999974389,
+      "since": 1000000,
+      "until": 1001500,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 136,
+      "triangles": 438502,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/02-overhead.png",
+      "label": "Меч поднят · метеорит рядом"
+    },
+    {
+      "stage": "cosmic-meteor-draw",
+      "elapsed": 1490,
+      "since": 1000000,
+      "until": 1001500,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 136,
+      "triangles": 438502,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/03-side-windup.png",
+      "label": "Боковой замах · прицел зафиксирован"
+    },
+    {
+      "stage": "cosmic-meteor-cast",
+      "elapsed": 2010,
+      "since": 1001500,
+      "until": 1003752.6051484824,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 132,
+      "triangles": 437622,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/04-curved-throw.png",
+      "label": "Метеорит летит по дуге"
+    },
+    {
+      "glError": 0,
+      "meteor": [
+        12.800576841756127,
+        184.33608320192164,
+        9.960199152268963
+      ],
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/05-meteor-closeup.png",
+      "label": "Крупно · камень, трещины, огонь и шлейф"
+    },
+    {
+      "stage": "cosmic-meteor-cast",
+      "elapsed": 2837.077700586524,
+      "since": 1001500,
+      "until": 1003752.6051484824,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 132,
+      "triangles": 437622,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/06-incoming.png",
+      "label": "Быстрый подлёт · момент для отражения"
+    },
+    {
+      "stage": "cosmic-meteor-return",
+      "elapsed": 2983.744367252686,
+      "since": 1002850.4110339197,
+      "until": 1003500.4110339197,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 133,
+      "triangles": 437798,
+      "reflects": 1,
+      "index": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/07-reflected.png",
+      "label": "Удар Q · метеорит отражён"
+    },
+    {
+      "stage": "cosmic-hit",
+      "elapsed": 3580.411033919663,
+      "since": 1003500.4110339197,
+      "until": 1004500.4110339197,
+      "yaw": 0,
+      "height": 180,
+      "radius": 35,
+      "bossHeight": 180,
+      "hp": 5,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 135,
+      "triangles": 425390,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-phase4-meteors-2026-10-25\\screenshots/08-impact.png",
+      "label": "Попадание в Метакнайта · здоровье 6 → 5"
+    }
+  ],
+  "close": {
+    "glError": 0,
+    "meteor": [
+      12.800576841756127,
+      184.33608320192164,
+      9.960199152268963
+    ]
+  },
+  "unreflected": {
+    "stage": "cosmic-spin-warn",
+    "elapsed": 13399.9999999688,
+    "since": 1013386.1932056565,
+    "until": 1016186.1932056565,
+    "yaw": 0,
+    "height": 180,
+    "radius": 38.300000000000004,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 2,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.375699563140854,
+    "glError": 0,
+    "drawCalls": 128,
+    "triangles": 423266,
+    "indexes": [
+      0,
+      1,
+      2
+    ],
+    "frames": 803
+  },
+  "reflected": {
+    "stage": "cosmic-meteor-return",
+    "elapsed": 2983.744367252686,
+    "since": 1002850.4110339197,
+    "until": 1003500.4110339197,
+    "yaw": 0,
+    "height": 180,
+    "radius": 35,
+    "bossHeight": 180,
+    "hp": 6,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.375699563140854,
+    "glError": 0,
+    "drawCalls": 133,
+    "triangles": 437798,
+    "reflects": 1,
+    "index": 0
+  },
+  "impact": {
+    "stage": "cosmic-hit",
+    "elapsed": 3580.411033919663,
+    "since": 1003500.4110339197,
+    "until": 1004500.4110339197,
+    "yaw": 0,
+    "height": 180,
+    "radius": 35,
+    "bossHeight": 180,
+    "hp": 5,
+    "life": 5,
+    "orbs": 0,
+    "bolts": 0,
+    "green": false,
+    "arrowY": 0,
+    "window": -1,
+    "cameraAngle": 10.375699563140854,
+    "glError": 0,
+    "drawCalls": 135,
+    "triangles": 425390
+  },
+  "commands": [
+    {
+      "command": "/phase 4-1",
+      "stage": "cosmic-spin-warn",
+      "elapsed": 3597.077700586291,
+      "since": 1003580.4110339197,
+      "until": 1006380.4110339197,
+      "yaw": 0,
+      "height": 180,
+      "radius": 41,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 129,
+      "triangles": 423442
+    },
+    {
+      "command": "/phase 4-2",
+      "stage": "cosmic-meteor-draw",
+      "elapsed": 3613.744367252919,
+      "since": 1003597.0777005863,
+      "until": 1005097.0777005863,
+      "yaw": 0,
+      "height": 180,
+      "radius": 41,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 135,
+      "triangles": 437458
+    },
+    {
+      "command": "/phase 4-2",
+      "stage": "cosmic-meteor-draw",
+      "elapsed": 3630.4110339195468,
+      "since": 1003613.7443672529,
+      "until": 1005113.7443672529,
+      "yaw": 0,
+      "height": 180,
+      "radius": 41,
+      "bossHeight": 180,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375699563140854,
+      "glError": 0,
+      "drawCalls": 135,
+      "triangles": 437458
+    },
+    {
+      "command": "/phase 4",
+      "stage": "transition",
+      "elapsed": 3647.0777005861746,
+      "since": 1003630.4110339195,
+      "until": 1005130.4110339195,
+      "yaw": -3.141592653589793,
+      "height": 0,
+      "radius": 41,
+      "bossHeight": 0,
+      "hp": 6,
+      "life": 5,
+      "orbs": 0,
+      "bolts": 0,
+      "green": false,
+      "arrowY": 0,
+      "window": -1,
+      "cameraAngle": 10.375702186532436,
+      "glError": 0,
+      "drawCalls": 102,
+      "triangles": 389876
+    }
+  ],
+  "video": {
+    "elapsed": 12.942767999999914,
+    "wallSeconds": 13.126299999952316,
+    "medianMs": 13.30000000000291,
+    "p95Ms": 13.400000000001455,
+    "hp": 5,
+    "life": 5,
+    "reflects": 1,
+    "height": 180,
+    "throws": [
+      0,
+      1,
+      2
+    ],
+    "pressed": true
+  },
+  "errors": [],
+  "cues": [
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1000000
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1001806.6666666659
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1000000
+    },
+    {
+      "kind": "hurt",
+      "at": 1002966.6666666598
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1004416.6666666564
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1006216.6666666522
+    },
+    {
+      "kind": "hurt",
+      "at": 1007383.3333333161
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1008833.3333333128
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1010633.3333333086
+    },
+    {
+      "kind": "hurt",
+      "at": 1011833.3333333058
+    },
+    {
+      "kind": "warn",
+      "at": 1013399.9999999688
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1000000
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1001809.9999999993
+    },
+    {
+      "kind": "cosmic-meteor-reflect",
+      "at": 1002850.4110339197
+    },
+    {
+      "kind": "hit",
+      "at": 1003517.0777005848
+    },
+    {
+      "kind": "cosmic-meteor-impact",
+      "at": 1003517.0777005848
+    },
+    {
+      "kind": "warn",
+      "at": 1003597.0777005863
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1003613.7443672529
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1003630.4110339195
+    },
+    {
+      "kind": "phase",
+      "at": 1003647.0777005862
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1000000
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1004411.6346666759
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1006211.83466668
+    },
+    {
+      "kind": "cosmic-meteor-draw",
+      "at": 1008812.2346666853
+    },
+    {
+      "kind": "cosmic-meteor-throw",
+      "at": 1010612.4346666887
+    },
+    {
+      "kind": "cosmic-meteor-reflect",
+      "at": 1011665.8346666908
+    },
+    {
+      "kind": "hit",
+      "at": 1012319.2346666923
+    },
+    {
+      "kind": "cosmic-meteor-impact",
+      "at": 1012319.2346666923
+    }
+  ]
+}

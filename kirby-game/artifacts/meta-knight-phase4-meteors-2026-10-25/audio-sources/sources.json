@@ -1,0 +1,36 @@
+[
+  {
+    "id": "swish",
+    "path": "artifacts/meta-knight-phase4-meteors-2026-10-25/audio-sources/swishes/swishes/swish-7.wav",
+    "author": "artisticdude",
+    "page": "https://opengameart.org/content/swishes-sound-pack",
+    "url": "https://opengameart.org/sites/default/files/swishes.zip",
+    "sha256": "e6de737a34de16afed094d6170d7679149022f149e0a8356d2f029b0e8f4a4d7",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "fire",
+    "path": "artifacts/meta-knight-phase4-meteors-2026-10-25/audio-sources/fire-1.wav",
+    "author": "AntumDeluge",
+    "page": "https://opengameart.org/content/fire-crackling",
+    "url": "https://opengameart.org/sites/default/files/fire-1.wav",
+    "sha256": "26702de8a195bcbafeae72034861d875a1b7917168a25106f4e1957ecdddf7e5",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "boom",
+    "path": "artifacts/meta-knight-phase4-transition-2026-10-24-v3/audio-sources/boom.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "sha256": "fa7943c117f367b205bf808486d249c22e894f19e5641608a1a25c25d6d7ad39",
+    "license": "CC0-1.0"
+  },
+  {
+    "id": "charge",
+    "path": "artifacts/meta-knight-phase4-transition-2026-10-24-v3/audio-sources/charge.wav",
+    "author": "faxcorp",
+    "page": "https://opengameart.org/content/electricity-game-sound-pack",
+    "sha256": "397e4a4da793558cc541d9fce3da5791cb21dddadf31c02442e67f3a58cbe1c8",
+    "license": "CC0-1.0"
+  }
+]

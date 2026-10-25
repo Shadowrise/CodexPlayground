@@ -1,6 +1,10 @@
 import * as T from 'three';
 import {KNIGHT,knightJumpOpening,type KnightBattle} from './meta-knight-battle';
 import {starOpening,ricochetCurve,ricochetIndex} from './meta-knight-star-assault';
+import {cosmicStage,cosmicCombat,cosmicElapsed,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
+import {COSMIC_SPIN,cosmicSpinFatigue} from './meta-knight-cosmic-spin';
+import {COSMIC_METEOR,cosmicMeteorStage} from './meta-knight-cosmic-meteor';
+import {cosmicRefugeStage,refugePlanetAngle,refugeAngle,refugeContactAngle} from './meta-knight-cosmic-refuge';
 
 const TIP=new T.Vector3(-.315,2.05,0).normalize();
 const BLADE_LENGTH=Math.hypot(.315,2.05);
@@ -12,6 +16,7 @@ export class MetaKnightBattleMotion{
  private armAxis:T.Vector3;private leftAxis:T.Vector3;private q=new T.Quaternion();private parentQ=new T.Quaternion();private axis=new T.Vector3();private hilt=new T.Vector3();private support=new T.Vector3();
  private side=new T.Vector3();private normal=new T.Vector3();private basis=new T.Matrix4();
  private wings:T.Object3D[];private cape:T.Object3D;
+ private fallFrom?:{nodes:{node:T.Object3D;p:T.Vector3;q:T.Quaternion}[];hilt:T.Vector3;direction:T.Vector3};
  constructor(private actor:T.Object3D){
   const node=(name:string)=>{const n=actor.getObjectByName(name);if(!n)throw Error('Missing battle joint: '+name);return n;};
   this.body=node('Body_motion');this.motion=node('MetaKnight_motion');this.arm=node('Right_shoulder');this.left=node('Left_shoulder');this.hand=node('Left_gauntlet');this.wrist=node('Right_gauntlet');this.grip=node('Right_grip');this.feet=['Left','Right'].map(s=>node(s+'_foot_pivot'));
@@ -22,6 +27,26 @@ export class MetaKnightBattleMotion{
  }
  clear(){if(!this.active)return;for(const {node,p,q} of this.poses){node.position.copy(p);node.quaternion.copy(q);}this.active=false;}
  private savePose(){if(this.active)return;for(const pose of this.poses){pose.p.copy(pose.node.position);pose.q.copy(pose.node.quaternion);}this.active=true;}
+ beginCosmicFall(){
+  this.actor.updateWorldMatrix(true,true);const hilt=this.actor.worldToLocal(this.grip.getWorldPosition(new T.Vector3())),blade=this.actor.getObjectByName('Galaxia')!,tip=this.actor.worldToLocal(blade.localToWorld(new T.Vector3(-.315,2.05,0)));
+  this.fallFrom={nodes:this.poses.map(({node})=>({node,p:node.position.clone(),q:node.quaternion.clone()})),hilt,direction:tip.sub(hilt).normalize()};
+ }
+ private cosmicFallPose(s:KnightBattle,f:number){
+  this.savePose();const now=s.since+f*(s.until-s.since),fall=cosmicDescent(s,now)!,clock=fall.elapsed/1000,{release,brace,landed,settle}=fall,blend=easeCosmic(fall.elapsed/500),flail=release*(1-brace);
+  this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);this.body.position.set(0,fall.bodyY,fall.bodyZ);this.body.rotation.set(fall.pitch,.065*Math.sin(clock*7)*flail,fall.roll);
+  this.arm.position.x=.84;this.left.position.x=-.84;this.q.setFromUnitVectors(this.armAxis,this.axis.set(.2,-.25,.8).normalize());this.arm.quaternion.copy(this.q);
+  this.left.rotation.set(-.3+.20*Math.sin(clock*13)*flail,.12*Math.sin(clock*9)*flail,-.85-.25*Math.sin(clock*11)*flail);
+  if(landed)this.left.rotation.set(T.MathUtils.lerp(-.3,-.14,settle),0,T.MathUtils.lerp(-.85,-.24,settle));
+  this.feet.forEach((foot,i)=>{const side=i?1:-1,sway=Math.sin(clock*11+side*.8)*flail;foot.position.set(side*(.48+.055*sway),.52+.085*sway,-.52+.11*Math.cos(clock*8+side)*flail);foot.rotation.set(1.2+.18*sway,side*.10*flail,side*(.08+.05*sway));foot.position.lerp(this.axis.set(side*.44,.26,.35),brace);this.q.setFromEuler(new T.Euler(-.25,0,side*.12));foot.quaternion.slerp(this.q,brace);});
+  this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(T.MathUtils.lerp(.10+.16*Math.sin(clock*17+side)*flail,0,settle),side*T.MathUtils.lerp(.94+.18*Math.sin(clock*14+side)*flail+.14*brace,.92,settle),side*T.MathUtils.lerp(.13+.10*Math.sin(clock*12)*flail,.07,settle));});
+  this.cape.rotation.set(landed?T.MathUtils.lerp(2.05,-.06,settle):T.MathUtils.lerp(.95,2.05,release),.035*Math.sin(clock*9)*flail,.045*Math.sin(clock*16)*flail);
+  if(this.fallFrom&&blend<1)for(const from of this.fallFrom.nodes){from.node.position.lerpVectors(from.p,from.node.position.clone(),blend);this.q.copy(from.node.quaternion);from.node.quaternion.copy(from.q).slerp(this.q,blend);}
+  // Recompute the cape's shoulder hinge after blending; its hem streams upward clear of the boots.
+  this.axis.set(0,.40,-.75);this.support.copy(this.axis).applyQuaternion(this.cape.quaternion);this.cape.position.copy(this.axis).sub(this.support);
+  this.hilt.set(T.MathUtils.lerp(.95,1.05,settle),T.MathUtils.lerp(1.42,1.10,settle),T.MathUtils.lerp(1.4,.95,settle));this.axis.set(T.MathUtils.lerp(.12,.2,settle),T.MathUtils.lerp(-.58,-.42,settle),T.MathUtils.lerp(.81,.885,settle)).normalize();
+  if(this.fallFrom&&blend<1){this.hilt.lerpVectors(this.fallFrom.hilt,this.hilt,blend);this.hilt.z+=.55*Math.sin(blend*Math.PI);this.hilt.y+=.12*Math.sin(blend*Math.PI);this.axis.lerpVectors(this.fallFrom.direction,this.axis,blend).normalize();}
+  this.placeHilt(this.hilt.x,this.hilt.y,this.hilt.z);this.aim(this.axis);
+ }
  applyThrust(extend=1,ricochet=false){
   this.savePose();
   this.body.rotation.set(.18*extend,0,0);this.left.rotation.set(.25,0,-.45);this.arm.position.x=T.MathUtils.lerp(this.arm.position.x,.46,extend);
@@ -48,6 +73,25 @@ export class MetaKnightBattleMotion{
   this.q.setFromUnitVectors(this.leftAxis,this.axis);this.left.quaternion.slerp(this.q,blend);
   this.actor.updateMatrixWorld(true);this.axis.copy(this.support);this.left.worldToLocal(this.axis);this.hand.position.lerp(this.axis,blend);
   this.grip.getWorldQuaternion(this.q);this.left.getWorldQuaternion(this.parentQ).invert();this.q.premultiply(this.parentQ);this.hand.quaternion.slerp(this.q,blend);
+ }
+ private cosmicFeet(clock:number,air:number,ready=0,tired=0,landing=0){
+  this.feet.forEach((foot,i)=>{
+   const side=i?1:-1,sway=Math.sin(clock*3.4+side*.6);
+   // Tuck the boots behind the body, toes down, instead of lifting them into a seated pose.
+   foot.position.set(side*(.47+.05*ready),T.MathUtils.lerp(.25,.49-.07*tired+.018*sway,air),T.MathUtils.lerp(.10,-.58-.04*tired+.018*sway,air));
+   foot.rotation.set(air*(1.45-.27*tired+.025*sway),side*.06*air,side*(.04+.10*ready));
+   if(landing>0){
+    foot.position.lerp(this.axis.set(side*.44,.26,.35),landing);
+    this.q.setFromEuler(new T.Euler(-.25,0,side*.12));foot.quaternion.slerp(this.q,landing);
+   }
+  });
+ }
+ private cosmicCape(clock:number,air:number,ready=0,tired=0){
+  // Stream from the shoulder seam, rather than swinging the hem through the heels.
+  const roll=.025*Math.sin(clock*3.1);this.axis.set(0,.40,-.75);
+  this.cape.rotation.set(-.06,0,roll);this.cape.position.copy(this.axis).applyQuaternion(this.cape.quaternion).lerp(this.axis,air);
+  this.cape.rotation.set(T.MathUtils.lerp(-.06,.90+.10*ready-.10*tired+.045*Math.sin(clock*5),air),air*.025*Math.sin(clock*3.7),roll);
+  this.support.copy(this.axis).applyQuaternion(this.cape.quaternion);this.cape.position.sub(this.support);
  }
  private jumpPose(crouch:number,plunge:number,air:boolean,hold:number,recovery=0,raisedHilt?:number,seat=0){
   // Land just behind the blade so its ground contact remains visible in front.
@@ -81,7 +125,101 @@ export class MetaKnightBattleMotion{
   this.twoHands(hold);
   if(recovery)this.feet.forEach((foot,i)=>{foot.position.z+=(i?.22:-.15)*recovery;foot.rotation.x=-.15*recovery;});
  }
+ private cosmicPose(s:KnightBattle,f:number){
+  this.savePose();
+  const stage=s.stage,elapsed=cosmicElapsed(s,s.since+f*(s.until-s.since)),clock=elapsed/1000;
+  const charge=stage==='cosmic-charge'?easeCosmic(f):1,air=stage==='cosmic-rise'||stage==='cosmic-flight';
+  const settle=stage==='cosmic-flight'?easeCosmic(f*(s.until-s.since)/1600):0;
+  const vertical=Math.sqrt(BLADE_LENGTH**2-.1**2-.4**2),plantedY=vertical-.04,down=Math.PI+Math.atan2(.4,vertical);
+  let hiltX=.1,hiltY=2.45,hiltZ=1.35,turn=0,back=0,crouch=.13,hold=1,hop=0;
+  if(stage==='cosmic-charge'){
+   hiltX=T.MathUtils.lerp(.65,.1,charge);hiltY=T.MathUtils.lerp(1.35,2.45,charge);turn=T.MathUtils.lerp(.55,0,charge);hold=easeCosmic(f/.55);crouch=.13*charge;
+  }else if(stage==='cosmic-strike'){
+   const plunge=easeCosmic((f-.18)/.82);
+   hop=f<.46?1.25*easeCosmic((f-.10)/.36):1.25*(1-easeCosmic((f-.46)/.54));
+   turn=down*plunge;hiltY=T.MathUtils.lerp(2.45,plantedY,plunge)+hop;hiltZ=T.MathUtils.lerp(1.35,.4,plunge)+.65*Math.sin(Math.PI*plunge);back=-1.05*plunge;crouch=.13+.10*plunge+.10*Math.sin(Math.PI*Math.min(1,f/.2))*(1-Math.min(1,f/.2));
+  }else if(stage==='cosmic-surge'){
+   hiltY=plantedY;hiltZ=.4;turn=down;back=-1.05;crouch=.23;
+  }else if(stage==='cosmic-lift'){
+   // Pull the point CLEAR of the floor before reversing. The forward arc never
+   // crosses the mask, even on the first frame after the planted hold.
+   const pull=easeCosmic(f/.48),raise=easeCosmic((f-.36)/.64);
+   hiltY=plantedY+.81*pull;hiltZ=T.MathUtils.lerp(.4,1.35,raise)+.65*Math.sin(Math.PI*raise);turn=down*(1-raise);back=-1.05*(1-raise);crouch=.23*(1-raise)+.03*raise;
+  }else if(air){
+   hiltY=T.MathUtils.lerp(plantedY+.81,1.4,settle);hiltX=T.MathUtils.lerp(.1,.72,settle);hiltZ=1.35;turn=.48*settle;hold=1-settle;crouch=.03;
+  }
+  this.motion.position.set(0,hop,back);this.motion.rotation.set(0,0,0);
+  this.body.position.set(0,1.17-crouch+(air?.012*Math.sin(clock*3.4):.006*Math.sin(clock*5)),0);
+  this.body.rotation.set(.08*charge*(1-settle),0,(air?.018:.006)*Math.sin(clock*2.1));
+  this.arm.position.x=.52;this.left.position.x=-.52;
+  this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.20,.65,.8).normalize());this.arm.quaternion.copy(this.q);
+  this.left.rotation.set(-.28,0,-.62);
+  const tucked=air?(stage==='cosmic-rise'?easeCosmic(f/.22):1):hop*.55;
+  if(air)this.cosmicFeet(clock,tucked);
+  else this.feet.forEach((foot,i)=>{const side=i?1:-1;foot.position.set(side*.47,T.MathUtils.lerp(.25,.59,tucked),T.MathUtils.lerp(.10,-.12,tucked));foot.rotation.set(-.78*tucked,0,side*.04);});
+  this.wings.forEach((wing,i)=>{const side=i?1:-1,spread=T.MathUtils.lerp(.32,.86,charge);wing.rotation.set(-.12+.06*Math.sin(clock*4.2),side*(spread+.11*Math.sin(clock*(air?5:3))),side*.10);});
+  this.cosmicCape(clock,air?(stage==='cosmic-rise'?easeCosmic(f/.12):1):0);
+  this.placeHilt(hiltX,hiltY,hiltZ);
+  const flat=Math.sqrt(1-(.1/BLADE_LENGTH*Math.min(1,turn/down))**2);
+  this.aim(this.axis.set(-.1/BLADE_LENGTH*Math.min(1,turn/down),Math.cos(turn)*flat,Math.sin(turn)*flat));this.twoHands(hold);
+ }
+ private cosmicSpinPose(s:KnightBattle,f:number){
+  this.savePose();
+  const now=s.since+f*(s.until-s.since),clock=cosmicElapsed(s,now)/1000,stage=s.stage;
+  const warning=stage==='cosmic-spin-warn',spin=stage==='cosmic-spin',recover=stage==='cosmic-recover',hit=stage==='cosmic-hit',descending=stage==='cosmic-descent';
+  const ready=warning?easeCosmic(f):recover?1-easeCosmic(f):1;
+  const tired=cosmicSpinFatigue(s,now);
+  const flinch=hit?Math.sin(Math.PI*Math.min(1,(now-s.since)/650))*.16:0;
+  this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);
+  this.body.position.set(0,1.14-.16*tired+.018*Math.sin(clock*(tired>0?4.8:3.4)),0);
+  this.body.rotation.set(.08+.22*tired+flinch,0,(spin?.055:.018)*Math.sin(clock*(spin?7:2.1)));
+  this.arm.position.x=.52;this.left.position.x=-.52;
+  this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.20,-.45*ready+.65*(1-ready),.8).normalize());this.arm.quaternion.copy(this.q);
+  this.left.rotation.set(-.28+.2*tired,0,-.62+.38*tired);
+  const hiltX=T.MathUtils.lerp(.72,0,ready),hiltY=T.MathUtils.lerp(1.4,COSMIC_SPIN.orbHeight/KNIGHT.modelScale,ready),hiltZ=T.MathUtils.lerp(1.35,COSMIC_SPIN.hiltZ,ready);
+  this.placeHilt(T.MathUtils.lerp(hiltX,.72,tired),T.MathUtils.lerp(hiltY,.70,tired),T.MathUtils.lerp(hiltZ,1.30,tired));
+  const turn=T.MathUtils.lerp(T.MathUtils.lerp(.48,Math.PI/2,ready),1.75,tired);
+  this.aim(this.axis.set(0,Math.cos(turn),Math.sin(turn)));this.twoHands(recover?0:ready*(1-tired));
+  this.cosmicFeet(clock,1,ready,tired,descending?easeCosmic((f-.75)/.25):0);
+  this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(-.12+.38*tired+.05*Math.sin(clock*4.8),side*T.MathUtils.lerp(.86+.16*ready,.34,tired)+side*.06*Math.sin(clock*5),side*(.10-.50*tired));});
+  this.cosmicCape(clock,descending?1-easeCosmic((f-.87)/.13):1,ready,tired);
+  if(descending)this.body.rotation.x+=.12;
+ }
+ private cosmicMeteorPose(s:KnightBattle,f:number){
+  this.savePose();const stage=s.stage,elapsed=f*(s.until-s.since),clock=cosmicElapsed(s,s.since+elapsed)/1000;
+  const drawing=stage==='cosmic-meteor-draw',casting=stage==='cosmic-meteor-cast'||stage==='cosmic-meteor-return';
+  const castElapsed=elapsed+(stage==='cosmic-meteor-return'&&s.cosmicMeteor?.returned?s.cosmicMeteor.returned.at-s.cosmicMeteor.at+COSMIC_METEOR.releaseMs:0);
+  const raised=drawing?easeCosmic(f/.45):casting?1:0,wind=drawing?easeCosmic((f-.60)/.40):casting?1:0;
+  const cut=casting?easeCosmic(castElapsed/COSMIC_METEOR.releaseMs):0,relax=casting?easeCosmic((castElapsed-COSMIC_METEOR.releaseMs-120)/650):0;
+  const hold=raised*(1-relax),sweep=Math.sin(Math.PI*cut)*(1-relax);
+  this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);
+  this.body.position.set(0,1.14+.018*Math.sin(clock*3.4),0);this.body.rotation.set(.08+.08*sweep,.10*wind*(1-relax)-.20*sweep,.018*Math.sin(clock*2.1));
+  this.arm.position.x=.52;this.left.position.x=-.52;this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.2,.65,.8).normalize());this.arm.quaternion.copy(this.q);this.left.rotation.set(-.28,0,-.62);
+  let x=T.MathUtils.lerp(.72,.2,raised),y=T.MathUtils.lerp(1.4,2.35,raised),z=T.MathUtils.lerp(1.35,1.45,raised);
+  x=T.MathUtils.lerp(x,1.05,wind);y=T.MathUtils.lerp(y,1.3,wind);
+  const direction=new T.Vector3().lerpVectors(new T.Vector3(0,Math.cos(.48),Math.sin(.48)),new T.Vector3(.08,1,.18),raised).lerp(new T.Vector3(.88,.38,.40),wind);
+  if(casting){x=T.MathUtils.lerp(x,-.65,cut);y=T.MathUtils.lerp(y,1.12,cut);direction.lerp(new T.Vector3(-.82,.06,.57),cut);}
+  x=T.MathUtils.lerp(x,.72,relax);y=T.MathUtils.lerp(y,1.4,relax);z=T.MathUtils.lerp(z,1.35,relax);direction.lerp(new T.Vector3(0,Math.cos(.48),Math.sin(.48)),relax);
+  this.placeHilt(x,y,z);this.aim(this.axis.copy(direction));this.twoHands(hold);
+  this.cosmicFeet(clock,1,.35*hold);this.cosmicCape(clock,1,.35*hold);
+  this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(-.12+.05*Math.sin(clock*4.8),side*(.86+.10*hold+.08*Math.sin(clock*5)),side*(.10+.10*sweep));});
+ }
+ private cosmicRefugePose(s:KnightBattle,f:number){
+  this.savePose();const now=s.since+f*(s.until-s.since),clock=cosmicElapsed(s,now)/1000,stage=s.stage;
+  const raise=stage==='cosmic-star-draw'?easeCosmic(f):stage==='cosmic-star-stun'?1-.55*easeCosmic(f/.25):stage==='cosmic-star-retreat'?(s.cosmicRefuge?.activatedAt!==undefined ? .45 : 1)*(1-easeCosmic(f/.7)):1,rolling=stage==='cosmic-planet-sweep';
+  const turn=rolling?refugePlanetAngle(s,now)-refugeAngle(s,now):stage==='cosmic-planet-draw'?refugeContactAngle*easeCosmic(f):['cosmic-planet-break','cosmic-planet-release','cosmic-star-strike'].includes(stage)?(Math.PI*2-refugeContactAngle)*(1-easeCosmic(f)):0,flinch=stage==='cosmic-star-stun'?Math.sin(Math.PI*Math.min(1,f/.55))*.15:0;
+  this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);this.body.position.set(0,1.14+.018*Math.sin(clock*3.4),0);this.body.rotation.set(.08+flinch,0,.018*Math.sin(clock*2.1));
+  this.arm.position.x=.52;this.left.position.x=-.52;this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.2,.85,.7).normalize());this.arm.quaternion.copy(this.q);this.left.rotation.set(-.28,0,-.62);
+  this.placeHilt(T.MathUtils.lerp(.72,.15,raise),T.MathUtils.lerp(1.4,2.55,raise),T.MathUtils.lerp(1.35,1.40,raise));
+  this.axis.set(Math.sin(turn)*.75*raise,T.MathUtils.lerp(Math.cos(.48),.82,raise),T.MathUtils.lerp(Math.sin(.48),Math.cos(turn)*.75,raise));this.aim(this.axis);this.twoHands(raise);
+  this.cosmicFeet(clock,1,.35*raise);this.cosmicCape(clock,1,.35*raise);this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(-.12+.05*Math.sin(clock*4.8),side*(.86+.14*raise+.07*Math.sin(clock*5)),side*.10);});
+ }
  apply(s:KnightBattle,f:number){
+  if(s.phase===4&&(s.stage==='cosmic-descent'||s.stage==='won')){this.cosmicFallPose(s,f);return;}
+  if(cosmicRefugeStage(s)){this.cosmicRefugePose(s,f);return;}
+  if(cosmicMeteorStage(s)){this.cosmicMeteorPose(s,f);return;}
+  if(cosmicCombat(s)||s.stage==='cosmic-descent'){this.cosmicSpinPose(s,f);return;}
+  if(cosmicStage(s)){this.cosmicPose(s,f);return;}
   const stage=s.stage,elapsed=f*(s.until-s.since),landed=knightJumpOpening(s),impact=stage==='slam',seated=stage==='won'||stage==='stunned'||stage==='crystal-break'||stage==='open',rising=stage==='get-up',charging=stage==='shot-warn'||stage==='shot';
   const warning=stage==='jump-warn'||stage==='dive-warn',air=stage==='jump'||stage==='dive',recover=stage==='wave'&&elapsed<350,dash=stage==='dash'||stage==='dash-warn'||stage==='ricochet'||stage==='ricochet-warn';
   const star=s.pattern==='star'&&!['won','lost','cancelled','stunned','get-up','crystal-break'].includes(stage)||s.phase===3&&stage==='transition';

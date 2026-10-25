@@ -89,5 +89,8 @@ test('forest detail changes crown geometry distances without shortening fruit or
  for(const lod of [crown,fruit])for(const distance of [0,168,336])lod.addLevel(new T.Mesh(new T.SphereGeometry(),new T.MeshBasicMaterial()),distance,.15);
  forest.add(crown,fruit);const detail=new ForestDetail([forest]);assert.deepEqual(crown.levels.map(l=>l.distance),[0,80,180]);assert.deepEqual(fruit.levels.map(l=>l.distance),[0,168,336]);
  detail.setEnabled(false);assert.deepEqual(crown.levels.map(l=>l.distance),[0,168,336]);
- assert.equal(parseRenderScale('1'),1);assert.equal(parseRenderScale('1.25'),1.25);assert.equal(parseRenderScale('0.1'),1.25);
+ for(const mobile of [false,true]){
+  for(const value of [null,'','bad','0.1','Infinity'])assert.equal(parseRenderScale(value,mobile),mobile?1:1.25);
+  assert.equal(parseRenderScale('1',mobile),1);assert.equal(parseRenderScale('1.25',mobile),1.25);
+ }
 });

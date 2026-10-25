@@ -1,7 +1,17 @@
-/** Original layered duel effects. No downloads; cached stereo PCM on the sound bus. */
-export type KnightSound='count'|'start'|'warn'|'slash'|'dash'|'thrust'|'slam'|'shot'|'reflect'|'hit'|'hurt'|'phase'|'win'|'crystal'|'constellation'|'shield'|'wave'|'shatter';
+/** Generated duel effects, also used as a fallback for sampled cosmic cues. */
+import {cosmicSound,isCosmicSound,type CosmicSound} from './meta-knight-cosmic-sounds';
+import {cosmicSpinSound,isCosmicSpinSound,type CosmicSpinSound} from './meta-knight-cosmic-spin-sounds';
+import {meteorSound,isMeteorSound,type MeteorSound} from './meta-knight-cosmic-meteor-sounds';
+import {refugeSound,isRefugeSound,type RefugeSound} from './meta-knight-cosmic-refuge-sounds';
+import {finaleSound,isFinaleSound,type FinaleSound} from './meta-knight-cosmic-finale-sounds';
+export type KnightSound=CosmicSound|CosmicSpinSound|MeteorSound|RefugeSound|FinaleSound|'count'|'start'|'warn'|'slash'|'dash'|'thrust'|'slam'|'shot'|'reflect'|'hit'|'hurt'|'phase'|'win'|'crystal'|'constellation'|'shield'|'wave'|'shatter';
 export const KNIGHT_SOUND_RATE=44100;
 export function knightSound(kind:KnightSound,rate=KNIGHT_SOUND_RATE){
+ if(isCosmicSound(kind))return cosmicSound(kind,rate);
+ if(isCosmicSpinSound(kind))return cosmicSpinSound(kind,rate);
+ if(isMeteorSound(kind))return meteorSound(kind,rate);
+ if(isRefugeSound(kind))return refugeSound(kind,rate);
+ if(isFinaleSound(kind))return finaleSound(kind,rate);
  const duration={count:.24,start:1.35,warn:.85,slash:.6,dash:.9,thrust:1.35,slam:1.25,shot:1,reflect:1.2,hit:.8,hurt:.7,phase:1.8,win:3,crystal:1.4,constellation:1.8,shield:1.6,wave:1.2,shatter:1.5}[kind],n=Math.ceil(rate*duration);
  const left=new Float32Array(n),right=new Float32Array(n);let seed=907+kind.length*311,low=0,slow=0,phase=0;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296*2-1;};

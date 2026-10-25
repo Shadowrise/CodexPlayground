@@ -86,6 +86,30 @@ export function createWaterSurface({flow=false,opacity=1}:{flow?:boolean;opacity
    // Water's normal-incidence reflectance (IOR 1.333), rather than glass's .04.
    material.specularColor=vec3(.0204);
   `);
+  // The standard isotropic GGX lobe spreads the moon across most of the water
+  // at grazing angles. Replace only its direct specular term; the existing
+  // celestial light, shadow cascades and diffuse lighting remain in use.
+  shader.fragmentShader=shader.fragmentShader.replace('#include <lights_physical_pars_fragment>',T.ShaderChunk.lights_physical_pars_fragment.replace(
+   'reflectedLight.directSpecular += irradiance * BRDF_GGX( directLight.direction, geometryViewDir, geometryNormal, material );',`
+    vec3 waterHalf=normalize(directLight.direction+geometryViewDir);
+    vec3 waterAcross=cross(geometryNormal,directLight.direction);
+    if(dot(waterAcross,waterAcross)<.0001){
+     waterAcross=cross(geometryNormal,abs(geometryNormal.y)<.9?vec3(0.,1.,0.):vec3(1.,0.,0.));
+    }
+    waterAcross=normalize(waterAcross);
+    vec3 waterAlong=cross(waterAcross,geometryNormal);
+    vec2 waterHalfSlope=vec2(dot(waterHalf,waterAcross),dot(waterHalf,waterAlong))/max(.05,dot(waterHalf,geometryNormal));
+    // Narrow across the light, longer towards it: a trail of wave glints.
+    // Pixel-footprint filtering fades distant glints instead of widening them
+    // into a luminous sheet. All detail comes from the two existing reads.
+    vec2 waterGlintSize=vec2(.024,.24)*(.8+.4*material.roughness);
+    vec2 waterFilteredSize=max(waterGlintSize,fwidth(waterHalfSlope));
+    vec2 waterGlintSlope=waterHalfSlope/waterFilteredSize;
+    float waterTrail=1./(1.+dot(waterGlintSlope,waterGlintSlope));
+    waterTrail*=waterTrail*(waterGlintSize.x*waterGlintSize.y)/(waterFilteredSize.x*waterFilteredSize.y);
+    vec3 waterLightFresnel=min(vec3(.2),F_Schlick(vec3(.0204),.22,saturate(dot(geometryViewDir,waterHalf)))*8.);
+    reflectedLight.directSpecular+=irradiance*waterLightFresnel*waterTrail;
+   `));
   shader.fragmentShader=shader.fragmentShader.replace('#include <lights_fragment_end>',`
    #include <lights_fragment_end>
    #ifdef USE_LIGHT_PROBES
@@ -107,6 +131,6 @@ export function createWaterSurface({flow=false,opacity=1}:{flow?:boolean;opacity
    #endif
   `);
  };
- material.customProgramCacheKey=()=> 'packed-water-ripples-v5-'+(flow?'flow':'surface');
+ material.customProgramCacheKey=()=> 'packed-water-ripples-v6-'+(flow?'flow':'surface');
  return {texture,material,phase};
 }

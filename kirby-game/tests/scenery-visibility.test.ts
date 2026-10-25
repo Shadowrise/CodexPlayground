@@ -33,7 +33,9 @@ test('an offscreen mesh parent cannot hide a visible child outside its own geome
  assert(parent.visible&&child.visible);
 });
 
-test('only supported saved distances are accepted',()=>{
- assert.equal(parseViewDistance(null),360);assert.equal(parseViewDistance('bad'),360);assert.equal(parseViewDistance('-1'),360);assert.equal(parseViewDistance('Infinity'),360);
- for(const d of [240,360,750])assert.equal(parseViewDistance(String(d)),d);
+test('distance defaults depend on the device and supported saved distances take precedence',()=>{
+ for(const mobile of [false,true]){
+  for(const value of [null,'','bad','-1','Infinity'])assert.equal(parseViewDistance(value,mobile),mobile?240:750);
+  for(const d of [240,360,750])assert.equal(parseViewDistance(String(d),mobile),d);
+ }
 });

@@ -51,6 +51,32 @@ test('short taps, interruption, swimming and eating cannot arm a delayed dash',(
  }
 });
 
+test('holding Space dashes in a locked flight plane, keeps altitude and cannot repeat until released',()=>{
+ for(const index of [0,1,2])for(const fps of [30,60,120]){
+  const c=create(index);c.actor.position.y=c.surfaceY=180;c.yaw=.7;c.actor.rotation.y=.7;c.setActivity('Fly');
+  const origin=c.actor.position.clone(),input={...idle,jump:false,jumpPressed:false,dashHeld:true};
+  const step=(frames:number,held:boolean)=>{for(let i=0;i<frames;i++){
+   c.flight.holdPlane();c.surfaceY=c.actor.position.y=180;c.update(1/fps,{...input,dashHeld:held});
+   c.flight.holdPlane();c.surfaceY=c.actor.position.y=180;assert(c.flight.active);assert.equal(c.actor.position.y,180);
+  }};
+  step(1,false);step(Math.round(.5*fps),true);assert.equal(c.state,'Dash');assert(c.actor.position.distanceTo(origin)>0);
+  step(Math.round(.5*fps),true);assert(!c.playerDash.active);assert.equal(c.state,'Fly');assert(Math.abs(c.actor.position.distanceTo(origin)-12)<1e-7);
+  step(6*fps,true);assert(!c.playerDash.active);assert.equal(c.playerDash.cooldown,0);assert(Math.abs(c.actor.position.distanceTo(origin)-12)<1e-7);
+  step(1,false);step(Math.round(.5*fps),true);assert.equal(c.state,'Dash');disposeActor(c);
+ }
+});
+
+test('the cosmic movement multiplier doubles planar flight for one input frame without changing world movement or the Space dash',()=>{
+ for(const index of [0,1,2]){
+  const c=create(index);c.beginDuel();c.actor.position.y=c.surfaceY=180;c.setActivity('Fly');
+  const step=(frames:number,multiplier?:number)=>{for(let i=0;i<frames;i++){c.flight.holdPlane();c.update(1/60,{...idle,forward:true,movementMultiplier:multiplier});c.actor.position.y=180;}};
+  step(60);const normal=c.actor.position.z;step(60,2);const cosmic=c.actor.position.z-normal;step(60);const restored=c.actor.position.z-normal-cosmic;
+  assert(Math.abs(normal-2.72)<1e-7);assert(Math.abs(cosmic-normal*2)<1e-7);assert(Math.abs(restored-normal)<1e-7,'no persistent movement modifier leaks to the next scene');
+  const before=c.actor.position.clone();c.update(1/60,{...idle,dashHeld:false,movementMultiplier:2});for(let i=0;i<60;i++){c.flight.holdPlane();c.update(1/60,{...idle,dashHeld:true,movementMultiplier:2});c.actor.position.y=180;}
+  assert(Math.abs(c.actor.position.distanceTo(before)-12)<1e-7,'the existing twelve-metre Space dash stays intact');disposeActor(c);
+ }
+});
+
 test('bird burst accelerates and brakes, keeps its beak aimed forward, folds wings and restores the full flight rig',()=>{
  const c=create(1);advance(c,DASH.hold,held);const displacements:number[]=[];
  for(let i=0;i<7;i++){const before=c.actor.position.z;advance(c,.1,held);displacements.push(c.actor.position.z-before);}

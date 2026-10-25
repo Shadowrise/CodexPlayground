@@ -14,8 +14,8 @@ import {GroundShadowPass} from './ground-shadow-pass';
 import {SceneryVisibility} from './scenery-visibility';
 import {CharacterShadowPass} from './character-shadow-pass';
 import {ForestDetail} from './forest-detail';
-import {createRenderScaleControl,DEFAULT_RENDER_SCALE} from './render-scale';
-import {createViewDistanceControl,DEFAULT_VIEW_DISTANCE} from './view-distance';
+import {createRenderScaleControl,parseRenderScale} from './render-scale';
+import {createViewDistanceControl,parseViewDistance} from './view-distance';
 import {CentipedeEventView} from './centipede-event-view';
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,centipedeContact,nearCentipede,completedCentipede,type CentipedeEvent,type CentipedeActor} from './centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,hasChasers} from './centipede-chasers';
@@ -29,6 +29,7 @@ import {MetaKnightSeal} from './meta-knight-seal';
 import {MetaKnightSealHud} from './meta-knight-seal-hud';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
+import {cosmicCombat} from './meta-knight-cosmic';
 import {createMetaKnightPortal} from './meta-knight-portal';
 import {META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
 import {META_KNIGHT_SEAL_SITES} from './meta-knight-seal-sites';
@@ -429,7 +430,7 @@ scene.fog = new THREE.Fog('#d8e9eb', 180, 750);
 // A less extreme depth range keeps distant ground overlays from fighting at altitude.
 const cameraFov=()=>mobile&&innerHeight>innerWidth?75:48;
 const camera = new THREE.PerspectiveCamera(cameraFov(), innerWidth / innerHeight, .75, 1200);
-let renderScale:number=DEFAULT_RENDER_SCALE;
+let renderScale:number=parseRenderScale(null,mobile);
 const renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true, powerPreference: 'high-performance' });
 configureSceneryBatching(renderer.extensions.has('WEBGL_multi_draw'));
 renderer.setPixelRatio(renderScale);
@@ -567,7 +568,7 @@ chat.configureCommands({
  destinations:()=>destinations,
  execute:command=>{
   if(!character||network||networkIntent)return;
-  if(command.kind==='phase'){cosmicArena.setPhase(command.phase);return;}
+  if(command.kind==='phase'){cosmicArena.setPhase(command.phase,command.subphase);return;}
   if(command.kind==='godmode'){
    const enabled=cosmicArena.toggleGodMode();
    if(enabled!==undefined)addLocalLog(enabled?'включил неуязвимость до конца дуэли.':'выключил неуязвимость.');
@@ -661,11 +662,11 @@ const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
 const sceneryVisibility=new SceneryVisibility(environmentRoots);
 const forestDetail=new ForestDetail(environmentRoots);
-languageSetting.after(createRenderScaleControl(scale=>{renderScale=scale;renderer.setPixelRatio(scale);}));
-let viewDistance=DEFAULT_VIEW_DISTANCE;
+languageSetting.after(createRenderScaleControl(scale=>{renderScale=scale;renderer.setPixelRatio(scale);},mobile));
+let viewDistance:number=parseViewDistance(null,mobile);
 languageSetting.after(createViewDistanceControl(distance=>{
  viewDistance=distance;const fog=scene.fog as THREE.Fog;fog.near=Math.min(180,distance*.5);fog.far=distance;
-}));
+},mobile));
 
 const keys = new Set<string>();
 let pendingTurn: 'KeyA' | 'KeyD' | undefined;
@@ -735,7 +736,7 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),music:active=>music.setEvent(active?'knight':false)});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),stopCosmic:()=>sounds.stopKnightCosmic(),prepareCosmic:()=>sounds.prepareKnightCosmic(),music:active=>music.setEvent(active?'knight':false)});
 function completeKnightVictory(local=false){
  if(!character)return;
  if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
@@ -1467,7 +1468,7 @@ function tickMeadowWhileAway(dt:number){
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
  if(!network){bread.state=advanceBread(bread.state,now,mountainLedges.networkState());soloFlowerGame=advanceFlowerGame(soloFlowerGame,now,[]);soloNumberGame=advanceNumberGame(soloNumberGame,now,[]);centipedeTick();}
  fruits.update(dt,character!,host?npcs:[],true);
- music.setEvent(cosmicArena.engaged?'knight':false);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);music.updateDucking(false,dt);
+ music.setEvent(cosmicArena.engaged?'knight':false);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);music.updateDucking(cosmicArena.engaged&&cosmicArena.battle?.phase===4&&cosmicArena.battle.stage!=='cosmic-flight'&&!cosmicCombat(cosmicArena.battle),dt);
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   if(nearMetaKnightPortal(c.actor.position)&&sealActor(c).available)return {text:metaKnightPortalReady()?'E — Войти на арену Метакнайта':'Портал пока не работает',run:()=>{if(metaKnightPortalReady())void cosmicArena.enter(c);},target:{key:meadowPortal,root:meadowPortal.group}};
