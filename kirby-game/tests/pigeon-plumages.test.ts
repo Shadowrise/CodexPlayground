@@ -8,7 +8,7 @@ import {KIRBY_VARIANTS,isPigeonVariant} from '../src/variant-palette';
 import {createPlayerModel} from '../src/player-model';
 import {CharacterController} from '../src/controller';
 import {actorState,RemotePlayers} from '../src/network-actors';
-import {CharacterUnlocks,UGOLYOK_UNLOCK_KEY,RYZHIK_UNLOCK_KEY} from '../src/character-unlocks';
+import {CharacterUnlocks,UGOLYOK_UNLOCK_KEY,RYZHIK_UNLOCK_KEY,KURLYK_UNLOCK_KEY} from '../src/character-unlocks';
 import {PidgieNpc} from '../src/pidgie-npc';
 import {PigeonFlock} from '../src/pigeon-flock';
 import {applyBread,breadOffering,grantBread,newBread,validBread} from '../src/bread-state';
@@ -53,9 +53,9 @@ test('new plumages embed their own feather atlases and preserve the complete aut
 });
 
 test('new selectable players and remote players use their native paint and pigeon controller without moving saved variant IDs',()=>{
- assert.deepEqual(KIRBY_VARIANTS.slice(17).map(v=>v[0]),['Пиджи','Meta Knight','Снежок','Уголёк','Рыжик']);
+ assert.deepEqual(KIRBY_VARIANTS.slice(17).map(v=>v[0]),['Пиджи','Meta Knight','Снежок','Уголёк','Рыжик','Курлык']);
  const remote=new RemotePlayers(new Scene(),kirby,templates.pidgie,undefined,undefined,templates.snowball,templates);
- for(const id of ['ugolyok','ryzhik'] as const){
+ for(const id of ['ugolyok','ryzhik','kurlyk'] as const){
   const variant=KIRBY_VARIANTS.find(v=>v[0]===wildPigeonName(id))!,index=KIRBY_VARIANTS.indexOf(variant);
   assert(isPigeonVariant(variant[0]));assert.throws(()=>createPlayerModel(kirby,variant,templates.pidgie));
   const rig=createPlayerModel(kirby,variant,templates.pidgie,false,undefined,templates.snowball,templates),player=new CharacterController(rig.model,rig.clips);
@@ -70,7 +70,7 @@ test('new selectable players and remote players use their native paint and pigeo
  remote.clear();
 });
 
-test('all four wild birds use identical bread, scare and greeting rules, and reserve separate offerings',()=>{
+test('all five wild birds use identical bread, scare and greeting rules, and reserve separate offerings',()=>{
  let bread=newBread();const birds=WILD_PIGEONS.map((id,i)=>{
   const npc=new PidgieNpc(templates[id],{kind:id,seed:131,safeGround:()=>true});
   npc.actor.position.set(i*30,0,0);return {id,npc};
@@ -94,13 +94,13 @@ test('all four wild birds use identical bread, scare and greeting rules, and res
 
 test('feeding unlocks each new character independently, persists through reload and denied storage, and awards ten points',()=>{
  const values=new Map<string,string>(),storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>{values.set(k,v);}},progress=new CharacterUnlocks(storage);
- for(const [id,key] of [['ugolyok',UGOLYOK_UNLOCK_KEY],['ryzhik',RYZHIK_UNLOCK_KEY]] as const){
+ for(const [id,key] of [['ugolyok',UGOLYOK_UNLOCK_KEY],['ryzhik',RYZHIK_UNLOCK_KEY],['kurlyk',KURLYK_UNLOCK_KEY]] as const){
   const name=wildPigeonName(id);assert(progress.isLocked(name));assert(progress.unlockPigeon(id));assert(!progress.unlockPigeon(id));
   assert.equal(values.get(key),'1');assert(!new CharacterUnlocks(storage).isLocked(name));assert(progress.isLocked('Пиджи'));assert(progress.isLocked('Снежок'));
   assert.equal(achievementPoints([pigeonFriendAchievement(id)]),10);assert.match(lockedCharacterHint(name),new RegExp(name));
   const denied=new CharacterUnlocks({getItem(){throw Error();},setItem(){throw Error();}});assert(denied.unlockPigeon(id));assert(!denied.isLocked(name));
   for(const locale of ['en','bg'] as const){
-   setLocale(locale);const translated=id==='ugolyok'?(locale==='en'?'Cinder':'Въгленчо'):(locale==='en'?'Ginger':'Рижко');
+   setLocale(locale);const translated=id==='ugolyok'?(locale==='en'?'Cinder':'Въгленчо'):id==='ryzhik'?(locale==='en'?'Ginger':'Рижко'):(locale==='en'?'Coo King':'Гуругурко');
    assert.equal(t(name),translated);
    for(const text of [`Дикий ${name}`,`E — Угостить дикого ${wildPigeonObjectName(id)}`,lockedCharacterHint(name),pidgieFriendLog('Рыжик $&',id).text,pidgieScareLog('Рыжик $&',id).text,pidgieInterestLog('Рыжик $&',id).text]){
     assert.notEqual(t(text),text,`${locale}/${text}`);assert(t(text).includes(translated),`${locale}/${text}`);
@@ -110,11 +110,11 @@ test('feeding unlocks each new character independently, persists through reload 
  }
 });
 
-test('four bird checkpoints and earned friendships round-trip in saves and reject malformed network data',()=>{
- const bird=pidgieFixture(),actor={variant:'Уголёк',x:0,z:0,yaw:0,size:1,fruitsEaten:0,achievements:['ugolyokFriend','ryzhikFriend']};
+test('five bird checkpoints and earned friendships round-trip in saves and reject malformed network data',()=>{
+ const bird=pidgieFixture(),actor={variant:'Курлык',x:0,z:0,yaw:0,size:1,fruitsEaten:0,achievements:['ugolyokFriend','ryzhikFriend','kurlykFriend']};
  const checkpoints=Object.fromEntries(WILD_PIGEONS.map((id,i)=>[id,{...bird,seed:i+1}]));
  const save={version:1,savedAt:'2026-10-24',player:actor,npcs:KIRBY_VARIANTS.slice(0,14).map(v=>({...actor,variant:v[0],achievements:[]})),fruits:Array(70).fill(false),...checkpoints};
- const restored=parseSave(JSON.stringify(save));assert.equal(restored.ugolyok?.seed,3);assert.equal(restored.ryzhik?.seed,4);
+ const restored=parseSave(JSON.stringify(save));assert.equal(restored.ugolyok?.seed,3);assert.equal(restored.ryzhik?.seed,4);assert.equal(restored.kurlyk?.seed,5);
  const a={p:[0,0,0],q:[0,0,0,1],s:1,state:'Idle',pose:[],fruits:0,achievements:[],name:'Кирби',variant:0,star:0};
  const world={npcs:Array.from({length:14},()=>a),npcLife:Array.from({length:14},()=>Array(15).fill(0)),carts:Array.from({length:12},()=>Array(4).fill(0)),balloons:Array.from({length:3},()=>[0,'parked',...Array(14).fill(0)]),bugs:Array.from({length:40},()=>Array(10).fill(0)),...checkpoints};
  assert(validWorld(world));
@@ -125,9 +125,9 @@ test('admin flocks render and synchronize every native plumage with the same sha
  const flock=new PigeonFlock(templates,{safeGround:()=>true}),player={id:'target',position:new Vector3(),hasBread:false};
  const specs=WILD_PIGEONS.map((skin,i)=>({id:skin,playerId:'target',skin,seed:i+1,order:i}));
  for(let step=0;step<240;step++)flock.update(.05,specs,true,[player],[player.position]);
- assert.equal(flock.birds.size,4);
+ assert.equal(flock.birds.size,5);
  for(const id of WILD_PIGEONS){const bird=flock.birds.get(id)!;assert.equal(bird.spec.skin,id);assert.equal(bird.npc.phase,'follow');}
  const paints=new Set<string>();flock.group.traverse(node=>{if(node instanceof Mesh)for(const material of Array.isArray(node.material)?node.material:[node.material])if(material.userData.characterTexture)paints.add(material.userData.characterTexture);});
- assert.deepEqual(paints,new Set(['snowball','ugolyok','ryzhik']));
+ assert.deepEqual(paints,new Set(['snowball','ugolyok','ryzhik','kurlyk']));
  flock.clear();
 });

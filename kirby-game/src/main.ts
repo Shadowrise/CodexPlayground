@@ -302,7 +302,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState()})));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState(),kurlyk:wildBirds.get('kurlyk')?.npc.networkState()})));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -851,7 +851,7 @@ async function loadCharacter() {
   try {
     const files=preloadGameAssets(import.meta.env.BASE_URL).models,models:GLTF[]=[],loader=new GLTFLoader();
     for(const file of files){models.push(await loader.parseAsync(await file,new URL(import.meta.env.BASE_URL+'models/',location.href).href));await startupTask();}
-    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel,snowballModel,ugolyokModel,ryzhikModel]=models;
+    const [gltf,bugModel,shibaModel,centipedeModel,pigeonModel,breadModel,metaKnightModel,snowballModel,ugolyokModel,ryzhikModel,kurlykModel]=models;
     metaKnightReflections=createMetaKnightReflections(renderer,metaKnightModel.scene);
     for(const seal of seals)metaKnightReflections.add(seal.model);
     metaKnightReflections.update(daylight(currentDayPhase()));
@@ -867,7 +867,7 @@ async function loadCharacter() {
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
     loadedSnowball = snowballModel;
-    loadedPlumages={pidgie:pigeonModel,snowball:snowballModel,ugolyok:ugolyokModel,ryzhik:ryzhikModel};
+    loadedPlumages={pidgie:pigeonModel,snowball:snowballModel,ugolyok:ugolyokModel,ryzhik:ryzhikModel,kurlyk:kurlykModel};
     loadedMetaKnight = metaKnightModel;
     for(const model of Object.values(loadedPlumages)){await preparePigeonPalette(model);await startupTask();}
   } catch (error) {

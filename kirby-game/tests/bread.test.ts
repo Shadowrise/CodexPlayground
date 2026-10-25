@@ -184,7 +184,7 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   room.webSocketMessage(third,JSON.stringify({type:'frame',actor:{...a,p:snowPlayer},world:both,events:[]}));
   assert.equal(room.room.world.snowball.friend.by,third.data.id,'stale host frames preserve both friendships');
   // New plumages require a real, targeted feeding and keep all previous friendships.
-  for(const [i,id] of ['ugolyok','ryzhik'].entries()){
+  for(const [i,id] of ['ugolyok','ryzhik','kurlyk'].entries()){
    now+=1000;const position=[p[0]+60+i*30,0,p[2]],checkpoint={...pidgie,p:[position[0],0,position[2]+4]};
    const current={...room.room.world,[id]:checkpoint};
    room.room.bread=grantBread(room.room.bread,actor(third.data.id,position),now);
@@ -200,8 +200,8 @@ test('the room arbitrates one loaf, permits fruit pickup while carrying it, bloc
   const late=await join('Snow watcher',19);assert.equal(late.messages[0].room.world.snowball.friend.by,third.data.id);
   await room.webSocketClose(third);assert.equal(room.room.host,late.data.id);
   const afterSnow=new GameRoom(ctx,{});await Promise.resolve();await Promise.resolve();
-  assert.equal(afterSnow.room.world.snowball.friend.by,third.data.id);assert.equal(breadLoaves(afterSnow.room.bread).length,4);
-  for(const id of ['ugolyok','ryzhik'])assert.equal(afterSnow.room.world[id].friend.by,third.data.id);
+  assert.equal(afterSnow.room.world.snowball.friend.by,third.data.id);assert.equal(breadLoaves(afterSnow.room.bread).length,5);
+  for(const id of ['ugolyok','ryzhik','kurlyk'])assert.equal(afterSnow.room.world[id].friend.by,third.data.id);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
 

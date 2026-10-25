@@ -136,7 +136,7 @@ test('Pidgie unlock requires its complete Latin name; partial names remain sugge
   const result=parseChatCommand(text,true,places);assert(result?.error,text);
   assert.match(result.error,/\/unlock bandana/);assert.match(result.error,/\/unlock pidgie/);
  }
- assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball','/unlock cinder','/unlock ginger']);
+ assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball','/unlock cinder','/unlock ginger','/unlock coo-king']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);
   for(const prefix of ['p','PI','pidg','pidgie']){
@@ -183,15 +183,15 @@ test('Snowball unlock accepts its full alias and localizes suggestions and usage
  }finally{setLocale('ru');}
 });
 
-test('Cinder and Ginger use English unlock aliases in every locale while retaining stable character IDs',()=>{
+test('Cinder, Ginger and Coo King use English unlock aliases in every locale while retaining stable character IDs',()=>{
  try{
-  for(const [id,alias,names] of [['ugolyok','cinder',['Уголёк','Cinder','Въгленчо']],['ryzhik','ginger',['Рыжик','Ginger','Рижко']]] as const){
+  for(const [id,alias,names] of [['ugolyok','cinder',['Уголёк','Cinder','Въгленчо']],['ryzhik','ginger',['Рыжик','Ginger','Рижко']],['kurlyk','coo-king',['Курлык','Coo King','Гуругурко']]] as const){
    for(const [i,locale] of (['ru','en','bg'] as const).entries()){
     setLocale(locale);
     for(const text of [`/unlock ${alias}`,` /UNLOCK   ${alias.toUpperCase()} `])assert.deepEqual(parseChatCommand(text,true,places),{command:{kind:'unlock',character:id}});
     for(const text of [`/unlock ${alias.slice(0,3)}`,`/unlock ${names[0]}`,`/unlock ${names[2]}`,`/unlock ${alias} extra`,`/unlock ${id}`])assert(parseChatCommand(text,true,places)?.error,text);
     assert(parseChatCommand(`/unlock ${alias}`,false,places)?.error);assert.deepEqual(commandSuggestions(`/unlock ${alias}`,false,places),[]);
-    for(const prefix of [alias[0],alias.slice(0,3).toUpperCase(),alias])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{value:`/unlock ${alias}`,label:alias,description:names[i],complete:true}]);
+    for(const prefix of [alias.slice(0,2),alias.slice(0,3).toUpperCase(),alias])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{value:`/unlock ${alias}`,label:alias,description:names[i],complete:true}]);
     assert.deepEqual(commandSuggestions('/unlock '+id,true,places),[]);
     const error=t(parseChatCommand('/unlock',true,places)!.error!);assert.match(error,new RegExp('/unlock '+alias));assert.doesNotMatch(error,/ugolyok|ryzhik/i);
     if(locale!=='ru')assert.notEqual(error,parseChatCommand('/unlock',true,places)!.error!);

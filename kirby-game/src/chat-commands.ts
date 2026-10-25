@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3|4;subphase?:1|2|3}|{kind:'godmode'};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'|'kurlyk'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3|4;subphase?:1|2|3}|{kind:'godmode'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -32,6 +32,7 @@ const unlockCharacters=[
  {character:'snowball',alias:'snowball',name:'Снежок'},
  {character:'ugolyok',alias:'cinder',name:'Уголёк'},
  {character:'ryzhik',alias:'ginger',name:'Рыжик'},
+ {character:'kurlyk',alias:'coo-king',name:'Курлык'},
 ] as const;
 const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–4'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
@@ -68,7 +69,7 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  }
  if(name==='unlock'){
   const target=unlockCharacters.find(entry=>entry.alias===argument.toLowerCase());
-  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock cinder или /unlock ginger, чтобы открыть персонажа.'};
+  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock cinder, /unlock ginger или /unlock coo-king, чтобы открыть персонажа.'};
  }
  return {error:duelActive?'Доступные команды: /size, /tele, /unlock, /time, /portal, /phase и /godmode.':'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }

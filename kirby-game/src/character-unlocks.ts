@@ -6,6 +6,7 @@ export const PIDGIE_UNLOCK_KEY='kirby-pidgie-unlocked-v1';
 export const SNOWBALL_UNLOCK_KEY='kirby-snowball-unlocked-v1';
 export const UGOLYOK_UNLOCK_KEY='kirby-ugolyok-unlocked-v1';
 export const RYZHIK_UNLOCK_KEY='kirby-ryzhik-unlocked-v1';
+export const KURLYK_UNLOCK_KEY='kirby-kurlyk-unlocked-v1';
 export const META_KNIGHT_UNLOCK_KEY='kirby-meta-knight-unlocked-v1';
 
 /** Earn once in either mode; unavailable browser storage never blocks play. */
@@ -15,6 +16,7 @@ export class CharacterUnlocks {
  snowballUnlocked=false;
  ugolyokUnlocked=false;
  ryzhikUnlocked=false;
+ kurlykUnlocked=false;
  metaKnightUnlocked=false;
  constructor(private storage?:Pick<Storage,'getItem'|'setItem'>){
   try{this.bandanaUnlocked=storage?.getItem(BANDANA_UNLOCK_KEY)==='1';}catch{}
@@ -22,6 +24,7 @@ export class CharacterUnlocks {
   try{this.snowballUnlocked=storage?.getItem(SNOWBALL_UNLOCK_KEY)==='1';}catch{}
   try{this.ugolyokUnlocked=storage?.getItem(UGOLYOK_UNLOCK_KEY)==='1';}catch{}
   try{this.ryzhikUnlocked=storage?.getItem(RYZHIK_UNLOCK_KEY)==='1';}catch{}
+  try{this.kurlykUnlocked=storage?.getItem(KURLYK_UNLOCK_KEY)==='1';}catch{}
   try{this.metaKnightUnlocked=storage?.getItem(META_KNIGHT_UNLOCK_KEY)==='1';}catch{}
  }
  isLocked(name:string){const bird=wildPigeonId(name);return bird?!this[`${bird}Unlocked`]:name==='Бандана'&&!this.bandanaUnlocked||name==='Meta Knight'&&!this.metaKnightUnlocked;}

@@ -89,7 +89,7 @@ export class RemotePlayers{
    // An optional model may still be loading; keep the state for a later frame.
    if(isPigeonVariant(variant[0])&&!this.pigeon)continue;
    if(variant[0]==='Снежок'&&!this.snowball)continue;
-   if(variant[0]==='Уголёк'&&!this.plumages.ugolyok||variant[0]==='Рыжик'&&!this.plumages.ryzhik)continue;
+   if(variant[0]==='Уголёк'&&!this.plumages.ugolyok||variant[0]==='Рыжик'&&!this.plumages.ryzhik||variant[0]==='Курлык'&&!this.plumages.kurlyk)continue;
    if(variant[0]==='Meta Knight'&&!this.metaKnight)continue;
    const fresh=!c;if(!c){const rig=createPlayerModel(this.model,variant,this.pigeon,false,this.metaKnight,this.snowball,this.plumages);if(rig.character==='meta-knight')this.onMetaKnight?.(rig.model);c=new CharacterController(rig.model,rig.clips);c.actor.userData.variant=a.variant;
     if(typeof document!=='undefined')this.nameplates.set(id,new PlayerNameplate(c.actor,rig.model));

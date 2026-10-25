@@ -5,9 +5,11 @@ export const META_KNIGHT_LOCK_HINT='Кто сможет победить Мет�
 export const SNOWBALL_LOCK_HINT='Угости Дикого Снежка хлебушком, чтобы поиграть за Снежка.';
 export const UGOLYOK_LOCK_HINT='Уголёк важно вышагивает по полянке, но его животик тихонько урчит. Особенно когда рядом пахнет свежей корочкой.';
 export const RYZHIK_LOCK_HINT='Рыжик мечтательно поглядывает на мельницу и всё ищет что-то в траве. Кажется, путь к его сердцу усыпан крошками.';
+export const KURLYK_LOCK_HINT='Курлык носит все цвета радуги и корону, но в его королевстве не хватает одного сокровища — тёплого подношения с хрустящей корочкой. Говорят, щедрых гостей он принимает в свою стаю.';
 export function lockedCharacterHint(name:string){
  if(name==='Уголёк')return UGOLYOK_LOCK_HINT;
  if(name==='Рыжик')return RYZHIK_LOCK_HINT;
+ if(name==='Курлык')return KURLYK_LOCK_HINT;
  return name==='Снежок'?SNOWBALL_LOCK_HINT:name==='Meta Knight'?META_KNIGHT_LOCK_HINT:name==='Пиджи'?PIDGIE_LOCK_HINT:'Пройди все приключения в одиночной или онлайн-игре, чтобы открыть Бандану.';
 }
 
