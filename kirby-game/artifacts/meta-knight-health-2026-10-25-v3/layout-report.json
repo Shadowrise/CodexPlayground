@@ -1,0 +1,38 @@
+{
+  "verified": true,
+  "viewports": [
+    1200,
+    390,
+    320
+  ],
+  "states": 15,
+  "direction": "right-to-left",
+  "frames": [
+    {
+      "phase": 1,
+      "hp": 12,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25-v3\\01-start.png"
+    },
+    {
+      "phase": 1,
+      "hp": 10,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25-v3\\02-phase-1.png"
+    },
+    {
+      "phase": 2,
+      "hp": 6,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25-v3\\03-phase-2.png"
+    },
+    {
+      "phase": 3,
+      "hp": 2,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25-v3\\04-phase-3.png"
+    },
+    {
+      "phase": 4,
+      "hp": 4,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25-v3\\05-phase-4.png"
+    }
+  ],
+  "errors": []
+}
