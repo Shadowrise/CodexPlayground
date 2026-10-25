@@ -1,0 +1,443 @@
+{
+  "frames": [
+    {
+      "phase": 1,
+      "hp": 12,
+      "total": 17,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 4 из 4. Фаза 2: осталось попаданий 4 из 4. Фаза 3: осталось попаданий 3 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "current",
+          "count": "4/4",
+          "cells": 4,
+          "filled": 4,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "upcoming",
+          "count": "4/4",
+          "cells": 4,
+          "filled": 4,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "upcoming",
+          "count": "3/3",
+          "cells": 3,
+          "filled": 3,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 580,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 28,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\01-start.png",
+      "label": "Начало боя · все четыре секции"
+    },
+    {
+      "phase": 1,
+      "hp": 10,
+      "total": 15,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 2 из 4. Фаза 2: осталось попаданий 4 из 4. Фаза 3: осталось попаданий 3 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "current",
+          "count": "2/4",
+          "cells": 4,
+          "filled": 2,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "upcoming",
+          "count": "4/4",
+          "cells": 4,
+          "filled": 4,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "upcoming",
+          "count": "3/3",
+          "cells": 3,
+          "filled": 3,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 580,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 28,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\02-phase-1.png",
+      "label": "Фаза 1 · оставшиеся попадания"
+    },
+    {
+      "phase": 2,
+      "hp": 6,
+      "total": 11,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 2 из 4. Фаза 3: осталось попаданий 3 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "current",
+          "count": "2/4",
+          "cells": 4,
+          "filled": 2,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "upcoming",
+          "count": "3/3",
+          "cells": 3,
+          "filled": 3,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 580,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 28,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\03-phase-2.png",
+      "label": "Фаза 2 · оставшиеся попадания"
+    },
+    {
+      "phase": 3,
+      "hp": 2,
+      "total": 8,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 2 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "current",
+          "count": "2/3",
+          "cells": 3,
+          "filled": 2,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 580,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 28,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\04-phase-3.png",
+      "label": "Фаза 3 · оставшиеся попадания"
+    },
+    {
+      "phase": 4,
+      "hp": 4,
+      "total": 4,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 0 из 3. Фаза 4: осталось попаданий 4 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "completed",
+          "count": "0/3",
+          "cells": 3,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "current",
+          "count": "4/6",
+          "cells": 6,
+          "filled": 4,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 580,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 28,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\05-phase-4.png",
+      "label": "Фаза 4 · оставшиеся попадания"
+    },
+    {
+      "phase": 3,
+      "hp": 2,
+      "total": 8,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 2 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 69
+        },
+        {
+          "phase": 2,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 69
+        },
+        {
+          "phase": 3,
+          "state": "current",
+          "count": "2/3",
+          "cells": 3,
+          "filled": 2,
+          "width": 69
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 69
+        }
+      ],
+      "box": {
+        "x": 80,
+        "y": 38.59375,
+        "width": 294,
+        "height": 39
+      },
+      "noCaption": true,
+      "hudBottom": 114.1875,
+      "partyTop": 127,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\06-mobile.png",
+      "label": "Телефон · третья фаза, два из трёх"
+    },
+    {
+      "phase": 3,
+      "hp": 2,
+      "total": 8,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 2 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 51.5
+        },
+        {
+          "phase": 2,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 51.5
+        },
+        {
+          "phase": 3,
+          "state": "current",
+          "count": "2/3",
+          "cells": 3,
+          "filled": 2,
+          "width": 51.5
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 51.5
+        }
+      ],
+      "box": {
+        "x": 80,
+        "y": 38.59375,
+        "width": 224,
+        "height": 39
+      },
+      "noCaption": true,
+      "hudBottom": 114.1875,
+      "partyTop": 127,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\07-narrow.png",
+      "label": "320 px · все деления различимы"
+    },
+    {
+      "phase": 3,
+      "hp": 2,
+      "total": 8,
+      "maximum": 17,
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 2 из 3. Фаза 4: осталось попаданий 6 из 6",
+      "sections": [
+        {
+          "phase": 1,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 2,
+          "state": "completed",
+          "count": "0/4",
+          "cells": 4,
+          "filled": 0,
+          "width": 103.25
+        },
+        {
+          "phase": 3,
+          "state": "current",
+          "count": "2/3",
+          "cells": 3,
+          "filled": 2,
+          "width": 103.25
+        },
+        {
+          "phase": 4,
+          "state": "upcoming",
+          "count": "6/6",
+          "cells": 6,
+          "filled": 6,
+          "width": 103.25
+        }
+      ],
+      "box": {
+        "x": 80,
+        "y": 51.1875,
+        "width": 440,
+        "height": 40
+      },
+      "noCaption": true,
+      "hudBottom": 130.578125,
+      "partyTop": 16,
+      "glError": 0,
+      "path": "C:\\repos\\codex-playground\\kirby-game\\artifacts\\meta-knight-health-2026-10-25\\08-landscape.png",
+      "label": "Телефон горизонтально"
+    }
+  ],
+  "locales": [
+    {
+      "locale": "en",
+      "aria": "Phase 1: 0 of 4 hits remaining. Phase 2: 0 of 4 hits remaining. Phase 3: 2 of 3 hits remaining. Phase 4: 6 of 6 hits remaining"
+    },
+    {
+      "locale": "bg",
+      "aria": "Фаза 1: остават 0 от 4 удара. Фаза 2: остават 0 от 4 удара. Фаза 3: остават 2 от 3 удара. Фаза 4: остават 6 от 6 удара"
+    },
+    {
+      "locale": "ru",
+      "aria": "Фаза 1: осталось попаданий 0 из 4. Фаза 2: осталось попаданий 0 из 4. Фаза 3: осталось попаданий 2 из 3. Фаза 4: осталось попаданий 6 из 6"
+    }
+  ],
+  "errors": []
+}

@@ -21,7 +21,8 @@ export function knightPartyHearts(s:KnightBattle|undefined){return Math.max(0,Ma
 export function knightPlayerVisible(s:KnightBattle|undefined,id:string,now:number,withdrawn=false){const p=s?.players[id];return !knightBattleActive(s)||!p||p.hp<=0||p.withdrawn||withdrawn||now>=p.invulnerable||Math.floor(now/95)%2===0;}
 /** The start snapshot keeps both sides of the gate fixed until the whole duel ends. */
 export function knightArenaSide(s:KnightBattle|undefined,id:string):KnightArenaSide|undefined{return knightBattleActive(s)?s!.players[id]?'arena':'annex':undefined;}
-export const KNIGHT_PHASE_HEALTH={1:12,2:8,3:4,4:COSMIC.health} as const;
+export const KNIGHT_PHASE_HEALTH={1:12,2:8,3:3,4:COSMIC.health} as const;
+export const KNIGHT_PHASE_HITS={1:4,2:4,3:3,4:COSMIC.health} as const;
 export function knightDashHalfWidth(s:KnightBattle){return KNIGHT.laneHalfWidth*(s.phase===2?1.5:1);}
 /** The landing ring keeps its own origin and clock while the duel continues. */
 export function knightPressureWave(s:KnightBattle,now:number){
@@ -167,7 +168,7 @@ function finishKnightDamage(s:KnightBattle,now:number,actors:KnightActor[]){
  if(s.hp<=0){enter(s,'won',1e12,now,actors);return true;}
  if(s.phase===4)return false;
  const phase=s.hp<=4?3:s.hp<=8?2:1;
- if(phase!==s.phase){s.phase=phase;enter(s,'transition',1500,now,actors);return true;}
+ if(phase!==s.phase){s.phase=phase;if(phase===3)s.hp=KNIGHT_PHASE_HEALTH[3];enter(s,'transition',1500,now,actors);return true;}
  return false;
 }
 function damageKnight(s:KnightBattle,now:number,actors:KnightActor[],reaction?:'stunned'|'crystal-break'){
@@ -297,6 +298,8 @@ export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=no
 /** Mutates only encounter state; returns true for state changes worth broadcasting. */
 export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:number,protectedPlayer?:string){
  const revision=s.revision;if(!knightBattleActive(s))return false;
+ // Preserve destroyed crystals when a saved four-hit third phase resumes.
+ if(s.phase===3){const broken=((s.brokenCrystals??0)&255).toString(2).replace(/0/g,'').length,remaining=Math.max(0,KNIGHT_PHASE_HITS[3]-broken);if(s.hp>remaining){s.hp=remaining;s.revision++;if(!remaining&&s.stage!=='crystal-break')setKnightPhase(s,4,actors,now);}}
  if(s.teamHp===undefined&&Object.keys(s.players).length>1){s.teamHp=knightPartyHearts(s);s.revision++;}
  // Keep player health as a projection for movement, defeat poses and older clients.
  if(s.teamHp!==undefined)for(const p of Object.values(s.players))if(p.hp!==s.teamHp){p.hp=s.teamHp;s.revision++;}

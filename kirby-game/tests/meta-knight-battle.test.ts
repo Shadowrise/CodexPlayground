@@ -68,7 +68,7 @@ test('a player facing the boss can still parry a point-blank release during its 
 
 test('phase commands select 12/8/4/6 health, clear pending attacks and restart that phase without healing the player',()=>{
  const s=battle(),a=actor();s.players.a.hp=2;
- for(const [phase,hp] of [[3,4],[2,8],[1,12],[4,6]] as const){
+ for(const [phase,hp] of [[3,3],[2,8],[1,12],[4,6]] as const){
   setStage(s,'shot');s.shotContacts={a:1900};s.returnFrom=[0,1,20];s.players.a.attackAt=1950;s.players.a.handled=0;
   assert(setKnightPhase(s,phase,[a],2100));assert.equal(s.phase,phase);assert.equal(s.hp,hp);assert.equal(s.stage,'transition');
   assert.equal(s.checked,2100);assert.equal(s.players.a.hp,2);assert.equal(s.shotContacts,undefined);assert.equal(s.returnFrom,undefined);
@@ -280,15 +280,15 @@ test('crescent charge tracks the player, locks the aim, takes flight, and produc
  const shots=new Set<number>();for(let now=lock+1;now<14000;now+=25){advanceKnightBattle(s,[a],now);const stage=s.stage as KnightBattle['stage'];if(stage==='shot')shots.add(s.since);if(stage==='rest')break;}
  assert.equal(shots.size,3);assert.equal(s.stage,'rest');
 });
-test('eight normal openings and four selected crystals unlock phase four; spam and distant hits fail',()=>{
+test('eight normal openings and three selected crystals unlock phase four; spam and distant hits fail',()=>{
  const s=battle(),a=actor();let now=2000;const phases=new Set<number>();
- for(let i=0;i<12;i++){
+ for(let i=0;i<11;i++){
   setStage(s,i<8?'open':'shield',now);a.p=[0,0,2];a.yaw=Math.PI;
   if(i>=8){s.pattern='star';s.cycle=i-7;s.activeCrystal=chooseShieldCrystal(s);const p=crystalPoint(s.activeCrystal);a.p=[p[0]*.94,0,p[2]*.94];a.yaw=Math.atan2(p[0]-a.p[0],p[2]-a.p[2]);}
   assert(knightAttack(s,a,now+10));advanceKnightBattle(s,[a],now+160);phases.add(s.phase);
   const health=s.hp;advanceKnightBattle(s,[a],now+180);assert.equal(s.hp,health);advanceKnightBattle(s,[a],s.until);if(s.stage==='get-up')advanceKnightBattle(s,[a],s.until);phases.add(s.phase);now+=3000;
  }
- assert.deepEqual([...phases],[1,2,3,4]);assert.equal(s.hp,6);assert.equal(s.stage,'transition');assert.equal(s.players.a.hits,12);
+ assert.deepEqual([...phases],[1,2,3,4]);assert.equal(s.hp,6);assert.equal(s.stage,'transition');assert.equal(s.players.a.hits,11);
  const miss=battle();setStage(miss,'open');a.p=[0,0,12];knightAttack(miss,a,2010);advanceKnightBattle(miss,[a],2200);assert.equal(miss.hp,12);
 });
 
@@ -310,9 +310,9 @@ test('airborne melee still requires reach, facing and an opening, and cannot hit
   if(miss==='backwards')a.yaw=0;
   if(miss==='closed')s.stage='slash-warn';
   if(miss==='stunned'||miss==='get-up')s.stage=miss;
-  if(miss==='phase three')s.phase=3;
+  if(miss==='phase three'){s.phase=3;s.hp=3;}
   if(miss==='spent opening')s.openHit=true;
-  assert(knightAttack(s,a,2100));advanceKnightBattle(s,[a],2250);assert.equal(s.hp,12,miss);assert.equal(s.players.a.hits,0,miss);
+  assert(knightAttack(s,a,2100));advanceKnightBattle(s,[a],2250);assert.equal(s.hp,miss==='phase three'?3:12,miss);assert.equal(s.players.a.hits,0,miss);
  }
 });
 

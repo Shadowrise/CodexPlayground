@@ -61,20 +61,20 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   const lockedAims=structuredClone(room.room.knightBattle.starAims),lockedRoute=structuredClone(room.room.knightBattle.starRoute);assert.deepEqual(lockedAims[0],[37,0,12]);
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.deepEqual(room.room.knightBattle.starAims,lockedAims,'Worker wakeup keeps the locked bend');assert.deepEqual(room.room.knightBattle.starRoute,lockedRoute);
   send(a,actor([1975,0,-20]));assert.deepEqual(room.room.knightBattle.starAims,lockedAims,'network movement cannot drag an already displayed flight lane');
-  for(let i=0;i<4;i++){
+  for(let i=0;i<3;i++){
    const s=room.room.knightBattle;Object.assign(s,{pattern:'star',stage:'shield',cycle:i+1,step:13,since:now,until:now+1e12,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});s.activeCrystal=chooseShieldCrystal(s);const index=s.activeCrystal;
    // This authority/credit fixture teleports across waves; wave damage is tested separately.
    s.players[aid].invulnerable=now+10000;
-   send(a,actor([2000,0,1]),[{type:'knight',action:'attack'}]);assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])>=SHIELD.radius+.64,'Worker enforces the solid dome');assert.equal(s.hp,4-i,'the shield rejects a boss hit');
+   send(a,actor([2000,0,1]),[{type:'knight',action:'attack'}]);assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])>=SHIELD.radius+.64,'Worker enforces the solid dome');assert.equal(s.hp,3-i,'the shield rejects a boss hit');
    const p=crystalPoint(index),point=[2000+p[0]*.94,0,p[2]*.94],yaw=Math.atan2(p[0],p[2]),c=actor(point);c.q=[0,Math.sin(yaw/2),0,Math.cos(yaw/2)];
    // Move around the shield before attacking, preserving the server sweep check.
    const current=a.data.actor.p,begin=Math.atan2(current[0]-2000,current[2]),end=Math.atan2(p[0],p[2]),turn=Math.atan2(Math.sin(end-begin),Math.cos(end-begin));
    for(let j=0;j<=8;j++){const angle=begin+turn*j/8;send(a,actor([2000+Math.sin(angle)*38,0,Math.cos(angle)*38]));}
    now+=800;send(a,c,[{type:'knight',action:'attack'}]);send(a,c);
-   assert.equal(s.hp,3-i);assert(s.brokenCrystals&(1<<index));
+   assert.equal(s.hp,2-i);assert(s.brokenCrystals&(1<<index));
    assert.equal(s.stage,'crystal-break');
    if(i===1){await Promise.all(waits);const mask=s.brokenCrystals;room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.equal(room.room.knightBattle.brokenCrystals,mask,'destroyed crystals survive Worker wakeup');}
-   now=room.room.knightBattle.until;send(a,c);if(i<3){assert.equal(room.room.knightBattle.stage,'get-up');now=room.room.knightBattle.until;send(a,c);}
+   now=room.room.knightBattle.until;send(a,c);if(i<2){assert.equal(room.room.knightBattle.stage,'get-up');now=room.room.knightBattle.until;send(a,c);}
   }
   assert.equal(room.room.knightBattle.phase,4);assert.equal(room.room.knightBattle.hp,6);assert.equal(room.room.knightBattle.stage,'transition');assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,0,'the old finale must not award victory before phase four');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.equal(room.room.knightBattle.phase,4,'cosmic phase persists across Worker wakeup');
@@ -123,7 +123,7 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   now=room.room.knightBattle.until-1600;send(a,actor([2000,180,4]));assert(a.data.actor.p[1]>0&&a.data.actor.p[1]<180);assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])<5,'descent never replays the original recoil');
   const savedFall=structuredClone(room.room.knightBattle.cosmicFall);assert(savedFall);await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.deepEqual(room.room.knightBattle.cosmicFall,savedFall,'the fall clock and fixed facing survive Worker wakeup');
   now=room.room.knightBattle.until-500;send(a,actor([2000,180,4]));assert.equal(a.data.actor.p[1],0,'the real floor is reached during the landing recovery');assert.equal(b.data.actor.p[1],0,'other players land on the same authoritative clock');assert.equal(room.room.knightBattle.stage,'cosmic-descent');assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,0);
-  now=room.room.knightBattle.until;send(a,actor([2000,0,4]));assert.equal(room.room.knightBattle.stage,'won');assert.equal(room.room.knightBattle.players[aid].hits,17);assert.equal(room.room.knightBattle.players[aid].reflects,1);
+  now=room.room.knightBattle.until;send(a,actor([2000,0,4]));assert.equal(room.room.knightBattle.stage,'won');assert.equal(room.room.knightBattle.players[aid].hits,16);assert.equal(room.room.knightBattle.players[aid].reflects,1);
   assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,1);assert.equal(b.messages.filter(m=>m.type==='knight-victory').length,0);
   assert(a.messages.some(m=>m.type==='log'&&m.entry.text==='Метакнайт с уважением смотрит на Рыцарь.'&&m.entry.name===''));
   assert(b.messages.some(m=>m.type==='log'&&m.entry.text==='Метакнайт с уважением смотрит на Рыцарь.'));

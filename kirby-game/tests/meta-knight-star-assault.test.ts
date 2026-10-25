@@ -10,7 +10,7 @@ import {MetaKnightCrystalLightning,CRYSTAL_LIGHTNING_SEGMENTS_PER_LINK} from '..
 import {SHIELD,chooseShieldCrystal,crystalPoint,crystalBroken,shieldWaves,shieldWaveAngle,shieldWaveGap,shieldCountdown,constrainKnightShield} from '../src/meta-knight-shield';
 
 const actor:KnightActor={id:'a',p:[12,0,12],yaw:0,available:true};
-function battle(){const s=startKnightBattle([{...actor,p:[0,0,-2]}],'a',1000)!;Object.assign(s,{phase:3,hp:4,stage:'transition',since:1000,until:2500});return s;}
+function battle(){const s=startKnightBattle([{...actor,p:[0,0,-2]}],'a',1000)!;Object.assign(s,{phase:3,hp:3,stage:'transition',since:1000,until:2500});return s;}
 function stage(s:KnightBattle,step:number){const [name,duration]=STAR_SEQUENCE[step];Object.assign(s,{pattern:'star',stage:name,step,cycle:1,yaw:.3,since:5000,until:5000+duration});}
 
 test('golden charging bolts stay attached to the moving sword and actual crystals, flicker and reuse their geometry',()=>{
@@ -84,16 +84,16 @@ test('all three route timers count to their own launch and future routes never b
  const s=battle();stage(s,5);assert.equal(ricochetCountdown(s,s.since,0),0);assert.equal(ricochetCountdown(s,s.until,0),1);assert.equal(ricochetCountdown(s,s.until,1),0);assert.equal(ricochetCountdown(s,s.until,2),0);
  for(let index=1;index<STAR_FLIGHTS;index++){stage(s,5+index*2);assert.equal(ricochetCountdown(s,s.until,index),1);}
 });
-test('four different random crystals, each broken once, finish phase three and begin the cosmic transition',()=>{
+test('three different random crystals, each broken once, finish phase three and begin the cosmic transition',()=>{
  const s=battle(),a:KnightActor={...actor,p:[36,0,0]};s.players.a.invulnerable=1e12;advanceKnightBattle(s,[a],2500);const seen=new Set<number>();
- for(let cycle=0;cycle<4;cycle++){
+ for(let cycle=0;cycle<3;cycle++){
   for(let guard=0;s.stage!=='shield'&&guard<32;guard++)advanceKnightBattle(s,[a],s.until);
   assert.equal(s.stage,'shield');const index=s.activeCrystal!;assert(!seen.has(index));seen.add(index);assert(!crystalBroken(s,index));
   const p=crystalPoint(index),d=Math.hypot(p[0],p[2]);a.p=[p[0]*(d-3)/d,0,p[2]*(d-3)/d];a.yaw=Math.atan2(p[0]-a.p[0],p[2]-a.p[2]);
-  const now=s.since+900;assert(knightAttack(s,a,now));advanceKnightBattle(s,[a],now+150);assert.equal(s.hp,3-cycle);assert(crystalBroken(s,index));assert.equal(s.activeCrystal,undefined);
-  assert.equal(s.stage,'crystal-break');assert.equal(s.until-s.since,1000);advanceKnightBattle(s,[a],s.until);if(cycle<3){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'star-rise');}else{assert.equal(s.stage,'transition');assert.equal(s.phase,4);assert.equal(s.hp,6);}
+  const now=s.since+900;assert(knightAttack(s,a,now));advanceKnightBattle(s,[a],now+150);assert.equal(s.hp,2-cycle);assert(crystalBroken(s,index));assert.equal(s.activeCrystal,undefined);
+  assert.equal(s.stage,'crystal-break');assert.equal(s.until-s.since,1000);advanceKnightBattle(s,[a],s.until);if(cycle<2){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'star-rise');}else{assert.equal(s.stage,'transition');assert.equal(s.phase,4);assert.equal(s.hp,6);}
  }
- assert.equal(s.players.a.hits,4);assert.equal(seen.size,4);
+ assert.equal(s.players.a.hits,3);assert.equal(seen.size,3);
 });
 test('rendered paths reuse geometry and every shown footprint carries the shared countdown',()=>{
  const s=battle(),view=new MetaKnightStarAssaultView();stage(s,5);view.update(s,5400,new T.Vector3(0,8,0));
@@ -105,10 +105,10 @@ test('rendered paths reuse geometry and every shown footprint carries the shared
 
 test('shield ignores boss, wrong, distant and spent crystal attacks',()=>{
  const s=battle();stage(s,STAR_SHIELD_STEP);s.activeCrystal=2;s.from=s.to=[0,0,0];s.checked=5000;
- const a:KnightActor={...actor,p:[0,0,3],yaw:Math.PI};knightAttack(s,a,5300);advanceKnightBattle(s,[a],5450);assert.equal(s.hp,4);
- a.p=[0,0,42];a.yaw=0;knightAttack(s,a,6200);advanceKnightBattle(s,[a],6350);assert.equal(s.hp,4,'wrong crystal');
- a.p=[36,0,0];a.yaw=Math.PI/2;knightAttack(s,a,7100);advanceKnightBattle(s,[a],7250);assert.equal(s.hp,4,'outside melee reach');
- a.p=[42,0,0];knightAttack(s,a,8000);advanceKnightBattle(s,[a],8150);assert.equal(s.hp,3);advanceKnightBattle(s,[a],8200);assert.equal(s.hp,3,'a press cannot break twice');
+ const a:KnightActor={...actor,p:[0,0,3],yaw:Math.PI};knightAttack(s,a,5300);advanceKnightBattle(s,[a],5450);assert.equal(s.hp,3);
+ a.p=[0,0,42];a.yaw=0;knightAttack(s,a,6200);advanceKnightBattle(s,[a],6350);assert.equal(s.hp,3,'wrong crystal');
+ a.p=[36,0,0];a.yaw=Math.PI/2;knightAttack(s,a,7100);advanceKnightBattle(s,[a],7250);assert.equal(s.hp,3,'outside melee reach');
+ a.p=[42,0,0];knightAttack(s,a,8000);advanceKnightBattle(s,[a],8150);assert.equal(s.hp,2);advanceKnightBattle(s,[a],8200);assert.equal(s.hp,2,'a press cannot break twice');
 });
 
 test('inward waves launch every three seconds in alternating crystal sectors with swept damage',()=>{
@@ -153,7 +153,7 @@ test('both crystal lanes cross simultaneously and all three curved flights pass 
 });
 
 test('every cycle performs exactly three flights despite broken crystals, with continuous movement',()=>{
- for(const broken of [0,1,9,73]){const s=battle();s.brokenCrystals=broken;s.players.a.invulnerable=1e12;advanceKnightBattle(s,[actor],2500);const sequence=starSequence(s),visited:number[]=[];
+ for(const broken of [0,1,9]){const s=battle();s.brokenCrystals=broken;s.players.a.invulnerable=1e12;advanceKnightBattle(s,[actor],2500);const sequence=starSequence(s),visited:number[]=[];
   for(let i=0;i<sequence.length;i++){assert.equal(s.stage,sequence[i][0]);if(s.stage==='ricochet-warn')assert.equal(ricochetCountdown(s,s.until,(i-5)/2),1);if(s.stage==='ricochet')visited.push(ricochetCrystal(s,(i-6)/2));if(s.stage==='shield')break;const end=knightPosition(s,s.until);advanceKnightBattle(s,[actor],s.until);assert(Math.hypot(...knightPosition(s,s.since).map((v,j)=>v-end[j]))<.001);}
   assert.equal(visited.length,3);assert(visited.every(i=>!crystalBroken(s,i)));assert.equal(s.stage,'shield');
   const view=new MetaKnightStarAssaultView();s.step=5;s.stage='ricochet-warn';view.update(s,s.since+200,new T.Vector3());assert.equal(view.routes.filter(r=>r.mesh.visible).length,1);view.dispose();

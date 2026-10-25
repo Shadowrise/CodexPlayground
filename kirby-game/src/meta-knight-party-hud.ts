@@ -13,7 +13,6 @@ export class MetaKnightPartyHud{
  private title=document.createElement('strong');
  private hearts=document.createElement('div');
  private count=document.createElement('span');
- private caption=document.createElement('p');
  private rosterTitle=document.createElement('span');
  private rosterCount=document.createElement('span');
  private healthKey='';private rosterKey='';
@@ -23,10 +22,10 @@ export class MetaKnightPartyHud{
  constructor(){
   this.element.id='knight-party-hud';this.element.className='panel';this.element.hidden=true;this.element.dataset.i18nIgnore='';
   const health=document.createElement('div'),meter=document.createElement('div'),roster=document.createElement('div');
-  health.className='knight-party-health';this.title.className='knight-party-title';meter.className='knight-party-meter';this.hearts.className='knight-party-hearts';this.count.className='knight-party-count';this.caption.className='knight-party-caption';
+  health.className='knight-party-health';this.title.className='knight-party-title';meter.className='knight-party-meter';this.hearts.className='knight-party-hearts';this.count.className='knight-party-count';
   this.hearts.setAttribute('role','img');
   for(let i=0;i<KNIGHT.hearts;i++){const heart=document.createElement('span');heart.textContent='♥';heart.setAttribute('aria-hidden','true');this.hearts.append(heart);}
-  this.count.setAttribute('aria-hidden','true');meter.append(this.hearts,this.count);health.append(this.title,meter,this.caption);
+  this.count.setAttribute('aria-hidden','true');meter.append(this.hearts,this.count);health.append(this.title,meter);
   roster.className='knight-party-roster';this.rosterCount.setAttribute('aria-hidden','true');roster.append(this.rosterTitle,this.rosterCount);
   this.list.className='knight-party-list';this.list.setAttribute('role','list');this.list.tabIndex=0;
   this.element.append(health,roster,this.list);document.body.append(this.element);
@@ -42,7 +41,6 @@ export class MetaKnightPartyHud{
    this.healthKey=healthKey;this.element.dataset.shared=String(shared);this.element.dataset.defeated=String(hp===0);this.title.textContent=label;
    this.hearts.setAttribute('aria-label',`${label}. ${t('Сердца: {0} из 5',[hp])}`);this.count.textContent=`${hp} / ${KNIGHT.hearts}`;
    Array.from(this.hearts.children).forEach((heart,i)=>{heart.classList.toggle('empty',i>=hp);heart.textContent=i<hp?'♥':'♡';});
-   this.caption.textContent=t(shared?'Общие для всех участников':'Сердца на эту попытку');
   }
   const rosterTitle=t('На арене'),count=String(ids.length),rosterKey=`${rosterTitle}:${count}`;
   if(this.rosterKey!==rosterKey){this.rosterKey=rosterKey;this.rosterTitle.textContent=rosterTitle;this.rosterCount.textContent=count;}

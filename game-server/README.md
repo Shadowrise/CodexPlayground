@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-35`) is shared with the browser in
+Protocol 2 (`build=meadow-network-36`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -211,6 +211,10 @@ the shared cosmic ascent, radial launch, three repeating attack stages and
 the accelerated finale. Participant positions, meteor guidance, the moving
 star refuge and the fall clock are authoritative and survive room wakeup.
 Build 33 clients must refresh before joining this version.
+
+Build `meadow-network-36` ends the third phase after three crystal hits.
+Saved rooms retain their already broken crystals when adopting the shorter
+phase. The four HUD sections show 4, 4, 3 and 6 hits from the start of the duel.
 
 Build `meadow-network-35` adds Курлык / Coo King / Гуругурко as a fifth wild
 pigeon and a playable character. The shared bird registry includes him in admin
