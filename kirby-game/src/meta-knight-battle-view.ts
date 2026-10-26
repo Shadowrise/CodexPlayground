@@ -29,7 +29,7 @@ import {cosmicSpinAngle,cosmicOrbs} from './meta-knight-cosmic-spin';
 import {MetaKnightCosmicMeteorView} from './meta-knight-cosmic-meteor-view';
 import {cosmicMeteorStage,meteorPoint} from './meta-knight-cosmic-meteor';
 import {MetaKnightCosmicRefugeView} from './meta-knight-cosmic-refuge-view';
-import {cosmicRefugeStage,refugeAngle} from './meta-knight-cosmic-refuge';
+import {COSMIC_REFUGE,cosmicRefugeStage,refugeSweepMs,refugeAngle} from './meta-knight-cosmic-refuge';
 import {gravityChargeVolume} from './meta-knight-gravity-charge-state';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 import {knightWarningGlass as glass,knightWarningCountdown as swordCountdown,knightWarningArrow} from './meta-knight-warning-material';
@@ -86,7 +86,7 @@ export class MetaKnightBattleView{
  private finale=new MetaKnightCosmicFinale();private fallKey='';
  private effectLights:T.PointLight[];
  private lighting=new T.Group();
- constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{},private chargeAudio:(level:number)=>void=()=>{}){
+ constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound,playbackRate?:number)=>void,private clearCosmicAudio=()=>{},private chargeAudio:(level:number)=>void=()=>{}){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
   this.motion=new MetaKnightBattleMotion(knight.actor);this.impactCountdown.name='Meta Knight impact countdown';
@@ -167,7 +167,7 @@ export class MetaKnightBattleView{
    if(stage==='cross')this.cue('crystal');if(stage==='ricochet')this.cue('thrust');if(stage==='star-rise'||stage==='star-fall')this.cue('constellation');if(stage==='shield')this.cue('slam');
    if(stage==='shield')this.cue('shield');if(stage==='crystal-break')this.cue('shatter');
    if(stage==='cosmic-meteor-draw')this.cue('cosmic-meteor-draw');if(stage==='cosmic-meteor-return')this.cue('cosmic-meteor-reflect');
-   if(cosmicRefugeStage(s)){this.cosmicAudio=true;if(stage==='cosmic-star-draw')this.cue('cosmic-refuge-call');if(stage==='cosmic-planet-draw')this.cue('cosmic-refuge-pull');if(stage==='cosmic-planet-sweep')this.cue('cosmic-refuge-roll');if(stage==='cosmic-planet-break'||stage==='cosmic-star-strike')this.cue('cosmic-refuge-break');}
+   if(cosmicRefugeStage(s)){this.cosmicAudio=true;if(stage==='cosmic-star-draw')this.cue('cosmic-refuge-call');if(stage==='cosmic-planet-draw')this.cue('cosmic-refuge-pull');if(stage==='cosmic-planet-sweep')this.cue('cosmic-refuge-roll',COSMIC_REFUGE.sweepMs/refugeSweepMs(s!));if(stage==='cosmic-planet-break'||stage==='cosmic-star-strike')this.cue('cosmic-refuge-break');}
    const cosmicCue:Partial<Record<typeof stage,KnightSound>>={'cosmic-charge':'cosmic-charge','cosmic-surge':'cosmic-impact','cosmic-lift':'cosmic-draw','cosmic-rise':'cosmic-ascent','cosmic-flight':'cosmic-arrive','cosmic-spin':'cosmic-spin','cosmic-open':'cosmic-tired'};
    if(cosmicCue[stage]){this.cosmicAudio=true;this.cue(cosmicCue[stage]!);}
    if(!cosmicStage(s)&&this.cosmicAudio){if(stage!=='won')this.clearCosmicAudio();this.cosmicAudio=false;}

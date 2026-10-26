@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 
+const forcedDirection=process.env.PLANET_DIRECTION==='-1'?-1:process.env.PLANET_DIRECTION==='1'?1:undefined;
 const output=process.env.COSMIC_OUTPUT??fileURLToPath(new URL('../artifacts/meta-knight-phase4-refuge-2026-10-25-v4/',import.meta.url));
 await mkdir(output+'screenshots/',{recursive:true});
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--autoplay-policy=no-user-gesture-required']});
@@ -10,6 +11,7 @@ try{
  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[],frames=[];
  page.on('pageerror',e=>{errors.push(e.stack);console.error(e.stack);});page.on('console',m=>{if(m.type()==='error'&&/WebGL|THREE|shader/i.test(m.text())){errors.push(m.text());console.error(m.text());}});
  await page.routeWebSocket(/.*/,ws=>ws.onMessage(()=>{}));
+ await page.addInitScript(direction=>{window.__qaPlanetDirection=direction;},forcedDirection);
  await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
  for(const endpoint of ['room','players','history/solo'])await page.route('**/'+endpoint,r=>r.fulfill({json:{ok:true,players:0,occupiedVariants:[],capacity:14}}));
  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('renderer.setAnimationLoop(', 'renderer.setAnimationLoop(window.__spinMainLoop = ')+'\nwindow.spinQA={THREE,travel:cosmicArena,renderer,chat,sounds,get c(){return character},mainFrame(time){previousTime=time-1000/60;window.__spinMainLoop(time)}};'});});
@@ -24,7 +26,7 @@ try{
  await page.evaluate(()=>{
   const q=spinQA;q.base=structuredClone(q.travel.battle);q.c.actor.position.set(2009,0,9);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;q.elapsed=0;q.cues=[];
   q.initialGlErrors=[];for(let i=0;i<8;i++){const error=q.renderer.getContext().getError();if(!error)break;q.initialGlErrors.push(error);}
-  const cue=q.travel.battleView.cue;q.travel.battleView.cue=kind=>{q.cues.push({kind,at:q.travel.soloNow});cue(kind);};
+  const cue=q.travel.battleView.cue;q.travel.battleView.cue=(kind,rate)=>{q.cues.push({kind,rate,at:q.travel.soloNow});cue(kind,rate);};
   q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashPressed:false,attack:false,attackPressed:false};
   q.travel.setGodMode(true);
   q.step=(dt,input=q.input)=>{q.travel.update(dt,q.travel.soloNow/1000,q.c,input,0,0,false,false);q.elapsed=q.travel.soloNow-q.base.since;};
@@ -36,8 +38,8 @@ try{
  });
  await page.evaluate(async()=>{
   const q=spinQA;q.ref=await import('/src/meta-knight-cosmic-refuge.ts');
-  q.restart=(hp=6)=>{q.travel.soloNow+=1000;q.c.actor.position.set(2000,180,35);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;Object.assign(q.travel.battle.players.solo,{hp:5,hits:0,reflects:0,invulnerable:0,attackAt:-1e9,handled:-1e9});q.travel.setPhase(4,3);q.travel.battle.hp=hp;q.base=structuredClone(q.travel.battle);q.elapsed=0;q.step(0);q.c.actor.position.set(2000,180,35);q.travel.follow.reset(q.c.yaw);q.step(1/60);};
-  const metrics=q.metrics;q.metrics=()=>{const v=q.travel.battleView.refuge,s=q.travel.battle;return {...metrics(),marker:v.target.group.visible,dome:v.dome.visible,activated:s.cosmicRefuge?.activatedAt!==undefined,attackAt:s.players.solo.attackAt,star:s.cosmicRefuge?q.ref.refugeStar(s,q.travel.soloNow):undefined,planet:v.planet?.position.toArray(),chunks:v.chunks.visible,gravity:v.gravity.hot.count,safety:!!q.travel.refugeGlows.get(q.c)?.group.visible,visibleStar:v.star.position.toArray(),blueEyes:q.travel.knight.actor.getObjectByName('Eyes_glow').children.map(o=>(o.material?.emissive??o.material?.color)?.toArray()),dazed:q.travel.knight.actor.getObjectByName('Duel dazed eyes')?.visible};};
+  q.restart=(hp=6)=>{q.travel.soloNow+=1000;q.c.actor.position.set(2000,180,35);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;Object.assign(q.travel.battle.players.solo,{hp:5,hits:0,reflects:0,invulnerable:0,attackAt:-1e9,handled:-1e9});q.travel.setPhase(4,3);q.actualApproach=structuredClone(q.travel.battle.cosmicRefuge);if(window.__qaPlanetDirection)q.travel.battle.cosmicRefuge.direction=window.__qaPlanetDirection;q.travel.battle.hp=hp;q.base=structuredClone(q.travel.battle);q.elapsed=0;q.step(0);q.c.actor.position.set(2000,180,35);q.travel.follow.reset(q.c.yaw);q.step(1/60);};
+  const metrics=q.metrics;q.metrics=()=>{const v=q.travel.battleView.refuge,s=q.travel.battle;return {...metrics(),marker:v.target.group.visible,dome:v.dome.visible,activated:s.cosmicRefuge?.activatedAt!==undefined,attackAt:s.players.solo.attackAt,star:s.cosmicRefuge?q.ref.refugeStar(s,q.travel.soloNow):undefined,planet:v.planet?.position.toArray(),chunks:v.chunks.visible,gravity:v.gravity.hot.count,direction:q.ref.refugeDirection(s),planetAngle:s.cosmicRefuge?q.ref.refugePlanetAngle(s,q.travel.soloNow):undefined,actualApproach:q.actualApproach,safety:!!q.travel.refugeGlows.get(q.c)?.group.visible,visibleStar:v.star.position.toArray(),blueEyes:q.travel.knight.actor.getObjectByName('Eyes_glow').children.map(o=>(o.material?.emissive??o.material?.color)?.toArray()),dazed:q.travel.knight.actor.getObjectByName('Duel dazed eyes')?.visible};};
   q.steerStar=()=>{const p=q.ref.refugeStar(q.travel.battle,q.travel.soloNow),dx=2000+p[0]-q.c.actor.position.x,dz=p[2]-q.c.actor.position.z,d=Math.hypot(dx,dz),yaw=Math.atan2(dx,dz),turn=Math.atan2(Math.sin(yaw-q.c.yaw),Math.cos(yaw-q.c.yaw));return {...q.input,forward:d>1&&Math.abs(turn)<.6,steer:Math.max(-1,Math.min(1,turn/(Math.PI*1.1/60))),distance:d};};
   q.followStarTo=ms=>{while(q.elapsed<ms-.001){const input=q.steerStar();q.travel.follow.face(Math.atan2(2000-q.c.actor.position.x,-q.c.actor.position.z));q.step(Math.min(1/60,(ms-q.elapsed)/1000),input);}return q.metrics();};q.restart();q.travel.setGodMode(false);
  });
@@ -45,10 +47,10 @@ try{
  await shot(650,'01-star-pull','Синие лучи вытягивают фоновую звёздочку');
  const open=await shot(1800,'02-automatic-dome','Прилёт · звезда сама включает общий купол');assert(!open.marker&&open.dome&&open.activated);assert.equal(open.attackAt,-1e9);assert(open.gravity>60);
  const approach=await page.evaluate(()=>{const q=spinQA;let frames=0;while(q.steerStar().distance>3.6&&q.travel.battle.stage==='cosmic-star-open'&&frames++<300)q.step(1/60,q.steerStar());return {...q.metrics(),distance:q.steerStar().distance};});assert(approach.distance<3.7&&approach.activated);
- const activated=await page.evaluate(()=>{const q=spinQA;return q.followStarTo(q.elapsed+350);});assert(activated.activated&&activated.dome&&!activated.marker);assert.equal(activated.attackAt,-1e9);assert.equal(activated.life,5);assert(activated.safety);assert(activated.gravity>60);await page.screenshot({path:output+'screenshots/03-shared-dome.png'});frames.push({...activated,path:output+'screenshots/03-shared-dome.png',label:'Купол включён автоматически · игрок подлетает без атаки'}); const R=await page.evaluate(()=>spinQA.ref.COSMIC_REFUGE),pull=R.drawMs+R.openMs,sweep=pull+R.pullMs,breakAt=sweep+R.sweepMs,strikeAt=breakAt;
+ const activated=await page.evaluate(()=>{const q=spinQA;return q.followStarTo(q.elapsed+350);});assert(activated.activated&&activated.dome&&!activated.marker);assert.equal(activated.attackAt,-1e9);assert.equal(activated.life,5);assert(activated.safety);assert(activated.gravity>60);await page.screenshot({path:output+'screenshots/03-shared-dome.png'});frames.push({...activated,path:output+'screenshots/03-shared-dome.png',label:'Купол включён автоматически · игрок подлетает без атаки'}); const R=await page.evaluate(()=>spinQA.ref.COSMIC_REFUGE),pull=R.drawMs+R.openMs,sweep=pull+R.pullMs,rollMs=await page.evaluate(()=>spinQA.ref.refugeSweepMs(spinQA.travel.battle)),breakAt=sweep+rollMs,strikeAt=breakAt;
  const pulled=await shot(pull+R.pullMs*.52,'04-planet-pull','Синие глаза · молнии обхватывают планету',true);assert(pulled.blueEyes[0][2]>pulled.blueEyes[0][0]*5);
- const early=await shot(sweep+300,'05-roll-start','Планета справа от движущегося купола',true);assert(early.dome);
- const middle=await shot(sweep+R.sweepMs*.5,'06-roll-middle','Прокатывание против часовой стрелки',true);assert.equal(middle.life,5);assert(Math.hypot(middle.star[0]-early.star[0],middle.star[2]-early.star[2])>5);
+ const early=await shot(sweep+300,'05-roll-start','Планета у выбранной границы купола',true);assert(early.dome);
+ const middle=await shot(sweep+rollMs*.5,'06-roll-middle','Прокатывание в выбранном направлении',true);assert.equal(middle.life,5);assert((middle.planetAngle-early.planetAngle)*early.direction>0);assert(Math.abs(Math.abs(early.actualApproach.angle)-Math.PI/2)<1e-8);assert(Math.abs(Math.hypot(middle.star[0]-early.star[0],middle.star[2]-early.star[2])-2*R.orbit*Math.sin((middle.elapsed-early.elapsed)*R.starSpeed/2000))<.001);
  await shot(breakAt-100,'07-roll-end','Планета подходит к другой стороне купола',true);
  await shot(breakAt+60,'08a-collision-flash','Столкновение · горячая трещина и вспышка',true);
  const broken=await shot(breakAt+220,'08-planet-shatter','Планета разбивается о купол',true);assert(broken.chunks);assert.equal(broken.life,5);

@@ -38,7 +38,7 @@ try{
  }
  await page.screenshot({path:output+'charge-with-crackle.png'});
  const stable=await page.evaluate(()=>{const q=chargeQA,source=q.sounds.knightCharge.source;for(let i=0;i<120;i++)q.step(0);return {sameSource:q.sounds.knightCharge.source===source,sameBuffers:q.sounds.buffers.size===q.bufferCount};});assert(stable.sameSource&&stable.sameBuffers);
- const speed=await page.evaluate(()=>{const q=chargeQA;q.go('cosmic-planet-sweep',.2);const s=q.travel.battle,before=q.ref.refugePlanetAngle(s,q.travel.soloNow),after=q.ref.refugePlanetAngle(s,q.travel.soloNow+1000),old=q.ref.COSMIC_REFUGE.starSpeed+(2*Math.PI-2*q.ref.refugeContactAngle)/9;return {duration:s.until-s.since,multiplier:(after-before)/old};});assert(Math.abs(speed.multiplier-1.2)<1e-8);
+ const speed=await page.evaluate(()=>{const q=chargeQA;q.go('cosmic-planet-sweep',.2);const s=q.travel.battle,before=q.ref.refugePlanetAngle(s,q.travel.soloNow),after=q.ref.refugePlanetAngle(s,q.travel.soloNow+1000),old=q.ref.COSMIC_REFUGE.starSpeed+(2*Math.PI-2*q.ref.refugeContactAngle)/9;return {duration:s.until-s.since,multiplier:Math.abs(after-before)/old};});assert(Math.abs(speed.multiplier-1.2)<1e-8);
  await page.evaluate(()=>chargeQA.step(0,true));assert(!await page.evaluate(()=>chargeQA.sounds.knightCharge));await page.waitForTimeout(80);
  await page.evaluate(()=>chargeQA.step(0));assert(await page.evaluate(()=>!!chargeQA.sounds.knightCharge));
  await page.evaluate(()=>chargeQA.sounds.button.click());await page.evaluate(()=>chargeQA.step(0));assert(!await page.evaluate(()=>chargeQA.sounds.knightCharge));await page.evaluate(()=>{chargeQA.sounds.button.click();chargeQA.step(0);});assert(await page.evaluate(()=>!!chargeQA.sounds.knightCharge));

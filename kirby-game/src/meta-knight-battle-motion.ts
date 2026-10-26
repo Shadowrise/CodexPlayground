@@ -4,7 +4,7 @@ import {starOpening,ricochetCurve,ricochetIndex} from './meta-knight-star-assaul
 import {COSMIC,cosmicStage,cosmicCombat,cosmicElapsed,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
 import {COSMIC_SPIN,cosmicSpinFatigue} from './meta-knight-cosmic-spin';
 import {COSMIC_METEOR,cosmicMeteorStage} from './meta-knight-cosmic-meteor';
-import {cosmicRefugeStage,refugePlanetAngle,refugeAngle,refugeContactAngle} from './meta-knight-cosmic-refuge';
+import {cosmicRefugeStage,refugePlanetAngle,refugeDirection,refugeAngle,refugeContactAngle} from './meta-knight-cosmic-refuge';
 
 const TIP=new T.Vector3(-.315,2.05,0).normalize();
 const BLADE_LENGTH=Math.hypot(.315,2.05);
@@ -207,7 +207,7 @@ export class MetaKnightBattleMotion{
  private cosmicRefugePose(s:KnightBattle,f:number){
   this.savePose();const now=s.since+f*(s.until-s.since),clock=cosmicElapsed(s,now)/1000,stage=s.stage;
   const raise=stage==='cosmic-star-draw'?easeCosmic(f):stage==='cosmic-star-stun'?1-.55*easeCosmic(f/.25):stage==='cosmic-star-retreat'?(s.cosmicRefuge?.activatedAt!==undefined ? .45 : 1)*(1-easeCosmic(f/.7)):1,rolling=stage==='cosmic-planet-sweep';
-  const turn=rolling?refugePlanetAngle(s,now)-refugeAngle(s,now):stage==='cosmic-planet-draw'?refugeContactAngle*easeCosmic(f):['cosmic-planet-break','cosmic-planet-release','cosmic-star-strike'].includes(stage)?(Math.PI*2-refugeContactAngle)*(1-easeCosmic(f)):0,flinch=stage==='cosmic-star-stun'?Math.sin(Math.PI*Math.min(1,f/.55))*.15:0;
+  const direction=refugeDirection(s),turn=rolling?refugePlanetAngle(s,now)-refugeAngle(s,now):stage==='cosmic-planet-draw'?direction*refugeContactAngle*easeCosmic(f):['cosmic-planet-break','cosmic-planet-release','cosmic-star-strike'].includes(stage)?direction*(Math.PI*2-refugeContactAngle)*(1-easeCosmic(f)):0,flinch=stage==='cosmic-star-stun'?Math.sin(Math.PI*Math.min(1,f/.55))*.15:0;
   this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);this.body.position.set(0,1.14+.018*Math.sin(clock*3.4),0);this.body.rotation.set(.08+flinch,0,.018*Math.sin(clock*2.1));
   this.arm.position.x=.52;this.left.position.x=-.52;this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.2,.85,.7).normalize());this.arm.quaternion.copy(this.q);this.left.rotation.set(-.28,0,-.62);
   this.placeHilt(T.MathUtils.lerp(.72,.15,raise),T.MathUtils.lerp(1.4,2.55,raise),T.MathUtils.lerp(1.35,1.40,raise));

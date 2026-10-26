@@ -333,10 +333,10 @@ export class SoundEffects {
     this.knightCharge.gain.gain.setTargetAtTime(Math.max(0,Math.min(.7,level)),ctx.currentTime,.06);
   }
   stopKnightCosmic(){for(const source of this.knightCosmicSources){try{source.stop();}catch{/* A source may have ended in the same audio quantum. */}}this.knightCosmicSources.clear();this.knightCharge=undefined;}
-  playKnight(kind:KnightSound){
+  playKnight(kind:KnightSound,playbackRate=1){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
     if(isCosmicSound(kind)||isMeteorSound(kind)||isRefugeSound(kind))void this.prepareKnightCosmic();
-    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.knightBuffer(kind);gain.gain.value=kind==='cosmic-orb'?.50:kind==='cosmic-spin'?.70:.85;source.connect(gain);gain.connect(this.master!);
+    const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.knightBuffer(kind);source.playbackRate.value=playbackRate;gain.gain.value=kind==='cosmic-orb'?.50:kind==='cosmic-spin'?.70:.85;source.connect(gain);gain.connect(this.master!);
     if(kind.startsWith('cosmic-')){this.knightCosmicSources.add(source);source.addEventListener('ended',()=>this.knightCosmicSources.delete(source),{once:true});}
     this.begin(source,gain,undefined,undefined,true);
   }

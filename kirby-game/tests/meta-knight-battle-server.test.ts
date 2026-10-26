@@ -104,14 +104,17 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   assert.equal(room.room.knightBattle.stage,'cosmic-meteor-return');assert.equal(room.room.knightBattle.hp,6);assert.equal(room.room.knightBattle.players[aid].reflects,priorReflects+1);
   now=room.room.knightBattle.until-200;send(a,actor([2000,180,35]));assert.equal(room.room.knightBattle.hp,5);assert.equal(room.room.knightBattle.stage,'cosmic-hit');room.room.knightBattle=structuredClone(beforeMeteors);
   const priorHits=beforeMeteors.players[aid].hits;
+  for(const direction of [1,-1]){
   setKnightPhase(room.room.knightBattle,4,[{id:aid,p:[0,180,35],yaw:Math.PI,available:true}],now,3);
+  assert([1,-1].includes(room.room.knightBattle.cosmicRefuge.direction));const quarterStar=refugeStar(room.room.knightBattle,room.room.knightBattle.until);assert(Math.abs(quarterStar[2])<1e-8,'the shared star is summoned ninety degrees from the selected player');room.room.knightBattle.cosmicRefuge.direction=direction;
   now=room.room.knightBattle.until-200;send(a,actor([2000,180,35]));assert.equal(room.room.knightBattle.stage,'cosmic-star-open');
   const star=refugeStar(room.room.knightBattle,now+200),starAttacker=actor([2000+star[0],-99,star[2]-3]);starAttacker.q=[0,0,0,1];send(a,starAttacker);send(a,starAttacker);
   assert.equal(a.data.actor.p[1],180);assert.equal(room.room.knightBattle.cosmicRefuge.activatedAt,room.room.knightBattle.since,'the authority activates the star on arrival without an attack');assert.equal(room.room.knightBattle.cosmicRefuge.activator,undefined);
   const savedRefuge=structuredClone(room.room.knightBattle.cosmicRefuge);await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.deepEqual(room.room.knightBattle.cosmicRefuge,savedRefuge,'the moving shared refuge survives Worker wakeup');
   for(const player of Object.values(room.room.knightBattle.players) as any[])player.invulnerable=now+100000;
   while(room.room.knightBattle.stage!=='cosmic-star-retreat'){const point=refugeStar(room.room.knightBattle,room.room.knightBattle.until);starAttacker.p=[2000+point[0],180,point[2]];now=room.room.knightBattle.until-200;send(a,starAttacker);}
-  assert.equal(room.room.knightBattle.hp,5);assert.equal(room.room.knightBattle.players[aid].hits,priorHits+1,'only the returned star awards the sheltered player a hit');
+  assert.equal(room.room.knightBattle.hp,5);assert.equal(room.room.knightBattle.players[aid].hits,priorHits+(direction===1?1:2),'only the returned star awards the sheltered player a hit');
+  }
   const shifted=structuredClone(beforeMeteors),offset=now-shifted.checked;shifted.since+=offset;shifted.until+=offset;shifted.checked=now;if(shifted.cosmicSpin)shifted.cosmicSpin.at+=offset;if(shifted.cosmicLaunch)shifted.cosmicLaunch.at+=offset;room.room.knightBattle=shifted;
   for(let hit=0;hit<6;hit++){
    const s=room.room.knightBattle;for(const p of Object.values(s.players) as any[])p.invulnerable=now+100000;

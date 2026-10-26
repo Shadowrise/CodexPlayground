@@ -18,7 +18,7 @@ import {WILD_PIGEONS,type WildPigeonId} from './wild-pigeons';
 import {validFruitBoost,type FruitBoostState} from './fruit-speed';
 /** Shared, dependency-free wire contract used by the Worker and browser. */
 export const PROTOCOL=2;
-export const BUILD='meadow-network-40';
+export const BUILD='meadow-network-41';
 export type ActorState={location?:'meta-knight-arena';p:number[];q:number[];s:number;fit?:number;state:string;pose:number[][];dash?:[charge:number,progress:number];roll?:number[];fruits:number;fruitBoost?:FruitBoostState;eventPoints?:number;achievements:string[];name:string;variant:number;star:number;progress?:{size:number;speed?:number;checkpoint:number;mountainCheckpoint?:number;ground:number};ride?:{key:string;data:(number|string)[]}};
 export type WorldState={npcs:ActorState[];npcLife:number[][];carts:number[][];balloons:(number|string)[][];bugs:number[][];mountainSteps?:number[][]}&Partial<Record<WildPigeonId,PidgieState>>;
 export type Event={type:'knight';action:'start'|'attack'|'cancel'}|{type:'seal';id:SealId}|{type:'number-start'}|{type:'number-step'}|{type:'number-note';digit:number}|{type:'bread';action:BreadAction}|{type:'flower-replay'}|{type:'flower-start'}|{type:'flower-step'}|{type:'flower-note';index:number}|{type:'centipede-step'}|{type:'centipede-start';trail:Point[]}|{type:'festival-star';index:number}|{type:'chat';text:string}|{type:'emote';emote:string}|{type:'pidgie-scare'|'pidgie-interest';playerId:string;bird?:WildPigeonId}|{type:'fruit';index:number;npc?:number}|{type:'mill';action:MillAction}|{type:'star'}|{type:'lock';key:string}|{type:'release';key:string;bugState?:number[]}|{type:'hit'}|{type:'visible';value:boolean};

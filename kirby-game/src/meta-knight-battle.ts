@@ -5,7 +5,7 @@ import {SHIELD,crystalPoint,chooseShieldCrystal} from './meta-knight-shield';
 import {COSMIC,cosmicStage,cosmicHeight,cosmicNext,cosmicOpening,cosmicCombat,type CosmicStage,type CosmicLaunch,type CosmicFall} from './meta-knight-cosmic';
 import {COSMIC_SPIN,cosmicSpinDanger,type CosmicSpin} from './meta-knight-cosmic-spin';
 import {COSMIC_METEOR as METEOR,meteorPoint,meteorPath,meteorContact,updateMeteorTracking,type CosmicMeteor} from './meta-knight-cosmic-meteor';
-import {COSMIC_REFUGE as REFUGE,REFUGE_WORLDS,refugeActive,insideRefuge,refugeAngle,refugeDanger,type CosmicRefuge} from './meta-knight-cosmic-refuge';
+import {COSMIC_REFUGE as REFUGE,REFUGE_WORLDS,refugeApproach,refugeSweepMs,refugeActive,insideRefuge,refugeAngle,refugeDanger,type CosmicRefuge} from './meta-knight-cosmic-refuge';
 import {spawnKnightLifeFirefly,hitKnightLifeFirefly,knightLifeFireflyPoint,type KnightLifeFirefly} from './meta-knight-life-firefly';
 export type KnightPoint=[number,number,number];
 export type KnightActor={id:string;p:KnightPoint;yaw:number;available:boolean};
@@ -136,9 +136,10 @@ function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:Knig
  if(stage==='cosmic-meteor-cast'&&s.cosmicMeteor){s.cosmicMeteor.at=now+METEOR.releaseMs;s.until=s.cosmicMeteor.at+meteorPath(s.cosmicMeteor).duration+METEOR.graceMs+25;}
  if(stage==='cosmic-star-draw'){
   s.cosmicPart=3;delete s.cosmicSpin;delete s.cosmicMeteor;
-  s.cosmicRefuge={at:now,angle:a?angle([0,COSMIC.height,0],a.p):s.yaw,world:REFUGE_WORLDS[Math.max(0,s.cycle-1)%REFUGE_WORLDS.length],contacts:{}};
+  s.cosmicRefuge={at:now,...refugeApproach(s.id,s.cycle,a?angle([0,COSMIC.height,0],a.p):s.yaw),world:REFUGE_WORLDS[Math.max(0,s.cycle-1)%REFUGE_WORLDS.length],contacts:{}};
  }
  if(stage==='cosmic-star-open'&&s.cosmicRefuge)s.cosmicRefuge.activatedAt??=now;
+ if(stage==='cosmic-planet-sweep')s.until=now+refugeSweepMs(s);
  if(!a||s.pattern==='star')return;
  if(stage.endsWith('-warn')){
   s.yaw=angle(s.from,a.p);s.height=stage==='shot-warn'?KNIGHT.hoverHeight:stage==='dash-warn'?Math.max(.5,Math.min(3,a.p[1])):0;
