@@ -31,10 +31,10 @@ test('Meta Knight retains every native gameplay clip and plays all ride poses',(
  c.setActivity('Attack');c.updateActivity(.2);assert.equal(c.state,'Attack');assert(c.actions.get('Attack')!.isRunning());
 });
 
-test('native movement preserves forward, sprint, reverse, steering and growth speed',()=>{
- const c=create();advance(c,1,{...idle,forward:true});assert.equal(c.state,'Run');assert(Math.abs(c.actor.position.z-3.4)<1e-6);
- let z=c.actor.position.z;advance(c,1,{...idle,forward:true,sprint:true});assert(Math.abs(c.actor.position.z-z-6.8)<1e-6);assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
- z=c.actor.position.z;advance(c,1,{...idle,backward:true,sprint:true});assert.equal(c.state,'WalkBackward');assert(Math.abs(c.actor.position.z-z+1.65)<1e-6);
+test('native movement preserves running, reverse, steering and growth speed',()=>{
+ const c=create();advance(c,1,{...idle,forward:true});assert.equal(c.state,'Run');assert(Math.abs(c.actor.position.z-6.8)<1e-6);
+ let z=c.actor.position.z;advance(c,1,{...idle,forward:true});assert(Math.abs(c.actor.position.z-z-6.8)<1e-6);assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
+ z=c.actor.position.z;advance(c,1,{...idle,backward:true});assert.equal(c.state,'WalkBackward');assert(Math.abs(c.actor.position.z-z+1.65)<1e-6);
  advance(c,.2,{...idle,left:true});advance(c,.2);assert(Math.abs(c.yaw-Math.PI*.55*2*.2)<1e-6);
  const facing=new Vector3(0,0,1).applyQuaternion(c.animationRoot.getWorldQuaternion(new Quaternion()));
  assert(Math.abs(Math.atan2(facing.x,facing.z)-c.yaw)<1e-6,'the native root never doubles the game heading');

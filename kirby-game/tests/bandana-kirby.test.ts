@@ -47,7 +47,7 @@ test('Bandana keeps its spear in the animated hand and survives emotions, moveme
   c.setActivity('Idle');assert(c.startEmote(emote.id));
   for(let i=0;i<165;i++){c.update(1/60,idle);if(i%15===0)checkGrip();}
  }
- for(const input of [{...idle,forward:true},{...idle,forward:true,sprint:true},{...idle,attack:true},{...idle,jump:true}]){
+ for(const input of [{...idle,forward:true},{...idle,attack:true},{...idle,jump:true}]){
   c.setActivity('Idle');for(let i=0;i<60;i++){c.update(1/60,input);checkGrip();}
  }
  assert(validActor(actorState(c,'Бандана',KIRBY_VARIANTS.indexOf(variant))));

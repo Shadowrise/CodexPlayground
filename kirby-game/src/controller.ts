@@ -22,7 +22,7 @@ import {KirbyDashMotion} from './kirby-dash-motion';
 import {FruitEatingPose} from './fruit-eating';
 import {TURN_RATE} from './movement-input';
 
-export type Input = { forward: boolean; backward?: boolean; sprint?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashHeld?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number; moveYaw?:number; movementMultiplier?:number };
+export type Input = { forward: boolean; backward?: boolean; left: boolean; right: boolean; jump?: boolean; jumpPressed?:boolean; dashPressed?:boolean; attack?: boolean; attackPressed?:boolean; eat?: boolean; steer?: number; moveYaw?:number; movementMultiplier?:number };
 
 export class CharacterController {
   readonly actor = new Group();
@@ -53,7 +53,7 @@ export class CharacterController {
   }
   readonly flight = new Flight();
   readonly playerDash = new MetaKnightPlayerDash();
-  /** Compatibility alias for the sword dash callers; every rig shares the hold rules. */
+  /** Compatibility alias for the sword dash callers; every rig shares the press rules. */
   readonly knightDash = this.playerDash;
   private pigeonDashMotion?:PigeonDashMotion;
   private kirbyDashMotion?:KirbyDashMotion;
@@ -107,6 +107,9 @@ export class CharacterController {
   private airPose:{arm:Object3D;p:Vector3;q:Quaternion}[]=[];
   private clearAirPose(){for(const p of this.airPose){p.arm.position.copy(p.p);p.arm.quaternion.copy(p.q);}this.airPose=[];}
   private pushReady = 0;
+  get pushAvailable(){return this.pushReady<=0&&!this.roll.active&&!this.playerDash.active&&this.eatElapsed===undefined&&(this.flight.active||this.attackElapsed===undefined);}
+  get jumpAvailable(){return !this.roll.active&&!this.playerDash.active&&this.eatElapsed===undefined&&(this.flight.active||this.attackElapsed===undefined)&&this.flight.canPress;}
+  get dashAvailable(){return !this.roll.active&&(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined&&this.playerDash.cooldown===0&&!this.playerDash.active;}
   private pushArmed = false;
   private readonly pushArms:{arm:Object3D;q:Quaternion;p:Vector3;side:number}[]=[];
   private attackWasHeld = false;
@@ -158,7 +161,7 @@ export class CharacterController {
     this.eatElapsed = undefined;
   }
   readonly animationRoot: Object3D;
-  get speed() { return this.duelSize?3.4:3.4 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
+  get speed() { return this.duelSize?6.8:6.8 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
   get backwardSpeed() { return this.duelSize?2.8:1.65 * this.sizeSpeedMultiplier * this.fruitBoost.multiplier * (this.starRemaining > 0 ? 2 : 1); }
 
   constructor(model: Object3D, clips: AnimationClip[]) {
@@ -224,7 +227,7 @@ export class CharacterController {
   private play(name: string) {
     if (this.active && this.state === name) return;
     const next = this.actions.get(name)!;
-    next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1);
+    next.reset().setEffectiveTimeScale(name==='Run'&&!this.isPigeon?2:1).setEffectiveWeight(1);
     const nativeClip=this.isPigeon?PIGEON_CLIP_BY_NAME[name as PigeonClipName]:this.isMetaKnight?META_KNIGHT_CLIP_BY_NAME[name as MetaKnightClipName]:undefined;
     const turning = this.hasNativeAnimations ? !(nativeClip?.loop??true) : name === 'Push' || name === 'Eat' || name === 'Jump';
     next.setLoop(turning ? LoopOnce : LoopRepeat, turning ? 1 : Infinity);
@@ -280,7 +283,7 @@ export class CharacterController {
     if(this.swimming)factor*=.55;
     factor*=input.movementMultiplier??1;
     const direction = Number(input.forward) - Number(!!input.backward);
-    const speed = direction > 0 ? this.speed * (input.sprint ? 2 : 1) : this.backwardSpeed;
+    const speed = direction > 0 ? this.speed : this.backwardSpeed;
     const yaw=input.moveYaw??this.yaw;
     this.actor.position.x += Math.sin(yaw) * speed * direction * dt * factor;
     this.actor.position.z += Math.cos(yaw) * speed * direction * dt * factor;
@@ -292,7 +295,7 @@ export class CharacterController {
     else updateFlightCloud(this.cloud,this.flight,levitating);
   }
 
-  /** Native stance travel determines cadence, including size, sprint and boosts. */
+  /** Native stance travel determines cadence, including size and boosts. */
   syncPigeonLocomotion(dt:number,distance:number){
     if(!this.isPigeon||this.flight.active||this.swimming||!isPigeonGait(this.state))return false;
     const model=this.animationRoot.parent;
@@ -343,7 +346,7 @@ export class CharacterController {
     this.fruitEating.clear();
     this.clearPigeonFlightWings();
     this.clearDuelDazedPose();
-    this.clearKnightDashPose();this.knightDash.tick(dt);this.knightDash.cancelCharge();
+    this.clearKnightDashPose();this.knightDash.tick(dt);
     this.updateGrowth(dt);this.pushReady=Math.max(0,this.pushReady-dt);
     this.mixer.update(dt);
     this.updateKnightDashVisual();
@@ -370,7 +373,7 @@ export class CharacterController {
     if(this.roll.active){this.mixer.update(dt);if(this.roll.update(dt,this.actor,this.surfaceY)){if(!this.hasNativeAnimations)this.roll.applyPose(this.animationRoot,this.yaw);}else this.play('Idle');this.constrainPosition();return;}
     if(this.emotion){
       this.emotion.clear();
-      if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.attack || input.eat){if(this.emotion.kind==='Peck')this.actions.get('Peck')!.stop();this.emotion=undefined;this.play('Idle');}
+      if(input.forward || input.backward || input.left || input.right || input.steer || input.jump || input.dashPressed || input.attack || input.eat){if(this.emotion.kind==='Peck')this.actions.get('Peck')!.stop();this.emotion=undefined;this.play('Idle');}
       else {
         this.mixer.update(dt);
         const emote=this.emotion;
@@ -402,14 +405,13 @@ export class CharacterController {
         this.flight.press();
       }
     }
-    const dashStart=this.playerDash.chargeHold(dt,input.dashHeld??!!input.jump,(!this.swimming||this.flight.active)&&this.eatElapsed===undefined&&this.attackElapsed===undefined&&this.airPush===undefined);
-    if(dashStart!==undefined){
+    if(input.dashPressed&&this.playerDash.press(this.dashAvailable)){
       if(!this.flight.active){this.flight.press();this.flightBoost=this.starRemaining>0?2:1;}
       this.flight.sustain();
       this.play('Dash');
     }
     if(this.knightDash.active){
-      const previous=this.playerDash.progress,step=this.playerDash.step(dashStart??dt);
+      const previous=this.playerDash.progress,step=this.playerDash.step(dt);
       const distance=(!this.isMetaKnight?(pigeonDashTravel(this.playerDash.progress)-pigeonDashTravel(previous))*PLAYER_KNIGHT_DASH.distance:step*PLAYER_KNIGHT_DASH.distance/PLAYER_KNIGHT_DASH.duration)*this.sizeSpeedMultiplier;
       this.actor.position.x+=Math.sin(this.yaw)*distance;this.actor.position.z+=Math.cos(this.yaw)*distance;
       this.flight.update(dt);this.actor.position.y=this.surfaceY+this.flight.height*Math.max(1,this.actor.scale.x)*this.flightBoost;
@@ -417,7 +419,7 @@ export class CharacterController {
       if(!this.knightDash.active)this.play(this.flight.active?'Fly':this.locomotion(input));
       this.constrainPosition();this.updateKnightDashVisual();this.updatePigeonDashVisual();this.updateKirbyDashVisual();return;
     }
-    if(!this.isPigeon)this.actions.get('Run')!.setEffectiveTimeScale(input.sprint && input.forward && !input.backward ? 2 : 1);
+    if(!this.isPigeon)this.actions.get('Run')!.setEffectiveTimeScale(input.forward && !input.backward ? 2 : 1);
     if (this.eatElapsed !== undefined) {
       const previous = this.eatElapsed;
       this.eatElapsed += dt;
@@ -475,7 +477,7 @@ export class CharacterController {
         const speed=2*Math.max(.35,Math.abs(steering));
         action.setLoop(LoopRepeat,Infinity).setEffectiveTimeScale(speed*action.getClip().duration/.4);
       } else if(this.state==='Run'&&!this.isPigeon) {
-        this.actions.get('Run')!.setEffectiveTimeScale(input.sprint?2:1);
+        this.actions.get('Run')!.setEffectiveTimeScale(2);
       }
       this.move(dt, input);
       this.advanceGroundMixer(dt);

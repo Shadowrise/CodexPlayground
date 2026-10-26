@@ -41,16 +41,16 @@ test('camera-relative facing takes the short path and settles without overshooti
  }
 });
 
-test('screen-relative movement stays responsive during sprint, push, jump and levitation',async()=>{
- for(const mode of ['sprint','push','jump','levitation']){
+test('screen-relative movement stays responsive during running, push, jump and levitation',async()=>{
+ for(const mode of ['run','push','jump','levitation']){
   const c=await create();c.yaw=0;
   if(mode==='levitation'){
    c.update(.01,{...idle,jump:true});c.update(.01,idle);c.update(.01,{...idle,jump:true});
   }
   const before=c.actor.position.clone();
   const motion=cameraRelativeMotion(0,-1,Math.PI,c.yaw,1/60);
-  c.update(1/60,{...idle,...motion,sprint:mode==='sprint',attack:mode==='push',jump:mode==='jump'});
-  const distance=c.speed/60*(mode==='sprint'?2:mode==='jump'||mode==='levitation'?.8:1);
+  c.update(1/60,{...idle,...motion,attack:mode==='push',jump:mode==='jump'});
+  const distance=c.speed/60*(mode==='jump'||mode==='levitation'?.8:1);
   assert(Math.abs(c.actor.position.x-before.x)<1e-8,mode);
   assert(Math.abs(c.actor.position.z-before.z+distance)<1e-8,mode);
   const stopped=c.actor.position.clone(),yaw=c.yaw;

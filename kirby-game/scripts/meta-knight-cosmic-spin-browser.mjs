@@ -24,7 +24,7 @@ try{
   const q=spinQA;q.base=structuredClone(q.travel.battle);q.c.actor.position.set(2009,0,9);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;q.elapsed=0;q.cues=[];
   q.initialGlErrors=[];for(let i=0;i<8;i++){const error=q.renderer.getContext().getError();if(!error)break;q.initialGlErrors.push(error);}
   const cue=q.travel.battleView.cue;q.travel.battleView.cue=kind=>{q.cues.push({kind,at:q.travel.soloNow});cue(kind);};
-  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashHeld:false,sprint:false,attack:false,attackPressed:false};
+  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashPressed:false,attack:false,attackPressed:false};
   q.travel.setGodMode(true);
   q.step=(dt,input=q.input)=>{q.travel.update(dt,q.travel.soloNow/1000,q.c,input,0,0,false,false);q.elapsed=q.travel.soloNow-q.base.since;};
   q.metrics=()=>{q.elapsed=q.travel.soloNow-q.base.since;q.travel.render();const s=q.travel.battle,v=q.travel.battleView,core=v.cosmicOrbs.cores,dir=q.travel.camera.getWorldDirection(new q.THREE.Vector3());return {stage:s.stage,elapsed:q.elapsed,since:s.since,until:s.until,yaw:q.travel.knight.yaw,height:q.c.actor.position.y,radius:Math.hypot(q.c.actor.position.x-2000,q.c.actor.position.z),bossHeight:q.travel.knight.actor.position.y,hp:s.hp,life:s.players.solo.hp,orbs:core.count,bolts:v.cosmicOrbs.electricity.hot.count,green:v.bossTarget.group.visible,arrowY:v.bossTarget.arrow.getWorldPosition(new q.THREE.Vector3()).y,window:v.bossTarget.ring.material.uniforms.progress.value,cameraAngle:-Math.asin(dir.y)*180/Math.PI,glError:q.renderer.getContext().getError(),drawCalls:q.renderer.info.render.calls,triangles:q.renderer.info.render.triangles};};

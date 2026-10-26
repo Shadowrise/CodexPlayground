@@ -42,7 +42,7 @@ try{
   const stick=await bounds('#touch-stick'),jump=await bounds('#touch-jump');
   const initial=await page.evaluate(()=>window.__mobileActor.actor.position.toArray());
   await touch('touchStart',1,stick.x,stick.y);await touch('touchMove',1,stick.x,stick.y-40);
-  await page.waitForFunction(()=>window.__mobileInput?.forward&&window.__mobileInput?.sprint);
+  await page.waitForFunction(()=>window.__mobileInput?.forward&&window.__mobileActor.actions.get('Run').getEffectiveTimeScale()===2);
   await page.waitForFunction(([x,,z])=>Math.hypot(window.__mobileActor.actor.position.x-x,window.__mobileActor.actor.position.z-z)>.3,initial);
   const cameraBefore=await page.evaluate(()=>window.__mobileCamera.azimuth);
   await touch('touchStart',2,410,190);await touch('touchMove',2,470,200);

@@ -19,6 +19,8 @@ export class Flight {
   get gliding() {return this.dash>0;}
   get atTop() {return this.height>=FLIGHT_HEIGHT-.08;}
   get levitating() {return this.active && this.hold>0;}
+  get hoverRemaining(){return this.active&&this.target>0?this.hold:0;}
+  get canPress(){return !this.active||this.levitating||this.level<2&&this.velocity>=0;}
   press() {
     if(this.active){
       if(this.level<2 && this.velocity>=0){this.levitate();return;}
@@ -38,7 +40,7 @@ export class Flight {
     this.velocity=Math.sqrt(2*FLIGHT_GRAVITY*Math.max(0,this.target-this.height));
     this.rising=this.velocity>0;
   }
-  /** The charged sword dash sustains its current flight level independently. */
+  /** The sword dash sustains its current flight level independently. */
   sustain() {this.hold=FLIGHT_HOVER_SECONDS;if(!this.rising)this.velocity=0;}
   /** Encounter-owned plane: keep the flying pose without integrating a jump. */
   holdPlane() {this.active=true;this.height=this.target=this.velocity=this.dash=0;this.level=2;this.hold=FLIGHT_HOVER_SECONDS;this.rising=false;}

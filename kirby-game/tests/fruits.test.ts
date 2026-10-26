@@ -33,7 +33,7 @@ test('close fruit from behind visibly inhales before swallowing and boosts speed
   assert.equal(player.savedSize,1);assert.equal(player.fruitBoost.multiplier,1.2);assert.equal(player.fruitBoost.remaining,20);
   player.update(.2,{...idle,forward:true});
   assert.equal(player.actor.scale.x,1);
-  assert(Math.abs(player.actor.position.z-3.4*1.2*.2)<1e-8,'fruit pickup does not lock movement');
+  assert(Math.abs(player.actor.position.z-6.8*1.2*.2)<1e-8,'fruit pickup does not lock movement');
   player.update(.3,idle);assert.equal(player.actor.scale.x,1);
   world.update(1,player,[]);assert.equal(player.fruitsEaten,1);
 });
@@ -72,7 +72,7 @@ test('successive fruit pickups refresh all stacks, cap at 300%, then expire toge
   assert.equal(player.fruitsEaten,11);assert.equal(player.savedSize,1);
   player.fruitBoost.update(19.99);assert.equal(player.fruitBoost.multiplier,3);
   player.fruitBoost.update(.01);assert.equal(player.fruitBoost.multiplier,1);assert.equal(player.fruitBoost.remaining,0);
-  assert.equal(player.speed,3.4);assert.equal(player.backwardSpeed,1.65);
+  assert.equal(player.speed,6.8);assert.equal(player.backwardSpeed,1.65);
   collect(11);assert.equal(player.fruitBoost.multiplier,1.2);assert.equal(player.fruitsEaten,12);
 });
 test('player and NPC cannot both collect the same fruit',async()=>{
@@ -144,13 +144,13 @@ test('restoring a save during inhale resets fruit transforms and the face',async
  assert.equal(player.fruitsEaten,0);
 });
 
-test('boosted sprint starts sucking fruit earlier than a stationary pickup and still allows movement',async()=>{
+test('boosted running starts sucking fruit earlier than a stationary pickup and still allows movement',async()=>{
  const {player,world}=await setup();isolate(world);const fruit=world.fruits[0];fruit.object.position.set(0,0,13);
  for(let i=0;i<10;i++)player.eatFruit();
  world.update(0,player,[]);assert.equal(player.fruitsEaten,10);assert.equal(fruit.object.position.z,13);
- advance(world,player,.2,{...idle,forward:true,sprint:true});
- assert(player.actor.position.z>4);assert(fruit.object.position.z!==13,'anticipation accounts for actual boosted sprint speed');
- advance(world,player,.75,{...idle,forward:true,sprint:true});
+ advance(world,player,.2,{...idle,forward:true});
+ assert(player.actor.position.z>4);assert(fruit.object.position.z!==13,'anticipation accounts for actual boosted running speed');
+ advance(world,player,.75,{...idle,forward:true});
  assert(fruit.eaten);assert.equal(player.fruitsEaten,11);assert(player.actor.position.z>18);
 });
 

@@ -30,7 +30,7 @@ test('admin growth and fruit speed on a firefly preserve the seated native pose'
  const c=create();c.setActivity('FireflyRide');c.resizeTo(1.1);c.eatFruit();
  for(let i=0;i<30;i++)c.updateActivity(1/60);
  assert.equal(c.actor.scale.x,1.1);assert.equal(c.savedSize,1.1);
- assert.equal(c.fruitBoost.multiplier,1.2);assert.equal(c.speed,3.4*1.1*1.2);
+ assert.equal(c.fruitBoost.multiplier,1.2);assert.equal(c.speed,6.8*1.1*1.2);
  assert.equal(c.state,'FireflyRide');assert(c.actions.get('FireflyRide')!.isRunning());
  assert(!c.actions.get('Idle')!.isRunning());
 });
@@ -161,10 +161,10 @@ test('Pidgie flight and remote jump/flight never show smoke while Kirby keeps hi
  applyActor(kirby,{...actorState(kirby,'Кирби',0),state:'Jump',p:[0,1,0]},1/60,true);assert(!kirby.cloud.visible);
 });
 
-test('native cadence follows real movement for forward, backward, sprint, size and star boost without changing speed',()=>{
- for(const size of [.3,1,3])for(const backward of [false,true])for(const boosted of [false,true])for(const sprint of [false,true]){
+test('native cadence follows real running and backward movement, size and star boost',()=>{
+ for(const size of [.3,1,3])for(const backward of [false,true])for(const boosted of [false,true]){
   const bird=create();bird.actor.scale.setScalar(size);bird.starRemaining=boosted?30:0;
-  const input={...idle,forward:!backward,backward,sprint},expected=(backward?1.65:3.4)*Math.max(1,size)*(boosted?2:1)*(!backward&&sprint?2:1);
+  const input={...idle,forward:!backward,backward},expected=(backward?1.65:6.8)*Math.max(1,size)*(boosted?2:1);
   bird.update(.01,input);
   assert(Math.abs(Math.abs(bird.actor.position.z)-expected*.01)<1e-8,'gameplay speed must not change');
   const state=backward?'WalkBackward':'Run',rate=pigeonGaitRate(state,expected*.01,.01,size);

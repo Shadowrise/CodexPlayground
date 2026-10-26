@@ -3,8 +3,23 @@ import {startKnightBattle,setKnightPhase,advanceKnightBattle,knightAttack,KNIGHT
 import {COSMIC,cosmicHeight,cosmicAirborne} from '../src/meta-knight-cosmic';
 import {COSMIC_METEOR as M,meteorPath,meteorPoint,meteorContact,meteorGuidanceMs,updateMeteorTracking} from '../src/meta-knight-cosmic-meteor';
 import {CharacterController} from '../src/controller';import {MetaKnightBattleMotion} from '../src/meta-knight-battle-motion';import {MetaKnightCosmicMeteorView} from '../src/meta-knight-cosmic-meteor-view';
+import {MetaKnightCosmicView} from '../src/meta-knight-cosmic-view';
 const a:KnightActor={id:'a',p:[0,180,35],yaw:Math.PI,available:true};
 function fixture(actors=[a]){const ground=actors.map((a,i)=>({...a,p:[i*3,0,-2] as [number,number,number]})),s=startKnightBattle(ground,'a',1000)!;setKnightPhase(s,4,actors,5000,2);return s;}
+
+test('meteor attraction uses blue eyes and sword lightning until release, without changing materials for the bolts',async()=>{
+ const bytes=await readFile(new URL('../public/models/meta-knight-animated.glb',import.meta.url)),asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),''),scene=new T.Scene(),actor=asset.scene;
+ scene.add(actor);const cosmic=new MetaKnightCosmicView(actor,scene),meteor=new MetaKnightCosmicMeteorView(actor.getObjectByName('Galaxia')!),s=fixture(),eyes=actor.getObjectByName('Eyes_glow')!;
+ scene.add(cosmic.group,meteor.group);const version=meteor.lightning.hotMaterial.version;
+ for(const at of [s.since+500,s.cosmicMeteor!.at-1]){
+  if(at===s.cosmicMeteor!.at-1){s.stage='cosmic-meteor-cast';s.since=s.until;}
+  cosmic.update(s,at);meteor.update(s,at);
+  eyes.traverse(o=>{if(o instanceof T.Mesh){const material=o.material as T.MeshBasicMaterial;assert(material instanceof T.MeshBasicMaterial);assert(material.color.b>material.color.r*5);}});
+  assert(meteor.lightning.hot.count>0);assert(meteor.lightning.hotMaterial.color.b>meteor.lightning.hotMaterial.color.r*5);assert.equal(meteor.lightning.hotMaterial.version,version);
+ }
+ cosmic.update(s,s.cosmicMeteor!.at);meteor.update(s,s.cosmicMeteor!.at);assert.equal(meteor.lightning.hot.count,0);
+ eyes.traverse(o=>{if(o instanceof T.Mesh)assert(o.material instanceof T.MeshStandardMaterial);});cosmic.dispose();meteor.dispose();
+});
 
 test('lead follows measured flight velocity until release, rather than freezing during the windup',()=>{
  const actor={...a,p:[-8,180,35] as typeof a.p},s=fixture([actor]),began=s.since,release=s.cosmicMeteor!.at;
@@ -77,6 +92,29 @@ test('real sword geometry clears the torso throughout the overhead summon, side 
  }
  view.update(undefined,0);assert(!view.group.visible);view.dispose();motion.clear();c.disposeEffects();
 });
+test('meteor fire, wake and animation stay identical with real epoch timestamps',()=>{
+ const view=new MetaKnightCosmicMeteorView(new T.Group()),s=fixture(),m=s.cosmicMeteor!;
+ const snapshot=()=>{
+  const meshes:{matrix:number[];instances?:number[];clock?:number}[]=[];view.group.updateMatrixWorld(true);view.group.traverse(o=>{if(o instanceof T.Mesh){
+   const material=o.material as T.Material;meshes.push({matrix:o.matrixWorld.elements.slice(),instances:o instanceof T.InstancedMesh?Array.from(o.instanceMatrix.array.slice(0,o.count*16)):undefined,clock:material instanceof T.ShaderMaterial?material.uniforms.clock?.value:undefined});
+  }});return {meshes,light:view.light.intensity};
+ };
+ try{for(const stage of ['cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-return'] as const){
+  s.stage=stage;s.since=stage==='cosmic-meteor-draw'?5000:stage==='cosmic-meteor-cast'?6500:7500;s.until=s.since+1500;
+  if(stage==='cosmic-meteor-return')m.returned={at:s.since,from:[3,182,25],by:'a'};
+  const now=s.since+(stage==='cosmic-meteor-return'?240:900);view.update(s,now);const expected=snapshot();
+  for(const offset of [Date.UTC(2026,9,26),Date.UTC(2027,9,26)]){
+   const shifted=structuredClone(s);shifted.since+=offset;shifted.until+=offset;shifted.cosmicMeteor!.at+=offset;if(shifted.cosmicMeteor!.returned)shifted.cosmicMeteor!.returned.at+=offset;if(shifted.cosmicLaunch)shifted.cosmicLaunch.at+=offset;
+   view.update(shifted,now+offset);const actual=snapshot();assert.equal(actual.light,expected.light);assert.deepEqual(actual.meshes.map(mesh=>mesh.clock),expected.meshes.map(mesh=>mesh.clock));assert.equal(actual.meshes.length,expected.meshes.length);
+   // Subtracting fractional trail ages from epoch milliseconds rounds by up to .00025ms.
+   for(let i=0;i<expected.meshes.length;i++)for(const key of ['matrix','instances'] as const){
+    const before=expected.meshes[i][key],after=actual.meshes[i][key];if(!before||!after){assert.equal(after,before);continue;}
+    assert.equal(after.length,before.length);assert(before.every((value,j)=>Math.abs(after[j]-value)<.001),`${stage}: ${key} of mesh ${i} changed with the timestamp origin`);
+   }
+  }
+ }}finally{view.dispose();}
+});
+
 test('recorded meteor cues are stereo PCM with silent edges and headroom',async()=>{
  for(const kind of ['draw','throw','reflect','impact']){const b=await readFile(new URL(`../public/audio/meta-knight-cosmic/cosmic-meteor-${kind}.wav`,import.meta.url));assert.equal(b.readUInt16LE(22),2);assert.equal(b.readUInt32LE(24),44100);let peak=0,energy=0;for(let i=44;i<b.length;i+=2){const v=b.readInt16LE(i)/32768;peak=Math.max(peak,Math.abs(v));energy+=v*v;}assert(peak>.4&&peak<=.701);assert(energy>10);assert.equal(b.readInt16LE(44),0);assert.equal(b.readInt16LE(b.length-2),0);}
 });

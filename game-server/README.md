@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-37`) is shared with the browser in
+Protocol 2 (`build=meadow-network-38`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -194,6 +194,18 @@ local room and never mutates a production room.
   Chrome on Windows; override `BROWSER_EXECUTABLE` or install Playwright Chromium.
 
 ## Publish
+
+The 2026-10-26 client/Worker release uses `meadow-network-38` / protocol 2: one
+phase-three crystal cross per assault, with the nearest full-body escape
+at 6.8 m/s sprint speed plus 20% warning time. Saved two-cross encounters
+normalize their step numbers once so later flights and shielding continue.
+It also includes the unified movement/action controls, revised healing-heart
+presentation, textured planet rings, blue cosmic electricity, prepared combat
+effects and the meteor fire clock fix. All 926 tests, the client production
+build, Worker type checking and dry run passed. Deploy the Worker with
+`--keep-vars`, then push `main` to publish the client through the existing
+Vercel Git integration. Release metadata and production checks are recorded
+locally in `.cache/release-20261026-all/` at the repository root.
 
 The 2026-10-26 release uses `meadow-network-37` / protocol 2 and includes
 the shared healing fireflies and bonus team lives. All 917 tests, the client

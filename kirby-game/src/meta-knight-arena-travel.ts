@@ -79,7 +79,7 @@ export class MetaKnightArenaTravel{
  loading=false;
  get active(){return !!this.current&&!this.loading;}
  get scene(){return this.current?.scene;}
- constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound)=>void;stopCosmic?:()=>void;prepareCosmic?:()=>void;firefly?:()=>GLTF|undefined;music?:(active:boolean)=>void}){
+ constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound)=>void;stopCosmic?:()=>void;prepareCosmic?:()=>Promise<void>|void;firefly?:()=>GLTF|undefined;music?:(active:boolean)=>void}){
   this.overlay.id='arena-loader';this.overlay.hidden=true;this.overlay.setAttribute('role','status');this.overlay.setAttribute('aria-live','polite');
   this.spinner.className='arena-loading-orbit';this.back.type=this.retry.type='button';
   this.retry.addEventListener('click',()=>{const c=this.owner,arrival=this.arrival;this.leave();if(c)void this.enter(c,arrival);});
@@ -97,7 +97,7 @@ export class MetaKnightArenaTravel{
    await frame();await frame();
    const {createMetaKnightArena}:typeof import('./meta-knight-arena')=await (this.retryModuleUrl?import(/* @vite-ignore */this.retryModuleUrl):import('./meta-knight-arena'));
    if(generation!==this.generation)return;
-   stage=createMetaKnightArena(this.renderer);this.cosmicFrame.name='Cosmic travelling formation';stage.scene.add(this.cosmicFrame);this.battleOptions?.prepareCosmic?.();
+   stage=createMetaKnightArena(this.renderer);this.cosmicFrame.name='Cosmic travelling formation';stage.scene.add(this.cosmicFrame);const audio=this.battleOptions?.prepareCosmic?.();
    this.playerStars=new MetaKnightDazedStars('Player golden dizziness stars');stage.scene.add(this.playerStars.group);this.playerStars.group.visible=false;
    this.knight=this.makeKnight?.();if(this.knight){this.knight.actor.name='Meta Knight duel boss';this.knight.actor.position.set(SITE.x,0,-9);this.knight.actor.scale.setScalar(KNIGHT.modelScale);stage.scene.add(this.knight.actor);this.battleView=new MetaKnightBattleView(this.knight,stage.scene,()=>this.cancelBattle(),kind=>this.battleOptions?.cue(kind),()=>this.battleOptions?.stopCosmic?.());const bug=this.battleOptions?.firefly?.();if(bug)this.battleView.setLifeFirefly(bug);}
    this.soloNow=Date.now();this.soloBattle=undefined;this.withdrawnBattle=0;this.attackHeld=false;this.life=5;this.battleOptions?.music?.(false);
@@ -106,7 +106,7 @@ export class MetaKnightArenaTravel{
    c.actor.position.set(arrival?.x??SITE.x+SITE.spawnX,0,arrival?.z??SITE.spawnZ);this.constrainArena(c.actor.position,c.actor.scale.x);
    c.actor.position.y=c.surfaceY=arenaPortalFloor(c.actor.position.x-SITE.x,c.actor.position.z);
    c.yaw=arrival?.yaw??Math.PI+META_KNIGHT_ANNEX.angle;c.actor.rotation.set(0,c.yaw,0);this.follow.reset(c.yaw);this.follow.zoom(550);this.follow.orbit(0,20);
-   this.placeCamera(c,1);await this.renderer.compileAsync(stage.scene,this.camera);
+   this.placeCamera(c,1);await Promise.all([this.battleView?this.battleView.prepare(this.renderer,stage.scene,this.camera):this.renderer.compileAsync(stage.scene,this.camera),audio]);
    if(generation!==this.generation){stage.dispose();return;}
    this.current=stage;this.renderer.render(stage.scene,this.camera);await frame();
    if(generation!==this.generation)return;

@@ -13,7 +13,7 @@ export type KnightStage=CosmicStage|'intro'|'approach'|'slash-warn'|'slash'|'jum
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number};
+export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;starSequenceVersion?:1;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Old room snapshots inherit the lowest remaining health, never extra lives. */
@@ -158,7 +158,7 @@ function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:Knig
 function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
  if(s.phase===4){const [stage,ms]=cosmicNext('transition');s.cycle=1;s.step=0;s.pattern='sword';enter(s,stage,ms,now,actors);s.from=s.to=[0,0,0];s.yaw=0;return;}
  const alive=living(s,actors);s.target=alive[s.cycle%Math.max(1,alive.length)]?.id??s.target;
- if(s.phase===3){s.pattern='star';s.cycle++;s.step=0;delete s.starCross;enter(s,'star-rise',STAR_SEQUENCE[0][1],now,actors);planStarRoute(s,target(s,actors)?.p??[0,0,1]);s.to=crystalPoint(s.starRoute![0],STAR_ASSAULT.ricochetRadius,STAR_ASSAULT.hover);s.yaw=angle(s.from,s.to);return;}
+ if(s.phase===3){s.pattern='star';s.starSequenceVersion=1;s.cycle++;s.step=0;delete s.starCross;enter(s,'star-rise',STAR_SEQUENCE[0][1],now,actors);planStarRoute(s,target(s,actors)?.p??[0,0,1]);s.to=crystalPoint(s.starRoute![0],STAR_ASSAULT.ricochetRadius,STAR_ASSAULT.hover);s.yaw=angle(s.from,s.to);return;}
  const order:KnightBattle['pattern'][]=s.phase===1?['sword','leap','crescent']:['flight','dive','crescent'];
  s.pattern=order[s.cycle%order.length];s.cycle++;s.step=-1;
  if(s.pattern==='leap'){s.step=0;enter(s,'jump-warn',warningDuration(recipes.leap[0][1],s.phase),now,actors);return;}
@@ -300,6 +300,8 @@ export function knightDanger(s:KnightBattle,a:KnightActor,now:number,previous=no
 /** Mutates only encounter state; returns true for state changes worth broadcasting. */
 export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:number,protectedPlayer?:string){
  const revision=s.revision;if(!knightBattleActive(s))return false;
+ // Saved encounters used two crosses, so their subsequent step numbers were two higher.
+ if(s.phase===3&&s.pattern==='star'&&!s.starSequenceVersion){s.step=s.step>=3?s.step-2:s.step;s.starSequenceVersion=1;s.revision++;}
  // Preserve destroyed crystals when a saved four-hit third phase resumes.
  if(s.phase===3){const broken=((s.brokenCrystals??0)&255).toString(2).replace(/0/g,'').length,remaining=Math.max(0,KNIGHT_PHASE_HITS[3]-broken);if(s.hp>remaining){s.hp=remaining;s.revision++;if(!remaining&&s.stage!=='crystal-break')setKnightPhase(s,4,actors,now);}}
  if(s.teamHp===undefined&&Object.keys(s.players).length>1){s.teamHp=knightPartyHearts(s);s.revision++;}

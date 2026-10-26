@@ -17,7 +17,7 @@ try{
  await page.locator('#chat-input').fill('/phase 4-1');await page.locator('#chat-input').press('Enter');
  await page.evaluate(()=>{
   const q=spinQA;for(let i=0;i<8;i++)if(!q.renderer.getContext().getError())break;q.cues=[];const cue=q.travel.battleView.cue;q.travel.battleView.cue=kind=>{q.cues.push({kind,at:q.travel.soloNow});cue(kind);};
-  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashHeld:false,sprint:false,attack:false,attackPressed:false};q.step=(dt,input=q.input)=>q.travel.update(dt,q.travel.soloNow/1000,q.c,input,0,0,false,false);
+  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashPressed:false,attack:false,attackPressed:false};q.step=(dt,input=q.input)=>q.travel.update(dt,q.travel.soloNow/1000,q.c,input,0,0,false,false);
   // Only HP and the opening are fixtures. The native attack, shared victory rules,
   // renderer, flight, camera and audio are the real game paths.
   q.prepare=()=>{q.travel.soloBattle=undefined;q.travel.withdrawnBattle=0;q.travel.soloNow+=10000;q.c.actor.position.set(2000,0,-2);q.travel.startBattle();q.travel.setPhase(4,1);const s=q.travel.battle;Object.assign(s,{stage:'cosmic-open',since:q.travel.soloNow-3000,until:q.travel.soloNow+9000,hp:1,cosmicSpin:{at:q.travel.soloNow-15000,yaw:0}});q.step(0);q.c.actor.position.set(2000,180,4.4);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;q.travel.follow.reset(Math.PI);q.travel.attackHeld=false;for(let i=0;i<45;i++)q.step(1/60);q.travel.render();};

@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {COSMIC_WORLDS,cosmicWorldPosition} from './meta-knight-cosmic-world';
+import {planetRingGeometry,planetRingTexture} from './meta-knight-planet-rings';
 
 const noise=`float hash(vec3 p){p=fract(p*.3183099+vec3(.1,.2,.3));p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
@@ -28,6 +29,7 @@ export class MetaKnightCosmicSky{
  private sky:T.Mesh<T.SphereGeometry,T.ShaderMaterial>;
  readonly planets:T.Mesh<T.SphereGeometry,T.ShaderMaterial>[]=[];
  private clock=0;private previousSeconds?:number;
+ private ringTextures:T.Texture[]=[];
  private star=new T.Group();private starHalo:T.Sprite;
  constructor(){
   this.group.name='Fourth phase deep cosmic vista';
@@ -48,8 +50,9 @@ export class MetaKnightCosmicSky{
    const rings=new T.Group();rings.name='Three opaque connected ring bands';
    rings.scale.setScalar(world.radius/100*1.3);rings.rotation.set(world.kind===1?1.12:.87,-.2,world.kind===1?.22:-.34);
    const edges=[86,100,115,130];
+   const seed=i*1.71,texture=planetRingTexture(seed);this.ringTextures.push(texture);
    world.rings.forEach((color,band)=>{
-    const ring=new T.Mesh(new T.RingGeometry(edges[band],edges[band+1],160,1),new T.MeshBasicMaterial({color,side:T.DoubleSide}));
+    const ring=new T.Mesh(planetRingGeometry(edges[band],edges[band+1],seed),new T.MeshBasicMaterial({color,map:texture,side:T.DoubleSide}));
     ring.name=`Opaque ring band ${band+1}`;rings.add(ring);
    });planet.add(rings);
   });
@@ -107,5 +110,5 @@ export class MetaKnightCosmicSky{
   this.planets.forEach((planet,i)=>{planet.position.fromArray(cosmicWorldPosition(i,time));planet.rotation.y=time*(.007+i*.003);planet.material.uniforms.clock.value=time;});
   this.star.position.set(-150+Math.sin(time*.055)*38,165+Math.sin(time*.09)*12,-105);this.star.rotation.set(.08*Math.sin(time),time*.12,.12*Math.sin(time*.7));this.starHalo.material.opacity=.75+.12*Math.sin(time*2);
  }
- dispose(){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());this.starHalo.material.map?.dispose();this.starHalo.material.dispose();this.group.removeFromParent();}
+ dispose(){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());this.ringTextures.forEach(t=>t.dispose());this.starHalo.material.map?.dispose();this.starHalo.material.dispose();this.group.removeFromParent();}
 }

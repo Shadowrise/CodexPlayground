@@ -7,7 +7,25 @@ import {refugeGravityPaths} from '../src/meta-knight-refuge-gravity';
 import {MetaKnightRefugeGlow} from '../src/meta-knight-refuge-glow';
 import {planetFractureGeometry} from '../src/meta-knight-planet-fracture';
 import {detailedPlanetGeometry} from '../src/meta-knight-planet-detail';
+import {MetaKnightGravityCharge} from '../src/meta-knight-gravity-charge';
+import {CosmicLightning} from '../src/meta-knight-cosmic-view';
 const a:KnightActor={id:'a',p:[0,180,41],yaw:Math.PI,available:true};
+
+test('the gravity charge grows across shared stages and pulling bolts start on its moving surface',()=>{
+ const s=fixture(),charge=new MetaKnightGravityCharge(),arcs=new CosmicLightning(true),root=new T.Group(),blade=new T.Group(),out=new T.Vector3();root.add(charge.group,arcs.group);blade.position.set(2010,187,4);blade.scale.setScalar(3.3);root.position.x=2000;
+ let previous=0;
+ for(const [stage,at,duration] of [['cosmic-star-draw',0,R.drawMs],['cosmic-star-open',R.drawMs,R.openMs],['cosmic-planet-draw',R.drawMs+R.openMs,R.pullMs],['cosmic-planet-sweep',R.drawMs+R.openMs+R.pullMs,R.sweepMs]] as const){
+  s.stage=stage;s.since=s.cosmicRefuge!.at+at;s.until=s.since+duration;
+  for(let frame=0;frame<=12;frame++){
+   const now=s.since+duration*frame/12;arcs.begin(1,now/1000);charge.update(s,now,blade,root,arcs);arcs.end();assert(charge.group.visible);assert(charge.radius>=previous-1e-8);previous=charge.radius;assert(arcs.hot.count>60);
+   const center=blade.localToWorld(new T.Vector3(-.315,1.75,0));root.worldToLocal(center);assert(charge.group.position.distanceTo(center)<1e-8);
+   const target=new T.Vector3(40,180,-20);charge.originToward(target,out);assert(Math.abs(out.distanceTo(center)-charge.radius*.96)<1e-8);assert(out.distanceTo(target)<center.distanceTo(target));
+   // Replaying a server snapshot must not restart or accumulate the charge.
+   charge.update(s,now,blade,root,arcs);assert.equal(charge.radius,previous);
+  }
+ }
+ assert(charge.radius>3);s.stage='cosmic-star-strike';charge.update(s,s.until,blade,root,arcs);assert(!charge.group.visible);charge.dispose();arcs.dispose();
+});
 
 test('detailed planet and uneven crust fragments have finite relief and closed volumetric boundaries',()=>{
  const hero=detailedPlanetGeometry(0),p=hero.getAttribute('position'),v=new T.Vector3();let lo=Infinity,hi=0;for(let i=0;i<p.count;i++){v.fromBufferAttribute(p,i);lo=Math.min(lo,v.length());hi=Math.max(hi,v.length());}assert(p.count>16000);assert(hi-lo>.1);hero.dispose();

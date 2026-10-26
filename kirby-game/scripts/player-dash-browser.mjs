@@ -24,9 +24,9 @@ async function prepare(page,pigeon){
  await page.locator('#game canvas').focus();
  await page.evaluate(()=>{
   const q=boostQA,c=q.c;c.setActivity('Idle');c.actor.position.set(135,0,146);c.surfaceY=0;
-  const update=c.update.bind(c);c.update=(dt,input)=>{update(dt,input);const el=document.querySelector('#knight-dash-hud');q.frames.push({state:c.state,charge:c.playerDash.charge,held:input.dashHeld,jump:input.jump,hud:el.dataset.state,fill:Number(el.style.getPropertyValue('--dash-charge'))});};
+  const update=c.update.bind(c);c.update=(dt,input)=>{update(dt,input);const el=document.querySelector('#knight-dash-hud');q.frames.push({state:c.state,charge:c.playerDash.charge,held:input.dashPressed,jump:input.jump,hud:el.dataset.state,fill:Number(el.style.getPropertyValue('--dash-charge'))});};
   const ctx=q.sounds.context,create=ctx.createBufferSource.bind(ctx);ctx.createBufferSource=()=>{const source=create(),start=source.start.bind(source);source.start=(...args)=>{q.played.push([...q.sounds.buffers].find(([,buffer])=>buffer===source.buffer)?.[0]);start(...args);};return source;};
- });await page.waitForFunction(()=>boostQA.frames.some(f=>!f.held)&&!boostQA.c.playerDash.spent);
+ });await page.waitForFunction(()=>boostQA.frames.some(f=>!f.held));
 }
 try{
  for(const {pigeon,mobile,viewport} of process.env.BOOST_POSES_ONLY==='1'?[]:[
@@ -36,16 +36,15 @@ try{
   {pigeon:false,mobile:true,viewport:{width:390,height:844}},
  ]){
   const context=await browser.newContext({viewport,isMobile:mobile,hasTouch:mobile}),page=await context.newPage();await prepare(page,pigeon);
-  const hud=page.locator('#knight-dash-hud');assert(await hud.isVisible());assert.equal(await hud.getAttribute('aria-label'),'Ускорение');assert.match(await hud.getAttribute('aria-description'),/0,3/);
+  const hud=page.locator('#knight-dash-hud');assert(await hud.isVisible());assert.equal(await hud.getAttribute('aria-label'),'Рывок');assert.match(await hud.getAttribute('aria-description'),/Нажми/);
   assert.equal(await hud.locator('.knight-dash-symbol').count(),1);
   assert.doesNotMatch(await hud.textContent(),/Пробел/);
   await page.waitForFunction(pigeon=>boostQA.sounds.buffers.has(pigeon?'hawk-dash':'cheer'),pigeon);
-  const session=mobile?await context.newCDPSession(page):undefined,box=mobile?await page.locator('#touch-jump').boundingBox():undefined;
-  const down=()=>mobile?session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2}]}):page.keyboard.down('Space');
-  const up=()=>mobile?session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}):page.keyboard.up('Space');
-  await down();await page.waitForFunction(()=>boostQA.frames.some(f=>f.hud==='charging'&&f.fill>0));
-  const charge=await page.evaluate(()=>boostQA.frames.find(f=>f.hud==='charging'&&f.fill>0));assert(charge.fill>0&&charge.fill<1);
-  await page.waitForFunction(()=>boostQA.frames.some(f=>f.state==='Dash'));await up();
+  const session=mobile?await context.newCDPSession(page):undefined,box=mobile?await page.locator('#touch-dash').boundingBox():undefined;
+  const down=()=>mobile?session.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width/2,y:box.y+box.height/2}]}):page.keyboard.down('ShiftLeft');
+  const up=()=>mobile?session.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]}):page.keyboard.up('ShiftLeft');
+  await down();await up();await page.waitForFunction(()=>boostQA.frames.some(f=>f.state==='Dash'));
+  const charge={immediate:true};
   assert(await page.evaluate(()=>boostQA.c.playerDash.cooldown>5));
   await page.waitForFunction(()=>document.querySelector('#knight-dash-hud').dataset.state==='cooldown');
   assert.match(await hud.locator('.knight-dash-countdown').textContent(),/^[1-6]$/);
@@ -56,12 +55,12 @@ try{
   await page.waitForFunction(()=>!boostQA.c.playerDash.active);
   const bounds=await hud.boundingBox();assert(bounds.x>=0&&bounds.y>=0&&bounds.x+bounds.width<=viewport.width&&bounds.y+bounds.height<=viewport.height);
   if(mobile){
-   const jump=await page.locator('#touch-jump').boundingBox();assert.equal(await hud.getAttribute('data-embedded'),'true');
-   assert(Math.abs(bounds.x-jump.x)<1&&Math.abs(bounds.y-jump.y)<1&&Math.abs(bounds.width-jump.width)<1&&Math.abs(bounds.height-jump.height)<1,'boost feedback is inside the jump button');
+   const jump=await page.locator('#touch-dash').boundingBox();assert.equal(await hud.getAttribute('data-embedded'),'true');
+   assert(Math.abs(bounds.x-jump.x)<1&&Math.abs(bounds.y-jump.y)<1&&Math.abs(bounds.width-jump.width)<1&&Math.abs(bounds.height-jump.height)<1,'boost feedback is inside the dash button');
    assert(await hud.locator('.knight-dash-key').isHidden());
-   assert(!await page.evaluate(()=>boostQA.frames.some(f=>f.jump)),'releasing a successful dash hold must not add a jump');
+   assert(!await page.evaluate(()=>boostQA.frames.some(f=>f.jump)),'tapping dash must not add a jump');
   }else assert(Math.abs(bounds.x+bounds.width/2-viewport.width/2)<1,'the ability stays centered at the bottom');
-  report.runs.push({pigeon,mobile,charge,sound,bounds});console.log(`PASS ${pigeon?'pigeon':'Kirby'} ${mobile?'touch':'keyboard'} charge, dash, cooldown, correct voice`);
+  report.runs.push({pigeon,mobile,charge,sound,bounds});console.log(`PASS ${pigeon?'pigeon':'Kirby'} ${mobile?'touch':'keyboard'} press, dash, cooldown, correct voice`);
   await context.close();
  }
  // Inspect the real shipped GLBs under neutral lighting at deterministic phases.
@@ -74,13 +73,13 @@ try{
  const scene=new T.Scene();scene.background=new T.Color('#26364d');scene.add(new T.HemisphereLight('#ffffff','#8b7ca7',2.5));const sun=new T.DirectionalLight('#fff0d4',3);sun.position.set(4,7,6);scene.add(sun);
  const camera=new T.PerspectiveCamera(32,640/480,.1,100);camera.position.set(5,2.7,4.5);camera.lookAt(0,1.25,0);
  const loader=new GLTFLoader();let c;
- window.pose=async(kind,seconds,front=false)=>{if(c)scene.remove(c.actor);const gltf=await loader.loadAsync('/models/'+kind+'-animated.glb');c=new CharacterController(gltf.scene,gltf.animations);scene.add(c.actor);for(let i=0;i<Math.round(seconds*100);i++)c.update(.01,{forward:false,left:false,right:false,jump:true});c.actor.position.set(0,0,0);camera.position.set(front?0:5,2.7,front?7:4.5);camera.lookAt(0,1.25,0);renderer.render(scene,camera);return {state:c.state,progress:c.playerDash.progress};};
+ window.pose=async(kind,seconds,front=false)=>{if(c)scene.remove(c.actor);const gltf=await loader.loadAsync('/models/'+kind+'-animated.glb');c=new CharacterController(gltf.scene,gltf.animations);scene.add(c.actor);for(let i=0;i<Math.round(seconds*100);i++)c.update(.01,{forward:false,left:false,right:false,dashPressed:i===0});c.actor.position.set(0,0,0);camera.position.set(front?0:5,2.7,front?7:4.5);camera.lookAt(0,1.25,0);renderer.render(scene,camera);return {state:c.state,progress:c.playerDash.progress};};
  window.ready=true;
  </script></body></html>`}));
  await photo.goto(new URL('__boost-poses',url).href);await photo.waitForFunction(()=>window.ready);
- for(const kind of ['pigeon','kirby'])for(const [stage,seconds] of [['charge',.24],['launch',.37],['cruise',.62],['brake',.86],['recovered',1.05]]){
+ for(const kind of ['pigeon','kirby'])for(const [stage,seconds] of [['ready',0],['launch',.07],['cruise',.32],['brake',.56],['recovered',.85]]){
   await photo.evaluate(([kind,seconds])=>window.pose(kind,seconds),[kind,seconds]);await photo.screenshot({path:resolve(output,`${kind}-${stage}.png`)});
  }
- await photo.evaluate(()=>window.pose('kirby',.62,true));await photo.screenshot({path:resolve(output,'kirby-airplane-front.png')});
+ await photo.evaluate(()=>window.pose('kirby',.32,true));await photo.screenshot({path:resolve(output,'kirby-airplane-front.png')});
  await photo.close();assert.deepEqual(report.errors,[]);await writeFile(resolve(output,process.env.BOOST_POSES_ONLY==='1'?'checks-poses.json':'checks.json'),JSON.stringify(report,null,2));
 }catch(error){for(const context of browser.contexts())for(const page of context.pages()){console.error(await page.evaluate(()=>({state:window.boostQA?.c?.state,dash:window.boostQA?.c?.playerDash,frames:window.boostQA?.frames.slice(-4),charged:window.boostQA?.frames.filter(f=>f.charge>0).slice(0,4),cues:window.boostQA?.cues,focus:document.activeElement?.outerHTML.slice(0,120)})).catch(()=>({closed:true})));await page.screenshot({path:resolve(output,'failure.png')}).catch(()=>{});}throw error;}finally{await browser.close();}

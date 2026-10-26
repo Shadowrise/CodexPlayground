@@ -30,7 +30,7 @@ try{
  await page.evaluate(()=>knightQA.stop());
  const first=await page.evaluate(async()=>{
   const {starDanger}=await import('/src/meta-knight-star-assault.ts');
-  const q=knightQA,c=q.c,empty={forward:false,left:false,right:false,sprint:false};q.empty=empty;
+  const q=knightQA,c=q.c,empty={forward:false,left:false,right:false};q.empty=empty;
   q.step=(attack=false)=>{q.travel.update(.025,performance.now()/1000,c,{...empty,attack},0,0,false,false);q.music.updateKnightPhase(q.travel.battle?.phase??1,.025);};
   let lastWarning='';q.avoid=()=>{const s=q.travel.battle,key=s.stage+':'+s.since;if((!s.stage.endsWith('-warn')&&s.stage!=='shot')||key===lastWarning)return;lastWarning=key;
    if(s.pattern==='star'){
@@ -88,7 +88,7 @@ try{
  assert.equal(won.hp,0);assert.equal(won.hits,11,'one returned crescent plus eleven melee hits win the duel');assert(won.unlocked);assert.equal(won.stored,'1');assert(won.log.includes('Метакнайт с уважением смотрит на Звёздочка.'));assert(won.bodyY<1&&won.dazedEyes&&won.stars,'the defeated boss really sits with spiral eyes and stars');await page.screenshot({path:output+'victory.png'});
  assert(await page.locator('#knight-party-hud').isVisible());assert(await page.locator('.knight-health').isHidden());assert(!(await page.locator('.knight-hint').textContent()).includes('прервана'));assert.equal(await page.evaluate(()=>knightQA.travel.controlsHint('E','Q')),'E — Завершить дуэль, Q — Ещё раз');
  assert.equal(await page.evaluate(()=>knightQA.music.eventActive),false);
- const walking=await page.evaluate(()=>{const q=knightQA,before=q.c.actor.position.clone();q.c.yaw=Math.atan2(2000-before.x,-before.z);q.c.actor.rotation.y=q.c.yaw;q.travel.update(.05,0,q.c,{forward:true,left:false,right:false,sprint:false},0,0,false,false);return q.c.actor.position.distanceTo(before);});assert(walking>.01,'winner can walk to the portal');
+ const walking=await page.evaluate(()=>{const q=knightQA,before=q.c.actor.position.clone();q.c.yaw=Math.atan2(2000-before.x,-before.z);q.c.actor.rotation.y=q.c.yaw;q.travel.update(.05,0,q.c,{forward:true,left:false,right:false},0,0,false,false);return q.c.actor.position.distanceTo(before);});assert(walking>.01,'winner can walk to the portal');
  await page.evaluate(()=>{knightQA.travel.interact();knightQA.step();knightQA.travel.render();});assert.equal(await page.evaluate(()=>knightQA.travel.battle.stage),'won','finishing a victory cannot turn it into cancellation');assert(await page.locator('#knight-battle-hud').isHidden());await page.screenshot({path:output+'victory-finished.png'});
  await page.evaluate(()=>{knightQA.travel.interact();knightQA.step();});assert.equal(await page.evaluate(()=>knightQA.travel.battle.hp),12);assert(await page.locator('.knight-party-hearts').isVisible());assert(await page.locator('.knight-health').isVisible());
  const lost=await page.evaluate(()=>{const q=knightQA,c=q.c;for(let i=0;i<20000&&q.travel.battle.stage!=='lost';i++){

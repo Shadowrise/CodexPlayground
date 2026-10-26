@@ -292,7 +292,7 @@ export class FruitWorld {
         const contact=.9*size+.65;
         const radius=this.radii[index]*fruit.object.scale.x;
         const closing=Math.max(0,(dx*this.pickupVelocity.x+dz*this.pickupVelocity.z)/(d||1));
-        // Start sooner at sprint/boost speed so the runner cannot overtake the
+        // Start sooner at boosted speed so the runner cannot overtake the
         // fruit before its final approach to the mouth.
         const reach=isPlayer?Math.max(1.9*size+radius+1.3,closing*FRUIT_EATING[player.fruitEating.kind].swallow+.9*size+radius+.5):contact;
         const facing=dx*Math.sin(eater.yaw)+dz*Math.cos(eater.yaw);

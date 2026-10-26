@@ -39,7 +39,7 @@ test('fruit bite sounds once per swallowed fruit during smooth growth',()=>{
   assert.equal(count,1);
 });
 
-test('steps follow actual travel, sprint cadence, grounded states and nearby NPC limits', () => {
+test('steps follow actual travel, running cadence, grounded states and nearby NPC limits', () => {
   const count = (speed: number, state = 'Run', down = false) => {
     const events = new SoundEvents(() => 0), player = { ...actor('player'), player: true, state, down };
     let steps = 0;

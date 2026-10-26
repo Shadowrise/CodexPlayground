@@ -12,7 +12,6 @@ import {knightSound} from '../src/meta-knight-sounds';
 import {Flight} from '../src/flight';
 import {cosmicCameraPose} from '../src/meta-knight-cosmic-camera';
 import {MetaKnightCosmicView} from '../src/meta-knight-cosmic-view';
-import {MetaKnightCrystalLightning} from '../src/meta-knight-crystal-lightning';
 import {buildCosmicSurface} from '../src/meta-knight-cosmic-electricity';
 import {FollowCamera} from '../src/follow-camera';
 import {COSMIC_WORLDS,cosmicWorldPosition,cosmicTravel} from '../src/meta-knight-cosmic-world';
@@ -96,12 +95,12 @@ test('worlds remain on separate orbital bands and the formation never flies thro
   assert(Math.hypot(radial,vertical)>world.extent+46,'even the nearest edge of the player plane clears the planets');
  }
 });
-test('the charge has five times as many bolt segments and uses the exact third-phase gold',async()=>{
+test('the ascent charge keeps its branching density and uses blue electricity',async()=>{
  const bytes=await readFile(new URL('../public/models/meta-knight-animated.glb',import.meta.url)),asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const c=new CharacterController(asset.scene,asset.animations),scene=new T.Scene();scene.add(c.actor);c.actor.position.x=2000;c.actor.scale.setScalar(KNIGHT.modelScale);
- const fx=new MetaKnightCosmicView(c.actor,scene),crystals=new MetaKnightCrystalLightning(),s=battle();scene.add(fx.group);fx.group.position.x=2000;Object.assign(s,{phase:4,stage:'cosmic-charge',since:10000,until:12800});
- fx.update(s,12500);assert(fx.lightning.hot.count>=162*5);assert(fx.lightning.hotMaterial.color.equals((crystals.cores.material as T.MeshBasicMaterial).color));
- assert(fx.lightning.glowMaterial.color.equals((crystals.group.children[1] as T.Mesh<T.BufferGeometry,T.MeshBasicMaterial>).material.color));
+ const fx=new MetaKnightCosmicView(c.actor,scene),s=battle();scene.add(fx.group);fx.group.position.x=2000;Object.assign(s,{phase:4,stage:'cosmic-charge',since:10000,until:12800});
+ fx.update(s,12500);assert(fx.lightning.hot.count>=162*5);assert.equal(fx.lightning.hotMaterial.color.getHexString(),'609aff');
+ assert.equal(fx.lightning.glowMaterial.color.getHexString(),'215cff');
  assert(fx.lightning.hot.count<8192);
  const before=new T.Matrix4(),after=new T.Matrix4();fx.lightning.hot.getMatrixAt(0,before);
  const formation=new T.Group();scene.add(formation);formation.add(c.actor,fx.group);formation.position.set(170,0,170);fx.update(s,12500);fx.lightning.hot.getMatrixAt(0,after);
@@ -112,7 +111,25 @@ test('the charge has five times as many bolt segments and uses the exact third-p
  fx.update(s,21100);const late=new T.Matrix4();fx.lightning.hot.getMatrixAt(attached,late);
  assert.deepEqual(early.elements,late.elements,'a completed ground segment stays at the same world coordinates as electricity moves outward');
  assert(fx.lightning.hot.count>earlyCount*2,'new branches appear progressively, instead of scaling an existing image');assert(fx.lightning.hot.count<8192);
- fx.dispose();crystals.dispose();c.disposeEffects();
+ fx.dispose();c.disposeEffects();
+});
+test('ascent trails stop above the arena throughout takeoff, including after formation travel',async()=>{
+ const bytes=await readFile(new URL('../public/models/meta-knight-animated.glb',import.meta.url)),asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const c=new CharacterController(asset.scene,asset.animations),scene=new T.Scene(),formation=new T.Group(),motion=new MetaKnightBattleMotion(c.actor),s=battle();scene.add(formation);formation.add(c.actor);c.actor.scale.setScalar(KNIGHT.modelScale);
+ const fx=new MetaKnightCosmicView(c.actor,scene);formation.add(fx.group);fx.group.position.x=c.actor.position.x=2000;
+ const matrix=new T.Matrix4(),point=new T.Vector3();let total=0;
+ for(const stage of ['cosmic-surge','cosmic-lift','cosmic-rise'] as const)for(let frame=0;frame<=20;frame++){
+  const duration=stage==='cosmic-rise'?COSMIC.riseMs:stage==='cosmic-lift'?COSMIC.liftMs:COSMIC.surgeMs;
+  Object.assign(s,{phase:4,stage,since:10000,until:10000+duration});const now=s.since+duration*frame/20,height=cosmicHeight(s,now);
+  c.actor.position.y=height;formation.position.set(height*.9,0,height*.6);motion.clear();motion.apply(s,frame/20);fx.update(s,now);
+  assert.equal(fx.lightning.glowMaterial.color.getHexString(),'215cff');assert.equal(fx.light.color.getHexString(),'215cff');
+  c.actor.getObjectByName('Eyes_glow')!.traverse(o=>{if(o instanceof T.Mesh){assert(o.material instanceof T.MeshBasicMaterial);assert.equal(o.material.color.getHexString(),'53adff');}});
+  for(const mesh of [fx.lightning.hot,fx.plasma.mesh])for(let i=0;i<mesh.count;i++){
+   mesh.getMatrixAt(i,matrix);for(const end of [-.5,.5]){point.set(0,end,0).applyMatrix4(matrix);assert(point.y>=.05,`${stage}/${frame}: an electric trail crossed the floor (${point.y})`);}total++;
+  }
+ }
+ assert(total>20000);Object.assign(s,{stage:'cosmic-flight'});fx.update(s,s.until);assert.equal(fx.lightning.glowMaterial.color.getHexString(),'ffb52b');
+ fx.dispose();c.disposeEffects();
 });
 test('surface electricity reaches the real arena rim with independently timed branches and no floor paths in the void',()=>{
  for(const seed of [0,987,174099123]){

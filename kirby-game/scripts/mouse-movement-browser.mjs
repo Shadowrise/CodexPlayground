@@ -38,7 +38,8 @@ CharacterController.prototype.update=function(dt,input){if(this===character)wind
  const before=await page.evaluate(()=>({x:window.mouseCheck.c.actor.position.x,z:window.mouseCheck.c.actor.position.z,yaw:window.mouseCheck.c.yaw}));
  await page.mouse.move(730,450,{steps:5});
  await page.waitForFunction(b=>Math.abs(window.mouseCheck.c.yaw-b.yaw)>.08&&Math.hypot(window.mouseCheck.c.actor.position.x-b.x,window.mouseCheck.c.actor.position.z-b.z)>.2,before);
- await page.keyboard.down('Shift');await page.waitForFunction(()=>window.mouseCheck.input.sprint);await page.keyboard.up('Shift');
+ assert.equal(await page.evaluate(()=>window.mouseCheck.c.actions.get('Run').getEffectiveTimeScale()),2);
+ assert.equal(await page.evaluate(()=>window.mouseCheck.c.speed),6.8);
  // Releasing left stops mouse-forward while right continues to turn.
  await page.mouse.up({button:'left'});await stopped();assert(await page.evaluate(()=>!!document.pointerLockElement));
  const turned=await page.evaluate(()=>window.mouseCheck.c.yaw);await page.mouse.move(780,450,{steps:5});
@@ -69,5 +70,5 @@ CharacterController.prototype.update=function(dt,input){if(this===character)wind
   await stopped();
  }
  assert.deepEqual(errors,[]);
- console.log(JSON.stringify({bothButtonOrders:true,moveAndTurn:true,shiftSprint:true,releaseEitherStops:true,keyboardUnchanged:true,leftCameraUnchanged:true,clearsOnSettingsChatBlur:true,errors}));
+ console.log(JSON.stringify({bothButtonOrders:true,moveAndTurn:true,defaultRun:true,releaseEitherStops:true,keyboardUnchanged:true,leftCameraUnchanged:true,clearsOnSettingsChatBlur:true,errors}));
 }finally{await browser.close();}

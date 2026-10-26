@@ -4,7 +4,9 @@ import {centipedeSound} from './centipede-sounds';
 import {knightSound,KNIGHT_SOUND_RATE,type KnightSound} from './meta-knight-sounds';
 import {COSMIC_SOUNDS,isCosmicSound} from './meta-knight-cosmic-sounds';
 import {METEOR_SOUNDS,isMeteorSound} from './meta-knight-cosmic-meteor-sounds';
-import {isRefugeSound} from './meta-knight-cosmic-refuge-sounds';
+import {REFUGE_SOUNDS,isRefugeSound} from './meta-knight-cosmic-refuge-sounds';
+import {COSMIC_SPIN_SOUNDS} from './meta-knight-cosmic-spin-sounds';
+import {FINALE_SOUNDS} from './meta-knight-cosmic-finale-sounds';
 import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
 import type { Emote, PlayerEmote } from './emotes';
@@ -299,10 +301,15 @@ export class SoundEffects {
     const context=this.context;if(!context||!this.enabled)return Promise.resolve();
     return this.knightCosmicLoad??=Promise.all([...COSMIC_SOUNDS,...METEOR_SOUNDS].map(async kind=>{
       try{
-        const response=await fetch(`${import.meta.env.BASE_URL}audio/meta-knight-cosmic/${kind}.wav`);if(!response.ok)return;
+        const response=await fetch(`${import.meta.env.BASE_URL}audio/meta-knight-cosmic/${kind}.wav`,{signal:AbortSignal.timeout(15000)});if(!response.ok)return;
         const buffer=await context.decodeAudioData(await response.arrayBuffer());this.buffers.set('knight-v2-'+kind,buffer);
       }catch{/* The generated effect remains available if a sample cannot load. */}
-    })).then(()=>{});
+    })).then(async()=>{
+      // Synthesizing the long roll/impact on first playback also stalls the frame.
+      for(const kind of [...COSMIC_SOUNDS,...METEOR_SOUNDS,...COSMIC_SPIN_SOUNDS,...REFUGE_SOUNDS,...FINALE_SOUNDS]){
+        this.knightBuffer(kind);await new Promise<void>(resolve=>setTimeout(resolve,0));
+      }
+    });
   }
   stopKnightCosmic(){for(const source of this.knightCosmicSources){try{source.stop();}catch{/* A source may have ended in the same audio quantum. */}}this.knightCosmicSources.clear();}
   playKnight(kind:KnightSound){

@@ -1,7 +1,7 @@
 import {t,onLocaleChange} from './i18n';
 import {emotesFor,type PlayerEmote} from './emotes';
 
-type Actions={jump:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
+type Actions={jump:()=>void;dash:()=>void;attack:()=>void;interact:()=>void;chat:()=>void;
   emote:(emote:PlayerEmote)=>void;orbit:(x:number,y:number)=>void;zoom:(delta:number)=>void};
 
 /** Every finger has its own owner: moving, looking and jumping can overlap. */
@@ -9,6 +9,7 @@ export class TouchControls {
   readonly root=document.createElement('div');
   readonly chooser=document.createElement('div');
   readonly jumpButton=document.createElement('button');
+  readonly dashButton:HTMLButtonElement;
   private interactionLayer=document.createElement('div');
   x=0;y=0;
   private enabled=false;
@@ -17,7 +18,8 @@ export class TouchControls {
   private thumb=document.createElement('span');
   private look=new Map<number,{x:number;y:number}>();
   private action:HTMLButtonElement;
-  private attack:HTMLButtonElement;private attackHint=document.createElement('small');
+  private attack:HTMLButtonElement;
+  get attackButton(){return this.attack;}
   private actionRequiresHold=false;private interactionWasHold=false;private interactionId?:number;
   private jumpId?:number;
   get jumpHeld(){return this.jumpId!==undefined;}
@@ -33,7 +35,7 @@ export class TouchControls {
     this.interactionLayer.id='touch-interaction';this.interactionLayer.hidden=true;
     this.stick.id='touch-stick';this.stick.setAttribute('aria-label',t('Джойстик движения'));
     this.thumb.className='touch-thumb';this.stick.append(this.thumb);
-    const caption=document.createElement('small');caption.textContent=t('Движение · край — спринт');this.stick.append(caption);
+    const caption=document.createElement('small');caption.textContent=t('Движение');this.stick.append(caption);
     const buttons=document.createElement('div');buttons.className='touch-actions';
     const button=(id:string,text:string,label:string,fn:()=>void,parent:HTMLElement=buttons)=>{
       const b=document.createElement('button');b.type='button';b.id=id;b.textContent=t(text);b.setAttribute('aria-label',t(label));
@@ -43,7 +45,7 @@ export class TouchControls {
       b.addEventListener('click',e=>{if(e.detail===0&&this.enabled)fn();});
       parent.append(b);return b;
     };
-    const jump=this.jumpButton;jump.type='button';jump.id='touch-jump';jump.setAttribute('aria-label',t('Прыжок / полёт / ускорение'));
+    const jump=this.jumpButton;jump.type='button';jump.id='touch-jump';jump.setAttribute('aria-label',t('Прыжок / полёт'));
     const jumpIcon=document.createElement('span');jumpIcon.className='touch-jump-default';jumpIcon.textContent='↑';jumpIcon.setAttribute('aria-hidden','true');jump.append(jumpIcon);buttons.append(jump);
     jump.addEventListener('pointerdown',e=>{if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.jumpId!==undefined)return;e.preventDefault();this.jumpId=e.pointerId;jump.setPointerCapture(e.pointerId);});
     const releaseJump=(e:PointerEvent)=>{
@@ -52,7 +54,9 @@ export class TouchControls {
     };
     for(const name of ['pointerup','pointercancel','lostpointercapture'])jump.addEventListener(name,releaseJump as EventListener);
     jump.addEventListener('click',e=>{if(e.detail===0&&this.enabled&&!this.choosing)actions.jump();});
-    this.attack=button('touch-attack','✦','Толчок',actions.attack);this.attackHint.className='touch-attack-hint';this.attackHint.hidden=true;this.attack.append(this.attackHint);
+    this.dashButton=button('touch-dash','»','Рывок',actions.dash);
+    this.dashButton.innerHTML='<span class="touch-dash-default">»</span>';
+    this.attack=button('touch-attack','✦','Толчок',actions.attack);this.attack.innerHTML='<span class="touch-attack-default">✦</span>';
     // Keep the contextual action above the scrollable HUD, outside the movement layer.
     this.action=button('touch-interact','Действие','Взаимодействовать',()=>{if(!this.interactionWasHold&&!this.actionRequiresHold)actions.interact();},this.interactionLayer);this.action.hidden=true;
     this.action.addEventListener('pointerdown',e=>{if(!this.enabled||this.choosing||e.pointerType!=='touch'||this.interactionId!==undefined)return;this.interactionWasHold=this.actionRequiresHold;if(this.actionRequiresHold){this.interactionId=e.pointerId;this.action.setPointerCapture(e.pointerId);}});
@@ -114,7 +118,7 @@ export class TouchControls {
     this.action.hidden=!text;this.action.textContent=(text?t(text).replace(/^E\s*—\s*/,''):t('Действие'));
     this.action.setAttribute('aria-label',this.action.textContent);
   }
-  setAttackHint(text?:string){this.attackHint.hidden=!text;this.attackHint.textContent=text??'';this.attack.setAttribute('aria-label',text??t('Толчок'));}
+  setAttackHint(text?:string){this.attack.setAttribute('aria-label',text??t('Толчок'));}
   reset(){
     const jump=this.root.querySelector<HTMLButtonElement>('#touch-jump'),jumpId=this.jumpId;this.jumpId=undefined;if(jumpId!==undefined&&jump?.hasPointerCapture(jumpId))jump.releasePointerCapture(jumpId);
     const interaction=this.interactionId;this.interactionId=undefined;if(interaction!==undefined&&this.action.hasPointerCapture(interaction))this.action.releasePointerCapture(interaction);

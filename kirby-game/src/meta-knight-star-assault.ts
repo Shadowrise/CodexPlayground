@@ -3,11 +3,12 @@ import {SHIELD,shieldDanger,crystalPoint,crystalBroken} from './meta-knight-shie
 import {META_KNIGHT_ARENA} from './meta-knight-arena-site';
 export {crystalPoint} from './meta-knight-shield';
 
-/** Shared choreography and geometry for the last phase, in arena metres/ms. */
-export const STAR_ASSAULT={crystalRadius:SHIELD.crystalRadius,ricochetRadius:35,beamHalfWidth:2.0,crossWarningMs:3600,routeHalfWidth:4.5,impactRadius:SHIELD.radius,hover:1.2,peak:9} as const;
-export const STAR_FLIGHTS=3,STAR_LANDING_STEP=5+STAR_FLIGHTS*2,STAR_FALL_STEP=STAR_LANDING_STEP+1,STAR_SHIELD_STEP=STAR_LANDING_STEP+2;
+/** Shared phase-three choreography and geometry, in arena metres/ms. */
+export const STAR_ASSAULT={crystalRadius:SHIELD.crystalRadius,ricochetRadius:35,beamHalfWidth:2.0,routeHalfWidth:4.5,impactRadius:SHIELD.radius,hover:1.2,peak:9} as const;
+export const STAR_FLIGHTS=3,STAR_FLIGHT_STEP=3,STAR_LANDING_STEP=STAR_FLIGHT_STEP+STAR_FLIGHTS*2,STAR_FALL_STEP=STAR_LANDING_STEP+1,STAR_SHIELD_STEP=STAR_LANDING_STEP+2;
 export const STAR_SEQUENCE:[KnightStage,number][]=[
- ['star-rise',1200],['cross-warn',STAR_ASSAULT.crossWarningMs],['cross',450],['cross-warn',STAR_ASSAULT.crossWarningMs],['cross',450],
+ // The cross warning duration is calculated from the players' positions on entry.
+ ['star-rise',1200],['cross-warn',1],['cross',450],
  ['ricochet-warn',1550],['ricochet',950],['ricochet-warn',1000],['ricochet',950],['ricochet-warn',1000],['ricochet',950],
  ['star-warn',1550],['star-fall',1100],['shield',1e12],
 ];
@@ -17,7 +18,7 @@ const clamp=(v:number)=>Math.max(0,Math.min(1,v));
 const smooth=(v:number)=>{v=clamp(v);return v*v*(3-2*v);};
 export const starProgress=(s:KnightBattle,now:number)=>clamp((now-s.since)/Math.max(1,s.until-s.since));
 export const starOpening=(s:KnightBattle)=>s.pattern==='star'&&(s.stage==='shield'||s.stage==='crystal-break');
-export function crossPairs(s:KnightBattle):[[number,number],[number,number]]{if(s.starCross)return s.starCross.pairs;const available=Array.from({length:8},(_,i)=>i).filter(i=>!crystalBroken(s,i)),n=available.length,base=((s.cycle-1)+(s.step>=3?2:0)+80)%n,at=(i:number)=>available[(base+i)%n];return [[at(0),at(Math.floor(n/2))],[at(Math.floor(n/4)),at(n-1)]];}
+export function crossPairs(s:KnightBattle):[[number,number],[number,number]]{if(s.starCross)return s.starCross.pairs;const available=Array.from({length:8},(_,i)=>i).filter(i=>!crystalBroken(s,i)),n=available.length,base=((s.cycle-1)+80)%n,at=(i:number)=>available[(base+i)%n];return [[at(0),at(Math.floor(n/2))],[at(Math.floor(n/4)),at(n-1)]];}
 export const crossCrystal=(s:KnightBattle)=>crossPairs(s)[0][0];
 /** Continue the crystal beams to the arena rim, including beyond shattered gems. */
 export function crossLines(s:KnightBattle):[KnightPoint,KnightPoint][]{return crossPairs(s).map(([a,b])=>{const from=crystalPoint(a),to=crystalPoint(b);return [rimPoint(from,to,from[1]),rimPoint(to,from,to[1])];});}
@@ -72,12 +73,12 @@ export function lockStarCross(s:KnightBattle,p:KnightPoint){
  }
  if(best)s.starCross=best;
 }
-/** Walk to an actual safe point on the floor, rather than an edge beyond the arena. */
+/** Duel running speed is 6.8 m/s (CharacterController); allow 20% extra to reach safety. */
 export function crossWarningDuration(s:KnightBattle,p:KnightPoint){
  const escape=crossEscapePoint(s,p),distance=escape?Math.hypot(escape[0]-p[0],escape[2]-p[2]):META_KNIGHT_ARENA.radius*2;
- return Math.max(STAR_ASSAULT.crossWarningMs,Math.ceil((distance/3.4+.8)*10)*100);
+ return Math.max(1,Math.ceil(distance/6.8*1000*1.2));
 }
-export const ricochetIndex=(s:KnightBattle)=>Math.max(0,Math.min(starFlightCount(s)-1,Math.floor((s.step-5)/2)));
+export const ricochetIndex=(s:KnightBattle)=>Math.max(0,Math.min(starFlightCount(s)-1,Math.floor((s.step-STAR_FLIGHT_STEP)/2)));
 /** Pick the closest chord to the player's locked position; prefer a long chord on ties. */
 export function nearestCrystalChord(s:KnightBattle,p:KnightPoint,begin?:number):[number,number]{
  const available=Array.from({length:8},(_,i)=>i).filter(i=>!crystalBroken(s,i));let best:[number,number]=[available[0],available[1]],distance=Infinity,length=0;

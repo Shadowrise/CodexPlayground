@@ -22,7 +22,7 @@ test('admin speed still follows body animation across the base-speed floor',asyn
  const c=new CharacterController(gltf.scene,gltf.animations);
  for(const [from,to] of [[.3,1.5],[2,.3]]){
   c.resizeTo(from,true);c.resizeTo(to);
-  for(let i=0;i<30;i++){c.update(1/60,{forward:false,left:false,right:false});assert.equal(c.speed,3.4*Math.max(1,c.actor.scale.x));}
+  for(let i=0;i<30;i++){c.update(1/60,{forward:false,left:false,right:false});assert.equal(c.speed,6.8*Math.max(1,c.actor.scale.x));}
  }
 });
 

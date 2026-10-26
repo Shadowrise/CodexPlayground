@@ -10,7 +10,7 @@ export class MetaKnightCosmicFinale{
  private wind=new T.InstancedMesh(new T.PlaneGeometry(1,1),this.windMaterial,24);
  private dust=Array.from({length:12},()=>softMist(softMistMaterial(0xc4b39b,0)));
  private ring=new T.Mesh(new T.RingGeometry(.94,1,80),new T.MeshBasicMaterial({color:0xffdba8,transparent:true,opacity:0,depthWrite:false,side:T.DoubleSide,toneMapped:false}));
- private light=new T.PointLight(0xffd4a0,0,24,2);
+ readonly light=new T.PointLight(0xffd4a0,0,24,2);
  private matrix=new T.Matrix4();private position=new T.Vector3();private scale=new T.Vector3();private rotation=new T.Quaternion();
  private impact='';private lastNow=-Infinity;
  constructor(){this.group.name='Meta Knight fall air and landing';this.wind.frustumCulled=false;this.wind.instanceMatrix.setUsage(T.DynamicDrawUsage);this.ring.rotation.x=-Math.PI/2;this.ring.position.y=.09;this.light.position.y=1.6;this.group.add(this.wind,this.ring,this.light,...this.dust);}

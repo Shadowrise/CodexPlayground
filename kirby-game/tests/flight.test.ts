@@ -21,11 +21,11 @@ async function model(){const bytes=await readFile(new URL('../public/models/kirb
 test('a second press during ascent or exactly at the apex enables the existing two-second hover',()=>{
   for(const pressedAt of [.01,.2,JUMP_SECONDS/2]){
     const flight=new Flight();flight.press();flight.update(pressedAt);
-    const start=flight.height;flight.press();assert.equal(flight.height,start);assert(flight.levitating);
+    const start=flight.height;flight.press();assert.equal(flight.height,start);assert(flight.levitating);assert.equal(flight.hoverRemaining,2);
     const rise=Math.sqrt(2*(FLIGHT_HEIGHT-start)/24);
     flight.update(rise);assert.equal(flight.height,FLIGHT_HEIGHT);assert(flight.atTop);
-    flight.update(1.99);assert.equal(flight.height,FLIGHT_HEIGHT);
-    flight.update(.11);assert(!flight.levitating);
+    flight.update(1.99);assert.equal(flight.height,FLIGHT_HEIGHT);assert(Math.abs(flight.hoverRemaining-.01)<1e-8);
+    flight.update(.11);assert(!flight.levitating);assert.equal(flight.hoverRemaining,0);assert(!flight.canPress);
     assert(Math.abs(flight.height-(FLIGHT_HEIGHT-.5*24*.1**2))<1e-8);
     const before=flight.height;flight.update(.1);assert(before-flight.height>.5*24*.1**2);
     flight.update(1);assert(!flight.active);assert.equal(flight.height,0);

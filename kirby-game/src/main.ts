@@ -163,7 +163,7 @@ if(mobile)document.querySelector<HTMLButtonElement>('#tasks-toggle')!.click();
 if(mobile){
  audioPanel.prepend(createFullscreenControls());
  const help=document.createElement('div');help.dataset.controls='touch';help.hidden=true;
- help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение; край — спринт</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыжок; второе касание до падения — левитация на 2 с</span></li><li><b>✦</b><span>Толкнуть</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
+ help.innerHTML='<strong>Сенсорное управление</strong><ul class="hotkey-list"><li><b>Джойстик слева</b><span>Движение</span></li><li><b>Проведи по поляне</b><span>Повернуть камеру</span></li><li><b>Два пальца на поляне</b><span>Приблизить / отдалить</span></li><li><b>↑</b><span>Прыжок; второе касание до падения — левитация на 2 с</span></li><li><b>»</b><span>Рывок</span></li><li><b>✦</b><span>Толкнуть</span></li><li><b>Кнопка действия</b><span>Появляется рядом с аттракционом</span></li><li><b>☺ / Чат</b><span>Эмоции / сообщение</span></li></ul><p>Удобнее играть, повернув телефон горизонтально.</p>';
  controlsPanel.append(help);
 }
 settingsToggle.addEventListener('click', () => {
@@ -172,7 +172,7 @@ settingsToggle.addEventListener('click', () => {
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
   audioPanel.hidden = controlsPanel.hidden = !open;
-  keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();
+  keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();
   touch?.setEnabled(false);
   if(open)audioPanel.querySelector<HTMLElement>('select, button, input')?.focus();
   else if(playing)canvas.focus();
@@ -672,6 +672,7 @@ languageSetting.after(createViewDistanceControl(distance=>{
 const keys = new Set<string>();
 let pendingTurn: 'KeyA' | 'KeyD' | undefined;
 let pendingJump = false;
+let pendingDash = false;
 let pendingAttack = false;
 let pendingEmote:PlayerEmote|undefined;
 const emoteWheel=new EmoteWheel();
@@ -681,7 +682,7 @@ const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space
 window.addEventListener('keydown', event => {
   if(!playing||roundFinished()||tutorial.active)return;
   if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
-    event.preventDefault();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
+    event.preventDefault();keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
   }
   if(chat.open)return;
   if(event.code==='Escape'){
@@ -699,18 +700,19 @@ window.addEventListener('keydown', event => {
     event.preventDefault(); keys.add(event.code);
     if (!event.repeat && (event.code === 'KeyA' || event.code === 'KeyD')) pendingTurn = event.code;
     if (!event.repeat && event.code === 'Space') pendingJump = true;
+    if (!event.repeat && (event.code === 'ShiftLeft' || event.code === 'ShiftRight')) pendingDash = true;
     if (!event.repeat && event.code === 'KeyE') pendingBoard = true;
     if (!event.repeat && event.code === 'KeyQ') pendingAttack = true;
   }
 });
 window.addEventListener('keyup', event => { keys.delete(event.code); });
-window.addEventListener('blur', () => { pendingEmote=undefined;emoteWheel.close();keys.clear(); pendingTurn = undefined; pendingJump = false; pendingAttack = false; pendingBoard = false; });
-document.addEventListener('visibilitychange', () => { keys.clear(); pendingTurn = undefined; pendingJump = false; pendingAttack = false; pendingBoard = false; });
+window.addEventListener('blur', () => { pendingEmote=undefined;emoteWheel.close();keys.clear(); pendingTurn = undefined; pendingJump = false; pendingDash = false; pendingAttack = false; pendingBoard = false; });
+document.addEventListener('visibilitychange', () => { keys.clear(); pendingTurn = undefined; pendingJump = false; pendingDash = false; pendingAttack = false; pendingBoard = false; });
 
 const followCamera = new FollowCamera();
 const canvas = renderer.domElement;
 const touch=mobile?new TouchControls(canvas,{
- jump:()=>{if(!character?.playerDash.triggered)pendingJump=true;},attack:()=>{pendingAttack=true;},interact:()=>{pendingBoard=true;},
+ jump:()=>{pendingJump=true;},dash:()=>{pendingDash=true;},attack:()=>{pendingAttack=true;},interact:()=>{pendingBoard=true;},
  chat:()=>{chat.show();},emote:emote=>{pendingEmote=emote;},
  orbit:(x,y)=>followCamera.orbit(x,y),zoom:delta=>followCamera.zoom(delta),
 }):undefined;
@@ -728,7 +730,7 @@ const stopDragging = () => {
   canvas.style.cursor='grab';
 };
 let tutorialStorage:Storage|undefined;try{tutorialStorage=localStorage;}catch{}
-const clearTutorialInput=()=>{keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();touch?.reset();};
+const clearTutorialInput=()=>{keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();touch?.reset();};
 const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  clearTutorialInput();interactionOutline.update(undefined);wayfinder.selectDestination('');
  document.body.classList.toggle('in-meta-knight-arena',cosmicArena.active||cosmicArena.loading);
@@ -947,7 +949,7 @@ async function enterGame(){
   followCamera.reset(character.yaw);
   scene.add(character.actor, ...npcs.map(npc => npc.actor),...Array.from(wildBirds.values(),b=>b.npc.actor));
   setupShadowMaterials();
-  keys.clear(); pendingTurn = undefined; pendingJump = false;
+  keys.clear(); pendingTurn = undefined; pendingJump = false; pendingDash = false;
   playing = true;renderer.domElement.style.visibility='';meadowPortal.setWorking(metaKnightPortalReady());startupCard.hidden=true;if(!network)addLocalLog('зашёл на полянку.');
   startButton.disabled=false;startButton.textContent=t('На поляну →');saveButton.hidden=saveMessage.hidden=!!network;saveMessage.textContent='';
   if(!network)try{soloHistory=new SoloHistory(serverUrl,()=>({name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),score:scoreOf(character!),tasksDone:SCORE_ACTIONS.filter(t=>character!.achievements.has(t)).length,tasksTotal:SCORE_ACTIONS.length}),historyDevice);}catch{/* Statistics are optional; the game must always start. */}
@@ -1083,7 +1085,7 @@ renderer.setAnimationLoop((time: number) => {
   previousTime = time;
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
-  if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
+  if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   const controlScheme=gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard';
   const tutorialWasOpen=tutorial.active;
@@ -1099,7 +1101,7 @@ renderer.setAnimationLoop((time: number) => {
   const touchBlocked=settingsOpen||!!touch?.choosing||!playing||document.hidden;
   // Mounts and the treehouse deck retain their own existing turning physics.
   const steeringTurnRate=fireflies?.riding||treehouse.active?Math.PI*.55:TURN_RATE;
-  const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt,steeringTurnRate):{forward:false,sprint:false,steer:0};
+  const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt,steeringTurnRate):{forward:false,steer:0};
   if(usingPad&&festivalView.results.open&&pad.pressed.has(0))leaveOnline.click();
   const wasChoosing=!playing;
   const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
@@ -1122,17 +1124,16 @@ renderer.setAnimationLoop((time: number) => {
     if(pad.pressed.has(14))wayfinder.cycle(-1);
     else if(pad.pressed.has(15))wayfinder.cycle(1);
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
-    if(pad.held.has(7))padKeys.add('ShiftLeft');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
     followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
-  const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:key==='ShiftLeft'?motion.sprint:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
-  const dashHeld=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&(usingPad?pad.held.has(0):usingTouch?!!touch?.jumpHeld:held('Space'));
-  if(!dashHeld)character?.playerDash.chargeHold(0,false,true);
-  knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'A':usingTouch?'↑':t('Пробел'),usingTouch?touch?.jumpButton:undefined);
+  const held=(key:string)=>settingsOpen || wheelUsed || touch?.choosing || (!usingPad && !usingTouch && editingUi)?false:usingPad?padKeys.has(key):usingTouch?(key==='KeyW'?motion.forward:false):keys.has(key)||(key==='KeyW'&&mouseTurning&&leftMouseHeld);
+  const dashPressed=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()&&(usingPad?pad.pressed.has(1):pendingDash);
+  pendingDash=false;
+  knightDashHud.update(character,playing&&!settingsOpen&&!cosmicArena.loading,usingPad?'gamepad':usingTouch?'touch':'keyboard',usingTouch?touch:undefined);
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
   if(network?.room.sealProgress)sealProgress=network.room.sealProgress;
@@ -1146,7 +1147,7 @@ renderer.setAnimationLoop((time: number) => {
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
       const moveStick=settingsOpen||wheelUsed||touchBlocked?{x:0,y:0}:usingPad?{x:pad.x,y:pad.y}:usingTouch?Math.hypot(touch!.x,touch!.y)<.18?{x:0,y:0}:{x:touch!.x,y:touch!.y}:undefined;
-      cosmicArena.update(dt,time*.001,character,{cancelDuel,moveStick,dashHeld,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,sprint:held('ShiftLeft')||held('ShiftRight'),attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
+      cosmicArena.update(dt,time*.001,character,{cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'Q');
       setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
       sounds.update(dt,character,[],followCamera.azimuth);
@@ -1192,8 +1193,8 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { dashHeld:dashHeld&&!maze.contains(character.actor.position,2),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, sprint: held('ShiftLeft') || held('ShiftRight'), attack: !carryingBread && (held('KeyQ') || pendingAttack), attackPressed: !carryingBread&&!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), jumpPressed: !maze.contains(character.actor.position,2)&&!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
-    if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),sprint:held('ShiftLeft')||held('ShiftRight'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { dashPressed:dashPressed&&!maze.contains(character.actor.position,2),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, attack: !carryingBread && (held('KeyQ') || pendingAttack), attackPressed: !carryingBread&&!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), jumpPressed: !maze.contains(character.actor.position,2)&&!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);numberGarden.constrain(character.actor.position,character.actor.scale.x);}
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){

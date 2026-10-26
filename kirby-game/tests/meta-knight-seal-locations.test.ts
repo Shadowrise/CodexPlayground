@@ -112,12 +112,12 @@ test('old IDs remain fixed and eleven/thirteen-row snapshots restore omitted new
  }
 });
 
-test('walking, sprinting and jumping off every upper-course edge stay safe on rock or inside the meadow',async()=>{
+test('running and jumping off every upper-course edge stay safe on rock or inside the meadow',async()=>{
  const c=await player(),world=new MountainLedges();
  for(const origin of [UPPER[4],UPPER[13],PEAK])for(const heading of [Math.PI/4,-Math.PI/4,Math.PI*3/4,-Math.PI*3/4])for(const jump of [false,true]){
   world.resetPlayer();c.setActivity('Idle');c.actor.position.copy(ledgePosition(origin));c.surfaceY=origin.y;world.restorePosition(c);c.yaw=heading;c.actor.rotation.y=heading;
   for(let frame=0;frame<480;frame++){
-   tick(world,c,{...idle,forward:frame<200,sprint:true,jump:jump&&(frame===0||frame===18)},1/30);validPosition(c.actor.position);
+   tick(world,c,{...idle,forward:frame<200,jump:jump&&(frame===0||frame===18)},1/30);validPosition(c.actor.position);
   }
   // A descent may pause on several lower traps. Remove those temporary rests
   // to exercise the complete worst-case fall rather than stopping mid-descent.
@@ -131,7 +131,7 @@ test('large bodies and lag frames cannot escape behind the peak or fall beyond t
  const c=await player(),world=new MountainLedges();
  for(const size of [.3,2,10])for(const dt of [.25,1.5])for(const heading of [Math.PI/4,-Math.PI/4,Math.PI*3/4,-Math.PI*3/4]){
   world.resetPlayer();c.setActivity('Idle');c.resizeTo(size,true);c.actor.position.copy(ledgePosition(PEAK));c.surfaceY=PEAK.y;world.restorePosition(c);c.yaw=heading;
-  for(let frame=0;frame<90;frame++){tick(world,c,{...idle,forward:frame<15,sprint:true,jump:frame===0||frame===2},dt);validPosition(c.actor.position,size);}
+  for(let frame=0;frame<90;frame++){tick(world,c,{...idle,forward:frame<15,jump:frame===0||frame===2},dt);validPosition(c.actor.position,size);}
   assert(insideMeadow(c.actor.position,size)||world.surfaces(c).some(surface=>Math.abs(surface.height-c.actor.position.y)<.03),'lag ends on a supported ledge or in the meadow');
  }
  // apply() also repairs an external displacement which skipped controller constraints.

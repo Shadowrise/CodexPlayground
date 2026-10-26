@@ -13,7 +13,7 @@ try{
  await page.goto(process.env.GAME_URL??'http://127.0.0.1:5194/');await page.waitForFunction(()=>!!window.annexQA,null,{timeout:180000});await page.locator('#startup-loader').waitFor({state:'hidden',timeout:180000});
  await page.locator('#new-game').click();await page.locator('#player-name-input').fill('Звёздный мост');await page.locator('#start-game').click();await page.waitForFunction(()=>!!annexQA.c);
  const arrival=await page.evaluate(async()=>{
-  const q=annexQA;await q.travel.enter(q.c);q.renderer.setAnimationLoop(null);q.site=await import('/src/meta-knight-arena-site.ts');q.rules=await import('/src/meta-knight-battle.ts');q.empty={forward:false,left:false,right:false,sprint:false};q.step=()=>q.travel.update(.025,1,q.c,q.empty,0,0,false,false);
+  const q=annexQA;await q.travel.enter(q.c);q.renderer.setAnimationLoop(null);q.site=await import('/src/meta-knight-arena-site.ts');q.rules=await import('/src/meta-knight-battle.ts');q.empty={forward:false,left:false,right:false};q.step=()=>q.travel.update(.025,1,q.c,q.empty,0,0,false,false);
   q.photo=(close=false)=>{const c=q.travel.camera;c.fov=52;c.aspect=1440/1000;c.updateProjectionMatrix();if(close){c.position.set(2036,15,64);c.lookAt(2017,4,42);}else{c.position.set(2067,72,104);c.lookAt(2006,-1,12);}c.updateMatrixWorld();q.travel.render();};
   const a=q.site.knightAnnexCoordinates(q.c.actor.position.x-2000,q.c.actor.position.z);q.photo();return {along:a.along,portal:q.travel.current.portal.working,closed:q.travel.current.annex.gate.visible};
  });assert(arrival.along>50&&arrival.portal&&!arrival.closed);await page.screenshot({path:output+'annex-open.png'});

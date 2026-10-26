@@ -5,13 +5,14 @@ import {fileURLToPath} from 'node:url';
 import {knightSound,KNIGHT_SOUND_RATE} from '../src/meta-knight-sounds.ts';
 import {Vector3} from 'three';
 
-const output=fileURLToPath(new URL('../artifacts/meta-knight-phase4-transition-2026-10-24-v8/',import.meta.url));
+const output=process.env.COSMIC_OUTPUT??fileURLToPath(new URL('../artifacts/meta-knight-phase4-transition-2026-10-24-v8/',import.meta.url));
 await mkdir(output+'screenshots/',{recursive:true});
 async function screenshot(page,path,options={}){const bytes=await page.screenshot(options);for(let attempt=0;;attempt++){try{await writeFile(path,bytes);return;}catch(error){if(attempt>=5)throw error;await new Promise(resolve=>setTimeout(resolve,200*(attempt+1)));}}}
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--autoplay-policy=no-user-gesture-required']});
 try{
  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[],frames=[];
  const warnings=new Set();page.on('pageerror',e=>{errors.push(e.stack);console.error(e.stack);});page.on('console',m=>{if(/WebGL|THREE|shader/i.test(m.text())){if(m.type()==='error'){errors.push(m.text());console.error(m.text());}else warnings.add(m.text());}});
+ await page.routeWebSocket(/.*/,ws=>ws.onMessage(()=>{}));
  await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
  for(const endpoint of ['room','players','history/solo'])await page.route('**/'+endpoint,r=>r.fulfill({json:{ok:true,players:0,occupiedVariants:[],capacity:14}}));
  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('renderer.setAnimationLoop(', 'renderer.setAnimationLoop(window.__cosmicMainLoop = ')+'\nwindow.cosmicQA={THREE,travel:cosmicArena,renderer,chat,sounds,get c(){return character},mainFrame(time){previousTime=time-1000/60;window.__cosmicMainLoop(time)}};'});});
@@ -28,7 +29,7 @@ try{
   const q=cosmicQA;q.base=structuredClone(q.travel.battle);q.elapsed=0;q.c.actor.position.set(2009,0,9);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;q.cues=[];
   q.initialGlErrors=[];for(let i=0;i<8;i++){const error=q.renderer.getContext().getError();if(!error)break;q.initialGlErrors.push(error);}
   const original=q.travel.battleView.cue;q.travel.battleView.cue=kind=>{q.cues.push({kind,at:q.travel.soloNow});original(kind);};
-  q.input={forward:false,backward:false,left:false,right:false,jump:false,sprint:false,attack:false};
+  q.input={forward:false,backward:false,left:false,right:false,jump:false,attack:false};
   q.advanceTo=ms=>{
    while(q.elapsed<ms-.001){
     const dt=Math.min(1/60,(ms-q.elapsed)/1000);q.travel.update(dt,(q.base.since+q.elapsed)/1000,q.c,q.input,0,0,false,false);q.elapsed+=dt*1000;
@@ -63,7 +64,7 @@ try{
    await page.evaluate(()=>{const q=cosmicQA,c=q.travel.camera;c.position.copy(q.savedCamera.p);c.quaternion.copy(q.savedCamera.q);c.fov=q.savedCamera.fov;c.updateProjectionMatrix();c.updateMatrixWorld();q.travel.render();});
   }
   assert.equal(metrics.glError,0);assert.equal(metrics.hp,6);assert.equal(metrics.life,5);assert(Math.abs(metrics.tipNdc[1])<.82,'the raised blade stays inside the frame and below the HUD');if(ms>8100)assert(Math.abs(metrics.height-metrics.bossHeight)<1e-8);
-  assert.equal(metrics.glowColor,'ffb52b');if(ms===4000)assert(metrics.bolts>=162*5);if(ms===4700)assert(metrics.bodyHeight>6);
+  assert.equal(metrics.glowColor,ms<16000?'215cff':'ffb52b');if(ms===4000)assert(metrics.bolts>=162*5);if(ms===4700)assert(metrics.bodyHeight>6);
   if(ms>=7870)assert(Math.abs(metrics.radius-41)<.001,'the electrical recoil reaches the rim before takeoff');if(ms>=5350&&ms<=7870)assert.equal(metrics.height,0);
   if(ms===6550)assert(metrics.crystalOpacity<.2,'the foreground rim crystal must not hide the recoiling player');if(ms===16000)assert(metrics.crystalOpacity>.999,'rim crystals recover their full opacity after takeoff');
   if(ms>=7870)assert(Math.abs(metrics.bossNdc[0])<.08&&Math.abs(metrics.bossNdc[1])<.7,'the transition camera keeps Meta Knight ahead of the player');
@@ -90,7 +91,7 @@ try{
  assert.equal(spaceRepeat.state,'Dash');assert.equal(spaceRepeat.height,180);await page.keyboard.up('Space');await page.evaluate(()=>{const q=cosmicQA;q.mainFrame(q.mainTime+=1000/60);});
  const flight=await page.evaluate(()=>{
   const q=cosmicQA,before=q.c.actor.position.clone(),height=q.c.actor.position.y;
-  for(let i=0;i<180;i++)q.travel.update(1/60,q.travel.soloNow/1000,q.c,{...q.input,forward:true,jump:true,jumpPressed:i%20===0,dashHeld:true},0,0,false,false);
+  for(let i=0;i<180;i++)q.travel.update(1/60,q.travel.soloNow/1000,q.c,{...q.input,forward:true,jump:true,jumpPressed:i%20===0,dashPressed:true},0,0,false,false);
   return {height,after:q.c.actor.position.y,moved:Math.hypot(q.c.actor.position.x-before.x,q.c.actor.position.z-before.z),active:q.c.flight.active,state:q.c.state,stage:q.travel.battle.stage};
  });assert.equal(flight.height,180);assert.equal(flight.after,180);assert(flight.moved>4&&flight.active);assert.equal(flight.stage,'cosmic-flight');
  const controls=await page.evaluate(()=>{

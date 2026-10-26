@@ -5,19 +5,20 @@ export class CosmicPlasma{
  readonly group=new T.Group();
  private geometry=new T.PlaneGeometry(2,1);
  private material=new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide,toneMapped:false,
-  uniforms:{clock:{value:0}},
-  vertexShader:`attribute float energy;attribute float seed;varying vec2 vUv;varying float power;varying float phase;
+  uniforms:{clock:{value:0},blue:{value:0},floorY:{value:-1e6}},
+  vertexShader:`attribute float energy;attribute float seed;varying vec2 vUv;varying float power;varying float phase;varying float worldY;
    void main(){vUv=uv;power=energy;phase=seed;
     vec4 a=modelViewMatrix*instanceMatrix*vec4(0.,-.5,0.,1.);
     vec4 b=modelViewMatrix*instanceMatrix*vec4(0.,.5,0.,1.);
     vec2 tangent=normalize(b.xy-a.xy+vec2(.00001,0.));vec2 side=vec2(tangent.y,-tangent.x);
     float width=length((modelViewMatrix*instanceMatrix*vec4(1.,0.,0.,0.)).xyz);
-    vec4 p=mix(a,b,uv.y);p.xy+=side*position.x*width;gl_Position=projectionMatrix*p;
+    vec4 p=mix(a,b,uv.y);p.xy+=side*position.x*width;worldY=cameraPosition.y+dot(viewMatrix[1].xyz,p.xyz);gl_Position=projectionMatrix*p;
    }`,
-  fragmentShader:`varying vec2 vUv;varying float power;varying float phase;uniform float clock;
+  fragmentShader:`varying vec2 vUv;varying float power;varying float phase;varying float worldY;uniform float clock;uniform float blue;uniform float floorY;
    float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
    float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
    void main(){
+    if(worldY<floorY)discard;
     float along=vUv.y,x=vUv.x*2.-1.;float flow=noise(vec2(x*3.+phase,along*13.-clock*3.));
     float curl=sin(along*18.-clock*5.+phase)*.12+sin(along*31.+clock*2.)*.06;
     float radius=.38+.42*along;float d=abs(x-curl)/radius;
@@ -25,17 +26,24 @@ export class CosmicPlasma{
     float ends=smoothstep(0.,.16,along)*(1.-smoothstep(.84,1.,along));
     float density=(.30+.70*flow)*ends*power;
     vec3 color=mix(vec3(1.,.18,.015),vec3(1.,.63,.09),mist);color=mix(color,vec3(1.,.93,.64),core*.65);
+    vec3 cold=mix(vec3(.01,.06,.7),vec3(.025,.30,1.),mist);cold=mix(cold,vec3(.43,.83,1.),core*.65);color=mix(color,cold,blue);
     gl_FragColor=vec4(color,(mist*.32+core*.14)*density);
     #include <colorspace_fragment>
    }`});
  readonly mesh=new T.InstancedMesh(this.geometry,this.material,24);
  private energies=new T.InstancedBufferAttribute(new Float32Array(24),1);private seeds=new T.InstancedBufferAttribute(new Float32Array(24),1);
  private a=new T.Vector3();private b=new T.Vector3();private center=new T.Vector3();private axis=new T.Vector3();private rotation=new T.Quaternion();private scale=new T.Vector3();private matrix=new T.Matrix4();private count=0;
+ private minimumY=-Infinity;
  constructor(){this.geometry.setAttribute('energy',this.energies);this.geometry.setAttribute('seed',this.seeds);this.mesh.frustumCulled=false;this.mesh.renderOrder=4;this.mesh.name='Soft amber plasma around Galaxia and ascent wakes';this.group.add(this.mesh);}
- begin(clock:number){this.count=0;this.material.uniforms.clock.value=clock;}
+ setBlue(blue:boolean){this.material.uniforms.blue.value=blue?1:0;}
+ setFloor(y:number){this.minimumY=y;}
+ begin(clock:number){this.count=0;this.material.uniforms.clock.value=clock;this.material.uniforms.floorY.value=Number.isFinite(this.minimumY)?this.group.localToWorld(this.a.set(0,this.minimumY,0)).y:-1e6;}
  add(a:T.Vector3,b:T.Vector3,radius:number,strength:number,seed:number){
-  if(this.count>=24)return;this.a.copy(a);this.b.copy(b);this.axis.subVectors(b,a);const length=this.axis.length();if(length<.001)return;
-  this.center.addVectors(a,b).multiplyScalar(.5);this.rotation.setFromUnitVectors(T.Object3D.DEFAULT_UP,this.axis.multiplyScalar(1/length));this.scale.set(radius,length,radius);this.matrix.compose(this.center,this.rotation,this.scale);
+  if(this.count>=24||a.y<this.minimumY&&b.y<this.minimumY)return;this.a.copy(a);this.b.copy(b);
+  if(this.a.y<this.minimumY)this.a.lerp(this.b,(this.minimumY-this.a.y)/(this.b.y-this.a.y));
+  if(this.b.y<this.minimumY)this.b.lerp(this.a,(this.minimumY-this.b.y)/(this.a.y-this.b.y));
+  this.axis.subVectors(this.b,this.a);const length=this.axis.length();if(length<.001)return;
+  this.center.addVectors(this.a,this.b).multiplyScalar(.5);this.rotation.setFromUnitVectors(T.Object3D.DEFAULT_UP,this.axis.multiplyScalar(1/length));this.scale.set(radius,length,radius);this.matrix.compose(this.center,this.rotation,this.scale);
   this.mesh.setMatrixAt(this.count,this.matrix);this.energies.setX(this.count,strength);this.seeds.setX(this.count++,seed);
  }
  end(){this.mesh.count=this.count;this.mesh.instanceMatrix.needsUpdate=this.energies.needsUpdate=this.seeds.needsUpdate=true;this.group.visible=this.count>0;}

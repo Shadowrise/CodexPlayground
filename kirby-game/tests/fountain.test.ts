@@ -50,7 +50,7 @@ test('bathing during an admin resize preserves its speed animation and fruit boo
  }
  assert(c.savedSize<3);assert.equal(reference.savedSize,3);assert.equal(c.fruitBoost.multiplier,1.2);
  c.resizeTo(4);for(let i=0;i<30;i++)c.update(1/60,{forward:false,left:false,right:false});
- assert.equal(c.savedSize,4);assert.equal(c.speed,3.4*4*1.2);
+ assert.equal(c.savedSize,4);assert.equal(c.speed,6.8*4*1.2);
 });
 test('flying over the fountain does not shrink or complete its task, and the centre is solid',async()=>{
  const c=await player(),f=new RainbowFountain(),ponds=new Ponds();c.actor.scale.setScalar(3);c.actor.position.set(FOUNTAIN_SITE.x+6,5,FOUNTAIN_SITE.z);c.flight.press();

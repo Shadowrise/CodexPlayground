@@ -7,6 +7,7 @@ import {BUILD,type ActorState} from '../src/network-protocol';
 import {chooseShieldCrystal,crystalPoint,SHIELD} from '../src/meta-knight-shield';
 import {META_KNIGHT_ARENA as ARENA,META_KNIGHT_ANNEX,knightAnnexCoordinates} from '../src/meta-knight-arena-site';
 import {COSMIC_SPIN,cosmicOrbs} from '../src/meta-knight-cosmic-spin';
+import {STAR_SHIELD_STEP} from '../src/meta-knight-star-assault';
 import {setKnightPhase} from '../src/meta-knight-battle';
 import {meteorPath} from '../src/meta-knight-cosmic-meteor';
 import {refugeStar} from '../src/meta-knight-cosmic-refuge';
@@ -63,7 +64,7 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.deepEqual(room.room.knightBattle.starAims,lockedAims,'Worker wakeup keeps the locked bend');assert.deepEqual(room.room.knightBattle.starRoute,lockedRoute);
   send(a,actor([1975,0,-20]));assert.deepEqual(room.room.knightBattle.starAims,lockedAims,'network movement cannot drag an already displayed flight lane');
   for(let i=0;i<3;i++){
-   const s=room.room.knightBattle;Object.assign(s,{pattern:'star',stage:'shield',cycle:i+1,step:13,since:now,until:now+1e12,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});s.activeCrystal=chooseShieldCrystal(s);const index=s.activeCrystal;
+   const s=room.room.knightBattle;Object.assign(s,{pattern:'star',stage:'shield',cycle:i+1,step:STAR_SHIELD_STEP,since:now,until:now+1e12,checked:now,from:[0,0,0],to:[0,0,0],openHit:false});s.activeCrystal=chooseShieldCrystal(s);const index=s.activeCrystal;
    // This authority/credit fixture teleports across waves; wave damage is tested separately.
    s.players[aid].invulnerable=now+10000;
    send(a,actor([2000,0,1]),[{type:'knight',action:'attack'}]);assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])>=SHIELD.radius+.64,'Worker enforces the solid dome');assert.equal(s.hp,3-i,'the shield rejects a boss hit');

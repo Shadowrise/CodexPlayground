@@ -1,30 +1,18 @@
-export const PLAYER_KNIGHT_DASH={hold:.3,cooldown:6,duration:.7,distance:12} as const;
+export const PLAYER_KNIGHT_DASH={cooldown:6,duration:.7,distance:12} as const;
 
-/** One thrust per continuous hold; a press during cooldown is never queued. */
+/** A press starts immediately; presses during cooldown are discarded. */
 export class MetaKnightPlayerDash{
  cooldown=0;
- private heldFor=0;
- private spent=false;
- private triggeredForHold=false;
  private remaining=0;
- /** Keeps the jump button from firing again when a completed dash hold is released. */
- get triggered(){return this.triggeredForHold;}
  get active(){return this.remaining>0;}
  get progress(){return 1-this.remaining/PLAYER_KNIGHT_DASH.duration;}
- get charge(){return this.heldFor/PLAYER_KNIGHT_DASH.hold;}
+ /** Network poses retain the charge slot for compatibility with existing peers. */
+ get charge(){return 0;}
  tick(dt:number){this.cooldown=Math.max(0,this.cooldown-dt);if(this.cooldown<1e-9)this.cooldown=0;}
- cancelCharge(){this.heldFor=0;this.spent=true;}
- cancel(){this.remaining=0;this.cancelCharge();}
- /** Returns the part of this frame after reaching the charge threshold. */
- chargeHold(dt:number,held:boolean,allowed:boolean):number|undefined{
-  if(!held){this.heldFor=0;this.spent=false;this.triggeredForHold=false;return;}
-  if(!allowed||this.cooldown>0){this.cancelCharge();return;}
-  if(this.spent)return;
-  this.heldFor+=dt;
-  if(this.heldFor+1e-9<PLAYER_KNIGHT_DASH.hold)return;
-  const overflow=Math.max(0,this.heldFor-PLAYER_KNIGHT_DASH.hold);
-  this.cancelCharge();this.triggeredForHold=true;this.remaining=PLAYER_KNIGHT_DASH.duration;this.cooldown=PLAYER_KNIGHT_DASH.cooldown;
-  return overflow;
+ cancel(){this.remaining=0;}
+ press(allowed:boolean){
+  if(!allowed||this.cooldown>0||this.active)return false;
+  this.remaining=PLAYER_KNIGHT_DASH.duration;this.cooldown=PLAYER_KNIGHT_DASH.cooldown;return true;
  }
  step(dt:number){const step=Math.min(dt,this.remaining);this.remaining=Math.max(0,this.remaining-step);if(this.remaining<1e-9)this.remaining=0;return step;}
 }

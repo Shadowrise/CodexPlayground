@@ -10,17 +10,17 @@ float mn(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(m
 float mf(vec3 p){return .57*mn(p)+.28*mn(p*2.07)+.15*mn(p*4.11);}`;
 /** Real rough geometry stays visible inside an irregular bow shock and curved, sampled wake. */
 export class MetaKnightCosmicMeteorView{
- readonly group=new T.Group();readonly lightning=new CosmicLightning();
+ readonly group=new T.Group();readonly lightning=new CosmicLightning(true);
  readonly rock:T.Mesh<T.IcosahedronGeometry,T.MeshStandardMaterial>;
  private clock={value:0};private returned={value:0};private matrix=new T.Matrix4();private quaternion=new T.Quaternion();private rotation=new T.Quaternion();
  private p=new T.Vector3();private old=new T.Vector3();private velocity=new T.Vector3();private tailDirection=new T.Vector3();private scale=new T.Vector3();private tip=new T.Vector3();private up=new T.Vector3(0,1,0);
  private flameMaterial=new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,uniforms:{clock:this.clock,returned:this.returned},vertexShader:`attribute float age;varying float vAge;varying vec3 vLocal;varying float facing;void main(){vAge=age;vLocal=position;vec4 mv=modelViewMatrix*instanceMatrix*vec4(position,1.);facing=abs(dot(normalize(normalMatrix*mat3(instanceMatrix)*normal),normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float clock;uniform float returned;varying float vAge;varying vec3 vLocal;varying float facing;${noise}
- void main(){float n=mf(vLocal*4.+vec3(0,clock*10.,vAge*13.)),edge=pow(max(0.,1.-abs(vLocal.y)),.40);vec3 fire=mix(vec3(1.,.035,.001),vec3(1.,.38,.012),1.-vAge);fire=mix(fire,vec3(1.,.85,.34),pow(1.-vAge,3.)*smoothstep(.35,.7,n));fire=mix(fire,vec3(1.,.67,.16),returned*.16);float alpha=(.30+.48*n)*pow(1.-vAge,.85)*edge*smoothstep(.17,.59,n)*pow(facing,.85);gl_FragColor=vec4(fire*1.6,alpha);}`});
+ void main(){float n=mf(vLocal*4.+vec3(0,clock*10.,vAge*13.)),edge=pow(max(0.,1.-abs(vLocal.y)),.40),wake=smoothstep(.12,.45,vAge);vec3 fire=mix(vec3(1.,.08,.002),vec3(1.,.38,.012),pow(1.-vAge,.45));fire=mix(fire,vec3(1.,.85,.34),pow(1.-vAge,3.)*smoothstep(.35,.7,n));fire=mix(fire,vec3(1.,.67,.16),returned*.16);float detail=mix(smoothstep(.17,.59,n),.16+.84*smoothstep(.12,.55,n),wake),alpha=(.30+.48*n)*pow(1.-vAge,mix(.85,.50,wake))*edge*detail*pow(facing,mix(.85,.60,wake));gl_FragColor=vec4(fire*mix(1.6,1.9,wake),alpha);}`});
  private flame=new T.InstancedMesh(new T.SphereGeometry(1,16,10),this.flameMaterial,FLAMES);
  private smoke=new T.InstancedMesh(new T.SphereGeometry(1,12,10),new T.ShaderMaterial({transparent:true,depthWrite:false,uniforms:{clock:this.clock},vertexShader:'varying vec3 p;varying float facing;void main(){p=position;vec4 mv=modelViewMatrix*instanceMatrix*vec4(position,1.);facing=abs(dot(normalize(normalMatrix*mat3(instanceMatrix)*normal),normalize(-mv.xyz)));gl_Position=projectionMatrix*mv;}',fragmentShader:`uniform float clock;varying vec3 p;varying float facing;${noise}void main(){float density=mf(p*5.+clock*.8);gl_FragColor=vec4(vec3(.095,.045,.025),.07*pow(facing,2.)*smoothstep(.2,.75,density));}`}),18);
  private embers=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xff9c29,toneMapped:false}),72);
- private fireShell=new T.Mesh(new T.SphereGeometry(1,48,32),new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,uniforms:{clock:this.clock},vertexShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){p=position;float billow=mf(position*5.+vec3(0,clock*6.,clock));vec3 hot=position*(1.+.14*billow);hot.y-=max(0.,-position.y)*(.20+.28*billow);n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(hot,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){float detail=mf(p*6.+vec3(0,clock*8.,clock*.8)),rim=pow(1.-abs(dot(normalize(n),normalize(v))),.8),tongues=smoothstep(.38,.70,detail);vec3 colour=mix(vec3(1.,.045,.001),vec3(1.,.55,.035),detail);colour=mix(colour,vec3(1.,.87,.38),smoothstep(.66,.85,detail));gl_FragColor=vec4(colour*1.9,tongues*(.18+.50*rim));}`}));
- private light=new T.PointLight(0xff982d,0,32,1.5);
+ private fireShell=new T.Mesh(new T.SphereGeometry(1,48,32),new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,uniforms:{clock:this.clock},vertexShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){p=position;float billow=mf(position*5.+vec3(0,clock*6.,clock));vec3 hot=position*(1.+.14*billow);hot.y-=max(0.,-position.y)*(.20+.28*billow);n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(hot,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){float detail=mf(p*6.+vec3(0,clock*8.,clock*.8)),rim=pow(1.-abs(dot(normalize(n),normalize(v))),.65),tongues=smoothstep(.24,.65,detail);vec3 colour=mix(vec3(1.,.065,.002),vec3(1.,.55,.035),detail);colour=mix(colour,vec3(1.,.87,.38),smoothstep(.66,.85,detail));gl_FragColor=vec4(colour*2.2,tongues*(.24+.66*rim));}`}));
+ readonly light=new T.PointLight(0xff982d,0,32,1.5);
  constructor(private blade:T.Object3D){
   this.group.name='Meta Knight curved meteor, fire and rock';
   const geometry=new T.IcosahedronGeometry(1,4),positions=geometry.getAttribute('position'),colours:number[]=[],point=new T.Vector3(),craters=Array.from({length:9},(_,i)=>new T.Vector3(hash(i+1)-.5,hash(i+21)-.5,hash(i+91)-.5).normalize());
@@ -44,22 +44,23 @@ export class MetaKnightCosmicMeteorView{
  }
  update(s:KnightBattle|undefined,now:number){
   const point=s?meteorPoint(s,now):undefined;this.group.visible=!!point;if(!s||!point)return;
-  const m=s.cosmicMeteor!,clock=now/1000;this.clock.value=clock;this.returned.value=s.stage==='cosmic-meteor-return'?1:0;this.p.fromArray(point);this.old.fromArray(meteorPoint(s,Math.max(s.since,now-16))??point);this.velocity.subVectors(this.p,this.old);
+  // Epoch seconds lose animation and noise precision in GPU floats.
+  const m=s.cosmicMeteor!,clock=(now-m.at)/1000;this.clock.value=clock;this.returned.value=s.stage==='cosmic-meteor-return'?1:0;this.p.fromArray(point);this.old.fromArray(meteorPoint(s,Math.max(s.since,now-16))??point);this.velocity.subVectors(this.p,this.old);
   const speed=this.velocity.length()/.016;if(this.velocity.lengthSq()<.00001)this.velocity.set(Math.sin(m.yaw),.1,Math.cos(m.yaw));this.velocity.normalize();
   this.rock.position.copy(this.p);this.rock.rotation.set(clock*1.2+m.index,clock*.83,clock*.49);this.rock.scale.setScalar(M.radius);
-  this.rotation.setFromUnitVectors(this.up,this.velocity);this.fireShell.position.copy(this.p);this.fireShell.quaternion.copy(this.rotation);this.fireShell.scale.set(1.43,1.55,1.43);
+  this.rotation.setFromUnitVectors(this.up,this.velocity);this.fireShell.position.copy(this.p);this.fireShell.quaternion.copy(this.rotation);this.fireShell.scale.set(1.72,1.88,1.72);
   this.light.position.copy(this.p);this.light.intensity=22+6*Math.sin(clock*27)**2;
   for(let i=0;i<BODY_FLAMES;i++){
    const a=i*2.399+clock*.7,y=1-2*(i+.5)/BODY_FLAMES,r=Math.sqrt(1-y*y),pulse=.8+.2*Math.sin(clock*17+i*5);
    this.old.set(Math.cos(a)*r,y,Math.sin(a)*r).multiplyScalar(M.radius*(.97+.12*pulse)).add(this.p).addScaledVector(this.velocity,-.30);
-   this.scale.set(.32+.17*pulse,.78+.65*pulse,.32+.17*pulse);this.matrix.compose(this.old,this.rotation,this.scale);this.flame.setMatrixAt(i,this.matrix);
+   this.scale.set(.34+.18*pulse,.80+.70*pulse,.34+.18*pulse);this.matrix.compose(this.old,this.rotation,this.scale);this.flame.setMatrixAt(i,this.matrix);
   }
   for(let i=0;i<TAIL_FLAMES;i++){
-   const age=i/TAIL_FLAMES,t=now-age*540,past=meteorPoint(s,Math.max(s.since,t))??point,earlier=meteorPoint(s,Math.max(s.since,t-16))??past;this.old.fromArray(past);
+   const age=i/TAIL_FLAMES,t=now-age*720,past=meteorPoint(s,Math.max(s.since,t))??point,earlier=meteorPoint(s,Math.max(s.since,t-16))??past;this.old.fromArray(past);
    this.tailDirection.set(past[0]-earlier[0],past[1]-earlier[1],past[2]-earlier[2]);if(this.tailDirection.lengthSq()<.00001)this.tailDirection.copy(this.velocity);this.quaternion.setFromUnitVectors(this.up,this.tailDirection.normalize());
    this.old.addScaledVector(this.velocity,-age*4*(1-Math.min(1,speed/10)));
    const a=i*2.399+clock*3,r=(.12+age*.70)*Math.sin(age*Math.PI);this.old.x+=Math.cos(a)*r;this.old.y+=Math.sin(a)*r;this.old.z+=Math.cos(a*.7)*r;
-   this.scale.setScalar((1.55+age*.20)*(1-age)**.65*(.86+.14*Math.sin(clock*23+i*7)));this.scale.y*=2.0;this.matrix.compose(this.old,this.quaternion,this.scale);this.flame.setMatrixAt(BODY_FLAMES+i,this.matrix);
+   this.scale.setScalar((1.65+age*.20)*(1-age)**.50*(.86+.14*Math.sin(clock*23+i*7)));this.scale.y*=2.2;this.matrix.compose(this.old,this.quaternion,this.scale);this.flame.setMatrixAt(BODY_FLAMES+i,this.matrix);
   }
   for(let i=0;i<18;i++){
    const age=(i+3)/21,past=meteorPoint(s,Math.max(s.since,now-age*490))??point;this.old.fromArray(past).add(new T.Vector3(Math.sin(i*13+clock)*age,age*.9,Math.cos(i*7+clock)*age));

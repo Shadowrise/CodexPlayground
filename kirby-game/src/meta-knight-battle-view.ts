@@ -83,6 +83,8 @@ export class MetaKnightBattleView{
  setLifeFirefly(gltf:GLTF){this.lifeFirefly?.dispose();this.lifeFirefly=new MetaKnightLifeFireflyView(gltf,kind=>this.cue(kind));this.group.add(this.lifeFirefly.group);}
  fireflyBuzz(listener:T.Vector3){return this.lifeFirefly?.buzzLevel(listener)??0;}
  private finale=new MetaKnightCosmicFinale();private fallKey='';
+ private effectLights:T.PointLight[];
+ private lighting=new T.Group();
  constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{}){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
@@ -93,6 +95,9 @@ export class MetaKnightBattleView{
   this.cosmic=new MetaKnightCosmicView(knight.actor,scene);this.group.add(this.cosmic.group,this.cosmicOrbs.group);
   this.meteor=new MetaKnightCosmicMeteorView(knight.actor.getObjectByName('Galaxia')!);this.group.add(this.meteor.group);
   this.refuge=new MetaKnightCosmicRefugeView(scene,knight.actor.getObjectByName('Galaxia')!);this.group.add(this.refuge.group,this.finale.group);
+  // Visibility of a light changes NUM_POINT_LIGHTS for every lit material.
+  // Keep the slots present from loading onward; inactive effects use zero intensity.
+  this.effectLights=[this.cosmic.light,this.meteor.light,this.refuge.burst.light,this.finale.light];this.lighting.name='Persistent duel effect lighting';this.lighting.position.copy(this.group.position);this.lighting.add(...this.effectLights);scene.add(this.lighting);
   this.floorWarnings.name='Meta Knight floor warnings behind characters';this.floorWarnings.renderOrder=-1;this.group.add(this.floorWarnings);
   for(const mesh of [this.sector,this.sectorEdge,this.sectorHalo,this.sectorCountdown,this.impactCountdown,...this.sectorSides,this.slash,this.lane,this.target,this.targetFill,this.shadow]){mesh.rotation.x=-Math.PI/2;mesh.position.y=.09;this.floorWarnings.add(mesh);}this.group.add(this.wave.group,this.lightning.group);
   // Draw chevrons after the transparent warning glass, within the floor group.
@@ -107,7 +112,24 @@ export class MetaKnightBattleView{
   this.countdown.id='knight-battle-countdown';this.countdown.hidden=true;this.countdown.dataset.i18nIgnore='';this.countdown.setAttribute('role','status');this.countdown.setAttribute('aria-live','polite');this.countdown.setAttribute('aria-atomic','true');document.body.append(this.countdown);
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
+ async prepare(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera){
+  const eyes=this.cosmic.prepareEyes();this.group.add(eyes);
+  const states:{object:T.Object3D;visible:boolean;culled:boolean;count?:number}[]=[];
+  this.group.traverse(object=>{states.push({object,visible:object.visible,culled:object.frustumCulled,count:object instanceof T.InstancedMesh?object.count:undefined});object.visible=true;object.frustumCulled=false;if(object instanceof T.InstancedMesh)object.count=1;});
+  const viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest();
+  try{
+   await renderer.compileAsync(scene,camera);
+   // Compilation alone does not upload hidden geometry or exercise driver pipelines.
+   // Use the real framebuffer: render targets select a different color-space program.
+   renderer.setViewport(0,0,64,64);renderer.setScissor(0,0,64,64);renderer.setScissorTest(true);renderer.render(scene,camera);
+  }finally{
+   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);eyes.removeFromParent();
+   for(const {object,visible,culled,count} of states){object.visible=visible;object.frustumCulled=culled;if(object instanceof T.InstancedMesh)object.count=count!;}
+  }
+ }
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
+  if(this.group.parent&&this.lighting.parent!==this.group.parent)this.group.parent.add(this.lighting);
+  for(const light of this.effectLights)light.intensity=0;
   this.lifeFirefly?.update(s,now,dt,visible);
   if(now<this.lastNow||this.lastBattle!==(s?.id??0))this.burstAt=-1e9;this.lastNow=now;
   const participant=!!s?.players[id]&&!s.players[id].withdrawn&&!withdrawn,active=participant&&!!s&&!['won','lost','cancelled'].includes(s.stage);
@@ -218,10 +240,10 @@ export class MetaKnightBattleView{
   const hints:Partial<Record<typeof stage,string>>={'intro':'Увидеть замах → уклониться → ответить','approach':'Следи за мечом и держись рядом','slash-warn':'Выйди из сектора взмаха','slash':'Дождись конца связки','jump-warn':'Выйди из отмеченного круга','jump':'Выйди из отмеченного круга','wave':'Прыгай или перелетай низкую волну','dash-warn':'Уходи поперёк золотой полосы','dash':'Следующий заход готовится отдельно','dive-warn':'Выйди из отмеченного круга','dive':'Пикирование!','shot-warn':'Золотой полумесяц можно отбить атакой','shot':'Нажми {0} перед касанием полумесяца','return':'Отбито! Полумесяц летит в Метакнайта','open':'Защита открыта! Подойди и нажми {0}','transition':'Новая фаза — приготовься','won':'Победа! Метакнайт уважает твоё мастерство','lost':'Попытка окончена. Попробуем ещё раз?'};
   Object.assign(hints,{'star-rise':'Кристаллы пробуждаются — следи за лучами','cross-warn':'Выйди из жёлтых треугольников','cross':'Следующий кристалл уже заряжается','ricochet-warn':'Три прицельных перелёта — уходи с полосы','ricochet':'Уходи с отмеченной полосы','star-warn':'Выйди из круга — рыцарь создаёт щит','star-fall':'Приземление! Купол закроет центр','shield':'Волны идут к щиту! Пройди в разрыв и ударь фиолетовый кристалл · {1}/3','crystal-break':'Кристалл разбит! Приготовься к новому заходу','stunned':'Попадание! Метакнайт потерял здоровье','get-up':'Метакнайт поднимается — приготовься'});
   Object.assign(hints,{'cosmic-charge':'Сила собирается в мече…','cosmic-strike':'Удар в сердце арены!','cosmic-surge':'Молнии охватывают арену','cosmic-lift':'Меч тянет всех к звёздам','cosmic-rise':'Выше, за пределы арены!','cosmic-flight':'Лети в любом направлении — высота удерживается'});
-  Object.assign(hints,{'cosmic-spin-warn':'Меч заряжается! Отлети от клинка и приготовься двигаться','cosmic-spin':'Уворачивайся между шарами · удерживай пробел для рывка','cosmic-open':'Метакнайт устал! Подлети к зелёной метке и нажми {0}','cosmic-hit':'Попадание! Метакнайт приходит в себя','cosmic-recover':'Рыцарь восстанавливает силы — готовься к новому вихрю','cosmic-descent':'Бой окончен — возвращаемся на арену'});
+  Object.assign(hints,{'cosmic-spin-warn':'Меч заряжается! Отлети от клинка и приготовься двигаться','cosmic-spin':'Уворачивайся между шарами · используй рывок','cosmic-open':'Метакнайт устал! Подлети к зелёной метке и нажми {0}','cosmic-hit':'Попадание! Метакнайт приходит в себя','cosmic-recover':'Рыцарь восстанавливает силы — готовься к новому вихрю','cosmic-descent':'Бой окончен — возвращаемся на арену'});
   Object.assign(hints,{'cosmic-meteor-draw':'Метеорит притягивается! Следи за боковым замахом','cosmic-meteor-cast':'Отбей метеорит ударом {0} перед касанием или уклонись','cosmic-meteor-return':'Отбито! Метеорит летит в Метакнайта','cosmic-meteor-gap':'Следующий метеорит — новая цель','cosmic-meteor-settle':'Три броска завершены — приготовься к вихрю'});
   Object.assign(hints,{'cosmic-star-draw':'Синие лучи притягивают звёздочку','cosmic-star-open':'Общий купол открыт — следуй за звёздочкой','cosmic-planet-draw':'Огромная планета приближается — войди в движущийся купол','cosmic-planet-sweep':'Оставайся внутри золотого купола!','cosmic-planet-break':'Купол остановил планету!','cosmic-star-strike':'Звёздочка летит в Метакнайта','cosmic-star-stun':'Попадание в лоб! Метакнайт оглушён','cosmic-star-retreat':'Звёздочка возвращается — начинается новый цикл','cosmic-planet-release':'Звезда не активирована — планета наносит урон'});
   this.hint.textContent=stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(3-(s?.hp??3)));
  }
- dispose(){this.lifeFirefly?.dispose();this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+ dispose(){this.lifeFirefly?.dispose();this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.lighting.removeFromParent();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

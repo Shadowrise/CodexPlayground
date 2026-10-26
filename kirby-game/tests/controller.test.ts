@@ -8,7 +8,7 @@ import { CharacterController, type Input } from '../src/controller';
 const idle: Input = { forward: false, left: false, right: false };
 test('an immediate resize replaces pending growth without changing earned fruits or points',async()=>{
  const c=await create();c.resizeTo(1.1);c.fruitsEaten=1;c.bonusPoints=3;c.eventPoints=5;
- c.resizeTo(.3,true);assert.equal(c.actor.scale.x,.3);assert.equal(c.savedSize,.3);assert.equal(c.speed,3.4);
+ c.resizeTo(.3,true);assert.equal(c.actor.scale.x,.3);assert.equal(c.savedSize,.3);assert.equal(c.speed,6.8);
  advance(c,1);assert.equal(c.actor.scale.x,.3,'the old admin growth cannot restore its size later');
  c.setActivity('Balloon');c.resizeTo(10,true);assert.equal(c.actor.scale.x,10);assert.equal(c.savedSize,10);
  assert.equal(c.fruitsEaten,1);assert.equal(c.bonusPoints,3);assert.equal(c.eventPoints,5);
@@ -66,18 +66,18 @@ test('analog steering runs continuously, stops immediately and scales with stick
   assert.equal(c.state,'RotateRight');assert(c.actions.get('RotateRight')!.isRunning());
 });
 
-test('running, sprinting and backing turn without losing movement or animation cadence',async()=>{
-  for(const mode of ['run','sprint','backward']) {
+test('running and backing turn without losing movement or animation cadence',async()=>{
+  for(const mode of ['run','backward']) {
     const c=await create();
-    const input={...idle,left:true,forward:mode!=='backward',backward:mode==='backward',sprint:mode==='sprint'};
-    const speed=mode==='backward'?c.backwardSpeed:c.speed*(mode==='sprint'?2:1);
+    const input={...idle,left:true,forward:mode!=='backward',backward:mode==='backward'};
+    const speed=mode==='backward'?c.backwardSpeed:c.speed;
     for(let i=0;i<60;i++) {
       const before=c.actor.position.clone();c.update(1/60,input);
       assert(Math.abs(c.actor.position.distanceTo(before)-speed/60)<1e-7);
       assert.equal(c.state,mode==='backward'?'WalkBackward':'Run');
     }
     assert(Math.abs(c.yaw-198*Math.PI/180)<1e-6);
-    if(mode==='sprint')assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
+    if(mode==='run')assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(),2);
     c.update(1/60,{...idle,left:true});assert.equal(c.state,'RotateLeft');
   }
 });
@@ -88,7 +88,7 @@ test('swallow boosts speed without growth and immediately unlocks movement and j
   c.eatFruit();assert.equal(c.actor.scale.x,1);
   c.update(1/60,{...idle,forward:true});
   assert.equal(c.state,'Run');assert(c.actor.position.z>0);
-  assert.equal(c.speed,3.4*1.2);
+  assert.equal(c.speed,6.8*1.2);
   for(let i=0;i<30;i++){
     c.update(1/60,{...idle,forward:true});
     assert.equal(c.actor.scale.x,1);
@@ -117,23 +117,25 @@ test('actual GLB loads and forward movement uses Run', async () => {
   assert.equal(c.state, 'Idle');
 });
 
-test('Shift doubles forward speed and Run cadence, releases immediately and scales with growth', async () => {
+test('forward movement always uses full running speed and cadence, including after stopping and growth', async () => {
   const c = await create();
   c.resizeTo(1.5);c.eatFruit();
   advance(c, .5);
-  advance(c, 1, { ...idle, forward: true, sprint: true });
-  assert(Math.abs(c.actor.position.z - c.speed * 2) < 1e-6);
+  advance(c, 1, { ...idle, forward: true });
+  assert(Math.abs(c.actor.position.z - 6.8 * 1.5 * 1.2) < 1e-6);
   assert.equal(c.state, 'Run');
   assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(), 2);
+  advance(c, .2);
+  assert.equal(c.state, 'Idle');
   const z = c.actor.position.z;
   advance(c, 1, { ...idle, forward: true });
   assert(Math.abs(c.actor.position.z - z - c.speed) < 1e-6);
-  assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(), 1);
+  assert.equal(c.actions.get('Run')!.getEffectiveTimeScale(), 2);
   const beforeBack = c.actor.position.z;
-  advance(c, 1, { ...idle, backward: true, sprint: true });
+  advance(c, 1, { ...idle, backward: true });
   assert(Math.abs(c.actor.position.z - beforeBack + c.backwardSpeed) < 1e-6);
   const position = c.actor.position.clone();
-  advance(c, .5, { ...idle, sprint: true });
+  advance(c, .5, { ...idle });
   assert.equal(c.state, 'Idle');
   assert(c.actor.position.distanceTo(position) < 1e-6);
 });
@@ -205,7 +207,7 @@ test('uncharged jump rises, lands, cannot retrigger while held and works again a
   const c = await create();
   let maxHeight = 0;
   for (let i = 0; i < 180; i++) {
-    c.update(1 / 60, { ...idle, jump: true, dashHeld: false });
+    c.update(1 / 60, { ...idle, jump: true, dashPressed: false });
     assert(!c.flight.levitating);assert(!c.cloud.visible);
     assert(Math.abs(c.animationRoot.position.y)<1e-6,'the animation cannot add height to the ballistic arc');
     if(i>=48)assert.equal(c.state,'Idle','a single jump has already landed before 0.8s');
@@ -249,14 +251,13 @@ test('holding a turn never delays a jump or attack',async()=>{
     assert.equal(c.flight.active,action==='jump');
   }
 });
-test('small Kirby moves at full base speed, with sprint and star power still multiplying it',async()=>{
+test('small Kirby moves at full running speed, with star power still multiplying it',async()=>{
   for(const [size,multiplier] of [[.3,1],[.5,1],[.99,1],[1,1],[1.5,1.5],[2,2]]){
     for(const star of [false,true]){
       const c=await create();c.actor.scale.setScalar(size);if(star)c.activateStarPower();
       const boost=multiplier*(star?2:1);
       for(const [input,distance] of [
-        [{...idle,forward:true},3.4*boost],
-        [{...idle,forward:true,sprint:true},6.8*boost],
+        [{...idle,forward:true},6.8*boost],
         [{...idle,backward:true},-1.65*boost],
       ] as const){
         const z=c.actor.position.z;advance(c,1,input);
@@ -273,7 +274,7 @@ test('each fruit adds twenty percentage points to forward and backward speed wit
   assert.equal(c.fruitsEaten, 2);
   assert.equal(c.actor.scale.x,1);
   advance(c, 1, { ...idle, forward: true });
-  assert(Math.abs(c.actor.position.z - 3.4 * 1.4) < 1e-6);
+  assert(Math.abs(c.actor.position.z - 6.8 * 1.4) < 1e-6);
   const z = c.actor.position.z;
   advance(c, 1, { ...idle, backward: true });
   assert(Math.abs(c.actor.position.z - (z - 1.65 * 1.4)) < 1e-6);

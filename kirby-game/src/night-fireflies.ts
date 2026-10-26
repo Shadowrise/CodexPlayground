@@ -181,7 +181,7 @@ export class NightFireflies {
     else {c.state='Idle';c.update(dt,{forward:false,left:false,right:false});c.state='FireflyRide';}
     c.yaw+=(input.steer??(Number(input.left)-Number(input.right)))*Math.PI*.55*dt;c.actor.rotation.set(0,c.yaw,0);
     const direction=Number(input.forward)-Number(!!input.backward);this.moving=direction!==0;
-    const speed=(direction>0?c.speed*(input.sprint?2:1):c.backwardSpeed)*2;
+    const speed=(direction>0?c.speed:c.backwardSpeed)*2;
     c.actor.position.x+=Math.sin(c.yaw)*speed*direction*dt;c.actor.position.z+=Math.cos(c.yaw)*speed*direction*dt;
     constrainToMeadow(c.actor.position,c.actor.scale.x*2);
   }

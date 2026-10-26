@@ -10,10 +10,10 @@ test('touch UI does not replace mouse-first desktop or touchscreen laptop contro
  assert.equal(wantsTouchControls(5,true,false),false);
  assert.equal(wantsTouchControls(5,true,true),true);
 });
-test('joystick dead zone, sprint and camera-relative direction',()=>{
- assert.deepEqual(touchMotion(.08,-.1,Math.PI,0,1/60),{forward:false,sprint:false,steer:0});
- const walk=touchMotion(0,-.5,Math.PI,0,1/60);assert(walk.forward);assert(!walk.sprint);assert(Math.abs(walk.steer)<1e-10);
- assert(touchMotion(0,-1,Math.PI,0,1/60).sprint);
+test('joystick dead zone and camera-relative direction do not depend on stick distance',()=>{
+ assert.deepEqual(touchMotion(.08,-.1,Math.PI,0,1/60),{forward:false,steer:0});
+ const motion=touchMotion(0,-.5,Math.PI,0,1/60);assert(motion.forward);assert(Math.abs(motion.steer)<1e-10);
+ for(const distance of [.19,.5,.84,1])assert.deepEqual(touchMotion(0,-distance,Math.PI,0,1/60),motion);
  assert(touchMotion(1,0,Math.PI,0,1/60).steer<0);
  assert(touchMotion(-1,0,Math.PI,0,1/60).steer>0);
  assert(!touchMotion(0,1,Math.PI,0,1/60).forward);

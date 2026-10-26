@@ -3,7 +3,7 @@ import {META_KNIGHT_ARENA as ARENA} from './meta-knight-arena-site';
 import {COSMIC} from './meta-knight-cosmic';
 import {COSMIC_REFUGE,refugeActive,refugeStar,refugePlanet} from './meta-knight-cosmic-refuge';
 
-export const LIFE_FIREFLY={speed:.005,height:.9,clearance:2,detour:14,hitRadius:1.1,dropMs:1100} as const;
+export const LIFE_FIREFLY={speed:.005,height:1.35,clearance:2,detour:14,hitRadius:1.1,dropMs:1100} as const;
 export type KnightLifeFirefly={phase:1|2|3|4;at:number;angle:number;color:number;side:1|-1;hit?:{at:number;by:string;point:KnightPoint;yaw:number}};
 const hash=(seed:number)=>{let n=seed|0;n=Math.imul(n^(n>>>16),0x45d9f3b);n=Math.imul(n^(n>>>16),0x45d9f3b);return (n^(n>>>16))>>>0;};
 const R=ARENA.radius,D=LIFE_FIREFLY.detour,LEG=Math.sqrt(R*R-D*D),ANGLE=Math.acos(D/R),ARC=D*(Math.PI-2*ANGLE);

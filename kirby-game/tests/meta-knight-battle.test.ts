@@ -4,6 +4,7 @@ import {KNIGHT,startKnightBattle,advanceKnightBattle,setKnightPhase,knightDashHa
 import {META_KNIGHT_ARENA as ARENA} from '../src/meta-knight-arena-site';
 import {metaKnightVictoryLog} from '../src/world-log';
 import {CharacterUnlocks} from '../src/character-unlocks';
+import {STAR_FLIGHT_STEP,STAR_SHIELD_STEP} from '../src/meta-knight-star-assault';
 import {chooseShieldCrystal,crystalPoint} from '../src/meta-knight-shield';
 const actor=(id='a'):KnightActor=>({id,p:[0,0,-2],yaw:Math.PI,available:true});
 function battle(){return startKnightBattle([actor()],'a',1000)!;}
@@ -103,7 +104,7 @@ test('godmode consumes crescent contact without delayed damage and still allows 
 
 test('godmode also protects against third-phase beams, ricochets and the shield landing',()=>{
  for(const stage of ['cross','ricochet','shield'] as const){
-  const s=battle(),a=actor();setStage(s,stage);s.pattern='star';s.phase=3;s.step=stage==='ricochet'?6:stage==='shield'?13:2;s.cycle=1;
+  const s=battle(),a=actor();setStage(s,stage);s.pattern='star';s.phase=3;s.starSequenceVersion=1;s.step=stage==='ricochet'?STAR_FLIGHT_STEP+1:stage==='shield'?STAR_SHIELD_STEP:2;s.cycle=1;
   const now=stage==='ricochet'?3000:2001,pos=knightPosition(s,now);a.p=stage==='ricochet'?[pos[0],0,pos[2]]:[0,0,0];
   const normal=structuredClone(s);advanceKnightBattle(normal,[a],now);assert.equal(normal.players.a.hp,4,stage);
   advanceKnightBattle(s,[a],now,'a');assert.equal(s.players.a.hp,5,stage);

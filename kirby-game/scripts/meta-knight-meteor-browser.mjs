@@ -17,14 +17,14 @@ try{
  await page.evaluate(async()=>{
   const q=spinQA;await q.travel.enter(q.c);await q.sounds.prepareKnightCosmic();q.renderer.setAnimationLoop(null);
   q.rules=await import('/src/meta-knight-battle.ts');q.cosmic=await import('/src/meta-knight-cosmic.ts');q.spin=await import('/src/meta-knight-cosmic-spin.ts');
-  q.c.actor.position.set(2000,0,-2);q.travel.soloNow=1000000;q.travel.startBattle();q.chat.show();
+  q.c.actor.position.set(2000,0,-2);q.travel.soloNow=Date.now();q.travel.startBattle();q.chat.show();
  });
  await page.locator('#chat-input').fill('/phase 4-2');await page.locator('#chat-input').press('Enter');
  await page.evaluate(()=>{
   const q=spinQA;q.base=structuredClone(q.travel.battle);q.c.actor.position.set(2009,0,9);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;q.elapsed=0;q.cues=[];
   q.initialGlErrors=[];for(let i=0;i<8;i++){const error=q.renderer.getContext().getError();if(!error)break;q.initialGlErrors.push(error);}
   const cue=q.travel.battleView.cue;q.travel.battleView.cue=kind=>{q.cues.push({kind,at:q.travel.soloNow});cue(kind);};
-  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashHeld:false,sprint:false,attack:false,attackPressed:false};
+  q.input={forward:false,backward:false,left:false,right:false,jump:false,jumpPressed:false,dashPressed:false,attack:false,attackPressed:false};
   q.travel.setGodMode(true);
   q.step=(dt,input=q.input)=>{q.travel.update(dt,q.travel.soloNow/1000,q.c,input,0,0,false,false);q.elapsed=q.travel.soloNow-q.base.since;};
   q.metrics=()=>{q.elapsed=q.travel.soloNow-q.base.since;q.travel.render();const s=q.travel.battle,v=q.travel.battleView,core=v.cosmicOrbs.cores,dir=q.travel.camera.getWorldDirection(new q.THREE.Vector3());return {stage:s.stage,elapsed:q.elapsed,since:s.since,until:s.until,yaw:q.travel.knight.yaw,height:q.c.actor.position.y,radius:Math.hypot(q.c.actor.position.x-2000,q.c.actor.position.z),bossHeight:q.travel.knight.actor.position.y,hp:s.hp,life:s.players.solo.hp,orbs:core.count,bolts:v.cosmicOrbs.electricity.hot.count,green:v.bossTarget.group.visible,arrowY:v.bossTarget.arrow.getWorldPosition(new q.THREE.Vector3()).y,window:v.bossTarget.ring.material.uniforms.progress.value,cameraAngle:-Math.asin(dir.y)*180/Math.PI,glError:q.renderer.getContext().getError(),drawCalls:q.renderer.info.render.calls,triangles:q.renderer.info.render.triangles};};
@@ -35,7 +35,7 @@ try{
  });
  await page.evaluate(async()=>{
   const q=spinQA;q.met=await import('/src/meta-knight-cosmic-meteor.ts');
-  q.restart=()=>{q.travel.soloNow=1000000;q.c.actor.position.set(2000,180,35);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;const player=q.travel.battle.players.solo;Object.assign(player,{hp:5,reflects:0,invulnerable:0,attackAt:-1e9,handled:-1e9});q.travel.setPhase(4,2);q.base=structuredClone(q.travel.battle);q.elapsed=0;q.step(0);q.c.actor.position.set(2000,180,35);q.travel.follow.reset(q.c.yaw);q.step(1/60);};q.restart();
+  q.restart=()=>{q.travel.soloNow=Date.now();q.c.actor.position.set(2000,180,35);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;const player=q.travel.battle.players.solo;Object.assign(player,{hp:5,reflects:0,invulnerable:0,attackAt:-1e9,handled:-1e9});q.travel.setPhase(4,2);q.base=structuredClone(q.travel.battle);q.elapsed=0;q.step(0);q.c.actor.position.set(2000,180,35);q.travel.follow.reset(q.c.yaw);q.step(1/60);};q.restart();
  });
  const shot=async(ms,name,label)=>{const metrics=await page.evaluate(ms=>spinQA.advanceTo(ms),ms);assert.equal(metrics.glError,0);assert.equal(metrics.height,180);const path=output+`screenshots/${name}.png`;await page.screenshot({path});frames.push({...metrics,path,label});console.log(JSON.stringify({name,...metrics}));return metrics;};
  await shot(550,'01-attraction','Метеорит притягивается из космоса');
@@ -87,7 +87,7 @@ try{
     if(m){
      throws.add(m.index);const toward=Math.atan2(2000-p.x,-p.z),side=toward-Math.PI/2,desired=m.index<2?side:toward,turn=Math.atan2(Math.sin(desired-q.c.yaw),Math.cos(desired-q.c.yaw));
      input.steer=Math.max(-1,Math.min(1,turn/(Math.PI*1.1*dt)));
-     if(m.index<2){const locked=q.travel.soloNow>=m.at+q.met.meteorGuidanceMs(m)+40;input.forward=m.index===0&&locked;input.backward=m.index===1&&locked;input.dashHeld=m.index===0&&q.travel.soloNow>=m.at+q.met.meteorGuidanceMs(m)-200;}
+     if(m.index<2){const locked=q.travel.soloNow>=m.at+q.met.meteorGuidanceMs(m)+40;input.forward=m.index===0&&locked;input.backward=m.index===1&&locked;input.dashPressed=m.index===0&&q.travel.soloNow>=m.at+q.met.meteorGuidanceMs(m)-200;}
      else if(s.stage==='cosmic-meteor-cast'&&!pressed){const arrival=m.at+q.met.meteorPath(m).hitMs;if(q.travel.soloNow>=arrival-140){input.attackPressed=true;pressed=true;}}
     }
     q.travel.follow.face(Math.atan2(2000-p.x,-p.z));q.step(dt,input);q.travel.render();if(m?.index<2&&q.travel.battleView.particles.visible)ghostBursts++;if(q.travel.battle.stage==='cosmic-hit')hitTime+=dt;
