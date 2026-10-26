@@ -1,4 +1,6 @@
 import * as T from 'three';
+import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
+import {MetaKnightLifeFireflyView} from './meta-knight-life-firefly-view';
 import type {CharacterController} from './controller';
 import {KNIGHT,knightDashHalfWidth,knightPosition,knightProjectile,knightShotOrigin,knightProgress,knightImpactProgress,knightStartCount,knightJumpOpening,knightPressureWave,type KnightBattle,type KnightPoint} from './meta-knight-battle';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
@@ -77,6 +79,9 @@ export class MetaKnightBattleView{
  private cosmic:MetaKnightCosmicView;private cosmicOrbs=new MetaKnightCosmicOrbs();private cosmicAudio=false;private cosmicFacing?:number;private lastOrbSound='';
  private meteor:MetaKnightCosmicMeteorView;private meteorLaunch='';
  private refuge:MetaKnightCosmicRefugeView;private refugeActivation='';
+ private lifeFirefly?:MetaKnightLifeFireflyView;
+ setLifeFirefly(gltf:GLTF){this.lifeFirefly?.dispose();this.lifeFirefly=new MetaKnightLifeFireflyView(gltf,kind=>this.cue(kind));this.group.add(this.lifeFirefly.group);}
+ fireflyBuzz(listener:T.Vector3){return this.lifeFirefly?.buzzLevel(listener)??0;}
  private finale=new MetaKnightCosmicFinale();private fallKey='';
  constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{}){
   this.assault.bindCrystals(scene);
@@ -103,6 +108,7 @@ export class MetaKnightBattleView{
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
+  this.lifeFirefly?.update(s,now,dt,visible);
   if(now<this.lastNow||this.lastBattle!==(s?.id??0))this.burstAt=-1e9;this.lastNow=now;
   const participant=!!s?.players[id]&&!s.players[id].withdrawn&&!withdrawn,active=participant&&!!s&&!['won','lost','cancelled'].includes(s.stage);
   const enabled=active&&visible&&!document.hidden&&document.hasFocus();
@@ -217,5 +223,5 @@ export class MetaKnightBattleView{
   Object.assign(hints,{'cosmic-star-draw':'Синие лучи притягивают звёздочку','cosmic-star-open':'Общий купол открыт — следуй за звёздочкой','cosmic-planet-draw':'Огромная планета приближается — войди в движущийся купол','cosmic-planet-sweep':'Оставайся внутри золотого купола!','cosmic-planet-break':'Купол остановил планету!','cosmic-star-strike':'Звёздочка летит в Метакнайта','cosmic-star-stun':'Попадание в лоб! Метакнайт оглушён','cosmic-star-retreat':'Звёздочка возвращается — начинается новый цикл','cosmic-planet-release':'Звезда не активирована — планета наносит урон'});
   this.hint.textContent=stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(3-(s?.hp??3)));
  }
- dispose(){this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+ dispose(){this.lifeFirefly?.dispose();this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

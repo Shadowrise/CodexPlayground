@@ -12,7 +12,7 @@ export class MetaKnightPartyHud{
  readonly element=document.createElement('section');
  private title=document.createElement('strong');
  private hearts=document.createElement('div');
- private count=document.createElement('span');
+ private count=document.createElement('span');private bonus=document.createElement('span');
  private rosterTitle=document.createElement('span');
  private rosterCount=document.createElement('span');
  private healthKey='';private rosterKey='';
@@ -25,7 +25,8 @@ export class MetaKnightPartyHud{
   health.className='knight-party-health';this.title.className='knight-party-title';meter.className='knight-party-meter';this.hearts.className='knight-party-hearts';this.count.className='knight-party-count';
   this.hearts.setAttribute('role','img');
   for(let i=0;i<KNIGHT.hearts;i++){const heart=document.createElement('span');heart.textContent='♥';heart.setAttribute('aria-hidden','true');this.hearts.append(heart);}
-  this.count.setAttribute('aria-hidden','true');meter.append(this.hearts,this.count);health.append(this.title,meter);
+  this.bonus.className='knight-party-bonus';this.bonus.hidden=true;this.bonus.setAttribute('aria-hidden','true');
+  this.count.setAttribute('aria-hidden','true');meter.append(this.hearts,this.bonus,this.count);health.append(this.title,meter);
   roster.className='knight-party-roster';this.rosterCount.setAttribute('aria-hidden','true');roster.append(this.rosterTitle,this.rosterCount);
   this.list.className='knight-party-list';this.list.setAttribute('role','list');this.list.tabIndex=0;
   this.element.append(health,roster,this.list);document.body.append(this.element);
@@ -39,7 +40,8 @@ export class MetaKnightPartyHud{
   const healthKey=`${hp}:${label}`;
   if(this.healthKey!==healthKey){
    this.healthKey=healthKey;this.element.dataset.shared=String(shared);this.element.dataset.defeated=String(hp===0);this.title.textContent=label;
-   this.hearts.setAttribute('aria-label',`${label}. ${t('Сердца: {0} из 5',[hp])}`);this.count.textContent=`${hp} / ${KNIGHT.hearts}`;
+   const bonus=Math.max(0,hp-KNIGHT.hearts);this.bonus.hidden=bonus===0;this.bonus.textContent=`+${bonus} ♥`;
+   this.hearts.setAttribute('aria-label',`${label}. ${t('Сердца: {0} из 5',[Math.min(hp,KNIGHT.hearts)])}${bonus?` +${bonus} ♥`:''}`);this.count.textContent=bonus?String(hp):`${hp} / ${KNIGHT.hearts}`;this.count.dataset.lives=String(hp);
    Array.from(this.hearts.children).forEach((heart,i)=>{heart.classList.toggle('empty',i>=hp);heart.textContent=i<hp?'♥':'♡';});
   }
   const rosterTitle=t('На арене'),count=String(ids.length),rosterKey=`${rosterTitle}:${count}`;

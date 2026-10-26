@@ -10,6 +10,7 @@ import {COSMIC_SPIN,cosmicOrbs} from '../src/meta-knight-cosmic-spin';
 import {setKnightPhase} from '../src/meta-knight-battle';
 import {meteorPath} from '../src/meta-knight-cosmic-meteor';
 import {refugeStar} from '../src/meta-knight-cosmic-refuge';
+import {spawnKnightLifeFirefly,knightLifeFireflyPoint} from '../src/meta-knight-life-firefly';
 
 test('actual Worker validates duel attacks, owns victory and respect chat, persists the encounter, and refuses client supplied health',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
@@ -142,5 +143,14 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
   for(let i=0;i<4;i++){now+=1300;send(a,actor([2000,0,8]));assert.equal(room.room.knightBattle.teamHp,3-i);}
   assert.equal(room.room.knightBattle.stage,'lost');assert(Object.values(room.room.knightBattle.players).every((p:any)=>p.hp===0));
   send(a,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.teamHp,5);
+  // A real attack packet claims the visitor once; bonus health survives a wakeup.
+  Object.assign(room.room.knightBattle,{stage:'rest',since:now,until:now+100000,checked:now,from:[0,0,0],to:[0,0,0]});
+  spawnKnightLifeFirefly(room.room.knightBattle,now-5000);
+  const bug=knightLifeFireflyPoint(room.room.knightBattle,now+400)!,fighter=actor([ARENA.x+bug[0],0,bug[2]+2]);
+  send(a,fighter,[{type:'knight',action:'attack'}]);send(a,fighter);
+  assert.equal(room.room.knightBattle.teamHp,6);assert.equal(room.room.knightBattle.lifeFirefly.hit.by,aid);
+  assert(a.messages.some(m=>m.type==='room'&&m.room.knightBattle?.teamHp===6),'bonus heart is broadcast');
+  await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));
+  assert.equal(room.room.knightBattle.teamHp,6);send(a,fighter,[{type:'knight',action:'attack'}]);send(a,fighter);assert.equal(room.room.knightBattle.teamHp,6);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;sql.close();}
 });

@@ -201,6 +201,7 @@ let loadedPigeon: GLTF | undefined;
 let loadedSnowball: GLTF | undefined;
 let loadedPlumages:Record<WildPigeonId,GLTF>;
 let loadedMetaKnight: GLTF | undefined;
+let loadedFirefly: GLTF | undefined;
 let startupComplete=false;
 let startupFailed=false,entryPending=false;
 let resolveStartup!:()=>void,rejectStartup!:(error:unknown)=>void;
@@ -736,7 +737,7 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),stopCosmic:()=>sounds.stopKnightCosmic(),prepareCosmic:()=>sounds.prepareKnightCosmic(),music:active=>music.setEvent(active?'knight':false)});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:kind=>sounds.playKnight(kind),stopCosmic:()=>sounds.stopKnightCosmic(),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active?'knight':false)});
 function completeKnightVictory(local=false){
  if(!character)return;
  if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
@@ -862,6 +863,7 @@ async function loadCharacter() {
     await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);
     await startupTask();
+    loadedFirefly=bugModel;
     fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);
     preparedShadows.deferPreparation();setupShadowMaterials();await preparedShadows.finishPreparation();
     loadedModel = gltf;
@@ -1327,7 +1329,7 @@ renderer.setAnimationLoop((time: number) => {
   if(time-lastDialUpdate>=100){lastDialUpdate=time;timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);const label=t(lightTime.label);if(timeDial.title!==label){timeDial.title=label;timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));}}
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
-  sounds.updateFireflyBuzz(character && fireflies ? fireflies.buzzLevel(character.actor.position) : 0);
+  sounds.updateFireflyBuzz(character ? cosmicArena.active?cosmicArena.fireflyBuzz(character.actor.getWorldPosition(new THREE.Vector3())):fireflies?.buzzLevel(character.actor.position)??0 : 0);
   arenaCentipede?.update(boatTime(),camera.position,currentCentipede(),network?.serverNow??Date.now());
   ponds.update(dt);
   fountain.update(dt,lightTime.day,camera);

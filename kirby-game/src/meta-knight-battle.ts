@@ -2,21 +2,22 @@
 import {META_KNIGHT_ARENA,insideKnightFightingArea,type KnightArenaSide} from './meta-knight-arena-site';
 import {STAR_SEQUENCE,starSequence,starPosition,starDanger,STAR_ASSAULT,planStarRoute,lockStarFlight,lockStarCross,crossWarningDuration} from './meta-knight-star-assault';
 import {SHIELD,crystalPoint,chooseShieldCrystal} from './meta-knight-shield';
-import {COSMIC,cosmicStage,cosmicHeight,cosmicNext,cosmicOpening,type CosmicStage,type CosmicLaunch,type CosmicFall} from './meta-knight-cosmic';
+import {COSMIC,cosmicStage,cosmicHeight,cosmicNext,cosmicOpening,cosmicCombat,type CosmicStage,type CosmicLaunch,type CosmicFall} from './meta-knight-cosmic';
 import {COSMIC_SPIN,cosmicSpinDanger,type CosmicSpin} from './meta-knight-cosmic-spin';
 import {COSMIC_METEOR as METEOR,meteorPoint,meteorPath,meteorContact,updateMeteorTracking,type CosmicMeteor} from './meta-knight-cosmic-meteor';
 import {COSMIC_REFUGE as REFUGE,REFUGE_WORLDS,refugeActive,insideRefuge,refugeAngle,refugeDanger,type CosmicRefuge} from './meta-knight-cosmic-refuge';
+import {spawnKnightLifeFirefly,hitKnightLifeFirefly,knightLifeFireflyPoint,type KnightLifeFirefly} from './meta-knight-life-firefly';
 export type KnightPoint=[number,number,number];
 export type KnightActor={id:string;p:KnightPoint;yaw:number;available:boolean};
 export type KnightStage=CosmicStage|'intro'|'approach'|'slash-warn'|'slash'|'jump-warn'|'jump'|'slam'|'wave'|'dash-warn'|'dash'|'dive-warn'|'dive'|'shot-warn'|'shot'|'return'|'open'|'rest'|'stunned'|'get-up'|'transition'|'won'|'lost'|'cancelled'|'star-rise'|'cross-warn'|'cross'|'ricochet-warn'|'ricochet'|'star-warn'|'star-fall'|'shield'|'crystal-break';
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor};
+export type KnightBattle={id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;players:Record<string,KnightPlayer>;target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Old room snapshots inherit the lowest remaining health, never extra lives. */
-export function knightPartyHearts(s:KnightBattle|undefined){return Math.max(0,Math.min(KNIGHT.hearts,s?.teamHp??Math.min(KNIGHT.hearts,...Object.values(s?.players??{}).map(p=>p.hp))));}
+export function knightPartyHearts(s:KnightBattle|undefined){const players=Object.values(s?.players??{});return Math.max(0,s?.teamHp??(players.length?Math.min(...players.map(p=>p.hp)):KNIGHT.hearts));}
 /** Server time keeps the local and remote damage flicker in the same phase. */
 export function knightPlayerVisible(s:KnightBattle|undefined,id:string,now:number,withdrawn=false){const p=s?.players[id];return !knightBattleActive(s)||!p||p.hp<=0||p.withdrawn||withdrawn||now>=p.invulnerable||Math.floor(now/95)%2===0;}
 /** The start snapshot keeps both sides of the gate fixed until the whole duel ends. */
@@ -109,7 +110,7 @@ function damageRefugePlayer(s:KnightBattle,id:string,now:number,protectedPlayer?
 }
 /** One fresh press; holding and repeated packets cannot keep a reflection active. */
 export function knightAttack(s:KnightBattle|undefined,actor:KnightActor,now:number){
- const p=s?.players[actor.id];if(!s||!p||p.hp<=0||p.withdrawn||!actor.available||cosmicStage(s)&&!['cosmic-flight','cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-recover','cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-gap','cosmic-meteor-settle','cosmic-star-open'].includes(s.stage)||['won','lost','cancelled','transition','intro'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
+ const p=s?.players[actor.id];if(!s||!p||p.hp<=0||p.withdrawn||!actor.available||cosmicStage(s)&&!(cosmicCombat(s)&&knightLifeFireflyPoint(s,now))&&!['cosmic-flight','cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-recover','cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-gap','cosmic-meteor-settle','cosmic-star-open'].includes(s.stage)||['won','lost','cancelled','transition','intro'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
  p.attackAt=now;return true;
 }
 /** Leaving the duel never teleports the player or grants a victory. Friends can continue. */
@@ -121,6 +122,7 @@ export function cancelKnightBattle(s:KnightBattle|undefined,id:string,now:number
 }
 function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:KnightActor[]){
  const p=knightPosition(s,now),a=target(s,actors);s.from=[...p];s.to=[...s.from];s.stage=stage;s.since=now;s.until=now+ms;s.openHit=false;delete s.shotContacts;s.revision++;
+ if(stage==='jump-warn'&&s.phase===1||stage==='dive-warn'&&s.phase===2||stage==='shield'&&s.phase===3||stage==='cosmic-meteor-draw'&&s.phase===4)spawnKnightLifeFirefly(s,now);
  if(['won','lost','cancelled'].includes(stage))delete s.impactWave;
  if(stage==='cosmic-surge')s.cosmicLaunch={at:now,players:Object.fromEntries(living(s,actors).sort((a,b)=>a.id.localeCompare(b.id)).map((actor,i)=>[actor.id,{from:[...actor.p] as KnightPoint,angle:Math.hypot(actor.p[0],actor.p[2])>.1?Math.atan2(actor.p[0],actor.p[2]):actor.yaw+Math.PI+i*2.399963}]))};
  if(stage==='cosmic-descent'){s.cosmicFall={at:now,yaw:s.cosmicPart===3&&s.cosmicRefuge?refugeAngle(s,s.cosmicRefuge.impactAt??now):s.cosmicPart===2&&s.cosmicMeteor?s.cosmicMeteor.yaw:a?angle([0,COSMIC.height,0],a.p):s.yaw};s.yaw=s.cosmicFall.yaw;}
@@ -330,6 +332,7 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
   if(p.hp<=0)continue;
   if(p.handled<p.attackAt&&now>=p.attackAt+140){
    p.handled=p.attackAt;const pos=knightPosition(s,now);
+   if(now-p.attackAt<550&&hitKnightLifeFirefly(s,a.id,a.p,a.yaw,now,KNIGHT.meleeReach))return true;
    if(s.stage==='shield'&&s.activeCrystal!==undefined&&now-p.attackAt<550){
     const crystal=crystalPoint(s.activeCrystal,undefined,0);
     if(distance(a.p,crystal)<KNIGHT.meleeReach&&a.p[1]<3.8&&Math.cos(angle(a.p,crystal)-a.yaw)>-.15){

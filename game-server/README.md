@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-36`) is shared with the browser in
+Protocol 2 (`build=meadow-network-37`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -194,6 +194,13 @@ local room and never mutates a production room.
   Chrome on Windows; override `BROWSER_EXECUTABLE` or install Playwright Chromium.
 
 ## Publish
+
+The 2026-10-26 release uses `meadow-network-37` / protocol 2 and includes
+the shared healing fireflies and bonus team lives. All 917 tests, the client
+build, Worker types and dry run passed. Published with `--keep-vars` as version
+`7c27b2be-e50c-427b-82d4-d9c012af2a4c`; production health/room checks passed,
+build 36 is rejected and build 37 reaches name validation without admitting
+a player. The client publishes through the existing Vercel Git integration.
 
 `npm run deploy -- --keep-vars` publishes the Worker while preserving its runtime
 variables; a Git push does not deploy it. Protocol 2 (`meadow-network-33`) was

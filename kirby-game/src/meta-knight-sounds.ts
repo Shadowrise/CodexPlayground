@@ -4,7 +4,7 @@ import {cosmicSpinSound,isCosmicSpinSound,type CosmicSpinSound} from './meta-kni
 import {meteorSound,isMeteorSound,type MeteorSound} from './meta-knight-cosmic-meteor-sounds';
 import {refugeSound,isRefugeSound,type RefugeSound} from './meta-knight-cosmic-refuge-sounds';
 import {finaleSound,isFinaleSound,type FinaleSound} from './meta-knight-cosmic-finale-sounds';
-export type KnightSound=CosmicSound|CosmicSpinSound|MeteorSound|RefugeSound|FinaleSound|'count'|'start'|'warn'|'slash'|'dash'|'thrust'|'slam'|'shot'|'reflect'|'hit'|'hurt'|'phase'|'win'|'crystal'|'constellation'|'shield'|'wave'|'shatter';
+export type KnightSound=CosmicSound|CosmicSpinSound|MeteorSound|RefugeSound|FinaleSound|'count'|'start'|'warn'|'slash'|'dash'|'thrust'|'slam'|'shot'|'reflect'|'hit'|'hurt'|'phase'|'win'|'crystal'|'constellation'|'shield'|'wave'|'shatter'|'life-firefly-hit';
 export const KNIGHT_SOUND_RATE=44100;
 export function knightSound(kind:KnightSound,rate=KNIGHT_SOUND_RATE){
  if(isCosmicSound(kind))return cosmicSound(kind,rate);
@@ -12,12 +12,13 @@ export function knightSound(kind:KnightSound,rate=KNIGHT_SOUND_RATE){
  if(isMeteorSound(kind))return meteorSound(kind,rate);
  if(isRefugeSound(kind))return refugeSound(kind,rate);
  if(isFinaleSound(kind))return finaleSound(kind,rate);
- const duration={count:.24,start:1.35,warn:.85,slash:.6,dash:.9,thrust:1.35,slam:1.25,shot:1,reflect:1.2,hit:.8,hurt:.7,phase:1.8,win:3,crystal:1.4,constellation:1.8,shield:1.6,wave:1.2,shatter:1.5}[kind],n=Math.ceil(rate*duration);
+ const duration={'life-firefly-hit':.85,count:.24,start:1.35,warn:.85,slash:.6,dash:.9,thrust:1.35,slam:1.25,shot:1,reflect:1.2,hit:.8,hurt:.7,phase:1.8,win:3,crystal:1.4,constellation:1.8,shield:1.6,wave:1.2,shatter:1.5}[kind],n=Math.ceil(rate*duration);
  const left=new Float32Array(n),right=new Float32Array(n);let seed=907+kind.length*311,low=0,slow=0,phase=0;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296*2-1;};
  const bell=(t:number,f:number)=>Math.sin(2*Math.PI*f*t)*Math.exp(-t*5)+.28*Math.sin(2*Math.PI*f*2.76*t)*Math.exp(-t*13)+.12*Math.sin(2*Math.PI*f*4.07*t)*Math.exp(-t*21);
  for(let i=0;i<n;i++){
   const t=i/rate,u=t/duration,noise=random();low+=(noise-low)*.14;slow+=(low-slow)*.035;const air=low-slow;let v=0;
+  if(kind==='life-firefly-hit'){v=air*Math.exp(-t*35)*.45+bell(t,1046.5)*.23;if(t>.07)v+=bell(t-.07,1568)*.19;if(t>.14)v+=bell(t-.14,2093)*.14;}
   if(kind==='count')v=(Math.sin(2*Math.PI*176*t)+.45*Math.sin(2*Math.PI*352*t))*Math.exp(-t*32)*.38+air*Math.exp(-t*85)*.32;
   if(kind==='start')v=bell(t,1568)*.40+bell(t,2093)*.19+bell(t,3136)*.065+air*Math.exp(-t*75)*.12;
   if(kind==='crystal'){v=bell(t,1174.66)*.28+bell(t,1760)*.16+air*Math.exp(-t*4)*.22;phase+=2*Math.PI*(170+1200*Math.exp(-t*7))/rate;v+=Math.sin(phase)*Math.exp(-t*5)*.12;}

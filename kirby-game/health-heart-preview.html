@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#21151d">
+  <link rel="icon" href="/kirby-icon.svg">
+  <title>Сердечко жизни · 3D</title>
+</head>
+<body>
+  <aside class="panel">
+    <a class="back" href="/">← На полянку</a>
+    <p class="eyebrow"><span>♥</span> ПРЕДМЕТ ВОССТАНОВЛЕНИЯ</p>
+    <h1>Ещё немного<br><em>жизни.</em></h1>
+    <p class="intro">Тёплое бордовое сердечко<br>в мягкой малиновой дымке.</p>
+    <div class="swatches" aria-hidden="true"><i></i><i></i><i></i><span>БОРДО · РУБИН · СВЕТ</span></div>
+    <div class="settings">
+      <p class="setting-title">Как выглядит предмет</p>
+      <div class="segments" role="group" aria-label="Состояние предмета">
+        <button data-mode="carried" aria-pressed="false">В руках NPC</button>
+        <button data-mode="dropped" aria-pressed="true">После выпадения</button>
+      </div>
+      <label><span>Цветная дымка</span><input id="mist" type="checkbox" checked></label>
+      <label><span>Искорки</span><input id="glints" type="checkbox" checked></label>
+      <label><span>Медленное вращение</span><input id="spin" type="checkbox"></label>
+    </div>
+    <p class="note">Потяни, чтобы рассмотреть объём.<br>Колесо мыши — приблизить.</p>
+    <a class="download" href="/models/health-heart.glb" download="health-heart.glb">↓ Скачать модель <small>GLB</small></a>
+    <div class="stats"><span>Модель <b id="triangles">—</b> треугольников</span><span>Предмет с эффектами <b id="draws">—</b> вызова отрисовки</span></div>
+  </aside>
+  <main id="stage" aria-label="Интерактивная 3D-модель сердечка жизни">
+    <div class="stage-title"><span>СЕРДЕЧКО ЖИЗНИ</span><p>Маленькая помощь в большом приключении.</p></div>
+    <div class="views" role="group" aria-label="Ракурс модели">
+      <button data-view="three" aria-pressed="true">¾</button><button data-view="front" aria-pressed="false">Спереди</button><button data-view="side" aria-pressed="false">Сбоку</button><button data-view="back" aria-pressed="false">Сзади</button>
+    </div>
+    <div class="playback"><button id="pause" aria-pressed="false">Ⅱ Пауза</button><span>3D · ПОВЕРНИ И РАССМОТРИ</span></div>
+    <div id="loading" role="status">Сердечко появляется…</div>
+  </main>
+  <script type="module" src="/src/health-heart-preview.ts"></script>
+</body>
+</html>

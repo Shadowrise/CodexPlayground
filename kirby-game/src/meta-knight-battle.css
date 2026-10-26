@@ -22,6 +22,7 @@ body.in-meta-knight-arena #action-hint[data-hold=true]{background:linear-gradien
 .knight-party-meter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:5px 0 2px}
 .knight-party-hearts{display:flex;gap:7px;color:#ffa4c8;font:30px/1.2 'Segoe UI',sans-serif;white-space:nowrap;filter:drop-shadow(0 2px 4px #ffa4c822)}
 .knight-party-hearts .empty{color:var(--ui-muted);opacity:.6;filter:none}
+.knight-party-bonus{font-size:14px;font-weight:800;color:#ffb6cb;white-space:nowrap}.knight-party-bonus[hidden]{display:none}
 .knight-party-count{font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ui-muted);white-space:nowrap}
 .knight-party-roster{display:flex;justify-content:space-between;gap:8px;padding:10px 2px 2px;color:var(--ui-muted);font-size:10px;line-height:1.4}
 .knight-party-roster>span:last-child{font-variant-numeric:tabular-nums}

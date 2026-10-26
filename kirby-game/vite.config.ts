@@ -8,4 +8,5 @@ export default defineConfig({plugins:[environmentBakePlugin()],build:{target:'es
  pigeon:fileURLToPath(new URL('./pigeon-preview.html',import.meta.url)),
  metaKnight:fileURLToPath(new URL('./meta-knight-preview.html',import.meta.url)),
  metaKnightSeal:fileURLToPath(new URL('./meta-knight-seal-preview.html',import.meta.url)),
+ healthHeart:fileURLToPath(new URL('./health-heart-preview.html',import.meta.url)),
 }}}});
