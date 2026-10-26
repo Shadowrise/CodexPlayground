@@ -30,6 +30,7 @@ import {MetaKnightCosmicMeteorView} from './meta-knight-cosmic-meteor-view';
 import {cosmicMeteorStage,meteorPoint} from './meta-knight-cosmic-meteor';
 import {MetaKnightCosmicRefugeView} from './meta-knight-cosmic-refuge-view';
 import {cosmicRefugeStage,refugeAngle} from './meta-knight-cosmic-refuge';
+import {gravityChargeVolume} from './meta-knight-gravity-charge-state';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
 import {knightWarningGlass as glass,knightWarningCountdown as swordCountdown,knightWarningArrow} from './meta-knight-warning-material';
 import './meta-knight-battle.css';
@@ -85,7 +86,7 @@ export class MetaKnightBattleView{
  private finale=new MetaKnightCosmicFinale();private fallKey='';
  private effectLights:T.PointLight[];
  private lighting=new T.Group();
- constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{}){
+ constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound)=>void,private clearCosmicAudio=()=>{},private chargeAudio:(level:number)=>void=()=>{}){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
   this.motion=new MetaKnightBattleMotion(knight.actor);this.impactCountdown.name='Meta Knight impact countdown';
@@ -128,6 +129,7 @@ export class MetaKnightBattleView{
   }
  }
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
+  this.chargeAudio(visible?gravityChargeVolume(s,now):0);
   if(this.group.parent&&this.lighting.parent!==this.group.parent)this.group.parent.add(this.lighting);
   for(const light of this.effectLights)light.intensity=0;
   this.lifeFirefly?.update(s,now,dt,visible);

@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import * as T from 'three';import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {startKnightBattle,setKnightPhase,advanceKnightBattle,type KnightActor} from '../src/meta-knight-battle';
 import {COSMIC,cosmicHeight} from '../src/meta-knight-cosmic';
-import {COSMIC_REFUGE as R,refugeStar,refugeActive,refugeOpen,insideRefuge,refugePlanet,refugePlanetAngle,refugeDanger,refugeStrike,refugeForehead,refugeRebound} from '../src/meta-knight-cosmic-refuge';
+import {COSMIC_REFUGE as R,refugeStar,refugeActive,refugeOpen,insideRefuge,refugePlanet,refugePlanetAngle,refugeContactAngle,refugeDanger,refugeStrike,refugeForehead,refugeRebound} from '../src/meta-knight-cosmic-refuge';
 import {CharacterController} from '../src/controller';import {MetaKnightBattleMotion} from '../src/meta-knight-battle-motion';
 import {refugeGravityPaths} from '../src/meta-knight-refuge-gravity';
 import {MetaKnightRefugeGlow} from '../src/meta-knight-refuge-glow';
@@ -55,6 +55,14 @@ test('the safety blessing clears on leaving shelter and restores the character m
 });
 function fixture(actors=[a]){const ground=actors.map((a,i)=>({...a,p:[i*3,0,-2] as typeof a.p})),s=startKnightBattle(ground,'a',1000)!;setKnightPhase(s,4,actors,5000,3);return s;}
 function activate(s:ReturnType<typeof fixture>,actors=[a]){while(s.stage!=='cosmic-star-open')advanceKnightBattle(s,actors,s.until,'a');const now=s.since+500,p=refugeStar(s,now);actors[0].p=[p[0],180,p[2]-3];actors[0].yaw=0;assert(refugeActive(s));assert.equal(s.players[actors[0].id].attackAt,-1e9);}
+test('the planet turns exactly twenty percent faster while saved sweep windows keep their endpoints',()=>{
+ const s=fixture(),arc=2*Math.PI-2*refugeContactAngle;Object.assign(s,{stage:'cosmic-planet-sweep',since:10000,until:10000+R.sweepMs});
+ const previousSpeed=R.starSpeed+arc/9,currentSpeed=refugePlanetAngle(s,s.since+1000)-refugePlanetAngle(s,s.since);
+ assert(Math.abs(currentSpeed/previousSpeed-1.2)<1e-10);assert(R.sweepMs<7500&&R.sweepMs>7000);
+ for(const duration of [R.sweepMs,9000]){
+  s.until=s.since+duration;const end=refugePlanet(s,s.until);s.stage='cosmic-star-strike';const after=refugePlanet(s,s.until);assert(new T.Vector3(...end).distanceTo(new T.Vector3(...after))<1e-8);s.stage='cosmic-planet-sweep';
+ }
+});
 test('the star activates automatically on arrival and leaves five seconds to reach its moving shared dome',()=>{
  const actors=[structuredClone(a),{...structuredClone(a),id:'b'}],s=fixture(actors);assert.equal(s.stage,'cosmic-star-draw');advanceKnightBattle(s,actors,s.until-1);assert(!refugeActive(s));advanceKnightBattle(s,actors,s.until);assert.equal(s.until-s.since,5000);assert(!refugeOpen(s));assert.equal(s.cosmicRefuge!.activatedAt,s.since);assert.equal(s.cosmicRefuge!.activator,undefined);
  const p=refugeStar(s,s.since);assert(Math.abs(Math.hypot(p[0],p[2])-COSMIC.rim/2)<1e-10);activate(s,actors);const before=refugeStar(s,s.since+1000),after=refugeStar(s,s.since+4000);assert(Math.hypot(before[0]-after[0],before[2]-after[2])>4);

@@ -3,7 +3,7 @@ export type RefugeSound=typeof REFUGE_SOUNDS[number];
 export function isRefugeSound(kind:string):kind is RefugeSound{return (REFUGE_SOUNDS as readonly string[]).includes(kind);}
 /** Harmonics layer over the already credited electrical, wind and impact recordings. */
 export function refugeSound(kind:RefugeSound,rate:number){
- const seconds={'cosmic-refuge-call':1.2,'cosmic-refuge-shield':.85,'cosmic-refuge-pull':2.4,'cosmic-refuge-roll':9,'cosmic-refuge-break':1.4}[kind],n=Math.ceil(seconds*rate),left=new Float32Array(n),right=new Float32Array(n);let seed=94821,low=0,rumble=0,phase=0;
+ const seconds={'cosmic-refuge-call':1.2,'cosmic-refuge-shield':.85,'cosmic-refuge-pull':2.4,'cosmic-refuge-roll':COSMIC_REFUGE.sweepMs/1000,'cosmic-refuge-break':1.4}[kind],n=Math.ceil(seconds*rate),left=new Float32Array(n),right=new Float32Array(n);let seed=94821,low=0,rumble=0,phase=0;
  const bell=(t:number,hz:number)=>t<0?0:(Math.sin(t*2*Math.PI*hz)+.25*Math.sin(t*2*Math.PI*hz*2.76))*Math.exp(-t*6);
  for(let i=0;i<n;i++){
   const t=i/rate,u=t/seconds;seed=(Math.imul(seed,1664525)+1013904223)>>>0;low+=(seed/4294967296*2-1-low)*.08;rumble+=(low-rumble)*.012;
@@ -16,3 +16,4 @@ export function refugeSound(kind:RefugeSound,rate:number){
   left[i]=Math.tanh(v*edge);right[i]=Math.tanh((v*.9+low*env*.05*Math.sin(t*29))*edge);
  }return {left,right};
 }
+import {COSMIC_REFUGE} from './meta-knight-cosmic-refuge';

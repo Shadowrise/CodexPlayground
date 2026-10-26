@@ -18,7 +18,7 @@ function harness(){
  const fear={duration:1.54} as AudioBuffer,master={name:'existing shared master'};
  const sounds=Object.create(SoundEffects.prototype) as SoundEffects;
  const internal=sounds as unknown as {context:unknown;master:unknown;enabled:boolean;buffers:Map<string,AudioBuffer>;active:Set<{source:{stop():void}}>;pigeonVoices:Promise<Map<Emote,AudioBuffer>>;pigeonVoiceToken:number;pigeonSoundGeneration:number;stopAll():void};
- Object.assign(internal,{context,master,enabled:true,buffers:new Map(),active:new Set(),pigeonVoices:Promise.resolve(new Map<Emote,AudioBuffer>([['Fear',fear]])),pigeonVoiceToken:0,pigeonSoundGeneration:0});
+ Object.assign(internal,{context,master,enabled:true,buffers:new Map(),active:new Set(),knightCosmicSources:new Set<AudioBufferSourceNode>(),pigeonVoices:Promise.resolve(new Map<Emote,AudioBuffer>([['Fear',fear]])),pigeonVoiceToken:0,pigeonSoundGeneration:0});
  return {sounds,internal,context,fear,master,page,nodes,restore(){if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');}};
 }
 

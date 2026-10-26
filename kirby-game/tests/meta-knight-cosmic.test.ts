@@ -30,6 +30,7 @@ test('fourth phase owns one finite shared ascent and a free-flight arrival befor
   }else assert.equal(cosmicHeight(s,s.since),stage==='cosmic-flight'?COSMIC.height:0);
   if(stage==='cosmic-flight')break;now=s.until;advanceKnightBattle(s,[a],now);
  }
+ assert.equal(s.until-s.since,1000,'arrival leaves only one second before preparing the first spin');
  advanceKnightBattle(s,[a],s.until-1);assert.equal(s.stage,'cosmic-flight');assert.equal(s.hp,6);assert.equal(s.players.solo.hp,3);
  advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'cosmic-spin-warn');assert.equal(cosmicHeight(s,s.since),180);
  assert(setKnightPhase(s,1,[a],s.since+1000));assert.equal(s.hp,12);assert.equal(cosmicHeight(s,s.since),0);assert.deepEqual(s.from,[0,0,-9]);

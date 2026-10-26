@@ -1,6 +1,11 @@
 import {COSMIC,easeCosmic} from './meta-knight-cosmic';
 
-export const COSMIC_REFUGE={drawMs:1200,openMs:5000,pullMs:2400,sweepMs:9000,breakMs:2200,strikeMs:650,stunMs:1000,retreatMs:1800,orbit:COSMIC.rim*.5,starSpeed:.08,domeRadius:5.2,planetOrbit:22.5,planetRadius:19,starHeight:COSMIC.height+1.25} as const;
+const geometry={orbit:COSMIC.rim*.5,starSpeed:.08,domeRadius:5.2,planetOrbit:22.5,planetRadius:19} as const;
+export const refugeContactAngle=Math.acos((geometry.orbit**2+geometry.planetOrbit**2-(geometry.domeRadius+geometry.planetRadius+.05)**2)/(2*geometry.orbit*geometry.planetOrbit));
+const sweepAngle=2*Math.PI-2*refugeContactAngle;
+// Increase actual world-space angular speed by 20%, including the moving star's drift.
+const sweepMs=1000*sweepAngle/((geometry.starSpeed+sweepAngle/9)*1.2-geometry.starSpeed);
+export const COSMIC_REFUGE={drawMs:1200,openMs:5000,pullMs:2400,sweepMs,breakMs:2200,strikeMs:650,stunMs:1000,retreatMs:1800,...geometry,starHeight:COSMIC.height+1.25} as const;
 export type CosmicRefuge={at:number;angle:number;world:number;activatedAt?:number;activator?:string;counterBy?:string[];impactAt?:number;hitAt?:number;contacts:Record<string,number>;partyDamaged?:boolean};
 type State={phase:number;stage:string;since:number;until:number;cosmicRefuge?:CosmicRefuge};
 type Point=[number,number,number];
@@ -12,8 +17,7 @@ export function refugeActive(s:Pick<State,'cosmicRefuge'>|undefined){return s?.c
 export function refugeOpen(s:State|undefined){return s?.stage==='cosmic-star-open'&&!!s.cosmicRefuge&&!refugeActive(s);}
 export function insideRefuge(s:State,p:readonly number[],now:number,padding=.65){if(!refugeActive(s)||!['cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep'].includes(s.stage))return false;const star=refugeStar(s,now);return Math.abs(p[1]-COSMIC.height)<2.4&&Math.hypot(p[0]-star[0],p[2]-star[2])<=COSMIC_REFUGE.domeRadius-padding;}
 /** A sphere fills the radial band from the boss's silhouette to the outer rim. */
-export const refugeContactAngle=Math.acos((COSMIC_REFUGE.orbit**2+COSMIC_REFUGE.planetOrbit**2-(COSMIC_REFUGE.domeRadius+COSMIC_REFUGE.planetRadius+.05)**2)/(2*COSMIC_REFUGE.orbit*COSMIC_REFUGE.planetOrbit));
-export function refugePlanetAngle(s:State,now:number){const f=s.stage==='cosmic-planet-sweep'?Math.max(0,Math.min(1,(now-s.since)/COSMIC_REFUGE.sweepMs)):['cosmic-planet-break','cosmic-star-strike','cosmic-star-stun','cosmic-star-retreat','cosmic-planet-release'].includes(s.stage)?1:0;return refugeAngle(s,now)+refugeContactAngle+(2*Math.PI-2*refugeContactAngle)*f;}
+export function refugePlanetAngle(s:State,now:number){const f=s.stage==='cosmic-planet-sweep'?Math.max(0,Math.min(1,(now-s.since)/Math.max(1,s.until-s.since))):['cosmic-planet-break','cosmic-star-strike','cosmic-star-stun','cosmic-star-retreat','cosmic-planet-release'].includes(s.stage)?1:0;return refugeAngle(s,now)+refugeContactAngle+(2*Math.PI-2*refugeContactAngle)*f;}
 export function refugePlanet(s:State,now:number):Point{const a=refugePlanetAngle(s,now);return [Math.sin(a)*COSMIC_REFUGE.planetOrbit,COSMIC_REFUGE.starHeight,Math.cos(a)*COSMIC_REFUGE.planetOrbit];}
 export function refugeForehead(s:State):Point{const a=refugeAngle(s,s.cosmicRefuge?.impactAt??s.since);return [Math.sin(a)*2.38,COSMIC.height+5.24,Math.cos(a)*2.38];}
 function bezier(a:readonly number[],b:readonly number[],c:readonly number[],d:readonly number[],t:number):Point{return [0,1,2].map(i=>(1-t)**3*a[i]+3*(1-t)**2*t*b[i]+3*(1-t)*t*t*c[i]+t**3*d[i]) as Point;}

@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-38`) is shared with the browser in
+Protocol 2 (`build=meadow-network-40`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -194,6 +194,13 @@ local room and never mutates a production room.
   Chrome on Windows; override `BROWSER_EXECUTABLE` or install Playwright Chromium.
 
 ## Publish
+
+The `meadow-network-40` / protocol 2 release gives the phase-three
+yellow cross a minimum three-second warning. Longer escape paths still use
+running time at 6.8 m/s plus 20%. Cosmic arrival waits one second; the planet's
+world-space angular speed is 20% higher. The blue sword charge reuses the ascent
+crackle with volume tied to its size. Publish the client and Worker together;
+release logs and production checks are in `.cache/release-20261026-cosmic-audio/`.
 
 The 2026-10-26 client/Worker release uses `meadow-network-38` / protocol 2: one
 phase-three crystal cross per assault, with the nearest full-body escape

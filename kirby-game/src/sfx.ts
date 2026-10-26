@@ -7,6 +7,7 @@ import {METEOR_SOUNDS,isMeteorSound} from './meta-knight-cosmic-meteor-sounds';
 import {REFUGE_SOUNDS,isRefugeSound} from './meta-knight-cosmic-refuge-sounds';
 import {COSMIC_SPIN_SOUNDS} from './meta-knight-cosmic-spin-sounds';
 import {FINALE_SOUNDS} from './meta-knight-cosmic-finale-sounds';
+import {gravityCrackleLoop} from './meta-knight-gravity-charge-state';
 import type {CentipedeStage} from './centipede-event';
 import { WaterSoundEvents, waterSamples } from './water-sounds';
 import type { Emote, PlayerEmote } from './emotes';
@@ -189,7 +190,7 @@ export class SoundEffects {
     this.pigeonVoiceToken++;
     this.pigeonSoundGeneration++;
     for (const voice of this.active) { try { voice.source.stop(); } catch { continue; } }
-    this.active.clear(); this.buzz=undefined; this.rewardAfter=0;
+    this.active.clear(); this.buzz=undefined;this.knightCharge=undefined;this.knightCosmicSources.clear(); this.rewardAfter=0;
   }
   private begin(source: AudioBufferSourceNode, gain: GainNode, cleanup?: () => void, when?: number, protectedVoice=false) {
     const voice: PlayingVoice = {source, gain,protected:protectedVoice};
@@ -282,6 +283,7 @@ export class SoundEffects {
     const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.buffers.get('push-boing')!;gain.gain.value=Math.min(1,volume)*.65;source.connect(gain);gain.connect(this.master!);this.begin(source,gain);
   }
   private knightCosmicSources=new Set<AudioBufferSourceNode>();
+  private knightCharge?:PlayingVoice;
   private knightCosmicLoad?:Promise<void>;
   private knightBuffer(kind:KnightSound){
     const ctx=this.context!,key='knight-v2-'+kind;
@@ -309,9 +311,28 @@ export class SoundEffects {
       for(const kind of [...COSMIC_SOUNDS,...METEOR_SOUNDS,...COSMIC_SPIN_SOUNDS,...REFUGE_SOUNDS,...FINALE_SOUNDS]){
         this.knightBuffer(kind);await new Promise<void>(resolve=>setTimeout(resolve,0));
       }
+      this.knightChargeBuffer();
     });
   }
-  stopKnightCosmic(){for(const source of this.knightCosmicSources){try{source.stop();}catch{/* A source may have ended in the same audio quantum. */}}this.knightCosmicSources.clear();}
+  private knightChargeBuffer(){
+    const key='knight-gravity-crackle';let buffer=this.buffers.get(key);
+    if(!buffer){
+      const ascent=this.knightBuffer('cosmic-ascent'),channels=Array.from({length:ascent.numberOfChannels},(_,channel)=>gravityCrackleLoop(ascent.getChannelData(channel),ascent.sampleRate));
+      buffer=this.context!.createBuffer(channels.length,channels[0].length,ascent.sampleRate);channels.forEach((data,channel)=>buffer!.copyToChannel(data,channel));this.buffers.set(key,buffer);
+    }return buffer;
+  }
+  /** One continuous ascent crackle follows the growing blue sphere, without retriggering. */
+  updateKnightGravityCharge(level:number){
+    const ctx=this.context;
+    if(!ctx||!this.enabled||document.hidden||ctx.state!=='running'||level<=0){if(this.knightCharge){const voice=this.knightCharge;this.knightCharge=undefined;this.silence(voice);}return;}
+    if(!this.knightCharge){
+      const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=this.knightChargeBuffer();source.loop=true;gain.gain.value=0;
+      source.connect(gain);gain.connect(this.master!);this.knightCharge={source,gain,protected:true};this.knightCosmicSources.add(source);
+      this.begin(source,gain,()=>{this.knightCosmicSources.delete(source);if(this.knightCharge?.source===source)this.knightCharge=undefined;},undefined,true);
+    }
+    this.knightCharge.gain.gain.setTargetAtTime(Math.max(0,Math.min(.7,level)),ctx.currentTime,.06);
+  }
+  stopKnightCosmic(){for(const source of this.knightCosmicSources){try{source.stop();}catch{/* A source may have ended in the same audio quantum. */}}this.knightCosmicSources.clear();this.knightCharge=undefined;}
   playKnight(kind:KnightSound){
     const ctx=this.context;if(!ctx||!this.enabled||document.hidden||ctx.state!=='running')return;
     if(isCosmicSound(kind)||isMeteorSound(kind)||isRefugeSound(kind))void this.prepareKnightCosmic();

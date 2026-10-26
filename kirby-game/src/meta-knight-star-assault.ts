@@ -4,11 +4,11 @@ import {META_KNIGHT_ARENA} from './meta-knight-arena-site';
 export {crystalPoint} from './meta-knight-shield';
 
 /** Shared phase-three choreography and geometry, in arena metres/ms. */
-export const STAR_ASSAULT={crystalRadius:SHIELD.crystalRadius,ricochetRadius:35,beamHalfWidth:2.0,routeHalfWidth:4.5,impactRadius:SHIELD.radius,hover:1.2,peak:9} as const;
+export const STAR_ASSAULT={crystalRadius:SHIELD.crystalRadius,ricochetRadius:35,beamHalfWidth:2.0,crossWarningMinMs:3000,routeHalfWidth:4.5,impactRadius:SHIELD.radius,hover:1.2,peak:9} as const;
 export const STAR_FLIGHTS=3,STAR_FLIGHT_STEP=3,STAR_LANDING_STEP=STAR_FLIGHT_STEP+STAR_FLIGHTS*2,STAR_FALL_STEP=STAR_LANDING_STEP+1,STAR_SHIELD_STEP=STAR_LANDING_STEP+2;
 export const STAR_SEQUENCE:[KnightStage,number][]=[
  // The cross warning duration is calculated from the players' positions on entry.
- ['star-rise',1200],['cross-warn',1],['cross',450],
+ ['star-rise',1200],['cross-warn',STAR_ASSAULT.crossWarningMinMs],['cross',450],
  ['ricochet-warn',1550],['ricochet',950],['ricochet-warn',1000],['ricochet',950],['ricochet-warn',1000],['ricochet',950],
  ['star-warn',1550],['star-fall',1100],['shield',1e12],
 ];
@@ -73,10 +73,10 @@ export function lockStarCross(s:KnightBattle,p:KnightPoint){
  }
  if(best)s.starCross=best;
 }
-/** Duel running speed is 6.8 m/s (CharacterController); allow 20% extra to reach safety. */
+/** Allow at least three seconds, or the 6.8 m/s escape time plus 20% when longer. */
 export function crossWarningDuration(s:KnightBattle,p:KnightPoint){
  const escape=crossEscapePoint(s,p),distance=escape?Math.hypot(escape[0]-p[0],escape[2]-p[2]):META_KNIGHT_ARENA.radius*2;
- return Math.max(1,Math.ceil(distance/6.8*1000*1.2));
+ return Math.max(STAR_ASSAULT.crossWarningMinMs,Math.ceil(distance/6.8*1000*1.2));
 }
 export const ricochetIndex=(s:KnightBattle)=>Math.max(0,Math.min(starFlightCount(s)-1,Math.floor((s.step-STAR_FLIGHT_STEP)/2)));
 /** Pick the closest chord to the player's locked position; prefer a long chord on ties. */

@@ -1,7 +1,7 @@
 import * as T from 'three';
 import {KNIGHT,knightJumpOpening,type KnightBattle} from './meta-knight-battle';
 import {starOpening,ricochetCurve,ricochetIndex} from './meta-knight-star-assault';
-import {cosmicStage,cosmicCombat,cosmicElapsed,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
+import {COSMIC,cosmicStage,cosmicCombat,cosmicElapsed,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
 import {COSMIC_SPIN,cosmicSpinFatigue} from './meta-knight-cosmic-spin';
 import {COSMIC_METEOR,cosmicMeteorStage} from './meta-knight-cosmic-meteor';
 import {cosmicRefugeStage,refugePlanetAngle,refugeAngle,refugeContactAngle} from './meta-knight-cosmic-refuge';
@@ -129,7 +129,7 @@ export class MetaKnightBattleMotion{
   this.savePose();
   const stage=s.stage,elapsed=cosmicElapsed(s,s.since+f*(s.until-s.since)),clock=elapsed/1000;
   const charge=stage==='cosmic-charge'?easeCosmic(f):1,air=stage==='cosmic-rise'||stage==='cosmic-flight';
-  const settle=stage==='cosmic-flight'?easeCosmic(f*(s.until-s.since)/1600):0;
+  const settle=stage==='cosmic-flight'?easeCosmic(f*(s.until-s.since)/COSMIC.arrivalMs):0;
   const vertical=Math.sqrt(BLADE_LENGTH**2-.1**2-.4**2),plantedY=vertical-.04,down=Math.PI+Math.atan2(.4,vertical);
   let hiltX=.1,hiltY=2.45,hiltZ=1.35,turn=0,back=0,crouch=.13,hold=1,hop=0;
   if(stage==='cosmic-charge'){

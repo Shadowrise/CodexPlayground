@@ -1,8 +1,7 @@
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import type {CosmicLightning} from './meta-knight-cosmic-view';
-import {easeCosmic} from './meta-knight-cosmic';
-import {COSMIC_REFUGE as R} from './meta-knight-cosmic-refuge';
+import {gravityChargeRadius} from './meta-knight-gravity-charge-state';
 
 const hash=(n:number)=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);};
 
@@ -36,11 +35,9 @@ export class MetaKnightGravityCharge{
  get radius(){return this.group.scale.x;}
  clear(){this.group.visible=false;}
  update(s:KnightBattle,now:number,blade:T.Object3D,root:T.Object3D,arcs:CosmicLightning){
-  const active=s.phase===4&&!!s.cosmicRefuge&&['cosmic-star-draw','cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep'].includes(s.stage);
+  const radius=gravityChargeRadius(s,now),active=radius>0;
   this.group.visible=active;if(!active)return;
-  const elapsed=Math.max(0,now-s.cosmicRefuge!.at),clock=elapsed/1000,f=T.MathUtils.clamp((now-s.since)/Math.max(1,s.until-s.since),0,1);
-  // Keep the charge growing while the party reaches the star, including late snapshots.
-  const radius=s.stage==='cosmic-planet-sweep'?3.1:s.stage==='cosmic-planet-draw'?2.6+.5*easeCosmic(f):.40+2.2*easeCosmic(elapsed/(R.drawMs+R.openMs));
+  const clock=Math.max(0,now-s.cosmicRefuge!.at)/1000;
   this.clock.value=clock;this.group.scale.setScalar(radius);
   blade.localToWorld(this.group.position.set(-.315,1.75,0));root.worldToLocal(this.group.position);
   const tick=Math.floor(clock*18);

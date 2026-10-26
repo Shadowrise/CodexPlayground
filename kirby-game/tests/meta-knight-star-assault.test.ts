@@ -216,14 +216,19 @@ test('crystal crosses aim near the player, exclude broken gems and stay fixed un
  const s=battle(),a={...actor,p:[30,0,8] as [number,number,number]};s.players.a.invulnerable=1e12;advanceKnightBattle(s,[a],2500);advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'cross-warn');const locked=structuredClone(s.starCross);a.p=[-30,0,-8];advanceKnightBattle(s,[a],s.since+(s.until-s.since)/2);assert.deepEqual(s.starCross,locked);advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'cross');assert.deepEqual(s.starCross,locked);advanceKnightBattle(s,[a],s.until);assert.equal(s.stage,'ricochet-warn');assert.deepEqual(s.starCross,locked);assert.deepEqual(crossTriangles(s),crossTriangles(structuredClone(s)),'snapshots retain the exact pair and danger orientation');
 });
 
-test('cross warning is the nearest full-body escape at duel running speed plus exactly 20%',()=>{
+test('cross warning allows at least three seconds or the full-body escape time plus 20% when longer',()=>{
  for(const mask of [0,1,9,73])for(let i=0;i<20;i++){
   const s=battle(),a=i*Math.PI/10,r=i%2?41.7:21,p:[number,number,number]=[Math.sin(a)*r,0,Math.cos(a)*r];s.brokenCrystals=mask;stage(s,2);lockStarCross(s,p);
   const escape=crossEscapePoint(s,p)!;assert(escape);assert(!knightDanger(s,{...actor,p:escape},s.since+100));
   const runMs=Math.hypot(escape[0]-p[0],escape[2]-p[2])/6.8*1000,warning=crossWarningDuration(s,p);
-  assert(warning>=runMs*1.2&&warning<runMs*1.2+1,'only millisecond rounding is added to the requested margin');
+  assert.equal(warning,Math.max(3000,Math.ceil(runMs*1.2)),'three seconds is a floor, and longer escape times keep their 20% margin');
  }
- const s=battle();s.starCross={pairs:[[0,4],[2,6]],side:0};assert.equal(crossWarningDuration(s,[12,0,-12]),1,'an already safe player does not add a fixed delay');
+ const s=battle();s.starCross={pairs:[[0,4],[2,6]],side:0};assert.equal(crossWarningDuration(s,[12,0,-12]),3000,'even a nearby or already safe player gets three seconds to react');
+ assert(crossWarningDuration(s,[30,0,30])>3000,'a long escape is never cut short by the minimum');
+ const active=battle();advanceKnightBattle(active,[actor],active.until);advanceKnightBattle(active,[actor],active.until);
+ assert.equal(active.stage,'cross-warn');assert.equal(active.until-active.since,3000);const since=active.since;
+ for(const elapsed of [500,2999]){advanceKnightBattle(active,[actor],since+elapsed);assert.equal(active.stage,'cross-warn');assert.equal(active.players.a.hp,5,'no damage before the three-second countdown ends');}
+ advanceKnightBattle(active,[actor],since+3000);assert.equal(active.stage,'cross');assert.equal(active.players.a.hp,4,'damage begins when the full countdown ends');
 });
 
 test('the rendered triangle buffers and perimeter timers match shared damage, reuse resources and hide after the strike',()=>{

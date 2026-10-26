@@ -51,7 +51,7 @@ try{
  const shots=[
   [2000,'01-charge-start','Начало заряда'],[4000,'02-charge-full','Глаза и меч под напряжением'],[4700,'03-sword-plunge','Прыжок перед ударом меча'],
   [5350,'04-lightning-spread','Молнии расходятся по арене'],[6550,'05-arena-charged','Арена заряжена'],[7870,'06-sword-raised','Меч снова поднят'],
-  [9550,'07-ascent-start','Общий взлёт'],[11100,'08-ascent-high','Арена остаётся внизу'],[13200,'09-arrival','Торможение в космосе'],[16000,'10-cosmic-flight','Свободный полёт в одной плоскости'],
+  [9550,'07-ascent-start','Общий взлёт'],[11100,'08-ascent-high','Арена остаётся внизу'],[13200,'09-arrival','Торможение в космосе'],[14200,'10-cosmic-flight','Свободный полёт в одной плоскости'],
  ];
  for(const [ms,name,label] of shots){
   if(name==='07-ascent-start')for(const [at,suffix] of [[8600,'06a-first-airborne'],[8740,'06b-flight-wings']]){await page.evaluate(ms=>cosmicQA.advanceTo(ms),at);await screenshot(page,output+'screenshots/'+suffix+'.png');}
@@ -64,12 +64,12 @@ try{
    await page.evaluate(()=>{const q=cosmicQA,c=q.travel.camera;c.position.copy(q.savedCamera.p);c.quaternion.copy(q.savedCamera.q);c.fov=q.savedCamera.fov;c.updateProjectionMatrix();c.updateMatrixWorld();q.travel.render();});
   }
   assert.equal(metrics.glError,0);assert.equal(metrics.hp,6);assert.equal(metrics.life,5);assert(Math.abs(metrics.tipNdc[1])<.82,'the raised blade stays inside the frame and below the HUD');if(ms>8100)assert(Math.abs(metrics.height-metrics.bossHeight)<1e-8);
-  assert.equal(metrics.glowColor,ms<16000?'215cff':'ffb52b');if(ms===4000)assert(metrics.bolts>=162*5);if(ms===4700)assert(metrics.bodyHeight>6);
+  assert.equal(metrics.glowColor,metrics.stage==='cosmic-flight'?'ffb52b':'215cff');if(ms===4000)assert(metrics.bolts>=162*5);if(ms===4700)assert(metrics.bodyHeight>6);
   if(ms>=7870)assert(Math.abs(metrics.radius-41)<.001,'the electrical recoil reaches the rim before takeoff');if(ms>=5350&&ms<=7870)assert.equal(metrics.height,0);
-  if(ms===6550)assert(metrics.crystalOpacity<.2,'the foreground rim crystal must not hide the recoiling player');if(ms===16000)assert(metrics.crystalOpacity>.999,'rim crystals recover their full opacity after takeoff');
+  if(ms===6550)assert(metrics.crystalOpacity<.2,'the foreground rim crystal must not hide the recoiling player');if(ms===14200)assert(metrics.crystalOpacity>.999,'rim crystals recover their full opacity after takeoff');
   if(ms>=7870)assert(Math.abs(metrics.bossNdc[0])<.08&&Math.abs(metrics.bossNdc[1])<.7,'the transition camera keeps Meta Knight ahead of the player');
   for(let i=0;i<initialWorlds.length;i++){assert.equal(metrics.worlds[i][1],initialWorlds[i][1]);assert(new Vector3().fromArray(metrics.worlds[i]).distanceTo(new Vector3().fromArray(initialWorlds[i]))<35,'the same worlds follow their independent orbits during the whole ascent');}
-  if(ms===16000){assert(Math.abs(metrics.cameraAngle)<15);assert(metrics.arenaNdc[1]<-.4&&metrics.arenaNdc[1]>-.95,'the real arena remains in the lower frame');assert(Math.abs(Math.hypot(metrics.formation[0],metrics.formation[2])-240)<.001);}
+  if(ms===14200){assert(Math.abs(metrics.cameraAngle)<15);assert(metrics.arenaNdc[1]<-.4&&metrics.arenaNdc[1]>-.95,'the real arena remains in the lower frame');assert(Math.abs(Math.hypot(metrics.formation[0],metrics.formation[2])-240)<.001);}
  }
  // This ascent-only harness holds arrival for the sky/control inspection.
  // The finite arrival and attack loop have their own cosmic-spin browser test.

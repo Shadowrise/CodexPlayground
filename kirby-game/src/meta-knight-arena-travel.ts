@@ -79,7 +79,7 @@ export class MetaKnightArenaTravel{
  loading=false;
  get active(){return !!this.current&&!this.loading;}
  get scene(){return this.current?.scene;}
- constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound)=>void;stopCosmic?:()=>void;prepareCosmic?:()=>Promise<void>|void;firefly?:()=>GLTF|undefined;music?:(active:boolean)=>void}){
+ constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound)=>void;stopCosmic?:()=>void;chargeAudio?:(level:number)=>void;prepareCosmic?:()=>Promise<void>|void;firefly?:()=>GLTF|undefined;music?:(active:boolean)=>void}){
   this.overlay.id='arena-loader';this.overlay.hidden=true;this.overlay.setAttribute('role','status');this.overlay.setAttribute('aria-live','polite');
   this.spinner.className='arena-loading-orbit';this.back.type=this.retry.type='button';
   this.retry.addEventListener('click',()=>{const c=this.owner,arrival=this.arrival;this.leave();if(c)void this.enter(c,arrival);});
@@ -99,7 +99,7 @@ export class MetaKnightArenaTravel{
    if(generation!==this.generation)return;
    stage=createMetaKnightArena(this.renderer);this.cosmicFrame.name='Cosmic travelling formation';stage.scene.add(this.cosmicFrame);const audio=this.battleOptions?.prepareCosmic?.();
    this.playerStars=new MetaKnightDazedStars('Player golden dizziness stars');stage.scene.add(this.playerStars.group);this.playerStars.group.visible=false;
-   this.knight=this.makeKnight?.();if(this.knight){this.knight.actor.name='Meta Knight duel boss';this.knight.actor.position.set(SITE.x,0,-9);this.knight.actor.scale.setScalar(KNIGHT.modelScale);stage.scene.add(this.knight.actor);this.battleView=new MetaKnightBattleView(this.knight,stage.scene,()=>this.cancelBattle(),kind=>this.battleOptions?.cue(kind),()=>this.battleOptions?.stopCosmic?.());const bug=this.battleOptions?.firefly?.();if(bug)this.battleView.setLifeFirefly(bug);}
+   this.knight=this.makeKnight?.();if(this.knight){this.knight.actor.name='Meta Knight duel boss';this.knight.actor.position.set(SITE.x,0,-9);this.knight.actor.scale.setScalar(KNIGHT.modelScale);stage.scene.add(this.knight.actor);this.battleView=new MetaKnightBattleView(this.knight,stage.scene,()=>this.cancelBattle(),kind=>this.battleOptions?.cue(kind),()=>this.battleOptions?.stopCosmic?.(),level=>this.battleOptions?.chargeAudio?.(level));const bug=this.battleOptions?.firefly?.();if(bug)this.battleView.setLifeFirefly(bug);}
    this.soloNow=Date.now();this.soloBattle=undefined;this.withdrawnBattle=0;this.attackHeld=false;this.life=5;this.battleOptions?.music?.(false);
    this.oldConstraint=c.positionConstraint;this.restoreMaterials=arenaMaterials(c.actor);c.setActivity('Idle');c.swimming=false;c.surfaceY=0;
    stage.scene.add(c.actor);c.actor.userData.location='meta-knight-arena';c.positionConstraint=(p,size)=>{this.constrainArena(p,size);this.constrainShield(p);};

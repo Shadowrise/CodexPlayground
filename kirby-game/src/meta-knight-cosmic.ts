@@ -1,8 +1,8 @@
 /** Shared clock for the ascent. Altitude belongs to the encounter, never to input. */
-export const COSMIC={height:180,health:6,flightSpeedMultiplier:2,rim:41,pushDelayMs:120,pushFrontMs:740,pushMs:950,centerMs:1500,chargeMs:2800,strikeMs:850,surgeMs:1900,liftMs:1050,riseMs:5600} as const;
+export const COSMIC={height:180,health:6,flightSpeedMultiplier:2,rim:41,pushDelayMs:120,pushFrontMs:740,pushMs:950,centerMs:1500,chargeMs:2800,strikeMs:850,surgeMs:1900,liftMs:1050,riseMs:5600,arrivalMs:1000} as const;
 export const COSMIC_DESCENT={durationMs:3000,impactMs:2380,releaseMs:240,braceMs:380,settleMs:620} as const;
 export type CosmicFall={at:number;yaw:number};
-export const COSMIC_SEQUENCE=[['cosmic-charge',COSMIC.chargeMs],['cosmic-strike',COSMIC.strikeMs],['cosmic-surge',COSMIC.surgeMs],['cosmic-lift',COSMIC.liftMs],['cosmic-rise',COSMIC.riseMs],['cosmic-flight',4000]] as const;
+export const COSMIC_SEQUENCE=[['cosmic-charge',COSMIC.chargeMs],['cosmic-strike',COSMIC.strikeMs],['cosmic-surge',COSMIC.surgeMs],['cosmic-lift',COSMIC.liftMs],['cosmic-rise',COSMIC.riseMs],['cosmic-flight',COSMIC.arrivalMs]] as const;
 export type CosmicStage=typeof COSMIC_SEQUENCE[number][0]|'cosmic-spin-warn'|'cosmic-spin'|'cosmic-open'|'cosmic-hit'|'cosmic-recover'|'cosmic-descent'|'cosmic-meteor-draw'|'cosmic-meteor-cast'|'cosmic-meteor-return'|'cosmic-meteor-gap'|'cosmic-meteor-settle'|'cosmic-star-draw'|'cosmic-star-open'|'cosmic-planet-draw'|'cosmic-planet-sweep'|'cosmic-planet-break'|'cosmic-star-strike'|'cosmic-star-stun'|'cosmic-star-retreat'|'cosmic-planet-release';
 type State={phase:number;stage:string;since:number;until:number;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall};
 export type CosmicLaunch={at:number;players:Record<string,{from:[number,number,number];angle:number}>};
