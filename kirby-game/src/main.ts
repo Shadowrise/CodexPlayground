@@ -29,7 +29,6 @@ import {MetaKnightSeal} from './meta-knight-seal';
 import {MetaKnightSealHud} from './meta-knight-seal-hud';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
-import {cosmicCombat} from './meta-knight-cosmic';
 import {createMetaKnightPortal} from './meta-knight-portal';
 import {META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
 import {META_KNIGHT_SEAL_SITES} from './meta-knight-seal-sites';
@@ -754,7 +753,7 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active?'knight':false)});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
 function completeKnightVictory(local=false){
  if(!character)return;
  if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
@@ -1371,10 +1370,7 @@ renderer.setAnimationLoop((time: number) => {
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
   const flowerGame=advanceFlowerGame(currentFlowerGame(),bossNow);
-  const hearingFlowers=playing&&!roundFinished()&&!!flowerGame&&!!character&&Math.hypot(character.actor.position.x-MUSICAL_FLOWER_SITE.x,character.actor.position.z-MUSICAL_FLOWER_SITE.z)<MUSICAL_FLOWER_SITE.radius+10;
   const numberGame=advanceNumberGame(currentNumberGame(),bossNow);
-  const hearingNumbers=playing&&!roundFinished()&&!!numberGame&&!!character&&Math.abs(character.actor.position.x-NUMBER_GARDEN_SITE.x)<NUMBER_GARDEN_SITE.halfWidth+10&&Math.abs(character.actor.position.z-NUMBER_GARDEN_SITE.z)<NUMBER_GARDEN_SITE.halfDepth+10;
-  music.updateDucking(hearingFlowers||hearingNumbers,dt);
   millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
   flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden,playing&&!roundFinished());
   if(!flowerGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
@@ -1490,7 +1486,7 @@ function tickMeadowWhileAway(dt:number){
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
  if(!network){bread.state=advanceBread(bread.state,now,mountainLedges.networkState());soloFlowerGame=advanceFlowerGame(soloFlowerGame,now,[]);soloNumberGame=advanceNumberGame(soloNumberGame,now,[]);centipedeTick();}
  fruits.update(dt,character!,host?npcs:[],true);
- music.setEvent(cosmicArena.engaged?'knight':false);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);music.updateDucking(cosmicArena.engaged&&cosmicArena.battle?.phase===4&&cosmicArena.battle.stage!=='cosmic-flight'&&!cosmicCombat(cosmicArena.battle),dt);
+ music.setEvent(cosmicArena.musicEvent);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   if(nearMetaKnightPortal(c.actor.position)&&sealActor(c).available)return {text:metaKnightPortalReady()?'E — Войти на арену Метакнайта':'Портал пока не работает',run:()=>{if(metaKnightPortalReady())void cosmicArena.enter(c);},target:{key:meadowPortal,root:meadowPortal.group}};

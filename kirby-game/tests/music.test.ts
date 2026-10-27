@@ -27,7 +27,7 @@ test('all fifteen stereo tracks exist, first two use approved arrangements, audi
   }
 });
 
-test('tracks preserve mute and configured volume, including temporary ducking and event soundtracks', async () => {
+test('tracks and event soundtracks preserve mute and the configured volume', async () => {
   class FakeElement extends EventTarget {
     value = ''; textContent = ''; title = ''; hidden = false;
     attributes = new Map<string, string>();
@@ -86,20 +86,22 @@ test('tracks preserve mute and configured volume, including temporary ducking an
     music.updateKnightPhase(3,.1);assert(event.playbackRate>1&&event.playbackRate<1.1);
     for(let i=0;i<180;i++)music.updateKnightPhase(3,1/60);assert(Math.abs(event.playbackRate-1.1)<.001);assert(event.preservesPitch);
     button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
-    music.updateDucking(true,.05);assert(background.volume<.29&&background.volume>.29*.2,'fade into the quieter mix');
-    for(let i=0;i<120;i++)music.updateDucking(true,1/60);
-    assert(Math.abs(background.volume-.29*.2)<1e-8);assert.equal(event.volume,background.volume);
-    assert.equal(volume.value,'29','temporary ducking must not move the slider');
+    assert.equal(background.volume,.29);assert.equal(event.volume,.29);
     volume.value='65';volume.dispatchEvent(new Event('input'));
-    assert(Math.abs(background.volume-.65*.2)<1e-8);assert.equal(event.volume,background.volume);
-    button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
-    assert.deepEqual(JSON.parse(storage.get('kirby.audio.music')!),{enabled:true,volume:.65},'persist the configured level, never the ducked level');
-    music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);assert.equal(event.playbackRate,1);
-    next.dispatchEvent(new Event('click'));assert(Math.abs(background.volume-.65*.2)<1e-8,'changing tracks keeps the quieter mix');
-    music.updateDucking(false,.05);assert(background.volume>.65*.2&&background.volume<.65,'fade back rather than jump');
-    for(let i=0;i<240;i++)music.updateDucking(false,1/60);
     assert.equal(background.volume,.65);assert.equal(event.volume,.65);
-    music.updateDucking(true,1);music.stop();assert(background.paused);assert.equal(background.volume,.65,'a new session must not inherit ducking');
+    button.dispatchEvent(new Event('click'));assert(event.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);
+    assert.deepEqual(JSON.parse(storage.get('kirby.audio.music')!),{enabled:true,volume:.65});
+    music.setEvent('celebrate');await Promise.resolve();
+    assert(event.src.endsWith('/audio/topotushka-victory.wav'),'the duel ends with the same cheerful victory music as Topotushka');
+    assert(!event.loop);assert(!event.paused);assert(background.paused);assert.equal(event.volume,.65);assert.equal(event.playbackRate,1);
+    music.updateKnightPhase(3,1);assert.equal(event.playbackRate,1,'victory music uses its original tempo');
+    button.dispatchEvent(new Event('click'));assert(event.paused);
+    music.setEvent('knight');music.setEvent('celebrate');assert(event.paused,'winning respects the music toggle');
+    button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!event.paused);assert.equal(event.volume,.65);
+    music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);assert.equal(event.playbackRate,1);
+    next.dispatchEvent(new Event('click'));assert.equal(background.volume,.65,'changing tracks keeps the configured volume');
+    assert.equal(background.volume,.65);assert.equal(event.volume,.65);
+    music.stop();assert(background.paused);assert.equal(background.volume,.65);
   } finally {
     if (originalAudio) Object.defineProperty(globalThis, 'Audio', originalAudio); else Reflect.deleteProperty(globalThis, 'Audio');
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');
@@ -132,7 +134,7 @@ test('menu autoplay keeps the music preference and retries on activation without
   music.start();assert.equal(background.playCalls,plays);assert.equal(background.currentTime,17.25);assert.equal(background.loads,1,'entering the game must not reload the menu track');
   doc.dispatchEvent(new Event('keydown'));await Promise.resolve();assert.equal(background.playCalls,plays,'gesture retries are removed after playback starts');
   music.setEvent('knight');await Promise.resolve();assert(background.paused);
-  music.updateDucking(true,1);music.enterMenu();await Promise.resolve();assert(!background.paused);assert.equal(background.currentTime,17.25);assert.equal(background.volume,.25);assert(audios[1].paused);
+  music.enterMenu();await Promise.resolve();assert(!background.paused);assert.equal(background.currentTime,17.25);assert.equal(background.volume,.25);assert(audios[1].paused);
   button.dispatchEvent(new Event('click'));assert(background.paused);music.enterMenu();doc.dispatchEvent(new Event('pointerup'));await Promise.resolve();assert(background.paused,'menu entry respects mute');
   music.stop();
  }finally{for(const [key,descriptor] of saved){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}}

@@ -56,6 +56,11 @@ export class MetaKnightArenaTravel{
  controlsHint(interactKey:string,attackKey:string){return this.actions.map(a=>`${a.key==='interact'?interactKey:attackKey} — ${t(a.label)}`).join(', ');}
  interact(){const action=this.actions.find(a=>a.key==='interact')?.action;if(action==='leave')this.leave();else if(action==='finish')this.cancelBattle();else if(action==='start')this.startBattle();}
  get engaged(){const s=this.battle,p=s?.players[this.battleOptions?.id()??'solo'];return knightBattleActive(s)&&!!p&&!p.withdrawn&&s!.id!==this.withdrawnBattle;}
+ get musicEvent():false|'knight'|'celebrate'{
+  const s=this.battle,p=s?.players[this.battleOptions?.id()??'solo'];
+  if(!this.active||!s||!p||p.withdrawn||s.id===this.withdrawnBattle)return false;
+  return knightBattleActive(s)?'knight':s.stage==='won'&&p.hp>0?'celebrate':false;
+ }
  get duelCommandsAvailable(){return this.active&&!this.battleOptions?.online()&&this.engaged&&(this.battle?.players[this.battleOptions?.id()??'solo']?.hp??0)>0;}
  get godMode(){return this.soloGodMode&&this.duelCommandsAvailable;}
  private setGodMode(enabled:boolean){
@@ -79,7 +84,7 @@ export class MetaKnightArenaTravel{
  loading=false;
  get active(){return !!this.current&&!this.loading;}
  get scene(){return this.current?.scene;}
- constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound,playbackRate?:number)=>void;stopCosmic?:()=>void;chargeAudio?:(level:number)=>void;prepareCosmic?:()=>Promise<void>|void;firefly?:()=>GLTF|undefined;music?:(active:boolean)=>void}){
+ constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:()=>CharacterController|undefined,private battleOptions?:{online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];send:(action:'start'|'attack'|'cancel')=>void;win:()=>void;cue:(kind:KnightSound,playbackRate?:number)=>void;stopCosmic?:()=>void;chargeAudio?:(level:number)=>void;prepareCosmic?:()=>Promise<void>|void;firefly?:()=>GLTF|undefined;music?:(active:false|'knight'|'celebrate')=>void}){
   this.overlay.id='arena-loader';this.overlay.hidden=true;this.overlay.setAttribute('role','status');this.overlay.setAttribute('aria-live','polite');
   this.spinner.className='arena-loading-orbit';this.back.type=this.retry.type='button';
   this.retry.addEventListener('click',()=>{const c=this.owner,arrival=this.arrival;this.leave();if(c)void this.enter(c,arrival);});
@@ -150,7 +155,7 @@ export class MetaKnightArenaTravel{
   if(finished){c.actor.position.set(SITE.x,0,-2);c.yaw=Math.PI;c.actor.rotation.y=Math.PI;}
   this.clearInput();this.attackHeld=false;this.withdrawnBattle=0;
   if(this.battleOptions?.online())this.battleOptions.send('start');else{this.soloBattle=startKnightBattle([this.localActor(c)],this.localActor(c).id,this.soloNow);}
-  this.battleOptions?.music?.(true);
+  this.battleOptions?.music?.('knight');
  }
  cancelBattle(){
   const c=this.owner,s=this.battle,id=this.battleOptions?.id()??'solo';if(!c||!s||!s.players[id]||s.players[id].withdrawn)return;
@@ -169,7 +174,7 @@ export class MetaKnightArenaTravel{
   if(!paused)this.soloNow+=dt*1000;const now=this.battleOptions?.online()?this.battleOptions.now():this.soloNow,id=this.battleOptions?.id()??'solo';let battle=this.battle;
   const player=battle?.players[id],withdrawn=battle?.id===this.withdrawnBattle||!!player?.withdrawn,participating=!!player&&!withdrawn,active=knightBattleActive(battle)&&participating;
   const defeated=participating&&player?.hp===0;
-  if(active||defeated)c.beginDuel();else c.endDuel();this.battleOptions?.music?.(active);
+  if(active||defeated)c.beginDuel();else c.endDuel();
   this.syncCosmicFlight(c,battle,now,participating);
   const stopped=paused||defeated||active&&(battle?.stage==='intro'||cosmicControlsLocked(battle));
   const previous=c.actor.position.clone(),previousYaw=c.yaw;c.fruitBoost.update(paused?0:dt);
@@ -184,6 +189,7 @@ export class MetaKnightArenaTravel{
   if(!paused)this.attackHeld=!!input.attack;
   if(!paused&&battle&&!this.battleOptions?.online())advanceKnightBattle(battle,[this.localActor(c)],now,this.soloGodMode?id:undefined);
   battle=this.battle;
+  this.battleOptions?.music?.(this.musicEvent);
   this.syncCosmicFlight(c,battle,now,participating);
   this.constrainShield(c.actor.position,previous);
   if(!this.duelCommandsAvailable)this.setGodMode(false);

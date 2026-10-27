@@ -32,7 +32,6 @@ export class BackgroundMusic {
   private eventActive:boolean|'celebrate'|'knight'=false;
   private enabled = true;
   private volume = .25;
-  private mix = 1;
   private started = false;
   private track = 0;
   private shuffle = false;
@@ -89,14 +88,6 @@ export class BackgroundMusic {
     onLocaleChange(()=>{this.updateButton();this.updateTrackLabel();});
   }
 
-  /** Temporary attenuation on the existing frame clock; the saved slider value stays intact. */
-  updateDucking(ducked:boolean,dt:number){
-    const target=ducked?.2:1;
-    if(this.mix===target)return;
-    this.mix+=(target-this.mix)*(1-Math.exp(-Math.max(0,dt)/(ducked?.09:.3)));
-    if(Math.abs(this.mix-target)<.001)this.mix=target;
-    this.applyVolume();
-  }
   /** Preserve pitch while the final duel phase gradually gains tempo. */
   updateKnightPhase(phase:number,dt:number){
     const audio=this.eventAudio;if(!audio||this.eventActive!=='knight')return;
@@ -105,7 +96,7 @@ export class BackgroundMusic {
     audio.playbackRate=Math.abs(rate-target)<.0005?target:rate;
   }
   private applyVolume(){
-    this.audio.volume=this.volume*this.mix;
+    this.audio.volume=this.volume;
     if(this.eventAudio)this.eventAudio.volume=this.audio.volume;
   }
 
@@ -127,9 +118,9 @@ export class BackgroundMusic {
     this.updateTrackLabel();
     if(this.enabled)void this.play();
   }
-  enterMenu() { this.mix=1;this.applyVolume();this.setEvent(false);this.start(); }
+  enterMenu() { this.setEvent(false);this.start(); }
   start() { this.started = true; if (this.enabled&&(this.eventActive?this.eventAudio!:this.audio).paused) void this.play(); }
-  stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false;this.mix=1;this.applyVolume(); }
+  stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false; }
 
   private skip(direction: number) {
     let position = this.trackOrder.indexOf(this.track);
