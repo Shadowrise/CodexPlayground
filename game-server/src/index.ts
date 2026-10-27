@@ -340,13 +340,11 @@ export class GameRoom extends DurableObject<Env>{
   if(this.players().some(s=>{const a=s.deserializeAttachment() as Attachment;return playerNameKey(a.name??a.actor?.name??'')===key;}))return this.reject('Игрок с таким именем уже на полянке. Выбери другое имя или выйди из игры на другом устройстве.');
   if(this.players().length>=MAX_PLAYERS)return Response.json({error:'ROOM_FULL'},{status:503});
   if(this.room?.festival&&Date.now()>=this.room.festival.endsAt&&this.players().length)return new Response('Celebration finished. Try again shortly.',{status:409});
-  let variant=Number(url.searchParams.get('variant'));
+  const variant=Number(url.searchParams.get('variant'));
   if(!url.searchParams.has('variant')||!Number.isInteger(variant)||variant<0||variant>=KIRBY_VARIANTS.length)return new Response('Invalid variant',{status:400});
   const first=this.players().length===0;
   const saved=!first&&this.room?await this.ctx.storage.get<DepartedPlayer>(`player:${this.room.id}:${key}`):undefined;
   const occupied=new Set(this.players().map(s=>(s.deserializeAttachment() as Attachment).variant));
-  // Restore the original colour if it is still free; otherwise keep the new selection.
-  if(saved&&!occupied.has(saved.actor.variant))variant=saved.actor.variant;
   if(occupied.has(variant))return this.reject('Этот цвет уже занят. Выбери другого Кирби.');
   const id=saved?.id??crypto.randomUUID();
   if(first){const prepared=await this.ctx.storage.get<RoomState>('prepared-room');await this.ctx.storage.deleteAll();this.room=prepared??this.newRoom();this.room.epoch=Date.now();this.room.dayPhase=INITIAL_DAY_PHASE;this.restoreSeals();this.room.host=id;}

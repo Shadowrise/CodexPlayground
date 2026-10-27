@@ -385,8 +385,15 @@ setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
 let menuRepeat=0;
 function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:number,vertical:number,repeat:boolean){
  if(!startupCard.hidden){
-  if(pad.pressed.has(2))loadButton.click();
-  else if(pad.pressed.has(0))newGameButton.click();
+  const buttons=[...startupCard.querySelectorAll<HTMLButtonElement>('.startup-section button')]
+    .filter(button=>!button.disabled&&button.getClientRects().length>0&&!button.closest('[inert]'));
+  if(!buttons.length)return;
+  let index=buttons.indexOf(document.activeElement as HTMLButtonElement);
+  if(index<0)index=0;
+  else if(repeat&&vertical)index=(index+vertical+buttons.length)%buttons.length;
+  const button=buttons[index];
+  if(document.activeElement!==button){button.focus({preventScroll:true});button.scrollIntoView({block:'nearest'});}
+  if(pad.pressed.has(0))button.click();
  }else if(!selectionCard.hidden){
   if(repeat){
    const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length,delta=horizontal+vertical*columns;
@@ -394,7 +401,7 @@ function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:nu
    for(let step=0;delta&&step<KIRBY_VARIANTS.length;step++){
     i=(i+delta+KIRBY_VARIANTS.length)%KIRBY_VARIANTS.length;
     const button=variantGrid.children[i] as HTMLButtonElement;
-    if(!button.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0])){button.click();break;}
+    if(!button.disabled&&!characterUnlocks.isLocked(KIRBY_VARIANTS[i][0])){button.click();button.scrollIntoView({block:'nearest'});break;}
    }
   }
   if(pad.pressed.has(1))backButton.click();
@@ -402,18 +409,21 @@ function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:nu
  }
 }
 // Menu input remains available while world and graphics preparation yield.
-let earlyMenuFrame=0,earlyMenuTime=performance.now();
+let earlyMenuFrame=0,earlyMenuTime=performance.now(),earlyMenuDirection='';
 function pollEarlyMenu(time:number){
  earlyMenuFrame=0;
  if(!document.body.classList.contains('choosing'))return;
  const dt=Math.min((time-earlyMenuTime)/1000,.05);earlyMenuTime=time;
  const pad=gamepad.poll(),usingPad=!document.body.classList.contains('loading')&&gamepad.input.active!=='keyboard';
- if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'');}
+ startupCard.classList.toggle('gamepad-navigation',usingPad);
+ if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · A — подтвердить':'');}
  menuRepeat=Math.max(0,menuRepeat-dt);
  const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
  const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
- const repeat=(horizontal!==0||vertical!==0)&&menuRepeat===0;
- if(repeat)menuRepeat=.22;if(!horizontal&&!vertical)menuRepeat=0;
+ const direction=usingPad?`${horizontal},${vertical}`:'0,0',changed=direction!==earlyMenuDirection||pad.changed;
+ const repeat=usingPad&&(horizontal!==0||vertical!==0)&&(changed||menuRepeat===0);
+ if(repeat)menuRepeat=changed ? .35 : .18;if(!horizontal&&!vertical)menuRepeat=0;
+ earlyMenuDirection=direction;
  if(usingPad)navigateCharacterMenu(pad,horizontal,vertical,repeat);
  earlyMenuFrame=requestAnimationFrame(pollEarlyMenu);
 }
@@ -731,6 +741,7 @@ const stopDragging = () => {
 };
 let tutorialStorage:Storage|undefined;try{tutorialStorage=localStorage;}catch{}
 const clearTutorialInput=()=>{keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();touch?.reset();};
+gamepad.onChange(clearTutorialInput);
 const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  clearTutorialInput();interactionOutline.update(undefined);wayfinder.selectDestination('');
  document.body.classList.toggle('in-meta-knight-arena',cosmicArena.active||cosmicArena.loading);
@@ -1085,14 +1096,13 @@ renderer.setAnimationLoop((time: number) => {
   previousTime = time;
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
-  if(pad.changed){pendingEmote=undefined;emoteWheel.close();keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;stopDragging();}
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
   const controlScheme=gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard';
   const tutorialWasOpen=tutorial.active;
   tutorial.setScheme(controlScheme);
   if(usingPad&&tutorialWasOpen)tutorial.gamepad(pad.pressed);
   if(controlScheme!==controlMode){controlMode=controlScheme;for(const element of controlHints)element.hidden=element.dataset.controls!==controlScheme;}
-  if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: A — новая игра · X — загрузить сохранение':'');}
+  if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · A — подтвердить':'');}
   if(usingPad && !tutorialWasOpen && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
   const settingsOpen=!audioPanel.hidden || chat.open || roundFinished() || tutorial.active || tutorialWasOpen;
   emoteWheel.setPigeon(!!character?.isPigeon);touch?.setPigeon(!!character?.isPigeon);

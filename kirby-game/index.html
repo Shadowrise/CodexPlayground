@@ -34,11 +34,13 @@
     <div id="menu-backdrop" aria-hidden="true" inert><img src="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=5" alt="" fetchpriority="high" /><video data-src="%BASE_URL%backgrounds/meadow-menu.mp4?v=5" muted loop playsinline preload="none" disablepictureinpicture></video></div>
     <div id="startup-loader" role="status" aria-live="polite"><div class="loading-status"><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
     <section id="character-select" aria-labelledby="select-title">
-      <div class="selection-card">
+      <div class="selection-card character-selection-card">
         <h2 id="select-title">Какой Кирби — ты?</h2>
-        <p class="selection-description">Выбери своего Кирби. На поляне тебя уже ждут 14 друзей.</p>
-        <div id="player-name-field" class="name-field"><label for="player-name-input">Твоё имя <span aria-hidden="true">*</span></label><input id="player-name-input" name="nickname" type="text" required maxlength="24" autocomplete="nickname" placeholder="Как тебя зовут?" aria-describedby="player-name-hint" /><small id="player-name-hint">Обязательно · до 24 символов</small></div>
-        <div id="variant-grid" aria-label="Варианты Кирби"></div>
+        <div class="selection-options">
+          <p class="selection-description">Выбери своего Кирби. На поляне тебя уже ждут 14 друзей.</p>
+          <div id="player-name-field" class="name-field"><label for="player-name-input">Твоё имя <span aria-hidden="true">*</span></label><input id="player-name-input" name="nickname" type="text" required maxlength="24" autocomplete="nickname" placeholder="Как тебя зовут?" aria-describedby="player-name-hint" /><small id="player-name-hint">Обязательно · до 24 символов</small></div>
+          <div id="variant-grid" aria-label="Варианты Кирби"></div>
+        </div>
         <div class="selection-bottom"><button id="character-back" type="button">← Назад</button><button id="start-game">На поляну →</button></div>
         <p id="selection-message" role="status" hidden></p>
       </div>

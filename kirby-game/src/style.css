@@ -2,9 +2,12 @@
 :root { color-scheme: dark; --ui-bg: #171e29; --ui-raised: #253142; --ui-hover: #33435a; --ui-border: #52647c; --ui-text: #f0f4fa; --ui-muted: #bdcadb; --ui-accent: #a6edbf; --ui-focus: #ffd782; font-family: 'Manrope', system-ui, sans-serif; color: var(--ui-text); font-synthesis: none; }
 .choosing .title, .choosing .status, .choosing .controls, .choosing .player-stats, .choosing .music-controls { visibility: hidden; }
 .choosing #game { visibility: hidden; }
-#character-select { position: fixed; inset: 0; z-index: 10; display: grid; place-items: safe center; overflow-y: auto; padding: 24px; background: #090e182e; }
+#character-select { position: fixed; inset: 0; z-index: 10; display: grid; grid-template-rows: minmax(0, 1fr); place-items: safe center; overflow-y: auto; padding: 24px; background: #090e182e; }
 #character-select[hidden] { display: none; }
 .selection-card { width: min(650px, 100%); padding: 30px; background: #171e29fa; border: 1px solid var(--ui-border); border-radius: 28px; box-shadow: 0 24px 100px #00000066; }
+.character-selection-card { display: flex; flex-direction: column; min-height: 0; max-height: 100%; }
+.character-selection-card > :not(.selection-options) { flex-shrink: 0; }
+.selection-options { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 6px; margin: -6px; }
 .selection-card h2 { font-size: 33px; letter-spacing: -1.4px; margin: 12px 0 8px; }
 .selection-description { color: var(--ui-muted); font-size: 13px; margin: 0 0 24px; line-height: 1.6; }
 #variant-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -77,6 +80,7 @@
 #start-game:disabled { opacity: .55; cursor: wait; }
 #selection-message { font-size: 10px; color: var(--ui-muted); margin: 18px 0 0; line-height: 1.5; }
 @media (max-width: 520px) { #character-select { padding: 12px; place-items: start center; } .selection-card { padding: 20px; } #variant-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; } .selection-card h2 { font-size: 27px; } .selection-bottom { gap: 8px; } #start-game { padding: 13px; } }
+@media (max-height: 500px) { .character-selection-card { padding: 16px 20px; } .character-selection-card h2 { font-size: 27px; margin: 0 0 12px; } .character-selection-card .selection-bottom { margin-top: 16px; } }
 .welcome-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0 20px; }
 .selection-card .welcome-heading h2 { min-width: 0; margin: 0; line-height: 1.15; }
 .language-switcher { position: relative; flex: 0 0 auto; display: grid; grid-template-columns: repeat(3,34px); padding: 3px; border: 1px solid var(--ui-border); border-radius: 12px; background: #0e141ecc; }
@@ -281,6 +285,7 @@ button:disabled { cursor:default; }
  flex:none;width:calc(100% - 96px);height:72px;box-sizing:border-box;padding:12px 14px;border-width:1px;border-style:solid;font:inherit;font-weight:700;line-height:22px;
 }
 #startup-menu #new-game {border-color:transparent;}
+#startup-menu.gamepad-navigation .startup-section button:focus {outline:3px solid var(--ui-focus);outline-offset:4px;}
 @media(max-width:520px){#startup-menu #new-game,#startup-menu #load-game,#startup-menu .network-entry button{height:100px;}}
 
 .right-hud {bottom:16px;max-height:none;overflow:hidden;}

@@ -8,7 +8,7 @@ import {playerNameKey} from '../src/player-name';
 import {createStarfall,validStarfall,RESULTS_MS} from '../src/starfall';
 import {cyclePhase,phaseAtHour,DAY_CYCLE_MS} from '../src/day-cycle';
 
-test('room restores disconnected players by name, rejects online duplicates, and forgets an empty session',async()=>{
+test('room restores progress with the newly selected character, rejects online duplicates, and forgets an empty session',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
   .replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(public ctx:any,public env:any){} }')
   .replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href)
@@ -51,24 +51,35 @@ test('room restores disconnected players by name, rejects online duplicates, and
   assert.equal(writes,1);assert.equal(room.room.host,second.data.id);assert(!room.room.locks['bug:0']);
   // A new Durable Object instance recovers the shared storage checkpoint.
   await wake();now+=5000;
-  const returned=await join('кирби друг',3),welcome=returned.messages.find(m=>m.type==='welcome');
-  assert.equal(welcome.playerId,id);assert.equal(welcome.room.id,roomId);assert.equal(welcome.resume.variant,0);
+  // The requested character must be free even when the original character is available.
+  const occupied=await join('кирби друг',1);assert.equal(occupied.messages[0].type,'error');assert.match(occupied.messages[0].message,/цвет/);
+  assert.equal(room.info().players,1);assert.equal(writes,1);
+  const returned=await join('кирби друг',18),welcome=returned.messages.find(m=>m.type==='welcome');
+  assert.equal(welcome.playerId,id);assert.equal(welcome.room.id,roomId);assert.equal(welcome.resume.variant,18);
+  assert.equal(returned.data.variant,18);assert.equal(returned.data.actor.variant,18);assert.deepEqual(room.info().occupiedVariants,[1,18]);
   assert.equal(welcome.resume.fruits,1);assert.deepEqual(welcome.resume.achievements,['mill','bench']);
   assert.deepEqual(welcome.resume.p,[12,4,-16]);assert.equal(welcome.resume.progress.checkpoint,2);assert.equal(welcome.resume.progress.size,2.2);
   assert.deepEqual(welcome.resume.fruitBoost,{stacks:1,remaining:15});
   assert.equal(welcome.resume.state,'Idle');assert(!welcome.resume.ride);assert.equal(welcome.resume.star,25);assert(validActor(welcome.resume));
   assert.equal(welcome.room.fruits[0],id);assert.equal(welcome.room.festival.players[id].bonus,6);
   // Rejoining cannot claim an already-collected festival star again.
-  send(returned,welcome.resume,[{type:'festival-star',index:0}]);assert.equal(room.room.festival.players[id].bonus,6);
+  send(returned,{...welcome.resume,variant:0},[{type:'festival-star',index:0}]);assert.equal(room.room.festival.players[id].bonus,6);
+  assert.equal(returned.data.actor.variant,18,'frames retain the character selected on rejoin');
+  assert.equal(second.messages.filter(m=>m.type==='frame'&&m.id===id&&m.actor).at(-1).actor.variant,18,'other players receive the newly selected character');
+  assert.equal(room.room.festival.players[id].variant,18);
   const count=writes;send(returned,welcome.resume);assert.equal(writes,count);
   assert.equal((await join('Кирби Друг',4)).messages[0].type,'error');
   // Riding is not restored: dismount at the same horizontal location, release the lock.
   send(returned,{...welcome.resume,p:[22,11,33],ride:{key:'bug:0',data:Array(10).fill(0)}},[{type:'lock',key:'bug:0'}]);
   send(returned,{...welcome.resume,p:[22,11,33],ride:{key:'bug:0',data:Array(10).fill(0)}});
-  await room.webSocketClose(returned);const colourUser=await join('Новый',0);
-  const fallback=await join('Кирби Друг',4),restored=fallback.messages[0].resume;
-  assert.equal(restored.variant,4);assert.deepEqual(restored.p,[22,0,33]);assert(!restored.ride);assert.equal(fallback.data.id,id);
-  await room.webSocketClose(second);await room.webSocketClose(colourUser);await room.webSocketClose(fallback);
+  await room.webSocketClose(returned);const colourUser=await join('Новый',18);
+  const reselected=await join('Кирби Друг',17),restored=reselected.messages[0].resume;
+  assert.equal(restored.variant,17);assert.deepEqual(restored.p,[22,0,33]);assert(!restored.ride);assert.equal(reselected.data.id,id);
+  assert.equal(reselected.data.variant,17,'a different character remains available when the previous one is occupied');
+  await room.webSocketClose(reselected);await wake();const sameSelection=await join('Кирби Друг',17);
+  assert.equal(sameSelection.messages[0].resume.variant,17,'rejoining with the same selection keeps that character');
+  assert.equal(sameSelection.data.id,id);assert.equal(sameSelection.messages[0].resume.fruits,1);assert.deepEqual(sameSelection.messages[0].resume.achievements,['mill','bench']);
+  await room.webSocketClose(second);await room.webSocketClose(colourUser);await room.webSocketClose(sameSelection);
   assert.equal(room.room,undefined);assert.equal(storage.size,0);
   const fresh=await join('Кирби Друг',0);assert.notEqual(fresh.messages[0].room.id,roomId);assert.notEqual(fresh.data.id,id);assert(!fresh.messages[0].resume);assert(fresh.messages[0].room.fruits.every((x:unknown)=>x===null));
   // Admin disconnect uses normal departure cleanup, transfers host and releases rides.

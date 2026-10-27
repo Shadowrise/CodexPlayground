@@ -46,8 +46,8 @@ and normalized name. Returning during the same occupied session restores the
 same player ID, fruit ownership, achievements, size, grounded position,
 orientation, sky checkpoint and festival rewards. Temporary star power expires
 while away. Rides are released, and a returning rider appears on the ground at
-the same horizontal location. The previous colour is restored when free;
-otherwise the new selected colour is used. Snapshots survive host migration and
+the same horizontal location. Returning players use the character selected for
+this connection; an occupied selection is rejected. Snapshots survive host migration and
 hibernation, but are deleted when the room empties or its results timer expires.
 Player recovery records are written on departure; shared room checkpoints follow
 the world updates and room changes described above, without extra periodic requests.
@@ -194,6 +194,16 @@ local room and never mutates a production room.
   Chrome on Windows; override `BROWSER_EXECUTABLE` or install Playwright Chromium.
 
 ## Publish
+
+The 2026-10-27 release snapshot preserves the newly selected character on rejoin
+while restoring the player's progress. It also includes automatic controller
+selection, built-in raw HID profiles, startup-menu navigation and the scrollable
+character picker. All 946 tests, the production client build, Worker types,
+dry run and isolated local capacity/multiplayer smoke checks passed. The smoke
+scripts read the shared build rather than a hard-coded historical value.
+BUILD remains `meadow-network-41` / protocol 2. Publish the Worker with
+`--keep-vars`, then push `main` for the existing Vercel Git integration.
+Release results are recorded locally in `.cache/release-20261027-controls/`.
 
 The `meadow-network-41` / protocol 2 release gives the phase-three
 yellow cross a minimum three-second warning. Longer escape paths still use
