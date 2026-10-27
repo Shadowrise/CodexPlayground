@@ -25,7 +25,9 @@ try{
   });
   const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{
-    localStorage.clear();localStorage.setItem('kirby-language-v1','ru');
+    if(!sessionStorage.getItem('qa-menu-initialized')){
+      localStorage.clear();localStorage.setItem('kirby-language-v1','ru');sessionStorage.setItem('qa-menu-initialized','1');
+    }
     window.qaPad={id:'Unknown Gamepad (Vendor: 045e Product: 0b13)',index:0,connected:true,mapping:'',
       axes:[.055,-.045,-.039,-1,-1,-.002,0,0,0,1227133568],
       buttons:Array.from({length:15},()=>({pressed:false,touched:false,value:0}))};
@@ -68,7 +70,19 @@ try{
   assert.equal(await page.locator('#network-join').evaluate(button=>getComputedStyle(button).outlineWidth),'3px');
   await page.screenshot({path:fileURLToPath(new URL('../.cache/gamepad-menu-focus.png',import.meta.url))});
   await hat(-1);await focused('new-game');
-  await hat(-1);await focused('network-join'); // Wrap upward past the disabled load action.
+  await hat(-1);await page.waitForFunction(()=>document.activeElement?.dataset.language==='ru');
+  assert.equal(await page.locator('#startup-menu .language-switcher [data-language="ru"]').evaluate(button=>getComputedStyle(button).outlineWidth),'3px');
+  await hat(-3/7);await page.waitForFunction(()=>document.documentElement.lang==='en');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('kirby-language-v1')),'en');
+  assert.equal(await selector.inputValue(),key,'changing the language keeps controller input active');
+  await hat(-3/7);await page.waitForFunction(()=>document.documentElement.lang==='bg');
+  await hat(5/7);await page.waitForFunction(()=>document.documentElement.lang==='en');
+  await hat(5/7);await page.waitForFunction(()=>document.documentElement.lang==='ru');
+  await button(0);assert(await page.locator('#startup-menu').isVisible(),'A on a flag confirms the language without starting a game');
+  await page.screenshot({path:fileURLToPath(new URL('../.cache/gamepad-language-focus.png',import.meta.url))});
+  await hat(1/7);await focused('new-game');
+  await hat(-1);await page.waitForFunction(()=>document.activeElement?.dataset.language==='ru');
+  await hat(-1);await focused('network-join'); // Wrap upward from language past the disabled load action.
   await button(0);await page.locator('#startup-menu').waitFor({state:'hidden'});
   assert(await page.locator('#player-name-input').isVisible(),'A confirms the highlighted online entry');
   await button(1);await page.locator('#startup-menu').waitFor({state:'visible'});
@@ -82,15 +96,16 @@ try{
   await button(0);await page.waitForFunction(()=>qaLoadClicks===1);
   assert(await page.locator('#startup-menu').isVisible(),'A activates the focused load action rather than New Game');
   await hat(1/7);await focused('network-join');
-  await hat(1/7);await focused('new-game'); // Wrap down from the final action.
+  await hat(1/7);await page.waitForFunction(()=>document.activeElement?.dataset.language==='ru');
+  await hat(1/7);await focused('new-game'); // Down from language returns to the first action.
 
   await page.evaluate(()=>{
-    window.qaFocusMoves=[];document.querySelector('#startup-menu').addEventListener('focusin',event=>qaFocusMoves.push({id:event.target.id,time:performance.now()}));
+    window.qaFocusMoves=[];document.querySelector('#startup-menu').addEventListener('focusin',event=>qaFocusMoves.push({id:event.target.closest('.language-switcher')?'language':event.target.id,time:performance.now()}));
   });
   await hat(1/7);await focused('load-game');
   await page.waitForFunction(()=>qaFocusMoves.length>=3);
   const moves=await page.evaluate(()=>qaFocusMoves.slice(0,3));
-  assert.deepEqual(moves.map(move=>move.id),['load-game','network-join','new-game']);
+  assert.deepEqual(moves.map(move=>move.id),['load-game','network-join','language']);
   assert(moves[1].time-moves[0].time>=250,'holding a direction waits before repeating');
   await neutral();const count=await page.evaluate(()=>qaFocusMoves.length);await settle();
   assert.equal(await page.evaluate(()=>qaFocusMoves.length),count,'releasing the direction stops repeat');
@@ -101,9 +116,15 @@ try{
   assert.equal(await selector.inputValue(),key,'a deliberate left-stick tilt can start navigation directly');
   await neutral();await page.evaluate(()=>qaPad.axes[1]=-1);await focused('new-game');
   await button(0);await page.locator('#startup-menu').waitFor({state:'hidden'});
+  await button(1);await page.locator('#startup-menu').waitFor({state:'visible'});
+  await hat(-1);await page.waitForFunction(()=>document.activeElement?.dataset.language==='ru');
+  await hat(-3/7);await page.waitForFunction(()=>document.documentElement.lang==='en');
+  await page.reload({waitUntil:'commit'});await page.locator('#new-game').waitFor({state:'visible',timeout:60000});
+  assert.equal(await page.locator('html').getAttribute('lang'),'en');
+  assert.equal(await page.locator('#startup-menu .language-switcher [aria-checked="true"]').getAttribute('data-language'),'en');
   assert.equal(await page.evaluate(()=>performance.getEntriesByName('kirby-game-ready').length),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS: initial-menu D-pad/stick navigation, focus outline, disabled-action skipping, wrap, repeat, A confirmation and B back work before world loading finishes.');
+  console.log('PASS: initial-menu D-pad/stick navigation, language focus/change/persistence, disabled actions, wrap, repeat, A confirmation and B back work before world loading finishes.');
 }finally{
   releaseModels();await browser.close();
 }

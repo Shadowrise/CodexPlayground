@@ -7,6 +7,33 @@ export const PIGEON_EMOTES=[...EMOTES,{id:'Peck',name:'Клевать с зем�
 export type PlayerEmote=typeof PIGEON_EMOTES[number]['id'];
 export const emotesFor=(pigeon=false)=>pigeon?PIGEON_EMOTES:EMOTES;
 export function emoteSector(x:number,y:number,count:number=EMOTES.length){if(Math.hypot(x,y)<.4)return undefined;return Math.round((Math.atan2(x,-y)+Math.PI*2)%(Math.PI*2)/(Math.PI*2/count))%count;}
+/** Keep the last choice and consume the gesture until the stick returns to neutral. */
+export class EmoteWheelSelection {
+ open=false;
+ selected:number|undefined;
+ private waitingForNeutral=false;
+ private cancelledUntilRelease=false;
+ get blocksMovement(){return this.open||this.waitingForNeutral||this.cancelledUntilRelease;}
+ update(held:boolean,x:number,y:number,cancel=false,count:number=EMOTES.length):number|undefined {
+  const neutral=Math.hypot(x,y)<.2;
+  if(neutral)this.waitingForNeutral=false;
+  if(cancel&&(this.open||held)){
+   this.open=false;this.selected=undefined;this.waitingForNeutral=!neutral;this.cancelledUntilRelease=held;return;
+  }
+  if(this.cancelledUntilRelease){if(!held)this.cancelledUntilRelease=false;return;}
+  if(held){
+   if(!this.open)this.selected=undefined;
+   this.open=true;
+   const sector=emoteSector(x,y,count);if(sector!==undefined)this.selected=sector;
+   return;
+  }
+  if(!this.open)return;
+  const result=this.selected;
+  this.open=false;this.selected=undefined;this.waitingForNeutral=!neutral;
+  return result;
+ }
+ reset(){this.open=false;this.selected=undefined;this.waitingForNeutral=this.cancelledUntilRelease=false;}
+}
 export class EmotePose {
  elapsed=0;
  private restore:(()=>void)[]=[];
@@ -32,8 +59,10 @@ export class EmoteWheel {
  readonly element=document.createElement('div');
  private choices:HTMLElement[]=[];
   private emotes:readonly typeof PIGEON_EMOTES[number][]=EMOTES;
- open=false;
- selected:number|undefined;
+ private selection=new EmoteWheelSelection();
+ get open(){return this.selection.open;}
+ get selected(){return this.selection.selected;}
+ get blocksMovement(){return this.selection.blocksMovement;}
  constructor(){
   this.element.className='emote-wheel';this.element.hidden=true;this.element.setAttribute('role','dialog');this.element.setAttribute('aria-label',t('Выбор эмоции'));
   const center=document.createElement('div');center.className='emote-center';center.textContent=t('Эмоции');this.element.append(center);
@@ -47,9 +76,9 @@ export class EmoteWheel {
  }
  setPigeon(pigeon:boolean){const emotes=emotesFor(pigeon);if(this.emotes===emotes)return;this.close();this.emotes=emotes;this.renderChoices();}
  update(held:boolean,x:number,y:number,cancel=false):PlayerEmote|undefined{
-  if(cancel){this.close();return;}
-  if(held){this.open=true;this.element.hidden=false;this.selected=emoteSector(x,y,this.emotes.length);this.choices.forEach((c,i)=>c.classList.toggle('selected',i===this.selected));return;}
-  const result=this.open && this.selected!==undefined?this.emotes[this.selected].id:undefined;this.close();return result;
+  const index=this.selection.update(held,x,y,cancel,this.emotes.length);
+  this.element.hidden=!this.open;this.choices.forEach((choice,i)=>choice.classList.toggle('selected',i===this.selected));
+  return index===undefined?undefined:this.emotes[index].id;
  }
- close(){this.open=false;this.selected=undefined;this.element.hidden=true;}
+ close(){this.selection.reset();this.element.hidden=true;this.choices.forEach(choice=>choice.classList.remove('selected'));}
 }

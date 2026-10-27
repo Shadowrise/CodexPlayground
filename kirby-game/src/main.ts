@@ -385,15 +385,19 @@ setInterval(()=>{if(!document.hidden)void refreshVariantAvailability();},10000);
 let menuRepeat=0;
 function navigateCharacterMenu(pad:ReturnType<typeof gamepad.poll>,horizontal:number,vertical:number,repeat:boolean){
  if(!startupCard.hidden){
-  const buttons=[...startupCard.querySelectorAll<HTMLButtonElement>('.startup-section button')]
+  const languageButtons=[...startupCard.querySelectorAll<HTMLButtonElement>('.language-switcher button')];
+  const buttons=[...startupCard.querySelectorAll<HTMLButtonElement>('.language-switcher button[aria-checked="true"],.startup-section button')]
     .filter(button=>!button.disabled&&button.getClientRects().length>0&&!button.closest('[inert]'));
   if(!buttons.length)return;
   let index=buttons.indexOf(document.activeElement as HTMLButtonElement);
+  if(languageButtons.includes(document.activeElement as HTMLButtonElement))index=0;
   if(index<0)index=0;
   else if(repeat&&vertical)index=(index+vertical+buttons.length)%buttons.length;
-  const button=buttons[index];
+  let button=buttons[index];
+  const changeLanguage=repeat&&horizontal&&languageButtons.includes(button);
+  if(changeLanguage)button=languageButtons[(languageButtons.indexOf(button)+horizontal+languageButtons.length)%languageButtons.length];
   if(document.activeElement!==button){button.focus({preventScroll:true});button.scrollIntoView({block:'nearest'});}
-  if(pad.pressed.has(0))button.click();
+  if(changeLanguage||pad.pressed.has(0))button.click();
  }else if(!selectionCard.hidden){
   if(repeat){
    const columns=getComputedStyle(variantGrid).gridTemplateColumns.split(' ').length,delta=horizontal+vertical*columns;
@@ -416,7 +420,7 @@ function pollEarlyMenu(time:number){
  const dt=Math.min((time-earlyMenuTime)/1000,.05);earlyMenuTime=time;
  const pad=gamepad.poll(),usingPad=!document.body.classList.contains('loading')&&gamepad.input.active!=='keyboard';
  startupCard.classList.toggle('gamepad-navigation',usingPad);
- if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · A — подтвердить':'');}
+ if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · ← / → — язык · A — подтвердить':'');}
  menuRepeat=Math.max(0,menuRepeat-dt);
  const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
  const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;
@@ -1102,7 +1106,7 @@ renderer.setAnimationLoop((time: number) => {
   tutorial.setScheme(controlScheme);
   if(usingPad&&tutorialWasOpen)tutorial.gamepad(pad.pressed);
   if(controlScheme!==controlMode){controlMode=controlScheme;for(const element of controlHints)element.hidden=element.dataset.controls!==controlScheme;}
-  if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · A — подтвердить':'');}
+  if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · ← / → — язык · A — подтвердить':'');}
   if(usingPad && !tutorialWasOpen && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
   const settingsOpen=!audioPanel.hidden || chat.open || roundFinished() || tutorial.active || tutorialWasOpen;
   emoteWheel.setPigeon(!!character?.isPigeon);touch?.setPigeon(!!character?.isPigeon);
@@ -1114,8 +1118,13 @@ renderer.setAnimationLoop((time: number) => {
   const motion=usingTouch&&!touchBlocked&&character?touchMotion(touch!.x,touch!.y,followCamera.azimuth,character.yaw,dt,steeringTurnRate):{forward:false,steer:0};
   if(usingPad&&festivalView.results.open&&pad.pressed.has(0))leaveOnline.click();
   const wasChoosing=!playing;
-  const wheelUsed=usingPad && playing && !settingsOpen && (emoteWheel.open || pad.held.has(4));
-  if(usingPad && playing && !settingsOpen && !document.hidden && document.hasFocus()){const picked=emoteWheel.update(pad.held.has(4),pad.x,pad.y,pad.held.has(1));if(picked)pendingEmote=picked;}else emoteWheel.close();
+  let wheelUsed=false;
+  if(usingPad && playing && !settingsOpen && !document.hidden && document.hasFocus()){
+    const wasBlocked=emoteWheel.blocksMovement;
+    const picked=emoteWheel.update(pad.held.has(4),pad.x,pad.y,pad.held.has(1));
+    wheelUsed=wasBlocked||emoteWheel.blocksMovement||pad.held.has(4);
+    if(picked)pendingEmote=picked;
+  }else emoteWheel.close();
   menuRepeat=Math.max(0,menuRepeat-dt);
   const horizontal=pad.held.has(15)?1:pad.held.has(14)?-1:Math.abs(pad.x)>.35?Math.sign(pad.x):0;
   const vertical=pad.held.has(13)?1:pad.held.has(12)?-1:Math.abs(pad.y)>.35?Math.sign(pad.y):0;

@@ -286,6 +286,7 @@ button:disabled { cursor:default; }
 }
 #startup-menu #new-game {border-color:transparent;}
 #startup-menu.gamepad-navigation .startup-section button:focus {outline:3px solid var(--ui-focus);outline-offset:4px;}
+#startup-menu.gamepad-navigation .language-switcher button:focus {outline:3px solid var(--ui-focus);outline-offset:2px;}
 @media(max-width:520px){#startup-menu #new-game,#startup-menu #load-game,#startup-menu .network-entry button{height:100px;}}
 
 .right-hud {bottom:16px;max-height:none;overflow:hidden;}
