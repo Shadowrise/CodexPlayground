@@ -101,7 +101,25 @@ test('tracks and event soundtracks preserve mute and the configured volume', asy
     music.setEvent(false);await Promise.resolve();assert(event.paused);assert(!background.paused);assert.equal(event.playbackRate,1);
     next.dispatchEvent(new Event('click'));assert.equal(background.volume,.65,'changing tracks keeps the configured volume');
     assert.equal(background.volume,.65);assert.equal(event.volume,.65);
-    music.stop();assert(background.paused);assert.equal(background.volume,.65);
+    music.updateFlowerDucking(true,.05);assert(background.volume<.65&&background.volume>.65*.2,'flower music fades down');
+    for(let i=0;i<120;i++)music.updateFlowerDucking(true,1/60);
+    assert(Math.abs(background.volume-.65*.2)<1e-8);assert.equal(volume.value,'65','flower ducking keeps the slider unchanged');
+    next.dispatchEvent(new Event('click'));assert(Math.abs(background.volume-.65*.2)<1e-8,'changing tracks preserves flower ducking');
+    volume.value='42';volume.dispatchEvent(new Event('input'));assert(Math.abs(background.volume-.42*.2)<1e-8);
+    button.dispatchEvent(new Event('click'));assert(background.paused);button.dispatchEvent(new Event('click'));await Promise.resolve();assert(!background.paused);
+    assert.deepEqual(JSON.parse(storage.get('kirby.audio.music')!),{enabled:true,volume:.42},'save the chosen level, never the quieter mix');
+    music.setEvent('knight');assert.equal(event.volume,.42,'entering the duel from a ducked flower game immediately restores duel music');
+    for(const phase of [1,2,3,4])for(let i=0;i<60;i++){
+      music.updateFlowerDucking(true,1/60);music.updateKnightPhase(phase,1/60);
+      assert.equal(event.volume,.42,'flower ducking cannot attenuate any duel phase');
+    }
+    volume.value='65';volume.dispatchEvent(new Event('input'));assert.equal(event.volume,.65);
+    music.setEvent(false);music.updateFlowerDucking(true,1);music.updateFlowerDucking(false,.05);
+    assert(background.volume>.65*.2&&background.volume<.65,'flower music fades back up');
+    for(let i=0;i<240;i++)music.updateFlowerDucking(false,1/60);
+    assert.equal(background.volume,.65);
+    music.updateFlowerDucking(true,1);music.enterMenu();assert.equal(background.volume,.65,'the menu never inherits flower ducking');
+    music.updateFlowerDucking(true,1);music.stop();assert(background.paused);assert.equal(background.volume,.65,'a new game never inherits flower ducking');
   } finally {
     if (originalAudio) Object.defineProperty(globalThis, 'Audio', originalAudio); else Reflect.deleteProperty(globalThis, 'Audio');
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument); else Reflect.deleteProperty(globalThis, 'document');

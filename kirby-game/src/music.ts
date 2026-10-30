@@ -32,6 +32,7 @@ export class BackgroundMusic {
   private eventActive:boolean|'celebrate'|'knight'=false;
   private enabled = true;
   private volume = .25;
+  private flowerMix = 1;
   private started = false;
   private track = 0;
   private shuffle = false;
@@ -88,6 +89,14 @@ export class BackgroundMusic {
     onLocaleChange(()=>{this.updateButton();this.updateTrackLabel();});
   }
 
+  /** Only the flower game requests attenuation; the chosen slider value stays intact. */
+  updateFlowerDucking(active:boolean,dt:number){
+    const ducked=active&&this.eventActive!=='knight',target=ducked?.2:1;
+    if(this.flowerMix===target)return;
+    this.flowerMix+=(target-this.flowerMix)*(1-Math.exp(-Math.max(0,dt)/(ducked?.09:.3)));
+    if(Math.abs(this.flowerMix-target)<.001)this.flowerMix=target;
+    this.applyVolume();
+  }
   /** Preserve pitch while the final duel phase gradually gains tempo. */
   updateKnightPhase(phase:number,dt:number){
     const audio=this.eventAudio;if(!audio||this.eventActive!=='knight')return;
@@ -96,8 +105,8 @@ export class BackgroundMusic {
     audio.playbackRate=Math.abs(rate-target)<.0005?target:rate;
   }
   private applyVolume(){
-    this.audio.volume=this.volume;
-    if(this.eventAudio)this.eventAudio.volume=this.audio.volume;
+    this.audio.volume=this.volume*this.flowerMix;
+    if(this.eventAudio)this.eventAudio.volume=this.eventActive==='knight'?this.volume:this.audio.volume;
   }
 
   /** Event soundtrack follows the same saved music toggle and volume. */
@@ -105,7 +114,7 @@ export class BackgroundMusic {
     if(active===this.eventActive)return;
     this.playRequest++;this.audio.pause();this.eventAudio?.pause();this.eventActive=active;
     if(active&&!this.eventAudio){
-      const event=this.eventAudio=new Audio();event.preload='none';event.volume=this.audio.volume;
+      const event=this.eventAudio=new Audio();event.preload='none';
       event.addEventListener('error',()=>{this.eventActive=false;if(this.enabled)void this.play();});
     }
     if(this.eventAudio)this.eventAudio.playbackRate=1;
@@ -115,12 +124,13 @@ export class BackgroundMusic {
       const revision=file==='meta-knight-duel'?MUSIC_ASSET_REVISIONS[file]:undefined;
       this.eventAudio.src=`${import.meta.env?.BASE_URL??'/'}audio/${file}.wav${revision?`?v=${revision}`:''}`;
     }
+    this.applyVolume();
     this.updateTrackLabel();
     if(this.enabled)void this.play();
   }
-  enterMenu() { this.setEvent(false);this.start(); }
+  enterMenu() { this.flowerMix=1;this.applyVolume();this.setEvent(false);this.start(); }
   start() { this.started = true; if (this.enabled&&(this.eventActive?this.eventAudio!:this.audio).paused) void this.play(); }
-  stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false; }
+  stop() { this.started=false;this.playRequest++;this.waitForGesture(false);this.audio.pause();this.eventAudio?.pause();this.eventActive=false;this.flowerMix=1;this.applyVolume(); }
 
   private skip(direction: number) {
     let position = this.trackOrder.indexOf(this.track);

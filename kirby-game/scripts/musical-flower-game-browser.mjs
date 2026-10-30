@@ -31,7 +31,7 @@ try{
    ws.onMessage(data=>{if(data==='ping'){ws.send('pong');return;}room.webSocketMessage(socket,data);});
    ws.send(JSON.stringify({type:'welcome',serverNow:Date.now(),protocolVersion:PROTOCOL,playerId:socket.data.id,room:room.room,players:sockets.map(s=>({id:s.data.id,actor:s.data.actor}))}));room.broadcast({type:'presence',count:sockets.length},socket);
   });
-  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`\nwindow.flowerGameQA={garden:musicalFlowers,view:flowerGameView,renderer,scene,camera,sounds,music,gamepad,played:[],get c(){return character},get game(){return currentFlowerGame()},get session(){return network},set solo(q){soloFlowerGame=q},set clock(v){const native=window.realFlowerNow??=Date.now,delta=v-native();Date.now=()=>native()+delta;},set offset(v){if(network)network.clockOffset=v;},set day(v){dayStart=Date.now();dayStartPhase=v}};const playFlowerForQA=flowerGameView.play;flowerGameView.play=(index,transpose)=>{flowerGameQA.played.push({index,transpose,stage:currentFlowerGame()?.stage});playFlowerForQA(index,transpose);};\n`});});
+  await page.route('**/src/main.ts*',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text())+`\nwindow.flowerGameQA={garden:musicalFlowers,view:flowerGameView,renderer,scene,camera,sounds,music,gamepad,travel:cosmicArena,played:[],get c(){return character},get game(){return currentFlowerGame()},get session(){return network},set solo(q){soloFlowerGame=q},set clock(v){const native=window.realFlowerNow??=Date.now,delta=v-native();Date.now=()=>native()+delta;},set offset(v){if(network)network.clockOffset=v;},set day(v){dayStart=Date.now();dayStartPhase=v}};const playFlowerForQA=flowerGameView.play;flowerGameView.play=(index,transpose)=>{flowerGameQA.played.push({index,transpose,stage:currentFlowerGame()?.stage});playFlowerForQA(index,transpose);};\n`});});
   await page.goto(process.env.GAME_URL??'http://127.0.0.1:5174/');await page.locator('#startup-loader').waitFor({state:'hidden',timeout:180000});
   await page.locator(online?'#network-join':'#new-game').click();await page.locator('#player-name-input').fill('Игрок '+i);if(i)await page.locator('#variant-grid button').nth(i).click();await page.locator('#start-game').click();await page.waitForFunction(()=>window.flowerGameQA?.c);
   console.log('Loaded player '+i);
@@ -74,6 +74,7 @@ try{
    assert.equal(await page.locator('#flower-game-hud .correct').count(),i+1);
   }
   q=await get();if(round<FLOWER_ROUNDS){assert.equal(q.stage,'echo');await listen(q);}else assert.equal(q.stage,'celebrate');
+  assert(await page.evaluate(()=>flowerGameQA.music.audio.volume<flowerGameQA.music.volume*.25),'the whole flower game keeps the background music quiet');
  }
  for(const p of pages){await p.waitForFunction(()=>flowerGameQA.c.achievements.has('flowers'));assert.equal(await p.evaluate(()=>flowerGameQA.c.achievements.has('flowers')),true);}
  const celebration=await page.evaluate(()=>({visible:flowerGameQA.view.group.getObjectByName('Flower melody celebration fireworks').visible,score:document.querySelector('#player-fruits').textContent}));assert(celebration.visible);
@@ -96,6 +97,22 @@ try{
  await page.evaluate(SITE=>{flowerGameQA.c.setActivity('Idle');flowerGameQA.c.actor.position.set(SITE.x,0,SITE.z+2);},SITE);
  await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Начать цветочную мелодию'));
  if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('KeyE');await page.waitForFunction(()=>!!flowerGameQA.game);
- for(const p of pages)await p.evaluate(()=>{flowerGameQA.c.actor.position.set(200,0,180);});await page.waitForTimeout(350);q=await get();assert(q.emptySince!==undefined);await page.screenshot({path:output+'flower-game-countdown.png'});await jump(q.emptySince+FLOWER_EMPTY_MS+20);assert.equal(await get(),undefined);
- assert.deepEqual(errors,[]);console.log('PASS '+(online?'two real browser players + actual Worker':mobile?'touch landscape/portrait':'solo keyboard')+': ten rounds, mistake/button replay, full melody/pitches, locked concert button, music fade, fireworks/reward, leave countdown and reset');
+ for(const p of pages)await p.evaluate(()=>{flowerGameQA.c.actor.position.set(200,0,180);});await page.waitForTimeout(350);q=await get();assert(q.emptySince!==undefined);await page.screenshot({path:output+'flower-game-countdown.png'});
+ await page.waitForFunction(()=>Math.abs(flowerGameQA.music.audio.volume-flowerGameQA.music.volume)<.001);
+ await jump(q.emptySince+FLOWER_EMPTY_MS+20);assert.equal(await get(),undefined);
+ if(!online){
+  await page.evaluate(SITE=>{flowerGameQA.c.setActivity('Idle');flowerGameQA.c.actor.position.set(SITE.x,0,SITE.z+2);},SITE);
+  await page.waitForFunction(()=>document.querySelector('#action-hint').textContent.includes('Начать цветочную мелодию'));
+  if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('KeyE');
+  await page.waitForFunction(()=>flowerGameQA.music.audio.volume<flowerGameQA.music.volume*.25);
+  await page.evaluate(async()=>{const q=flowerGameQA;await q.travel.enter(q.c);q.c.actor.position.set(2000,0,-2);q.c.yaw=Math.PI;q.c.actor.rotation.y=Math.PI;});
+  await page.waitForFunction(()=>flowerGameQA.travel.active);
+  if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('KeyE');
+  await page.waitForFunction(()=>flowerGameQA.music.eventActive==='knight'&&!flowerGameQA.music.eventAudio.paused);
+  const duelVolume=await page.evaluate(()=>{const q=flowerGameQA;q.sounds.playKnight('cosmic-impact');return {chosen:q.music.volume,actual:q.music.eventAudio.volume};});
+  assert.equal(duelVolume.actual,duelVolume.chosen,'duel music starts at the chosen volume even after a quiet flower game');
+  await page.waitForTimeout(750);
+  assert.equal(await page.evaluate(()=>flowerGameQA.music.eventAudio.volume),duelVolume.chosen,'lightning leaves duel music at the chosen volume');
+ }
+ assert.deepEqual(errors,[]);console.log('PASS '+(online?'two real browser players + actual Worker':mobile?'touch landscape/portrait':'solo keyboard')+': ten rounds, mistake/button replay, full melody/pitches, locked concert button, flower music fade/recovery, steady duel music through lightning, fireworks/reward, leave countdown and reset');
 }finally{Date.now=realNow;await browser.close();}

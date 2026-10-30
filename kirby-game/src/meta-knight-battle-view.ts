@@ -4,7 +4,7 @@ import {MetaKnightLifeFireflyView} from './meta-knight-life-firefly-view';
 import type {CharacterController} from './controller';
 import {KNIGHT,knightDashHalfWidth,knightPosition,knightProjectile,knightShotOrigin,knightProgress,knightImpactProgress,knightStartCount,knightJumpOpening,knightPressureWave,type KnightBattle,type KnightPoint} from './meta-knight-battle';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
-import {t} from './i18n';
+import {getLocale,t} from './i18n';
 import {MetaKnightCrescent,MetaKnightCrescentLaunch} from './meta-knight-crescent';
 import {MetaKnightSwordSwing,knightSwordAngle,knightSwordDirection} from './meta-knight-sword-swing';
 import {MetaKnightBattleMotion} from './meta-knight-battle-motion';
@@ -235,9 +235,9 @@ export class MetaKnightBattleView{
   }
   this.lastBattle=s?.id??0;
   this.particles.visible=now>=this.burstAt&&now-this.burstAt<700;for(let i=0;i<22&&this.particles.visible;i++){const life=(now-this.burstAt)/700,a=i*2.399;this.position.copy(this.burstPosition).add(new T.Vector3(Math.cos(a)*life*2*FX,(life*2-life*life*1.5)*FX,Math.sin(a)*life*2*FX));this.scale.setScalar(1-life);this.matrix.compose(this.position,this.quaternion,this.scale);this.particles.setMatrixAt(i,this.matrix);}this.particles.instanceMatrix.needsUpdate=true;
-  const key=[s?.id??0,s?.revision??0,s?.phase??0,s?.hp??12,stage,hp,near,withdrawn,attackKey,t('Метакнайт')].join(':');if(key===this.lastKey)return;this.lastKey=key;
+  const key=[s?.id??0,s?.revision??0,s?.phase??0,s?.hp??12,stage,hp,near,withdrawn,attackKey,getLocale()].join(':');if(key===this.lastKey)return;this.lastKey=key;
   const finished=stage==='won'||stage==='lost'||stage==='cancelled';
-  this.hud.querySelector('strong')!.textContent=t('Метакнайт');this.health.hidden=!s||finished;this.healthBar.update(s);
+  this.hud.setAttribute('aria-label',t('Бой с Метакнайтом'));this.hud.querySelector('strong')!.textContent=t('Метакнайт');this.health.hidden=!s||finished;this.healthBar.update(s);
   this.hud.dataset.phase=String(s?.phase??0);this.phase.textContent=s?t(s.phase===4&&cosmicCombat(s)?s.cosmicPart===3?'Звёздное убежище':s.cosmicPart===2?'Гравитационный удар':'Грозовой вихрь':['Дуэль','Крылья','Звёздный натиск','Космический подъём'][s.phase-1]):t('Вызов рыцаря');
   const hints:Partial<Record<typeof stage,string>>={'intro':'Увидеть замах → уклониться → ответить','approach':'Следи за мечом и держись рядом','slash-warn':'Выйди из сектора взмаха','slash':'Дождись конца связки','jump-warn':'Выйди из отмеченного круга','jump':'Выйди из отмеченного круга','wave':'Прыгай или перелетай низкую волну','dash-warn':'Уходи поперёк золотой полосы','dash':'Следующий заход готовится отдельно','dive-warn':'Выйди из отмеченного круга','dive':'Пикирование!','shot-warn':'Золотой полумесяц можно отбить атакой','shot':'Нажми {0} перед касанием полумесяца','return':'Отбито! Полумесяц летит в Метакнайта','open':'Защита открыта! Подойди и нажми {0}','transition':'Новая фаза — приготовься','won':'Победа! Метакнайт уважает твоё мастерство','lost':'Попытка окончена. Попробуем ещё раз?'};
   Object.assign(hints,{'star-rise':'Кристаллы пробуждаются — следи за лучами','cross-warn':'Выйди из жёлтых треугольников','cross':'Следующий кристалл уже заряжается','ricochet-warn':'Три прицельных перелёта — уходи с полосы','ricochet':'Уходи с отмеченной полосы','star-warn':'Выйди из круга — рыцарь создаёт щит','star-fall':'Приземление! Купол закроет центр','shield':'Волны идут к щиту! Пройди в разрыв и ударь фиолетовый кристалл · {1}/3','crystal-break':'Кристалл разбит! Приготовься к новому заходу','stunned':'Попадание! Метакнайт потерял здоровье','get-up':'Метакнайт поднимается — приготовься'});

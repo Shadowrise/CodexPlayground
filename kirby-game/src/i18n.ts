@@ -21,6 +21,7 @@ const templates=Object.entries(translations).filter(([key])=>key.includes('{')).
 });
 // These slots contain domain labels, never player names or player-written chat.
 const labelSlots:Record<string,number[]>={
+ '{0}: {1} из 3 жизней':[0],'Модель {0} ещё не загрузилась':[0],
  'Время суток: {0}':[0],'{0} съеден! Скорость от фруктов {1}% · 20 с':[0],'Шар: {0}':[0],'Летим: {0} · посадка автоматически':[0],
  'Топотушка переводит дух. Толкни золотой бубенчик на хвосте: {0}':[0],
  'Подлети к барабанчику на спине и толкни: {0}':[0],

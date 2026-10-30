@@ -1370,6 +1370,8 @@ renderer.setAnimationLoop((time: number) => {
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
   const flowerGame=advanceFlowerGame(currentFlowerGame(),bossNow);
+  const hearingFlowers=playing&&!roundFinished()&&!!flowerGame&&!!character&&Math.hypot(character.actor.position.x-MUSICAL_FLOWER_SITE.x,character.actor.position.z-MUSICAL_FLOWER_SITE.z)<MUSICAL_FLOWER_SITE.radius+10;
+  music.updateFlowerDucking(hearingFlowers,dt);
   const numberGame=advanceNumberGame(currentNumberGame(),bossNow);
   millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
   flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden,playing&&!roundFinished());
@@ -1486,7 +1488,7 @@ function tickMeadowWhileAway(dt:number){
  watermill.tickQuest(now,millActor(character!),sendMill,!!network);
  if(!network){bread.state=advanceBread(bread.state,now,mountainLedges.networkState());soloFlowerGame=advanceFlowerGame(soloFlowerGame,now,[]);soloNumberGame=advanceNumberGame(soloNumberGame,now,[]);centipedeTick();}
  fruits.update(dt,character!,host?npcs:[],true);
- music.setEvent(cosmicArena.musicEvent);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);
+ music.setEvent(cosmicArena.musicEvent);music.updateKnightPhase(cosmicArena.battle?.phase??1,dt);music.updateFlowerDucking(false,dt);
 }
 function resolveInteraction(c:CharacterController):{text:string;run:()=>unknown;target?:OutlineTarget}|undefined {
   if(nearMetaKnightPortal(c.actor.position)&&sealActor(c).available)return {text:metaKnightPortalReady()?'E — Войти на арену Метакнайта':'Портал пока не работает',run:()=>{if(metaKnightPortalReady())void cosmicArena.enter(c);},target:{key:meadowPortal,root:meadowPortal.group}};
