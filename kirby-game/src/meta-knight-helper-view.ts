@@ -28,12 +28,14 @@ export class MetaKnightHelperView{
   this.warningMaterial.uniforms.helperArenaCenter={value:new T.Vector2()};this.warningMaterial.uniforms.helperArenaRadius={value:SITE.radius-.5};
   this.warningMaterial.vertexShader='varying vec2 helperArenaPoint;\n'+this.warningMaterial.vertexShader.replace('gl_Position=','helperArenaPoint=(modelMatrix*vec4(position,1.)).xz;gl_Position=');
   this.warningMaterial.fragmentShader='varying vec2 helperArenaPoint;uniform vec2 helperArenaCenter;uniform float helperArenaRadius;\n'+this.warningMaterial.fragmentShader.replace('void main(){','void main(){if(distance(helperArenaPoint,helperArenaCenter)>helperArenaRadius)discard;');
+  this.cosmic=new MetaKnightCosmicView(c.actor,this.group,true);this.group.add(this.cosmic.group);
   const blade=c.actor.getObjectByName('Galaxia')!;this.meteor=new MetaKnightCosmicMeteorView(blade);this.lighting.position.x=SITE.x;this.lighting.name='Persistent helper meteor lighting';this.lighting.add(this.meteor.light);this.meteor.light.intensity=0;this.motion=new MetaKnightBattleMotion(c.actor);this.sparks=new MetaKnightDashSparks(blade);
   this.crescent.group.scale.setScalar(.9);this.target.group.name='Small Meta Knight available hit target';this.target.group.scale.setScalar(.85);
   for(let i=0;i<6;i++){const lane=new T.Mesh(new T.PlaneGeometry(1,1),this.warningMaterial);lane.rotation.x=-Math.PI/2;this.lanes.push(lane);const arrow=knightWarningArrow();this.arrows.push(arrow);this.group.add(lane,arrow);}
   this.group.add(this.crescent.group,this.orbs.group,this.meteor.group,this.target.group,this.stars.group);
   c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof T.MeshStandardMaterial&&!this.materials.has(m))this.materials.set(m,{color:m.emissive.clone(),intensity:m.emissiveIntensity});});
  }
+ prepareEyes(){return this.cosmic!.prepareEyes();}
  clear(){this.motion.clear();if(this.tinted){for(const [m,v] of this.materials){m.emissive.copy(v.color);m.emissiveIntensity=v.intensity;}this.tinted=false;}}
  updatePlanetLightning(s:KnightBattle|undefined,id:string,now:number,planet?:{node:T.Object3D;radius:number}){
   const ally=knightCosmicAlly(s,id,now);if(!s?.cosmicRefuge||ally?.kind!=='planet'||ally.gather||!planet)return;
@@ -54,7 +56,7 @@ export class MetaKnightHelperView{
   }
   const locked=helperPosition(h,now),recover=helperRecovering(h,now),vulnerable=helperVulnerable(h,now),stunned=now<(h.stunnedUntil??0),dead=helperDefeated(s,id,now);
   if(locked&&!dead)this.c.actor.position.set(SITE.x+locked[0],locked[1],locked[2]);
-  const casting=!!c&&now<c.end,warning=!!c&&now<c.release;
+  const casting=!!c&&!!locked&&now<c.end,warning=!!c&&now<c.release;
   if(warning){this.group.getWorldPosition(this.arenaOrigin);this.warningMaterial.uniforms.helperArenaCenter.value.set(this.arenaOrigin.x,this.arenaOrigin.z);}
   if(c&&(casting||recover||stunned||dead)){
    const stage:KnightStage=dead||recover||stunned?'open':c.ability===2?warning?'dash-warn':'dash':c.ability===3?warning?'cosmic-spin-warn':'cosmic-spin':c.meteor?warning?'cosmic-meteor-draw':'cosmic-meteor-cast':warning?'shot-warn':'shot';

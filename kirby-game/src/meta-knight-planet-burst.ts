@@ -26,6 +26,8 @@ export class MetaKnightPlanetBurst{
   let material=this.surfaces.get(world);if(!material){material=planetFractureMaterial(source);this.surfaces.set(world,material);}
   if(this.rocks)this.rocks.material=material;else{this.rocks=new T.Mesh(this.rockGeometry,material);this.rocks.frustumCulled=false;this.group.add(this.rocks);}
  }
+ /** Every cached world's fracture shader must be exercised behind the loader. */
+ prepareSurfaces(){const group=new T.Group();for(const material of this.surfaces.values()){const mesh=new T.Mesh(this.rockGeometry,material);mesh.frustumCulled=false;group.add(mesh);}return group;}
  update(ageMs:number,origin:T.Vector3,contact:T.Vector3,_world:number,camera?:T.Camera,orientation?:T.Quaternion){
   this.group.visible=ageMs>=0&&ageMs<2200;if(!this.group.visible)return;const t=ageMs/1000,f=t/2.2,fade=1-T.MathUtils.smoothstep(f,.52,1);
   this.group.position.copy(origin);this.away.subVectors(origin,contact).normalize();

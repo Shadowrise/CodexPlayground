@@ -1,3 +1,5 @@
+import {helperShotExitAt} from '../src/meta-knight-helper';
+import {knightFormationSide} from '../src/meta-knight-staging';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -35,7 +37,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   send(hero,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.stage,'side-choice');send(hero,actor(),[{type:'knight',action:'side',side:'boss'}]);assert.equal(room.room.knightSides[waitingId],undefined,'Kirby cannot choose the boss team');
   send(helper,actor(2012,0),[{type:'knight',action:'side',side:'boss'}]);send(hero,actor(),[{type:'knight',action:'start'}]);
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightBattle.stage,'intro','a wakeup immediately after confirming must not restore the old choice screen');
-  const id=helper.data.id,s=room.room.knightBattle;assert.equal(s.players[id].side,'boss');assert.equal(s.players[id].hp,5);assert.equal(s.players[hero.data.id].hp,44);assert.equal(s.teamHp,44);
+  const id=helper.data.id,s=room.room.knightBattle;assert.equal(s.players[id].side,'boss');assert.equal(s.players[id].hp,5);assert.equal(s.players[hero.data.id].hp,56);assert.equal(s.teamHp,56);
   now+=3500;send(hero,actor());Object.assign(s,{stage:'rest',until:now+1e9});
   const beforePush=[s.players[id].hp,s.players[hero.data.id].hp];send(hero,actor(2012,-2));send(helper,actor(2012,0));send(hero,actor(2012,-2),[{type:'hit'}]);assert(helper.messages.some(m=>m.type==='hit'&&m.target===id),'players can push the opposing playable Meta Knight');
   send(hero,actor(2012,2));send(helper,actor(2012,0),[{type:'hit'}]);assert(hero.messages.some(m=>m.type==='hit'&&m.target===hero.data.id),'the helper can push players in return');assert.deepEqual([s.players[id].hp,s.players[hero.data.id].hp],beforePush,'ordinary pushes do not consume hearts');
@@ -49,8 +51,9 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   send(helper,actor(2012,0),[{type:'knight',action:'attack'}]);now+=1000;send(hero,actor());assert.equal(resumed.hp,hp,'ordinary Q never damages the allied boss');
   now=Math.max(now,resumed.players[id].helper.cast.recoverUntil)+100;resumed.until=now+200;send(hero,actor(1980,0));assert.equal(resumed.stage,'duet-gather');
   let guard=0;while(resumed.stage!=='duet-recover'&&guard++<20){now=resumed.until-200;send(hero,actor(1980,0));}assert(guard<20);const until=resumed.until,bossHp=resumed.hp;
-  send(hero,actor(1996.7,-3.7),[{type:'knight',action:'attack'}]);now+=150;send(hero,actor(1996.7,-3.7));assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.stage,'duet-recover');assert.equal(resumed.until,until);
-  now+=400;send(hero,actor(2003.3,-2),[{type:'knight',action:'attack'}]);send(hero,actor(2003.3,-2));assert.equal(resumed.players[id].hp,4);assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.until,until);
+  const facing=resumed.duet.yaw??0,bp=knightFormationSide(-3.3,facing),helperPoint=resumed.players[id].helper.cast.from,aimed=(p:number[],back:number)=>({...actor(2000+p[0]-Math.sin(facing)*back,p[2]-Math.cos(facing)*back),q:[0,Math.sin(facing/2),0,Math.cos(facing/2)]});
+  send(hero,aimed(bp,3.7),[{type:'knight',action:'attack'}]);now+=150;send(hero,aimed(bp,3.7));assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.stage,'duet-recover');assert.equal(resumed.until,until);
+  now+=400;send(hero,aimed(helperPoint,2),[{type:'knight',action:'attack'}]);send(hero,aimed(helperPoint,2));assert.equal(resumed.players[id].hp,4);assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.until,until);
   resumed.stage='won';resumed.players[id].hits=10;resumed.players[hero.data.id].hits=1;send(hero,actor());
   assert(!helper.messages.some(m=>m.type==='knight-victory'));assert(hero.messages.some(m=>m.type==='knight-victory'));
   // The same authoritative Worker supports a lone knight while the other player is on the meadow.
@@ -60,6 +63,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   const variants=Object.values(solo.opponents).map((b:any)=>b.variant);assert.equal(new Set(variants).size,3);assert(!variants.includes(0),'the meadow player is excluded too');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.deepEqual(room.room.knightBattle.opponents,solo.opponents);
   now+=3500;send(helper,actor(2000,-2));send(helper,actor(2000,-2),[{type:'knight',action:'ability',ability:1}]);assert.equal(room.room.knightBattle.players[id].helper.cast.ability,1);
+  const cast=room.room.knightBattle.players[id].helper.cast;now=helperShotExitAt(cast)-201;send(helper,actor(2010,-2));assert.equal(helper.data.actor.p[0],2000,'the crescent holds the sender until the edge');now+=2;send(helper,actor(2010,-2));assert.equal(helper.data.actor.p[0],2010,'the authoritative Worker releases movement at the arena edge');
   send(helper,actor(2000,-2),[{type:'knight',action:'cancel'}]);assert.equal(room.room.knightBattle.stage,'cancelled');
   send(helper,actor(2000,-2),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.stage,'side-choice','retry asks again');
   send(helper,actor(2000,-2),[{type:'knight',action:'side',side:'boss'}]);now+=3500;send(helper,actor(1988,0));

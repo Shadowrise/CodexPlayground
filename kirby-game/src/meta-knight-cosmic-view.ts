@@ -182,7 +182,7 @@ export class MetaKnightCosmicView{
     this.lightning.arc(this.a,this.b,91+i,.04*intensity,clock,24,1.6,[hash(i+73)*3-1.5,3+hash(i+97)*4,hash(i+101)*3-1.5]);
    }
   }
-  if(stage==='cosmic-rise'){
+  if(stage==='cosmic-rise'&&!this.ally){
    const strength=Math.sin(Math.PI*f)**.5;
    const drift=this.actor.parent?.position,dx=height>.001?(drift?.x??0)/height:0,dz=height>.001?(drift?.z??0)/height:0;
    this.dust.material.uniforms.drift.value.set(dx,dz);

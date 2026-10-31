@@ -75,7 +75,7 @@ test('both real rigs take strides by distance and move their feet on circle hops
 test('the real helper raises Galaxia with the boss and emits blue floor lightning from his own sword',async()=>{
  const make=await models(),c=make(),scene=new Scene();scene.add(c.actor);const {s,actors}=battle();setKnightPhase(s,4,actors,100000);
  const view=new MetaKnightHelperView(c,()=>{});advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-charge');view.update(s,'helper',s.until-1,1/60);scene.updateMatrixWorld(true);
- const blade=c.actor.getObjectByName('Galaxia')!,base=blade.localToWorld(new Vector3()),tip=blade.localToWorld(new Vector3(-.315,2.05,0));assert(tip.sub(base).normalize().y>.999);assert.equal(c.actor.position.x,2004.8);
+ const blade=c.actor.getObjectByName('Galaxia')!,base=blade.localToWorld(new Vector3()),tip=blade.localToWorld(new Vector3(-.315,2.05,0));assert(tip.sub(base).normalize().y>.999);assert.equal(c.actor.position.x,2000+s.players.helper.helper!.ascent!.to[0]);
  advanceKnightBattle(s,actors,s.until);advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-surge');view.update(s,'helper',s.since+800,1/60);
  const fx=(view as any).cosmic;assert(fx.group.visible);assert(fx.lightning.hot.count>250);assert.equal(fx.lightning.hotMaterial.color.getHex(),0x609aff);assert.equal(fx.light.parent,null,'the helper reuses the arena light without adding another live light');
  view.update(undefined,'helper',s.until,0);assert(!fx.group.visible);view.dispose();c.disposeEffects();

@@ -28,7 +28,7 @@ test('three unique opponents use the complete palette including pigeons and vari
 });
 test('bots exist with human opponents too; movement is bounded, authoritative and survives snapshots',()=>{
  const a=knight('boss'),human:KnightActor={id:'hero',p:[18,0,4],yaw:0,available:true,variant:0},s=startKnightBattle([a,human],'solo',1000)!;
- assert.equal(Object.keys(s.opponents!).length,3);assert.equal(s.players.hero.hp,44);assert.equal(knightPartyHearts(s),44);assert.equal(knightPartyMaximum(s),44);
+ assert.equal(Object.keys(s.opponents!).length,3);assert.equal(s.players.hero.hp,56);assert.equal(knightPartyHearts(s),56);assert.equal(knightPartyMaximum(s),56);
  s.stage='open';s.until=100000;const copy=structuredClone(s),before=Object.values(s.opponents!).map(b=>[...b.p]);
  advanceKnightBattle(s,[a,human],5100);advanceKnightBattle(copy,[a,human],5100);assert.deepEqual(s,copy);
  Object.values(s.opponents!).forEach((b,i)=>assert(Math.hypot(b.p[0]-before[i][0],b.p[2]-before[i][2])<=OPPONENTS.speed*.15+.001));

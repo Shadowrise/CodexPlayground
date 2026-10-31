@@ -19,14 +19,14 @@ export class MetaKnightOpponentsView{
   if(this.battleId!==(s?.id??0)||s?.stage==='cancelled'){this.clear();this.battleId=s?.id??0;}
   for(const [id,a] of Object.entries(s?.opponents??{})){
    if(s?.stage==='cancelled')break;
-   let c=this.characters.get(id);if(!c){c=this.make(a.variant);if(!c)continue;c.actor.name=`Meta Knight AI opponent ${id}`;c.beginDuel();this.restores.set(id,arenaMaterials(c.actor));this.characters.set(id,c);}
+   let c=this.characters.get(id);if(!c){c=this.make(a.variant);if(!c)continue;c.actor.name=`Meta Knight AI opponent ${id}`;c.actor.userData.location='meta-knight-arena';c.beginDuel();this.restores.set(id,arenaMaterials(c.actor));this.characters.set(id,c);}
    const p=s!.players[id],airborne=cosmicAirborne(s);(airborne?cosmic:scene).add(c.actor);
    let gait=this.gait.get(id);if(!gait){gait={x:a.p[0],z:a.p[2],travelled:0,movedAt:-Infinity};this.gait.set(id,gait);}
    const travelled=Math.hypot(a.p[0]-gait.x,a.p[2]-gait.z);if(travelled>.003&&dt>0){gait.travelled+=Math.min(travelled,3);gait.movedAt=now;}gait.x=a.p[0];gait.z=a.p[2];
    c.actor.position.set(META_KNIGHT_ARENA.x+a.p[0],a.p[1],a.p[2]);c.yaw=a.yaw;c.actor.rotation.set(0,a.yaw,0);
    const defeated=p.hp<=0||s?.stage==='lost',attacking=now>=p.attackAt&&now-p.attackAt<500;
    const rolling=knightBumpActive(s,id,now),shoving=!!a.shove&&now<a.shove.at+KNIGHT_CONTACT.shoveMs;
-   const pose=defeated?'Sitting':rolling?'Roll':shoving?'Push':attacking?(c.hasNativeAnimations?'Attack':'Push'):now<(a.dashUntil??0)?'Dash':airborne?'Fly':a.moving||now-gait.movedAt<180?'Run':'Idle';
+   const pose=defeated?'Sitting':rolling?'Roll':shoving?'Push':attacking?(c.hasNativeAnimations?'Attack':'Push'):now<(a.dashUntil??0)?'Dash':airborne?'Fly':a.turning&&!a.moving?(a.turning>0?'RotateLeft':'RotateRight'):a.moving||now-gait.movedAt<180?'Run':'Idle';
    if(rolling&&this.bumpSeen.get(id)!==p.bump!.at){this.bumpSeen.set(id,p.bump!.at);this.cue?.();}
    c.roll.clearPose();if(c.state!==pose)c.setActivity(pose,true);
    // Sample Kirby's authored leg cycle by actual distance, so brief pauses and fresh snapshots do not restart it.

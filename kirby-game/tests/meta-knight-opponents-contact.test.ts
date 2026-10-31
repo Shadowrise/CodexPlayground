@@ -1,3 +1,4 @@
+import {TURN_RATE} from '../src/movement-input';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startKnightBattle,advanceKnightBattle,knightPartyHearts,type KnightActor,type KnightPoint} from '../src/meta-knight-battle';
@@ -26,13 +27,31 @@ test('legacy independent snapshots merge remaining lives without healing the tea
  const {s,actor,bots}=fixture();delete s.sharedOpponents;delete s.teamHp;bots.forEach((b,i)=>s.players[b.id].hp=[0,5,7][i]);
  advanceKnightBattle(s,[actor],100050);assert.equal(s.sharedOpponents,true);assert.equal(s.teamHp,12);for(const b of bots)assert.equal(s.players[b.id].hp,12,'the old defeated NPC returns while the shared pool remains positive');assert.equal(s.players.solo.hp,5);
 });
-test('NPCs keep moving between attacks and face the boss while reacting to crescents',()=>{
- const {s,actor,bots}=fixture();actor.p=[-30,0,-25];let moving=0,total=0;
- for(let now=100050;now<105000;now+=50){advanceKnightBattle(s,[actor],now);for(const b of bots){moving+=Number(b.moving);total++;}}
- assert(moving/total>.65,'the default behaviour should circle rather than wait in place');
- Object.assign(s,{stage:'shot-warn',since:105000,until:107000,from:[0,0,0],to:[0,0,30],yaw:0});
- for(let now=105050;now<106900;now+=50){advanceKnightBattle(s,[actor],now);for(const b of bots){const toward=Math.atan2(-b.p[0],-b.p[2]);assert(Math.cos(b.yaw-toward)>.95,'the NPC must watch the incoming crescent instead of presenting its back');}}
+test('NPCs turn at player speed, then walk forwards, including while reacting to crescents',()=>{
+ const {s,actor,bots}=fixture();actor.p=[-30,0,-25];let moving=0,total=0,turns=0;
+ for(let now=100050;now<106900;now+=50){
+  if(now===105000)Object.assign(s,{stage:'shot-warn',since:105000,until:107000,from:[0,0,0],to:[0,0,30],yaw:0});
+  const before=bots.map(b=>({p:[...b.p],yaw:b.yaw}));advanceKnightBattle(s,[actor],now);
+  for(const [i,b] of bots.entries()){
+   const angle=Math.abs(Math.atan2(Math.sin(b.yaw-before[i].yaw),Math.cos(b.yaw-before[i].yaw)));assert(angle<=TURN_RATE*.05+1e-8,'no instant heading changes');
+   const dx=b.p[0]-before[i].p[0],dz=b.p[2]-before[i].p[2];if(Math.hypot(dx,dz)>.001){assert(Math.abs(dx*Math.cos(b.yaw)-dz*Math.sin(b.yaw))<.002,'walking has no sideways component');assert(dx*Math.sin(b.yaw)+dz*Math.cos(b.yaw)>=0,'no backwards walking');}
+   if(b.turning&&!b.moving)turns++;moving+=Number(b.moving);total++;
+  }
+ }assert(moving/total>.40,'turning still leaves time for active movement');assert(turns>0,'large turns happen on the spot');
 });
+
+test('NPCs sometimes leave a vulnerable helper alone and save that decision across snapshots',()=>{
+ let hit=0,spared=0;
+ for(let seed=0;seed<24;seed++){
+  const {s,actor,bots}=fixture();actor.p=[0,0,0];actor.yaw=0;assert(startHelperAbility(s,actor,3,100000));const c=s.players.solo.helper!.cast!;
+  bots[0].p=[0,0,-3.5];bots[0].yaw=0;bots[0].goal=[...bots[0].p];bots[0].seed=seed;bots[0].thinkAt=c.end;bots[0].shoveReady=1e9;
+  for(const [i,b] of bots.slice(1).entries()){b.p=[-30,0,10+i*8];b.thinkAt=1e9;b.shoveReady=1e9;b.goal=[...b.p];}
+  s.checked=c.end;const copy=structuredClone(s);
+  for(let now=c.end+50;now<c.recoverUntil;now+=50){advanceKnightBattle(s,[actor],now);advanceKnightBattle(copy,[actor],now);}
+  assert.deepEqual(s,copy);if(s.players.solo.hp<5)hit++;else spared++;
+ }assert(hit>0);assert(spared>0);
+});
+
 test('coincident NPCs and crowds at the arena edge separate and stay apart during movement',()=>{
  for(const edge of [false,true]){
   const {s,actor,bots}=fixture();actor.p=[-25,0,-25];for(const b of bots){b.p=[edge?42:0,0,0];b.goal=[...b.p];}
@@ -52,7 +71,7 @@ test('a pushed NPC cannot tunnel into its neighbour and snapshots reproduce the 
  assert(bots[0].p[0]<bots[1].p[0]);
 });
 test('NPC counterpushes have a visible windup, avoid stun locks, and respect locked helper casts',()=>{
- const {s,actor,bots}=fixture();actor.p=[-12,0,0];bots[0].p=[-9,0,0];bots[1].p=[10,0,20];bots[2].p=[20,0,0];for(const b of bots){b.shoveReady=100000;b.thinkAt=200000;b.goal=[...b.p];}
+ const {s,actor,bots}=fixture();actor.p=[-12,0,0];bots[0].p=[-9,0,0];bots[0].yaw=-Math.PI/2;bots[1].p=[10,0,20];bots[2].p=[20,0,0];for(const b of bots){b.shoveReady=100000;b.thinkAt=200000;b.goal=[...b.p];}
  let now=100050;while(!bots[0].shove&&now<108000){advanceKnightBattle(s,[actor],now);now+=50;}assert(bots[0].shove,'a nearby NPC occasionally chooses a counterpush');
  const release=bots[0].shove!.release;assert.equal(s.players.solo.bump,undefined);advanceKnightBattle(s,[actor],release-1);assert.equal(s.players.solo.bump,undefined);advanceKnightBattle(s,[actor],release);assert(knightBumpActive(s,'solo',release));
  assert.equal(s.players.solo.hp,5);assert(!knightPlayerPushable(s,'solo',release+100));assert(!startHelperAbility(s,actor,2,release+100));assert(!startKnightBump(s,'solo',1,0,release+1000));

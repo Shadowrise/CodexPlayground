@@ -53,14 +53,14 @@ try{
   q.sounds.updateFireflyBuzz(q.travel.fireflyBuzz(q.c.actor.getWorldPosition(new q.T.Vector3())));
   return {hp:s.players.solo.hp,hit:!!s.lifeFirefly.hit,heartParent:q.visitor.heart.group.parent.name,buzz:q.travel.fireflyBuzz(q.c.actor.getWorldPosition(new q.T.Vector3())),cues:q.cues.filter(c=>c==='life-firefly-hit').length,hearts:document.querySelector('.knight-party-hearts').textContent};
  });
- assert.equal(hit.hp,6);assert(hit.hit);assert.equal(hit.buzz,0);assert.equal(hit.cues,2);assert.equal(hit.hearts,'♥'.repeat(6));await page.screenshot({path:output+'heart-drop.png'});checks.push(hit);
+ assert.equal(hit.hp,6);assert(hit.hit);assert.equal(hit.buzz,0);assert.equal(hit.cues,2);assert.equal(hit.hearts,'♥6');await page.screenshot({path:output+'heart-drop.png'});checks.push(hit);
  await page.evaluate(()=>{lifeQA.travel.soloNow+=350;lifeQA.tick();lifeQA.close();});await page.screenshot({path:output+'heart-drop-fall.png'});
  for(const viewport of [{width:1440,height:1000},{width:390,height:844},{width:320,height:740}]){
   await page.setViewportSize(viewport);
   for(const hp of [0,3,5,6,9,5]){
    await page.evaluate(hp=>{const q=lifeQA;q.s.players.solo.hp=hp||5;q.resize();if(hp===0){q.s.players.solo.hp=0;q.travel.battleView.updateParty(q.s,'solo',[],true);}},hp);
-   const hud=await page.evaluate(()=>{const p=document.querySelector('#knight-party-hud'),box=p.getBoundingClientRect(),health=p.querySelector('.knight-party-health'),hearts=[...p.querySelectorAll('.knight-party-hearts span')];return {x:box.x,right:box.right,width:box.width,scroll:p.scrollWidth,text:health.innerText,slots:hearts.length,filled:hearts.filter(h=>!h.classList.contains('empty')).length,rows:new Set(hearts.map(h=>Math.round(h.getBoundingClientRect().top))).size,oldCounters:!!p.querySelector('.knight-party-bonus,.knight-party-count')};});
-   assert(hud.x>=0&&hud.right<=viewport.width);assert(hud.scroll<=hud.width+1);assert.equal(hud.slots,Math.max(5,hp));assert.equal(hud.filled,hp);assert(!/[\d+/]/.test(hud.text));assert.equal(hud.oldCounters,false);checks.push({viewport,hp,...hud});
+   const hud=await page.evaluate(()=>{const p=document.querySelector('#knight-party-hud'),box=p.getBoundingClientRect(),health=p.querySelector('.knight-party-health'),hearts=[...p.querySelectorAll('.knight-party-heart')];return {x:box.x,right:box.right,width:box.width,scroll:p.scrollWidth,text:health.innerText,slots:hearts.length,filled:Number(p.querySelector('.knight-party-heart-count').textContent),rows:new Set(hearts.map(h=>Math.round(h.getBoundingClientRect().top))).size,oldCounters:!!p.querySelector('.knight-party-bonus,.knight-party-count')};});
+   assert(hud.x>=0&&hud.right<=viewport.width);assert(hud.scroll<=hud.width+1);assert.equal(hud.slots,1);assert.equal(hud.filled,hp);assert(!/[+/]/.test(hud.text));assert.equal(hud.oldCounters,false);checks.push({viewport,hp,...hud});
    if(hp===9)await page.screenshot({path:output+`hearts-${viewport.width}.png`});
   }
  }

@@ -14,6 +14,7 @@ test('every planet round reuses prepared surfaces and fracture buffers, then rel
  const view=new MetaKnightCosmicRefugeView(scene,new T.Group()),resources=()=>{
   const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();view.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});return {geometries,materials};
  };
+ const prepared=view.prepareSurfaces();assert.equal(prepared.children.length,REFUGE_WORLDS.length);const fractureMaterials=new Set(prepared.children.map(o=>(o as T.Mesh).material));
  const before=resources(),sharedMistGeometry=(view.burst.group.children.find(o=>o instanceof T.Mesh&&o.name==='Fruit colored mist') as T.Mesh).geometry,disposals=new Map<T.BufferGeometry,number>();for(const g of before.geometries)g.addEventListener('dispose',()=>disposals.set(g,(disposals.get(g)??0)+1));
  const actor:KnightActor={id:'a',p:[0,0,-2],yaw:0,available:true},s=startKnightBattle([actor],'a',1000)!;setKnightPhase(s,4,[actor],5000,3);
  for(let round=0;round<2;round++)for(const world of REFUGE_WORLDS){
@@ -23,7 +24,7 @@ test('every planet round reuses prepared surfaces and fracture buffers, then rel
   Object.assign(s,{stage:'cosmic-planet-sweep',since:7400,until:16400});view.update(s,10000);
   s.cosmicRefuge!.impactAt=16400;Object.assign(s,{stage:'cosmic-star-strike',since:16400,until:17050});view.update(s,16600);
   assert.deepEqual(resources().geometries,before.geometries,'combat must not construct or replace geometry');
-  assert.equal(disposals.size,0,'switching worlds must not discard prepared buffers');
+  assert.equal(disposals.size,0,'switching worlds must not discard prepared buffers');const rocks=(view.burst as any).rocks as T.Mesh;assert(fractureMaterials.has(rocks.material),'each combat fracture uses a shader included in warm-up');
  }
  view.dispose();assert([...disposals.values()].every(count=>count===1));
  for(const g of before.geometries)assert.equal(disposals.get(g),g===sharedMistGeometry?undefined:1);

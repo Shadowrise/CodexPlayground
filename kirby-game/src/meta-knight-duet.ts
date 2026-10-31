@@ -1,9 +1,10 @@
+import {knightAudienceYaw,knightFormationSide} from './meta-knight-staging';
 import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 import {helperLocked,helperPosition,HELPER} from './meta-knight-helper';
 
 export const DUET={cooldownMs:90000,gatherMs:2200,speed:8.5,chargeMs:3000,warnMs:3200,previewMs:1200,waves:5,strikeMs:650,recoverMs:3000,radius:14.25,maxSpots:3,maxOverlap:.30} as const;
 export type DuetStage='duet-gather'|'duet-charge'|'duet-warn'|'duet-strike'|'duet-gap'|'duet-recover';
-export type KnightDuet={owner:string;requestedAt:number;stage:'queued'|'gather'|'charge'|'warn'|'strike'|'gap'|'recover';round:number;at?:number;gatherUntil?:number;bossFrom?:KnightPoint;helperFrom?:KnightPoint;floor?:number;bossHit?:number;spots:KnightPoint[];preview?:{at:number;until:number;spots:KnightPoint[]};contacts:Record<string,number>;resume?:'cosmic-spin-warn'|'cosmic-meteor-draw'|'cosmic-star-draw'};
+export type KnightDuet={yaw?:number;owner:string;requestedAt:number;stage:'queued'|'gather'|'charge'|'warn'|'strike'|'gap'|'recover';round:number;at?:number;gatherUntil?:number;bossFrom?:KnightPoint;helperFrom?:KnightPoint;floor?:number;bossHit?:number;spots:KnightPoint[];preview?:{at:number;until:number;spots:KnightPoint[]};contacts:Record<string,number>;resume?:'cosmic-spin-warn'|'cosmic-meteor-draw'|'cosmic-star-draw'};
 const smooth=(n:number)=>{n=Math.max(0,Math.min(1,n));return n*n*(3-2*n);};
 export const duetActive=(s:KnightBattle|undefined)=>!!s?.duet&&s.duet.stage!=='queued'&&s.stage.startsWith('duet-');
 export const knightDuetOpening=(s:KnightBattle|undefined)=>s?.stage==='duet-recover'&&s.duet?.stage==='recover'&&!s.openHit&&s.hp>0;
@@ -16,9 +17,9 @@ export function duetOwnerAvailable(s:KnightBattle,actors:KnightActor[]){const id
 export function beginKnightDuet(s:KnightBattle,actors:KnightActor[],now:number,boss:KnightPoint){
  const d=s.duet;if(!d||d.stage!=='queued'||!duetOwnerAvailable(s,actors))return false;
  const h=s.players[d.owner].helper!;if(helperLocked(h,now))return false;
- const actor=actors.find(a=>a.id===d.owner)!,floor=boss[1],bossTo:KnightPoint=[-3.3,floor,0],helperTo:KnightPoint=[3.3,floor,0],helperFrom=helperPosition(h,now)??actor.p;
+ const actor=actors.find(a=>a.id===d.owner)!,floor=boss[1],yaw=knightAudienceYaw(s,actors),bossTo=knightFormationSide(-3.3,yaw,floor),helperTo=knightFormationSide(3.3,yaw,floor),helperFrom=helperPosition(h,now)??actor.p;
  const duration=Math.max(DUET.gatherMs,Math.hypot(boss[0]-bossTo[0],boss[2]-bossTo[2])/DUET.speed*1000,Math.hypot(helperFrom[0]-helperTo[0],helperFrom[2]-helperTo[2])/DUET.speed*1000);
- d.stage='gather';d.at=now;d.gatherUntil=now+duration;d.bossFrom=[...boss];d.helperFrom=[...helperFrom];d.floor=floor;h.cooldowns[3]=now+DUET.cooldownMs;
+ d.yaw=yaw;d.stage='gather';d.at=now;d.gatherUntil=now+duration;d.bossFrom=[...boss];d.helperFrom=[...helperFrom];d.floor=floor;h.cooldowns[3]=now+DUET.cooldownMs;
  if(s.phase===4)d.resume=s.stage==='cosmic-flight'||s.cosmicPart===3?'cosmic-spin-warn':s.cosmicPart===2?'cosmic-star-draw':'cosmic-meteor-draw';
  h.duet={at:now,arrival:now+duration,until:now+duration+DUET.chargeMs+DUET.warnMs+(DUET.waves-1)*(DUET.warnMs-DUET.previewMs)+DUET.strikeMs,from:[...helperFrom],to:helperTo};h.phase=s.phase;delete h.cast;delete h.stunnedUntil;delete h.anchor;
  delete s.impactWave;delete s.cosmicSpin;delete s.cosmicMeteor;delete s.cosmicRefuge;
@@ -26,8 +27,8 @@ export function beginKnightDuet(s:KnightBattle,actors:KnightActor[],now:number,b
 }
 export function duetBossPosition(s:KnightBattle,now:number):KnightPoint|undefined{
  const d=s.duet;if(!duetActive(s)||!d?.bossFrom)return;
- if(s.phase===4&&d.stage==='recover')return [-3.3*(1-smooth((now-s.since)/DUET.recoverMs)),d.floor!,0];
- const f=smooth((now-d.at!)/Math.max(1,d.gatherUntil!-d.at!));return [d.bossFrom[0]+(-3.3-d.bossFrom[0])*f,d.floor!,d.bossFrom[2]*(1-f)];
+ if(s.phase===4&&d.stage==='recover')return knightFormationSide(-3.3*(1-smooth((now-s.since)/DUET.recoverMs)),d.yaw??0,d.floor!);
+ const f=smooth((now-d.at!)/Math.max(1,d.gatherUntil!-d.at!)),to=knightFormationSide(-3.3,d.yaw??0,d.floor!);return d.bossFrom.map((v,i)=>v+(to[i]-v)*f) as KnightPoint;
 }
 /** Each wave locks targets once; the next wave may overlap its predecessor. */
 export function duetOverlapFraction(a:KnightPoint,b:KnightPoint){const x=Math.min(1,Math.hypot(a[0]-b[0],a[2]-b[2])/(2*DUET.radius));return (2*Math.acos(x)-2*x*Math.sqrt(Math.max(0,1-x*x)))/Math.PI;}
@@ -58,9 +59,9 @@ export function advanceKnightDuetStep(s:KnightBattle,actors:KnightActor[],now:nu
  }
  else if(s.stage==='duet-strike'){
   d.stage='recover';d.spots=[];delete d.preview;stage='duet-recover';ms=DUET.recoverMs;const h=s.players[d.owner]?.helper;
-  if(h){const from:KnightPoint=[3.3,d.floor!,0];delete h.duet;h.cast={ability:4,meteor:false,at:d.at!,release:now,end:now,recoverUntil:now+HELPER.recoverMs,from,to:[...from],yaw:0,hit:false};}
+  if(h){const from=knightFormationSide(3.3,d.yaw??0,d.floor!);delete h.duet;h.cast={ability:4,meteor:false,at:d.at!,release:now,end:now,recoverUntil:now+HELPER.recoverMs,from,to:[...from],yaw:d.yaw??0,hit:false};}
  }else return true;
  s.stage=stage;s.since=since;s.until=now+ms;s.revision++;return false;
 }
-export function endKnightDuet(s:KnightBattle,now=s.until){const d=s.duet;if(duetActive(s)){const p=duetBossPosition(s,now)!;s.from=[...p];s.to=[...p];s.yaw=0;}if(d&&s.players[d.owner]?.helper)delete s.players[d.owner].helper!.duet;delete s.duet;s.revision++;return d?.resume;}
+export function endKnightDuet(s:KnightBattle,now=s.until){const d=s.duet;if(duetActive(s)){const p=duetBossPosition(s,now)!;s.from=[...p];s.to=[...p];s.yaw=d?.yaw??0;}if(d&&s.players[d.owner]?.helper)delete s.players[d.owner].helper!.duet;delete s.duet;s.revision++;return d?.resume;}
 export function duetDanger(s:KnightBattle,p:KnightPoint){return s.stage==='duet-strike'&&!!s.duet?.spots.some(q=>Math.hypot(p[0]-q[0],p[2]-q[2])<DUET.radius+.65);}

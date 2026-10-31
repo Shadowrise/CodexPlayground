@@ -46,7 +46,7 @@ try{
  const s=room.room.knightBattle;Object.assign(s,{stage:'rest',since:Date.now(),until:Date.now()+1000000});s.players.p0.hp=8;s.players.p0.invulnerable=0;room.broadcast({type:'room',room:room.room});
  assert.equal(s.players.p1.hp,5);assert.equal(s.players.p0.hp,8);assert.equal(s.players.p1.side,'boss');
  await helper.locator('#knight-helper-actions').waitFor({state:'visible'});
- for(const page of pages){assert.equal(await page.locator('.knight-party-health').count(),2);assert.equal(await page.locator('.knight-party-hearts').first().locator('span:not(.empty)').count(),8);assert.equal(await page.locator('.knight-helper-hearts span:not(.empty)').count(),5);}
+ for(const page of pages){assert.equal(await page.locator('.knight-party-health').count(),2);assert.equal(await page.locator('.knight-party-hearts').first().locator('.knight-party-heart-count').textContent(),'8');assert.equal(await page.locator('.knight-helper-hearts .knight-party-heart-count').textContent(),'5');}
  await hero.evaluate(()=>arenaQA.stop());
  const bounds=await helper.evaluate(()=>{const a=document.querySelector('#knight-helper-actions').getBoundingClientRect(),b=document.querySelector('#navigation-hud').getBoundingClientRect();return {overlap:a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top};});assert.equal(bounds.overlap,false,'cancel hint stays above the two hex rows');
 assert.deepEqual(await helper.locator('#knight-helper-actions kbd').allTextContents(),['←','↑','→','↓']);

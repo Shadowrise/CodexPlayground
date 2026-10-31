@@ -118,10 +118,10 @@ export class MetaKnightBattleView{
   this.countdown.id='knight-battle-countdown';this.countdown.hidden=true;this.countdown.dataset.i18nIgnore='';this.countdown.setAttribute('role','status');this.countdown.setAttribute('aria-live','polite');this.countdown.setAttribute('aria-atomic','true');document.body.append(this.countdown);
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
- async prepare(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera){
-  const eyes=this.cosmic.prepareEyes();this.group.add(eyes);
+ async prepare(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera,extra:readonly T.Object3D[]=[]){
+  const eyes=this.cosmic.prepareEyes(),surfaces=this.refuge.prepareSurfaces();this.group.add(eyes,surfaces);
   const states:{object:T.Object3D;visible:boolean;culled:boolean;count?:number}[]=[];
-  this.group.traverse(object=>{states.push({object,visible:object.visible,culled:object.frustumCulled,count:object instanceof T.InstancedMesh?object.count:undefined});object.visible=true;object.frustumCulled=false;if(object instanceof T.InstancedMesh)object.count=1;});
+  for(const root of [this.group,...extra])root.traverse(object=>{states.push({object,visible:object.visible,culled:object.frustumCulled,count:object instanceof T.InstancedMesh?object.count:undefined});object.visible=true;object.frustumCulled=false;if(object instanceof T.InstancedMesh)object.count=1;});
   const viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest();
   try{
    await renderer.compileAsync(scene,camera);
@@ -129,7 +129,7 @@ export class MetaKnightBattleView{
    // Use the real framebuffer: render targets select a different color-space program.
    renderer.setViewport(0,0,64,64);renderer.setScissor(0,0,64,64);renderer.setScissorTest(true);renderer.render(scene,camera);
   }finally{
-   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);eyes.removeFromParent();
+   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);eyes.removeFromParent();surfaces.removeFromParent();
    for(const {object,visible,culled,count} of states){object.visible=visible;object.frustumCulled=culled;if(object instanceof T.InstancedMesh)object.count=count!;}
   }
  }

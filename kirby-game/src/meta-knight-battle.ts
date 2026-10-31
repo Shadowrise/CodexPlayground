@@ -1,9 +1,10 @@
+import {knightAudienceYaw} from './meta-knight-staging';
 import type {KnightBump} from './meta-knight-opponents-contact';
 import {prepareKnightDefeat,knightDefeatPose,type KnightDefeat} from './meta-knight-defeat';
 import {OPPONENTS,createKnightOpponents,advanceKnightOpponents,type KnightOpponent} from './meta-knight-opponents';
 import {beginKnightDuet,duetActive,duetBossPosition,advanceKnightDuetStep,previewKnightDuetWave,endKnightDuet,duetOwnerAvailable,duetDanger,knightDuetOpening,type KnightDuet,type DuetStage} from './meta-knight-duet';
 import {prepareKnightCosmicAllies,prepareKnightPlanetAllies,knightPlanetAssistStage} from './meta-knight-cosmic-ally';
-import {HELPER,helperChoiceAvailable,helperPosition,helperProjectile,helperOrbs,helperVulnerable,helperSegmentDistance,type KnightHelper,type KnightSide} from './meta-knight-helper';
+import {HELPER,helperShotExitAt,helperChoiceAvailable,helperPosition,helperProjectile,helperOrbs,helperVulnerable,helperSegmentDistance,type KnightHelper,type KnightSide} from './meta-knight-helper';
 /** Shared encounter rules. Coordinates are local to the cosmic arena; time is ms. */
 import {META_KNIGHT_ARENA,insideKnightFightingArea,type KnightArenaSide} from './meta-knight-arena-site';
 import {STAR_SEQUENCE,starSequence,starPosition,starDanger,STAR_ASSAULT,planStarRoute,lockStarFlight,lockStarCross,crossWarningDuration} from './meta-knight-star-assault';
@@ -19,7 +20,7 @@ export type KnightStage=DuetStage|CosmicStage|'side-choice'|'intro'|'approach'|'
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean;side?:KnightSide;helper?:KnightHelper;bump?:KnightBump};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={defeat?:KnightDefeat;id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;teamMaxHp?:number;players:Record<string,KnightPlayer>;opponents?:Record<string,KnightOpponent>;sharedOpponents?:true;partyInvulnerable?:number;choice?:{owner:string;until:number;actors:KnightActor[]};target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;starSequenceVersion?:1;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number;duet?:KnightDuet;celebration?:{at:number;landAt?:number;heading?:number;boss:KnightPoint;helpers:Record<string,KnightPoint>}};
+export type KnightBattle={defeat?:KnightDefeat;id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;teamMaxHp?:number;players:Record<string,KnightPlayer>;opponents?:Record<string,KnightOpponent>;sharedOpponents?:true;partyInvulnerable?:number;choice?:{owner:string;until:number;actors:KnightActor[]};target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;starSequenceVersion?:1;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number;duet?:KnightDuet;celebration?:{facing?:number;at:number;landAt?:number;heading?:number;boss:KnightPoint;helpers:Record<string,KnightPoint>}};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,sideChoiceMs:15000,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,sharedContactMs:800,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Old room snapshots inherit the lowest remaining health, never extra lives. */
@@ -142,7 +143,7 @@ function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:Knig
  if(stage==='jump-warn'&&s.phase===1||stage==='dive-warn'&&s.phase===2||stage==='shield'&&s.phase===3||stage==='cosmic-meteor-draw'&&s.phase===4)spawnKnightLifeFirefly(s,now);
  if(['won','lost','cancelled'].includes(stage))delete s.impactWave;
  if(stage==='won'){prepareKnightDefeat(s,actors,p,now);if(s.phase===4)for(const a of Object.values(s.opponents??{})){a.p[1]=0;a.moving=false;}}
- if(stage==='lost'){const helpers=Object.fromEntries(actors.filter(a=>a.available&&s.players[a.id]?.side==='boss'&&!s.players[a.id].withdrawn).map(a=>[a.id,[...a.p] as KnightPoint]));if(Object.keys(helpers).length)s.celebration={at:now,boss:[...p],helpers,...(s.phase===4&&p[1]>.01?{landAt:now+COSMIC_DESCENT.durationMs,heading:s.cosmicLaunch?.players[s.target]?.angle??Math.atan2(actors.find(a=>a.id===s.target)?.p[0]??0,actors.find(a=>a.id===s.target)?.p[2]??1)}:{})};}
+ if(stage==='lost'){const helpers=Object.fromEntries(actors.filter(a=>a.available&&s.players[a.id]?.side==='boss'&&!s.players[a.id].withdrawn).map(a=>[a.id,[...a.p] as KnightPoint]));if(Object.keys(helpers).length)s.celebration={facing:knightAudienceYaw(s,actors,p),at:now,boss:[...p],helpers,...(s.phase===4&&p[1]>.01?{landAt:now+COSMIC_DESCENT.durationMs,heading:s.cosmicLaunch?.players[s.target]?.angle??Math.atan2(actors.find(a=>a.id===s.target)?.p[0]??0,actors.find(a=>a.id===s.target)?.p[2]??1)}:{})};}
  if(s.duet&&(['won','lost','cancelled'].includes(stage)||stage==='transition'&&s.duet.stage!=='queued'))endKnightDuet(s);
  if(stage==='transition'||stage==='cosmic-descent'||['won','lost','cancelled'].includes(stage))for(const player of Object.values(s.players))if(player.helper){delete player.helper.cast;delete player.helper.duet;delete player.helper.anchor;delete player.helper.stunnedUntil;delete player.helper.ascent;delete player.helper.planet;player.helper.phase=s.phase;}
  if(!knightPlanetAssistStage(s))for(const p of Object.values(s.players))if(p.helper)delete p.helper.planet;
@@ -401,13 +402,16 @@ function advanceHelpers(s:KnightBattle,actors:KnightActor[],heroes:KnightActor[]
   if(h.phase!==s.phase){delete h.cast;h.phase=s.phase;s.revision++;continue;}
   if(c.ability===1){
    if(c.returned){if(!c.resolved&&now>=c.returned.at+HELPER.returnMs){c.resolved=true;damageHelper(s,actor,now);}continue;}
-   const point=helperProjectile(c,now,actor.p),before=helperProjectile(c,Math.max(c.release,previous),actor.p);if(!point||!before)continue;
+   if(c.resolved)continue;
+   const exit=helperShotExitAt(c),sample=Math.min(now,exit);
+   const point=helperProjectile(c,sample,actor.p),before=helperProjectile(c,Math.min(sample,Math.max(c.release,previous)),actor.p);if(!point||!before)continue;
    const contacts=c.contacts??={},grace=c.meteor?METEOR.graceMs:KNIGHT.parryGraceMs,reflectMs=c.meteor?METEOR.reflectMs:KNIGHT.reflectMs;
    const touching=heroes.filter(a=>helperSegmentDistance(before,point,[a.p[0],a.p[1]+.85,a.p[2]])<HELPER.shotRadius+KNIGHT.bodyRadius);
-   const reflector=heroes.find(a=>{const p=s.players[a.id],contact=contacts[a.id];return contact!==-1&&(touching.includes(a)||contact!==undefined&&now-contact<=grace)&&now>=p.attackAt&&now-p.attackAt<=reflectMs&&Math.cos(angle(a.p,c.from)-a.yaw)>-.25;});
+   const reflector=now<=exit&&heroes.find(a=>{const p=s.players[a.id],contact=contacts[a.id];return contact!==-1&&(touching.includes(a)||contact!==undefined&&now-contact<=grace)&&now>=p.attackAt&&now-p.attackAt<=reflectMs&&Math.cos(angle(a.p,c.from)-a.yaw)>-.25;});
    if(reflector){c.returned={at:now,from:[...point],by:reflector.id};s.players[reflector.id].reflects++;s.revision++;continue;}
    for(const a of touching)if(contacts[a.id]===undefined){contacts[a.id]=now;s.revision++;}
-   for(const a of heroes){const contact=contacts[a.id];if(contact!==undefined&&contact>=0&&now-contact>=grace){if(a.id!==protectedPlayer)damageKnightPlayer(s,a.id,now);contacts[a.id]=-1;s.revision++;}}
+   if(now>=exit){c.resolved=true;s.revision++;}
+   for(const a of heroes){const contact=contacts[a.id];if(contact!==undefined&&contact>=0&&(now-contact>=grace||now>=exit)){if(a.id!==protectedPlayer)damageKnightPlayer(s,a.id,now);contacts[a.id]=-1;s.revision++;}}
   }else{
    const orbs=helperOrbs(c,now),oldOrbs=helperOrbs(c,Math.max(c.release,previous));
    for(const a of heroes){if(a.id===protectedPlayer)continue;

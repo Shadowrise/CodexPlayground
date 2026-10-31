@@ -1,3 +1,4 @@
+import {knightAudienceYaw} from './meta-knight-staging';
 import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 import {COSMIC_DESCENT,cosmicDescent,easeCosmic} from './meta-knight-cosmic';
 
@@ -8,7 +9,7 @@ export function prepareKnightDefeat(s:KnightBattle,actors:readonly KnightActor[]
  const helpers=Object.fromEntries(actors.filter(a=>a.available&&s.players[a.id]?.side==='boss'&&!s.players[a.id].withdrawn).sort((a,b)=>a.id.localeCompare(b.id)).map(a=>[a.id,[...a.p] as KnightPoint]));
  if(!Object.keys(helpers).length)return;
  const duration=s.stage==='cosmic-descent'?COSMIC_DESCENT.impactMs:Math.max(1200,...Object.values(helpers).map(p=>Math.hypot(p[0],p[2])/8.5*1000));
- s.defeat={at:now,until:now+duration,yaw:s.cosmicFall?.yaw??s.yaw,boss:[...boss],helpers};
+ s.defeat={at:now,until:now+duration,yaw:knightAudienceYaw(s,actors,boss,s.cosmicFall?.yaw??s.yaw),boss:[...boss],helpers};
 }
 export function knightDefeatPose(s:KnightBattle|undefined,id:string,now:number){
  const d=s?.defeat;if(!s||!d||!['cosmic-descent','won'].includes(s.stage))return;

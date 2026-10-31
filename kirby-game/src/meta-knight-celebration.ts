@@ -9,10 +9,10 @@ export function knightCelebration(s:KnightBattle|undefined,id:string,now:number)
  const ids=Object.keys(c.helpers).filter(id=>!s.players[id]?.withdrawn).sort();if(!ids.length||id!=='boss'&&!ids.includes(id))return;
  const little=id!=='boss',index=little?ids.indexOf(id):0,first=c.helpers[ids[0]],y=c.landAt?0:c.boss[1];
  const centre:KnightPoint=[(c.boss[0]+first[0])/2,y,(c.boss[2]+first[2])/2],radius=Math.hypot(centre[0],centre[2]);if(radius>23){centre[0]*=23/radius;centre[2]*=23/radius;}
- const direction=Math.atan2(first[0]-c.boss[0],first[2]-c.boss[2]),offset=little?(index-(ids.length-1)/2)*.9:0;
+ const direction=c.facing!==undefined?c.facing+Math.PI:Math.atan2(first[0]-c.boss[0],first[2]-c.boss[2]),offset=little?(index-(ids.length-1)/2)*.9:0;
  const destination:KnightPoint=[centre[0]+Math.sin(direction)*(little?1.9:-1.9)+Math.cos(direction)*offset,y,centre[2]+Math.cos(direction)*(little?1.9:-1.9)-Math.sin(direction)*offset];
  const origin=little?c.helpers[id]:c.boss,from:KnightPoint=[origin[0],c.landAt?0:origin[1],origin[2]],approach=Math.max(2.2,...[c.boss,...Object.values(c.helpers)].map(p=>Math.hypot(p[0]-centre[0],p[2]-centre[2])/7.2));
- const descent=cosmicVictoryDescent(s,now);if(descent&&!descent.landed)return {p:[origin[0],origin[1]*(1-easeCosmic(descent.progress)),origin[2]] as KnightPoint,yaw:0,hug:0,jump:0,sway:0,hopPhase:0,hopLift:0,travelled:0,phase:'descent' as const,little,elapsed:0,centre};
+ const descent=cosmicVictoryDescent(s,now);if(descent&&!descent.landed)return {p:[origin[0],origin[1]*(1-easeCosmic(descent.progress)),origin[2]] as KnightPoint,yaw:c.facing??0,hug:0,jump:0,sway:0,hopPhase:0,hopLift:0,travelled:0,phase:'descent' as const,little,elapsed:0,centre};
  const elapsed=Math.max(0,(now-(c.landAt??c.at))/1000),run=smooth(elapsed/approach);let p=mix(from,destination,run),hug=0,jump=0,sway=0,hopPhase=0,hopLift=0,phase:'run'|'greet'|'hug'|'circle'='run',yaw=Math.atan2(destination[0]-from[0],destination[2]-from[2]);
  if(elapsed>=approach){
   const t=elapsed-approach,cycle=t<4.5?t:(t-4.5)%11.2+4.5;

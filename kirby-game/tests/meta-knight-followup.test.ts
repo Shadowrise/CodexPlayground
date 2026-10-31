@@ -1,3 +1,4 @@
+import {knightFormationSide} from '../src/meta-knight-staging';
 import {humanKnightFixture} from './knight-human-fixture';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,7 +20,7 @@ test('selection starts with the duel, persists for fifteen seconds and then cont
  room.knightBattle=startKnightBattle(actors,'hero',1000);assert.equal(room.knightBattle!.stage,'side-choice');assert.equal(knightSideChoiceDeadline(room),1000+KNIGHT_SIDE_CHOICE_MS);
  assert.equal(advanceKnightSideChoices(room,actors,5000),false,'ordinary frames never restart the timer');room=JSON.parse(JSON.stringify(room));assert(!advanceKnightSideChoices(room,actors,15999));assert.equal(room.knightSides,undefined);
  assert(advanceKnightSideChoices(room,actors,16000));assert.deepEqual(room.knightSides,{helper:'players'});assert.equal(knightSideChoiceDeadline(room),Infinity);assert.equal(room.knightBattle!.stage,'intro');assert.equal(room.knightBattle!.since,16000);assert.equal(room.knightBattle!.teamHp,5);
- const manual:KnightSideChoices={knightBattle:startKnightBattle(actors,'hero',20000),knightSides:{helper:'boss'}};assert(advanceKnightSideChoices(manual,actors,21000));assert.equal(manual.knightBattle!.stage,'intro');assert.equal(manual.knightBattle!.players.helper.side,'boss');assert.equal(manual.knightBattle!.players.hero.hp,44);
+ const manual:KnightSideChoices={knightBattle:startKnightBattle(actors,'hero',20000),knightSides:{helper:'boss'}};assert(advanceKnightSideChoices(manual,actors,21000));assert.equal(manual.knightBattle!.stage,'intro');assert.equal(manual.knightBattle!.players.helper.side,'boss');assert.equal(manual.knightBattle!.players.hero.hp,56);
 });
 test('spectators never get a choice, and the remaining lone Meta Knight keeps their choice',()=>{
  const {actors}=fixture();delete actors[1].side;const room:KnightSideChoices={};assert(!advanceKnightSideChoices(room,[actors[1]],1000));const annex=knightAnnexPoint(0,64);actors[1].p=[annex.x,0,annex.z];room.knightBattle=startKnightBattle(actors,'hero',2000);assert.equal(room.knightBattle!.stage,'intro');assert.equal(knightSideChoiceDeadline(room),Infinity);
@@ -28,14 +29,14 @@ test('spectators never get a choice, and the remaining lone Meta Knight keeps th
 for(const side of ['players','boss'] as const)test(`${side}: only a boss ally gathers in the centre and avoids the cosmic player recoil`,()=>{
  const {actors,s}=fixture(side);assert(setKnightPhase(s,4,actors,10000));
  assert.equal(!!knightCosmicAlly(s,'helper',10500),side==='boss');
- if(side==='boss'){assert(Math.hypot(...knightCosmicAlly(s,'helper',s.until)!.p.map((v,i)=>v-[4.8,0,0][i]))<1e-8);assert(!startHelperAbility(s,actors[1],4,10500));}
+ if(side==='boss'){assert(Math.hypot(...knightCosmicAlly(s,'helper',s.until)!.p.map((v,i)=>v-knightFormationSide(4.8,s.players.helper.helper!.ascent!.yaw??0)[i]))<1e-8);assert(!startHelperAbility(s,actors[1],4,10500));}
  advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-charge');
  if(side==='boss')for(const slot of [1,2,3,4] as const)assert(!startHelperAbility(s,actors[1],slot,s.since+100));
  for(let i=0;i<2;i++)advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-surge');
  assert(s.cosmicLaunch!.players.hero);assert.equal(!!s.cosmicLaunch!.players.helper,side==='players');assert.equal(!!cosmicPlayerPush(s,'helper',s.since+1500),side==='players');
  advanceKnightBattle(s,actors,s.until);advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-rise');
  const pose=knightCosmicAlly(JSON.parse(JSON.stringify(s)),'helper',s.since+COSMIC.riseMs/2);
- if(side==='boss'){assert.equal(pose!.p[0],4.8);assert.equal(pose!.p[1],90);assert.equal(pose!.p[2],0);}else assert.equal(pose,undefined);
+ if(side==='boss'){assert.deepEqual(pose!.p,knightFormationSide(4.8,s.players.helper.helper!.ascent!.yaw??0,90));}else assert.equal(pose,undefined);
  if(side==='boss'){s.players.helper.hp=0;assert.equal(knightCosmicAlly(s,'helper',s.since+200),undefined,'a defeated helper remains dazed');}
 });
 test('a fourth-phase boss victory returns continuously to the arena before running, smiling or dancing',()=>{
@@ -55,9 +56,9 @@ test('leaving during the choice preserves the gate side and lets a distant survi
 });
 
 test('both cosmic ascent headings keep the helper beside the boss until ordinary combat resumes',()=>{
- const {s,actors}=fixture();setKnightPhase(s,4,actors,10000);assert.equal(knightCosmicFormationYaw(s,10500),undefined,'the approach retains its turn animation');
+ const {s,actors}=fixture();setKnightPhase(s,4,actors,10000);assert(Number.isFinite(knightCosmicFormationYaw(s,10500)),'the shared turn approaches the audience heading');
  for(const stage of ['cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-flight']){advanceKnightBattle(s,actors,s.until,'hero');assert.equal(s.stage,stage);
-  const now=(s.since+s.until)/2,ally=knightCosmicAlly(s,'helper',now)!,yaw=knightCosmicFormationYaw(s,now);assert.equal(yaw,ally.yaw);assert.equal(yaw,0);assert(ally.p[0]>4);assert(Math.abs(ally.p[0]*Math.sin(yaw!)+ally.p[2]*Math.cos(yaw!))<1e-8,'the helper offset is perpendicular to their common facing');
+  const now=(s.since+s.until)/2,ally=knightCosmicAlly(s,'helper',now)!,yaw=knightCosmicFormationYaw(s,now);assert.equal(yaw,ally.yaw);assert.equal(yaw,s.players.helper.helper!.ascent!.yaw);assert(Math.hypot(ally.p[0],ally.p[2])>4);assert(Math.abs(ally.p[0]*Math.sin(yaw!)+ally.p[2]*Math.cos(yaw!))<1e-8,'the helper offset is perpendicular to their common facing');
  }
  advanceKnightBattle(s,actors,s.until,'hero');assert.equal(knightCosmicFormationYaw(s,s.since),undefined,'normal combat keeps its previous facing behaviour');
  const ordinary=fixture('players');setKnightPhase(ordinary.s,4,ordinary.actors,20000);advanceKnightBattle(ordinary.s,ordinary.actors,ordinary.s.until);assert.equal(knightCosmicFormationYaw(ordinary.s,ordinary.s.since),undefined);

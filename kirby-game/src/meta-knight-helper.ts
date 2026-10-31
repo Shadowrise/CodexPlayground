@@ -9,20 +9,28 @@ export type KnightSide='players'|'boss';
 export type HelperAbility=1|2|3|4;
 export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:18,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:1.8} as const;
 export type HelperCast={ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
-export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{at:number;from:KnightPoint;to:KnightPoint};planet?:{round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
+export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{yaw?:number;at:number;from:KnightPoint;to:KnightPoint};planet?:{yaw?:number;round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
 const mix=(a:KnightPoint,b:KnightPoint,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as KnightPoint;
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 export const helperIsBoss=(s:KnightBattle|undefined,id:string)=>s?.players[id]?.side==='boss';
 export function helperDefeated(s:KnightBattle|undefined,id:string,now:number){const p=s?.players[id];return p?.side==='boss'&&!p.withdrawn&&(p.hp<=0||s?.stage==='won'||!!cosmicDescent(s,now)?.landed);}
 export function helperRoster(actors:readonly KnightActor[]){return actors.filter(a=>a.available&&insideKnightFightingArea(a.p));}
 export function helperChoiceAvailable(actors:readonly KnightActor[]){return helperRoster(actors).some(a=>a.metaKnight);}
+/** The outgoing crescent ceases to pin its sender at the physical arena edge. */
+export function helperShotExitAt(c:HelperCast){
+ if(c.ability!==1||c.meteor)return Infinity;
+ const dx=Math.sin(c.yaw),dz=Math.cos(c.yaw),dot=c.from[0]*dx+c.from[2]*dz,r=META_KNIGHT_ARENA.radius;
+ const distance=Math.max(0,-dot+Math.sqrt(Math.max(0,dot*dot+r*r-c.from[0]**2-c.from[2]**2)));
+ return c.release+Math.max(0,distance-1.8)/HELPER.shotSpeed*1000;
+}
+function helperLockUntil(c:HelperCast){return Math.min(c.recoverUntil,c.returned?Infinity:helperShotExitAt(c));}
 export function helperPosition(h:KnightHelper,now:number):KnightPoint|undefined{
  const d=h.duet;if(d&&now<d.until){const f=clamp((now-d.at)/(d.arrival-d.at)),t=f*f*(3-2*f);return mix(d.from,d.to,t);}
  const c=h.cast;if(!c)return now<(h.stunnedUntil??0)?h.anchor:undefined;
- if(now<c.at||now>=c.recoverUntil)return now<(h.stunnedUntil??0)?h.anchor:undefined;
+ if(now<c.at||now>=helperLockUntil(c))return now<(h.stunnedUntil??0)?h.anchor:undefined;
  return c.ability===2?mix(c.from,c.to,clamp((now-c.release)/(c.end-c.release))):[...c.from];
 }
-export function helperRecovering(h:KnightHelper,now:number){const c=h.cast;return !!c&&now>=c.end&&now<c.recoverUntil;}
+export function helperRecovering(h:KnightHelper,now:number){const c=h.cast;return !!c&&now>=c.end&&now<helperLockUntil(c);}
 export function helperVulnerable(h:KnightHelper,now:number){return !!h.cast&&h.cast.ability!==1&&!h.cast.hit&&helperRecovering(h,now)&&now>=(h.stunnedUntil??0);}
 export function helperLocked(h:KnightHelper,now:number){return !!helperPosition(h,now);}
 export function startHelperAbility(s:KnightBattle|undefined,actor:KnightActor,ability:HelperAbility,now:number){

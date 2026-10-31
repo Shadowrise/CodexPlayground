@@ -42,6 +42,7 @@ export class MetaKnightCosmicRefugeView{
   const material=detailPlanetMaterial(planet.material as T.ShaderMaterial);this.burst.bindSurface(material,index);material.uniforms.fracture={value:0};
   material.fragmentShader='uniform float fracture;\n'+material.fragmentShader.replace('color+=emission;', 'color+=emission;float split=1.-smoothstep(.006,.025,plateEdge(d*7.3+vec3(seed)));color+=vec3(3.,1.1,.25)*split*fracture;');
  }
+ prepareSurfaces(){return this.burst.prepareSurfaces();}
  private bindPlanet(index:number){
   if(this.world===index&&this.planet)return;if(this.planet)this.planet.visible=false;this.world=index;
   this.planet=this.planets.get(index)!;this.burst.bindSurface(this.planet.material as T.ShaderMaterial,index);

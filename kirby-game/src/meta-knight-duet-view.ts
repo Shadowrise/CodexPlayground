@@ -1,3 +1,4 @@
+import {knightFormationSide,knightGatherYaw} from './meta-knight-staging';
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import type {CharacterController} from './controller';
@@ -44,7 +45,7 @@ export class MetaKnightDuetView{
   rigActors.forEach((c,index)=>{
    if(!c?.isMetaKnight)return;const rig=this.rig(c),point=index===0?duetBossPosition(s,now):s.players[d.owner]?.helper?helperPosition(s.players[d.owner].helper!,now):undefined;
    if(Array.isArray(point))c.actor.position.set(SITE.x+point[0],point[1],point[2]);
-   const toward=Math.atan2((index?3.3:-3.3)-(index?d.helperFrom!:d.bossFrom!)[0],-(index?d.helperFrom!:d.bossFrom!)[2]),turn=T.MathUtils.smoothstep(f,.75,1);c.yaw=gather?toward*(1-turn):0;c.actor.rotation.y=c.yaw;
+   const from=(index?d.helperFrom!:d.bossFrom!),to=knightFormationSide(index?3.3:-3.3,d.yaw??0,d.floor!);c.yaw=gather?knightGatherYaw(from,to,d.yaw??0,f):d.yaw??0;c.actor.rotation.y=c.yaw;
    const clip=gather?s.phase===4?'Fly':'Run':s.phase===4?'Fly':'Idle';if(c.state!==clip)c.setActivity(clip);c.updateActivity(0);
    if(!gather)rig.motion.applyRaisedSword(rise,clock,s.phase===4);c.updateKnightBladeGlow(now,!gather);
    if(!gather){rig.tinted=true;for(const m of rig.materials.keys()){m.emissive.setHex(0xffb82d);m.emissiveIntensity=.15+.25*power;}}
