@@ -7,11 +7,13 @@ import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 
 export type KnightSide='players'|'boss';
 export type HelperAbility=1|2|3|4;
-export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:18,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:1.8} as const;
+export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:36,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:3.6} as const;
 export type HelperCast={ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
 export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{yaw?:number;at:number;from:KnightPoint;to:KnightPoint};planet?:{yaw?:number;round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
 const mix=(a:KnightPoint,b:KnightPoint,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as KnightPoint;
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
+/** A phase can cancel a windup, but must not consume an ability that never fired. */
+export function cancelHelperCast(h:KnightHelper,now:number){const c=h.cast;if(c&&c.ability<=3&&now<c.release)h.cooldowns[c.ability-1]=Math.min(h.cooldowns[c.ability-1]??0,now);delete h.cast;}
 export const helperIsBoss=(s:KnightBattle|undefined,id:string)=>s?.players[id]?.side==='boss';
 export function helperDefeated(s:KnightBattle|undefined,id:string,now:number){const p=s?.players[id];return p?.side==='boss'&&!p.withdrawn&&(p.hp<=0||s?.stage==='won'||!!cosmicDescent(s,now)?.landed);}
 export function helperRoster(actors:readonly KnightActor[]){return actors.filter(a=>a.available&&insideKnightFightingArea(a.p));}

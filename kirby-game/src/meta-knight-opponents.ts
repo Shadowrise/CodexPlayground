@@ -1,3 +1,4 @@
+import {projectKnightFightersFinale} from './meta-knight-fighters-finale';
 import {TURN_RATE} from './movement-input';
 import {KIRBY_VARIANTS} from './variant-palette';
 import {KNIGHT,knightPosition,knightDanger,knightAttack,knightProjectile,knightShotPath,type KnightActor,type KnightBattle,type KnightPoint,type KnightStage} from './meta-knight-battle';
@@ -80,6 +81,7 @@ function constrain(s:KnightBattle,p:KnightPoint,previous:KnightPoint,now:number,
 /** Server-owned, serializable decisions; capped time prevents teleporting after a suspended tab. */
 export function advanceKnightOpponents(s:KnightBattle,humans:KnightActor[],now:number):KnightActor[]{
  const bots=Object.values(s.opponents??{}),actors=[...humans,...bots],dt=Math.max(0,Math.min(150,now-s.checked))/1000;
+ if(s.fightersFinale){projectKnightFightersFinale(s,now);return actors;}
  separateKnightOpponents(s,humans,(p,previous)=>constrain(s,p,previous,now));
  for(const a of bots){
   const player=s.players[a.id];a.moving=false;delete a.turning;if(!player||player.hp<=0||player.withdrawn)continue;

@@ -47,6 +47,12 @@ test('dash has its yellow warning before moving, and spin emits exactly six even
  const {s,helper,h}=fixture();startHelperAbility(s,helper,2,epoch);const dash=h.cast!;assert.deepEqual(helperPosition(h,dash.release-1),dash.from);assert.deepEqual(helperPosition(h,dash.end),dash.to);
  assert(startHelperAbility(s,helper,3,dash.recoverUntil));const c=h.cast!;assert.equal(helperOrbs(c,c.release-1).length,0);const orbs=helperOrbs(c,c.release+1000);assert.equal(orbs.length,6);const radii=orbs.map(p=>Math.hypot(p[0]-c.from[0],p[2]-c.from[2]));assert(radii.every(r=>Math.abs(r-radii[0])<1e-8));assert(Math.abs(orbs.reduce((sum,p)=>sum+p[0]-c.from[0],0))<1e-8);
 });
+
+test('the wider and longer player dash damages a fighter beyond the former corridor and reach',()=>{
+ const {s,actors,helper,hero}=fixture();helper.p=[0,0,0];hero.p=[3.4,0,20];const hp=s.players.hero.hp;
+ assert(startHelperAbility(s,helper,2,epoch));const c=s.players.helper.helper!.cast!;
+ advanceKnightBattle(s,actors,c.release+410);assert.equal(s.players.hero.hp,hp-1);
+});
 test('one melee hit per green window, including simultaneous attackers, and one second of dizziness',()=>{
  const {s,actors,helper,h,hero}=fixture(true);startHelperAbility(s,helper,2,epoch);const c=h.cast!,now=c.end+100;
  hero.p=[c.to[0],0,c.to[2]-2];hero.yaw=0;actors[2].p=[...hero.p];actors[2].yaw=0;
@@ -63,8 +69,8 @@ for(const phase of [1,4] as const)test(`phase ${phase}: reflected ${phase===4?'m
  hero.p=[point[0],helper.p[1],point[2]];hero.yaw=Math.PI;assert(knightAttack(s,hero,now-100));advanceKnightBattle(s,actors,now);assert(c.returned);assert.equal(c.meteor,phase===4);
  advanceKnightBattle(s,actors,now+HELPER.returnMs);assert.equal(s.players.helper.hp,HELPER.hearts-1);assert.equal(s.hp,12);assert.equal(s.players.hero.hp,HELPER.opponentHearts);advanceKnightBattle(s,actors,now+HELPER.returnMs+50);assert.equal(s.players.helper.hp,HELPER.hearts-1);
 });
-test('phase transitions clear hazards and retain helper health and cooldowns',()=>{
- const {s,actors,helper,h}=fixture();startHelperAbility(s,helper,1,epoch);s.players.helper.hp=2;const cooldowns=[...h.cooldowns];assert(setKnightPhase(s,2,actors,epoch+100));assert.equal(h.cast,undefined);assert.equal(s.players.helper.hp,2);assert.deepEqual(h.cooldowns,cooldowns);
+test('phase transitions clear hazards, retain health and refund the cancelled windup',()=>{
+ const {s,actors,helper,h}=fixture();startHelperAbility(s,helper,1,epoch);s.players.helper.hp=2;const cooldowns=[...h.cooldowns];assert(setKnightPhase(s,2,actors,epoch+100));assert.equal(h.cast,undefined);assert.equal(s.players.helper.hp,2);assert.equal(h.cooldowns[0],epoch+100);assert.deepEqual(h.cooldowns.slice(1),cooldowns.slice(1));
 });
 test('helper withdrawal leaves the heroes fighting, final hero withdrawal cancels',()=>{
  const {s}=fixture();assert(cancelKnightBattle(s,'helper',epoch+10));assert.equal(s.stage,'rest');assert(cancelKnightBattle(s,'hero',epoch+20));assert.equal(s.stage,'cancelled');

@@ -1,3 +1,4 @@
+import {knightFighterFinale} from '../../kirby-game/src/meta-knight-fighters-finale';
 import {pushKnightOpponent,knightOpponentPushCandidates,constrainKnightOpponentBodies} from '../../kirby-game/src/meta-knight-opponents-contact';
 import {knightDefeatPose} from '../../kirby-game/src/meta-knight-defeat';
 import {knightPlayerPushable} from '../../kirby-game/src/meta-knight-push';
@@ -398,7 +399,7 @@ export class GameRoom extends DurableObject<Env>{
    if(push&&cosmicControlsLocked(r.knightBattle)&&participant&&participant.hp>0&&!participant.withdrawn){position.x=META_KNIGHT_ARENA.x+push.point[0];position.z=push.point[2];position.y=0;}
    if(cosmicAirborne(r.knightBattle)&&r.knightBattle?.players[a.id]&&!r.knightBattle.players[a.id].withdrawn)position.y=cosmicHeight(r.knightBattle,now);
    const waiting=r.knightBattle?.stage==='side-choice'?r.knightBattle.choice?.actors.find(p=>p.id===a.id):undefined;if(waiting){position.x=META_KNIGHT_ARENA.x+waiting.p[0];position.y=waiting.p[1];position.z=waiting.p[2];}
-   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}constrainKnightOpponentBodies(r.knightBattle,p,oldKnightPoint,a.id);const helper=participant?.helper,locked=knightDefeatPose(r.knightBattle,a.id,now)?.p??knightCosmicAlly(r.knightBattle,a.id,now)?.p??(helper&&helperPosition(helper,now));if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
+   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}constrainKnightOpponentBodies(r.knightBattle,p,oldKnightPoint,a.id);const helper=participant?.helper,locked=knightFighterFinale(r.knightBattle,a.id,now)?.p??knightDefeatPose(r.knightBattle,a.id,now)?.p??knightCosmicAlly(r.knightBattle,a.id,now)?.p??(helper&&helperPosition(helper,now));if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    for(const id of WILD_PIGEONS){const offering=breadOffering(r.bread,id);if(offering&&next[id])next[id]=beginPidgieFeeding(next[id]!,offering);}
@@ -426,7 +427,7 @@ export class GameRoom extends DurableObject<Env>{
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
     if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&me.metaKnight&&helperChoiceAvailable(actors)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
     else if(e.action==='ability'){if(startHelperAbility(r.knightBattle,me,e.ability,now))changed=true;}
-    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
+    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
     else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }

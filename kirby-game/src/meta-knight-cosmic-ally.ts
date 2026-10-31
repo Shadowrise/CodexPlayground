@@ -2,7 +2,7 @@ import {knightAudienceYaw,knightFormationSide,knightGatherYaw} from './meta-knig
 import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 import {COSMIC,cosmicHeight,easeCosmic} from './meta-knight-cosmic';
 import {refugeAngle,refugeDirection} from './meta-knight-cosmic-refuge';
-import {helperPosition} from './meta-knight-helper';
+import {helperPosition,cancelHelperCast} from './meta-knight-helper';
 
 const STAGES=['transition','cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-flight'];
 const PLANET_STAGES=['cosmic-star-draw','cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep'];
@@ -16,7 +16,7 @@ export function prepareKnightPlanetAllies(s:KnightBattle,actors:readonly KnightA
  if(!knightPlanetAssistStage(s)||!s.cosmicRefuge)return false;let changed=false;
  for(const a of actors){const p=s.players[a.id],h=p?.helper;if(!a.available||p?.side!=='boss'||p.hp<=0||p.withdrawn||!h||h.planet?.round===s.cosmicRefuge.at)continue;
   const current=helperPosition(h,now)??a.p,from:KnightPoint=[current[0],COSMIC.height,current[2]],yaw=knightAudienceYaw(s,actors),side=planetSide(s,a.id),x=Math.cos(yaw)*side,z=-Math.sin(yaw)*side,at=Math.max(now,h.stunnedUntil??now);
-  h.planet={yaw,round:s.cosmicRefuge.at,side,at,arrival:at+Math.max(1000,Math.hypot(from[0]-x,from[2]-z)/8.5*1000),from};delete h.cast;delete h.duet;h.phase=s.phase;changed=true;
+  h.planet={yaw,round:s.cosmicRefuge.at,side,at,arrival:at+Math.max(1000,Math.hypot(from[0]-x,from[2]-z)/8.5*1000),from};cancelHelperCast(h,now);delete h.duet;h.phase=s.phase;changed=true;
  }return changed;
 }
 /** Only the boss ally joins the ritual; a Meta Knight on the player team is still launched normally. */

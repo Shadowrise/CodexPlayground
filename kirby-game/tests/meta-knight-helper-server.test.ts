@@ -1,3 +1,4 @@
+import {knightFighterFinale} from '../src/meta-knight-fighters-finale';
 import {helperShotExitAt} from '../src/meta-knight-helper';
 import {knightFormationSide} from '../src/meta-knight-staging';
 import test from 'node:test';
@@ -82,7 +83,9 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   send(helper,actor(2038,8));let expected=knightCosmicAlly(planet,id,now)!;assert.deepEqual(helper.data.actor.p,[2000+expected.p[0],expected.p[1],expected.p[2]],'the Worker owns the planetary gathering, including a forged movement packet');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));const persisted=room.room.knightBattle;assert.deepEqual(persisted.players[id].helper.planet,gathering,'planetary support survives hibernation without restarting');
   now=gathering.arrival+50;send(helper,actor(2038,8),[{type:'knight',action:'ability',ability:1},{type:'knight',action:'ability',ability:4}]);expected=knightCosmicAlly(persisted,id,now)!;assert(expected&&!expected.gather);assert.equal(persisted.players[id].helper.cast,undefined);assert.equal(persisted.duet.stage,'queued','slot four reserves the next subphase while the helper conducts');assert.deepEqual(helper.data.actor.p,[2000+expected.p[0],180,expected.p[2]]);
+  persisted.players[hero.data.id]={...persisted.players[Object.keys(persisted.opponents)[0]]};send(hero,actor(2025,12));
   Object.assign(persisted,{stage:'cosmic-star-stun',hp:0,until:now+100,checked:now});send(helper,actor(2038,8));assert.equal(persisted.stage,'cosmic-descent');now+=3100;send(helper,actor(2038,8));assert.equal(persisted.stage,'won');const defeated=knightDefeatPose(persisted,id,now)!;assert.deepEqual(helper.data.actor.p,[2000+defeated.p[0],0,defeated.p[2]],'the defeated helper remains beside the main boss on the authoritative arena floor');
+  send(hero,actor(2039,39));const result=knightFighterFinale(persisted,hero.data.id,now)!;assert(result?.won&&result.landed);assert.deepEqual(hero.data.actor.p,[2000+result.p[0],0,result.p[2]],'a forged movement packet cannot leave the shared fighter finale');await Promise.all(waits);assert(persisted.fightersFinale);
   send(helper,actor(2024,0),[{type:'knight',action:'cancel'}]);send(helper,actor(2024,0));assert(persisted.players[id].withdrawn);assert.equal(helper.data.actor.p[0],2024,'leaving the finished duel releases the final formation');
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}
 });
