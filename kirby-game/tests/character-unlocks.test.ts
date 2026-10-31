@@ -120,7 +120,7 @@ test('Meta Knight lock hint preserves the requested Russian text and localizes i
  assert.equal(META_KNIGHT_LOCK_HINT,'Кто сможет победить Метакнайта, тот станет новым метакнайтом.');
  assert.equal(lockedCharacterHint('Meta Knight'),META_KNIGHT_LOCK_HINT);
  try{
-  setLocale('ru');assert.equal(t(lockedCharacterHint('Meta Knight')),META_KNIGHT_LOCK_HINT);
+  setLocale('ru');assert.equal(t(lockedCharacterHint('Meta Knight')),'Кто сможет победить Метакнайта, тот станет новым Метакнайтом.');
   setLocale('en');assert.equal(t(META_KNIGHT_LOCK_HINT),'Whoever defeats Meta Knight will become the new Meta Knight.');
   setLocale('bg');assert.equal(t(META_KNIGHT_LOCK_HINT),'Който победи Meta Knight, ще стане новият Meta Knight.');
  }finally{setLocale('ru');}

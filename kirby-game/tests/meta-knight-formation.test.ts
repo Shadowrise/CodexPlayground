@@ -33,7 +33,7 @@ test('majority heading includes AI and resists a distant outlier',()=>{
 for(const [width,height] of [[1280,800],[390,844],[844,390]])test(`camera stays behind the local knight at a bounded distance at ${width}x${height}`,()=>{
  const {actors,s}=fixture();setKnightPhase(s,4,actors,10000,3);
  for(const stage of ['cosmic-star-draw','cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep','duet-charge'] as const){s.stage=stage;if(stage==='duet-charge')s.duet={yaw:1,owner:'helper',requestedAt:1,stage:'charge',round:0,at:10000,gatherUntil:10000,floor:180,bossFrom:[0,180,0],helperFrom:actors[1].p,spots:[],contacts:{}};
-  const frame=knightFormationFrame(s,actors,18000,'helper')!;assert(frame);const fit=fitKnightFormationCamera(frame,width,height),offset=fit.position.map((v,i)=>v-frame.anchor[i]);assert(Math.hypot(...offset)<31);assert(offset[0]*Math.sin(frame.yaw)+offset[2]*Math.cos(frame.yaw)>23,'behind the actual actor heading');
+  const frame=knightFormationFrame(s,actors,18000,'helper')!;assert(frame);const fit=fitKnightFormationCamera(frame,width,height),offset=fit.position.map((v,i)=>v-frame.anchor[i]);assert(Math.hypot(...offset)<39);assert(offset[0]*Math.sin(frame.yaw)+offset[2]*Math.cos(frame.yaw)>23,'behind the actual actor heading');
   actors[0].p=[900,180,-900];const far=knightFormationFrame(s,actors,18000,'helper')!;assert.deepEqual(fitKnightFormationCamera(far,width,height),fit,'distant combatants never push the camera away');
  }
  s.stage='won';assert.equal(knightFormationFrame(s,actors,19000,'helper'),undefined,'victory releases the encounter camera');s.stage='cosmic-spin-warn';delete s.duet;assert.equal(knightFormationFrame(s,actors,19000,'helper'),undefined);

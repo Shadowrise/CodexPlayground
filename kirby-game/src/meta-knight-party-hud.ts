@@ -66,7 +66,7 @@ export class MetaKnightPartyHud{
   for(const [id,bank] of this.helperBanks)if(!helpers.some(([key])=>key===id)){bank.element.remove();this.helperBanks.delete(id);}
   for(const [id,player] of helpers){
    let bank=this.helperBanks.get(id);if(!bank){const element=document.createElement('div'),title=document.createElement('strong'),hearts=document.createElement('div');element.className='knight-party-health knight-helper-health';element.dataset.playerId=id;title.className='knight-party-title';hearts.className='knight-party-hearts knight-helper-hearts';hearts.setAttribute('role','img');element.append(title,hearts);bank={element,title,hearts,key:''};this.helperBanks.set(id,bank);this.helperHealth.append(element);}
-   const name=this.profiles.get(id)?.name??t('Метакнайт'),label=`${name} · ${t('За Метакнайта')}`,key=JSON.stringify([label,player.hp]);if(bank.key===key)continue;bank.key=key;bank.title.textContent=label;bank.title.title=label;bank.element.dataset.defeated=String(player.hp===0);updateHeartCounter(bank.hearts,player.hp,label);
+   const label=t('Жизни помощника Метакнайта'),key=JSON.stringify([label,player.hp]);if(bank.key===key)continue;bank.key=key;bank.title.textContent=label;bank.title.title=label;bank.element.dataset.defeated=String(player.hp===0);updateHeartCounter(bank.hearts,player.hp,label);
   }
   const rosterTitle=t('На арене'),count=String(ids.length),rosterKey=`${rosterTitle}:${count}`;
   if(this.rosterKey!==rosterKey){this.rosterKey=rosterKey;this.rosterTitle.textContent=rosterTitle;this.rosterCount.textContent=count;}
@@ -83,7 +83,7 @@ export class MetaKnightPartyHud{
    }
    if(this.list.children[index]!==row.element)this.list.insertBefore(row.element,this.list.children[index]??null);
    const profile=this.profiles.get(id),player=s?.players[id];
-   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,defeated=!!player&&!player.withdrawn&&player.hp===0,state=player?.withdrawn?t('Дуэль прервана'):defeated?t('Сердца закончились'):knightBattleActive(s)&&!player?t('Наблюдает за боем'):player?.side==='boss'?`${t('За Метакнайта')} · ${player.hp}`:'';
+   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,defeated=!!player&&!player.withdrawn&&player.hp===0,state=player?.withdrawn?t('Дуэль прервана'):defeated?t('Сердца закончились'):knightBattleActive(s)&&!player?t('Наблюдает за боем'):'';
    const key=JSON.stringify([name,variant,hp,state,id===localId,t('Ты')]);if(row.key===key)return;row.key=key;
    styleVariant(row.element,KIRBY_VARIANTS[variant]??KIRBY_VARIANTS[0]);row.name.textContent=name;row.name.title=name;row.you.textContent=t('Ты');row.you.hidden=id!==localId;
    row.state.textContent=state;row.state.hidden=!state;row.element.dataset.defeated=String(defeated);row.element.dataset.withdrawn=String(!!player?.withdrawn);

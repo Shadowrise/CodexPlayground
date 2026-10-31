@@ -15,7 +15,7 @@ export function knightDefeatPose(s:KnightBattle|undefined,id:string,now:number){
  const d=s?.defeat;if(!s||!d||!['cosmic-descent','won'].includes(s.stage))return;
  const ids=Object.keys(d.helpers),index=ids.indexOf(id),from=id==='boss'?d.boss:d.helpers[id];
  if(!from||id!=='boss'&&s.players[id]?.withdrawn)return;
- const t=easeCosmic((now-d.at)/Math.max(1,d.until-d.at)),side=id==='boss'?-3:6.5+index*3.5,fall=cosmicDescent(s,now);
+ const t=easeCosmic((now-d.at)/Math.max(1,d.until-d.at)),side=id==='boss'?-4.75:4.75+index*3.5,fall=cosmicDescent(s,now);
  const target:KnightPoint=[Math.cos(d.yaw)*side,0,-Math.sin(d.yaw)*side],p=from.map((v,i)=>v+(target[i]-v)*t) as KnightPoint;
  if(fall)p[1]=fall.height;
  return {p,yaw:d.yaw,gather:now<d.until,landed:fall?.landed??now>=d.until};

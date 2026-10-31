@@ -1,3 +1,5 @@
+import {MetaKnightRefugeGlow} from './meta-knight-refuge-glow';
+import {insideRefuge} from './meta-knight-cosmic-refuge';
 import {MetaKnightFightersFinaleView} from './meta-knight-fighters-finale-view';
 import {knightBumpActive,KNIGHT_CONTACT} from './meta-knight-opponents-contact';
 import type {Group,Scene} from 'three';
@@ -12,6 +14,7 @@ import {META_KNIGHT_ARENA} from './meta-knight-arena-site';
 /** Models are local projections of shared AI state; clients never choose their actions. */
 export class MetaKnightOpponentsView{
  readonly characters=new Map<string,CharacterController>();
+ private glows=new Map<string,MetaKnightRefugeGlow>();
  private finales=new Map<string,MetaKnightFightersFinaleView>();
  private bumpSeen=new Map<string,number>();
  private gait=new Map<string,{x:number;z:number;travelled:number;movedAt:number}>();
@@ -22,6 +25,7 @@ export class MetaKnightOpponentsView{
   for(const [id,a] of Object.entries(s?.opponents??{})){
    if(s?.stage==='cancelled')break;
    let c=this.characters.get(id);if(!c){c=this.make(a.variant);if(!c)continue;c.actor.name=`Meta Knight AI opponent ${id}`;c.actor.userData.location='meta-knight-arena';c.beginDuel();this.restores.set(id,arenaMaterials(c.actor));this.characters.set(id,c);}
+   let glow=this.glows.get(id);if(!glow){glow=new MetaKnightRefugeGlow(c.actor);this.glows.set(id,glow);}glow.update(now,!!s&&s.players[id]?.hp>0&&!s.players[id].withdrawn&&insideRefuge(s,a.p,now));
    let finale=this.finales.get(id);if(!finale){finale=new MetaKnightFightersFinaleView(c);this.finales.set(id,finale);}if(finale.update(s,id,now,dt,scene,cosmic))continue;
    const p=s!.players[id],airborne=cosmicAirborne(s);(airborne?cosmic:scene).add(c.actor);
    let gait=this.gait.get(id);if(!gait){gait={x:a.p[0],z:a.p[2],travelled:0,movedAt:-Infinity};this.gait.set(id,gait);}
@@ -38,6 +42,6 @@ export class MetaKnightOpponentsView{
    if(rolling&&!defeated){const b=p.bump!;c.roll.state=[b.dx,b.dz,(now-b.at)/1000,0,a.p[1]];if(!c.hasNativeAnimations)c.roll.applyPose(c.animationRoot,c.yaw);}else c.roll.reset();c.updateDuelDazedPose(now,defeated);c.actor.visible=knightPlayerVisible(s,id,now);
   }
  }
- clear(){for(const view of this.finales.values())view.dispose();this.finales.clear();for(const [id,c] of this.characters){this.restores.get(id)?.();disposeActor(c);}this.restores.clear();this.characters.clear();this.bumpSeen.clear();this.gait.clear();}
+ clear(){for(const glow of this.glows.values())glow.dispose();this.glows.clear();for(const view of this.finales.values())view.dispose();this.finales.clear();for(const [id,c] of this.characters){this.restores.get(id)?.();disposeActor(c);}this.restores.clear();this.characters.clear();this.bumpSeen.clear();this.gait.clear();}
  dispose(){this.clear();}
 }

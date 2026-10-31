@@ -38,7 +38,7 @@ try{
   responsive.push({width,height,...layout});await page.screenshot({path:output+`/party-${width}x${height}.png`});
  }
  await page.setViewportSize(mobile?{width:390,height:844}:{width:1440,height:900});await page.evaluate(()=>document.activeElement?.blur());
- await page.waitForTimeout(3500);if(mobile)await page.locator('#knight-helper-actions button').first().tap();else await page.keyboard.press('Digit1');await page.waitForFunction(()=>opponentsQA.travel.battle.players.solo.helper.cast?.ability===1);
+ await page.waitForTimeout(3500);if(mobile)await page.locator('#knight-helper-actions button').nth(1).tap();else await page.keyboard.press('Digit2');await page.waitForFunction(()=>opponentsQA.travel.battle.players.solo.helper.cast?.ability===1);
  await page.screenshot({path:output+'/solo-three-opponents.png'});
  const roster=await page.evaluate(()=>Object.values(opponentsQA.travel.battle.opponents).map(a=>({variant:a.variant,p:a.p})));
  await page.waitForTimeout(1500);assert(await page.evaluate(before=>Object.values(opponentsQA.travel.battle.opponents).some((a,i)=>Math.hypot(a.p[0]-before[i].p[0],a.p[2]-before[i].p[2])>.1),roster));

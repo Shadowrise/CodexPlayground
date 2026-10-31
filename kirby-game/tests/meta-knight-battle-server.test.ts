@@ -128,7 +128,9 @@ test('actual Worker validates duel attacks, owns victory and respect chat, persi
    // Isolate the six melee openings: the automatic star counter has its own persisted branch above.
    if(hit<5){const hp=room.room.knightBattle.hp;now+=1000;setKnightPhase(room.room.knightBattle,4,[{id:aid,p:[0,180,41],yaw:Math.PI,available:true}],now,1);room.room.knightBattle.hp=hp;}
   }
-  now=room.room.knightBattle.until-1600;send(a,actor([2000,180,4]));assert(a.data.actor.p[1]>0&&a.data.actor.p[1]<180);assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])<5,'descent never replays the original recoil');
+  now=room.room.knightBattle.until-1600;send(a,actor([2000,180,4]));assert(a.data.actor.p[1]>0&&a.data.actor.p[1]<180);
+  const finaleLanding=room.room.knightBattle.fightersFinale.actors[aid],landingRadius=Math.hypot(finaleLanding.to[0],finaleLanding.to[2]);assert(landingRadius>=12,'fighters leave the arena centre for the defeated knights');
+  assert(Math.hypot(a.data.actor.p[0]-2000,a.data.actor.p[2])<=Math.max(Math.hypot(finaleLanding.from[0],finaleLanding.from[2]),landingRadius)+1e-6,'descent follows the captured landing path without replaying the original recoil');
   const savedFall=structuredClone(room.room.knightBattle.cosmicFall);assert(savedFall);await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(r=>setTimeout(r,0));assert.deepEqual(room.room.knightBattle.cosmicFall,savedFall,'the fall clock and fixed facing survive Worker wakeup');
   now=room.room.knightBattle.until-500;send(a,actor([2000,180,4]));assert.equal(a.data.actor.p[1],0,'the real floor is reached during the landing recovery');assert.equal(b.data.actor.p[1],0,'other players land on the same authoritative clock');assert.equal(room.room.knightBattle.stage,'cosmic-descent');assert.equal(a.messages.filter(m=>m.type==='knight-victory').length,0);
   now=room.room.knightBattle.until;send(a,actor([2000,0,4]));assert.equal(room.room.knightBattle.stage,'won');assert.equal(room.room.knightBattle.players[aid].hits,16);assert.equal(room.room.knightBattle.players[aid].reflects,1);

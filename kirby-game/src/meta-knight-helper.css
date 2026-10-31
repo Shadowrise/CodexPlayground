@@ -15,7 +15,7 @@ body.touch-ui:has(#knight-helper-actions:not([hidden])) #touch-interaction{botto
 
 body.in-meta-knight-arena:has(#knight-helper-actions:not([hidden])) #navigation-hud{bottom:calc(var(--dash-dock-bottom,18px) + 196px)}
 
-.knight-party-health.knight-helper-health{padding-top:16px}.knight-helper-health .knight-party-title{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.knight-helper-hearts{margin-top:7px}.knight-helper-hearts>.knight-party-heart{color:#d8b8ff;filter:drop-shadow(0 2px 4px #bb89ef40);background:linear-gradient(180deg,#edd6ff,#ad7df4);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.knight-party-health.knight-helper-health{padding-top:16px}.knight-helper-health .knight-party-title{font-size:12px;line-height:1.35;white-space:normal}.knight-helper-hearts{margin-top:7px}.knight-helper-hearts>.knight-party-heart{color:#d8b8ff;filter:drop-shadow(0 2px 4px #bb89ef40);background:linear-gradient(180deg,#edd6ff,#ad7df4);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
 body.touch-ui #knight-helper-actions{gap:6px}body.touch-ui #knight-helper-actions button{width:50px;height:57px}@media(max-width:370px){body.touch-ui #knight-helper-actions{display:grid;grid-template-columns:50px 50px;gap:6px}}
 

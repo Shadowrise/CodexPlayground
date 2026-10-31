@@ -1,3 +1,11 @@
+/** Display spellings can change while saved messages and character IDs retain their original keys. */
+export const russianLabels:Readonly<Record<string,string>>=Object.assign(Object.create(null),{
+ 'Meta Knight':'Метакнайт',
+ '✦ Печать Meta Knight · {0}/3':'✦ Печать Метакнайта · {0}/3',
+ 'Модель Meta Knight ещё не загрузилась':'Модель Метакнайта ещё не загрузилась',
+ 'Meta Knight пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.':'Метакнайт пока заблокирован. Прогресс сохранён, игра продолжится с другим персонажем.',
+ 'Кто сможет победить Метакнайта, тот станет новым метакнайтом.':'Кто сможет победить Метакнайта, тот станет новым Метакнайтом.',
+});
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
  'Доступна новая версия игры':['A new game version is available','Налична е нова версия на играта'],
@@ -16,6 +24,7 @@ export const translations: Record<string, readonly [string, string]> = {
  "Помоги Метакнайту · ←, ↑, →, ↓":["Help Meta Knight · ←, ↑, →, ↓","Помогни на Мета Найт · ←, ↑, →, ↓"],
  "Помоги Метакнайту · способности 1, 2, 3, 4":["Help Meta Knight · abilities 1, 2, 3, 4","Помогни на Мета Найт · способности 1, 2, 3, 4"],
  "Жизни игроков":["Player hearts","Животи на играчите"],
+ "Жизни помощника Метакнайта":["Meta Knight helper's hearts","Животи на помощника на Мета Найт"],
  "Выбери сторону":["Choose your side","Избери страна"],
  "Ждём выбора стороны":["Waiting for a side to be chosen","Изчакване на избор на страна"],
  "← → — выбор · A — подтвердить":["← → choose · A confirm","← → избор · A потвърждение"],

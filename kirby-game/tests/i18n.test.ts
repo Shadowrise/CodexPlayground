@@ -2,6 +2,15 @@ import {test,afterEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {detectLocale,initializeLocale,getLocale,setLocale,t,LANGUAGE_KEY,onLocaleChange} from '../src/i18n';
 import {translations} from '../src/i18n-catalog';
+import {KIRBY_VARIANTS} from '../src/variant-palette';
+
+test('Russian Meta Knight labels share one spelling while character IDs and player names stay intact',()=>{
+ setLocale('ru');assert.equal(t('Meta Knight'),'Метакнайт');assert.equal(t('✦ Печать Meta Knight · {0}/3',[2]),'✦ Печать Метакнайта · 2/3');
+ assert.equal(t('Кто сможет победить Метакнайта, тот станет новым метакнайтом.'),'Кто сможет победить Метакнайта, тот станет новым Метакнайтом.');
+ assert.equal(t('Meta Knight зашёл на полянку.'),'Meta Knight зашёл на полянку.');
+ assert(KIRBY_VARIANTS.some(variant=>variant[0]==='Meta Knight'));
+ setLocale('en');assert.equal(t('Meta Knight'),'Meta Knight');setLocale('bg');assert.equal(t('Meta Knight'),'Meta Knight');setLocale('ru');
+});
 import {pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightSealLogs} from '../src/world-log';
 
 test('shared badge and portal announcements translate and preserve collector names',()=>{

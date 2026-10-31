@@ -249,8 +249,8 @@ new GLTFLoader().load('/models/meta-knight-animated.glb?v=8', gltf => {
     get bounds() {return bounds?.clone();},
   }});
 }, undefined, error => {
-  console.error('Не удалось загрузить Мета-найта:', error);
-  fail('Не удалось загрузить Мета-найта. Обнови страницу, чтобы попробовать снова.');
+  console.error('Не удалось загрузить Метакнайта:', error);
+  fail('Не удалось загрузить Метакнайта. Обнови страницу, чтобы попробовать снова.');
 });
 
 let previous = performance.now();

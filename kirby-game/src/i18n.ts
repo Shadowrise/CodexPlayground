@@ -1,4 +1,4 @@
-import {translations} from './i18n-catalog';
+import {russianLabels,translations} from './i18n-catalog';
 
 export type Locale='ru'|'en'|'bg';
 export const LANGUAGE_KEY='kirby-language-v1';
@@ -57,8 +57,9 @@ export function setLocale(next:Locale,storage?:Pick<Storage,'setItem'>){
 export function onLocaleChange(listener:()=>void){listeners.add(listener);return ()=>listeners.delete(listener);}
 /** Translate presentation text; identifiers and player-authored text never pass here. */
 export function t(source:string,params?:readonly (string|number)[]):string{
- if(params){const value=locale==='ru'?source:translations[source]?.[locale==='en'?0:1]??source;return value.replace(/\{(\d+)\}/g,(_,i)=>String(params[Number(i)]??''));}
- if(locale==='ru'||!source)return source;
+ if(params){const value=locale==='ru'?russianLabels[source]??source:translations[source]?.[locale==='en'?0:1]??source;return value.replace(/\{(\d+)\}/g,(_,i)=>String(params[Number(i)]??''));}
+ if(locale==='ru')return russianLabels[source]??source;
+ if(!source)return source;
  const cached=cache.get(source);if(cached!==undefined)return cached;
  let result=translations[source]?.[locale==='en'?0:1];
  if(result===undefined&&/[А-Яа-яЁё]/.test(source)){

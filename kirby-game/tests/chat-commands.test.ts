@@ -159,7 +159,7 @@ test('Meta Knight unlock requires its complete alias and offers localized menu s
   for(const locale of ['ru','en','bg'] as const){
    setLocale(locale);
    for(const prefix of ['m','META','meta-','meta-knight'])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{
-    value:'/unlock meta-knight',label:'meta-knight',description:'Meta Knight',complete:true,
+    value:'/unlock meta-knight',label:'meta-knight',description:locale==='ru'?'Метакнайт':'Meta Knight',complete:true,
    }]);
    const error=parseChatCommand('/unlock',true,places)!.error!;
    assert.match(t(error),/\/unlock meta-knight/);

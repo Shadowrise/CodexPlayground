@@ -9,7 +9,7 @@ import {knightOpponentProfiles} from './meta-knight-opponents';
 import {MetaKnightOpponentsView} from './meta-knight-opponents-view';
 import {knightCosmicAlly} from './meta-knight-cosmic-ally';
 import {MetaKnightDuetView} from './meta-knight-duet-view';
-import {startHelperAbility,helperIsBoss,helperDefeated,helperLocked,helperChoiceAvailable,type HelperAbility,type KnightSide} from './meta-knight-helper';
+import {HELPER_SLOTS,startHelperAbility,helperIsBoss,helperDefeated,helperLocked,helperChoiceAvailable,type HelperAbility,type KnightSide} from './meta-knight-helper';
 import {MetaKnightHelperView} from './meta-knight-helper-view';
 import {MetaKnightHelperHud} from './meta-knight-helper-hud';
 import {MetaKnightCelebrationView} from './meta-knight-celebration-view';
@@ -64,14 +64,14 @@ export class MetaKnightArenaTravel{
  private helperHud=new MetaKnightHelperHud(side=>this.chooseSide(side),slot=>this.useAbility(slot));
  get helperMode(){return this.engaged&&helperIsBoss(this.battle,this.battleOptions?.id()??'solo');}
  get choosingSide(){return this.helperHud.choosing;}
- digit(digit:number){if(this.helperHud.digit(digit))return true;if(this.helperMode){if(digit>=1&&digit<=4)this.useAbility(digit as HelperAbility);return true;}return false;}
+ digit(digit:number){if(this.helperHud.digit(digit))return true;if(this.helperMode){if(digit>=1&&digit<=4)this.useAbility(HELPER_SLOTS[digit-1]);return true;}return false;}
  sidePad(direction:-1|0|1,confirm=false){this.helperHud.pad(direction,confirm);}
  private useAbility(slot:HelperAbility){if(this.helperMode&&this.owner&&document.hasFocus()&&!document.hidden){if(this.battleOptions?.online())this.battleOptions.ability?.(slot);else startHelperAbility(this.battle,this.localActor(this.owner),slot,this.soloNow);}}
  private helperView(c:CharacterController){let v=this.helperViews.get(c);if(!v){v=new MetaKnightHelperView(c,kind=>this.battleOptions?.cue(kind));this.helperViews.set(c,v);}return v;}
  private celebrate(c:CharacterController,id:string,now:number,dt:number){if(id===(this.battleOptions?.id()??'solo')&&this.battle?.id===this.withdrawnBattle){this.celebrations.get(c)?.clear();return false;}if(!knightCelebration(this.displayedBattle,id,now)){this.celebrations.get(c)?.clear();return false;}let v=this.celebrations.get(c);if(!v){v=new MetaKnightCelebrationView(c);this.celebrations.set(c,v);}return v.update(this.displayedBattle,id,now,dt);}
  private soloSides:Record<string,KnightSide>={};
  private opponentsView?:MetaKnightOpponentsView;
- private opponentProbes:{actor:CharacterController;restore:()=>void}[]=[];
+ private opponentProbes:{actor:CharacterController;restore:()=>void;glow:MetaKnightRefugeGlow}[]=[];
  private chooseSide(side:KnightSide){if(this.battleOptions?.online())this.battleOptions.chooseSide?.(side);else this.soloSides[this.battleOptions?.id()??'solo']=side;}
  private battleProfiles(){return [...(this.battleOptions?.profiles?.()??[]),...knightOpponentProfiles(this.battle)];}
  private lastBumpKey='';
@@ -151,7 +151,7 @@ export class MetaKnightArenaTravel{
    // Keep the helper's light slot and both model families present during the same warm-up.
    const helper=c.isMetaKnight?this.helperView(c):undefined;helper?.update(undefined,'prepare',this.soloNow,0,this.camera);
    const eyes=helper?.prepareEyes();if(eyes)helper!.group.add(eyes);
-   const probes=[0,17].flatMap(variant=>{const actor=this.battleOptions?.makeOpponent?.(variant);if(!actor)return [];const restore=arenaMaterials(actor.actor);actor.actor.position.copy(c.actor.position);stage!.scene.add(actor.actor);return [{actor,restore}];});
+   const probes=[0,17].flatMap(variant=>{const actor=this.battleOptions?.makeOpponent?.(variant);if(!actor)return [];const restore=arenaMaterials(actor.actor),glow=new MetaKnightRefugeGlow(actor.actor);actor.actor.position.copy(c.actor.position);stage!.scene.add(actor.actor);return [{actor,restore,glow}];});
    try{await Promise.all([this.battleView?this.battleView.prepare(this.renderer,stage.scene,this.camera,[c.actor,...(helper?[helper.group]:[]),...(this.duetView?[this.duetView.group]:[]),...probes.map(p=>p.actor.actor)]):this.renderer.compileAsync(stage.scene,this.camera),audio]);}
    finally{eyes?.removeFromParent();for(const p of probes)p.actor.actor.visible=false;this.opponentProbes.push(...probes);}
    if(generation!==this.generation){stage.dispose();return;}
@@ -184,7 +184,7 @@ export class MetaKnightArenaTravel{
   this.disposeKnight();
   this.current?.dispose();this.current=undefined;this.owner=undefined;this.arrival=undefined;this.loading=false;this.overlay.hidden=true;this.caption.hidden=true;this.overlay.setAttribute('aria-busy','false');this.clearInput();
  }
- private disposeKnight(){for(const p of this.opponentProbes){p.restore();disposeActor(p.actor);}this.opponentProbes=[];this.opponentsView?.dispose();this.opponentsView=undefined;this.duetView?.dispose();this.duetView=undefined;this.duetOwner=undefined;this.setGodMode(false);this.playerStars?.dispose();this.playerStars=undefined;this.battleView?.dispose();this.battleView=undefined;this.soloBattle=undefined;if(this.knight)disposeActor(this.knight);this.knight=undefined;}
+ private disposeKnight(){for(const p of this.opponentProbes){p.glow.dispose();p.restore();disposeActor(p.actor);}this.opponentProbes=[];this.opponentsView?.dispose();this.opponentsView=undefined;this.duetView?.dispose();this.duetView=undefined;this.duetOwner=undefined;this.setGodMode(false);this.playerStars?.dispose();this.playerStars=undefined;this.battleView?.dispose();this.battleView=undefined;this.soloBattle=undefined;if(this.knight)disposeActor(this.knight);this.knight=undefined;}
  private constrainShield(p:T.Vector3,previous?:T.Vector3){const id=this.battleOptions?.id()??'solo',local:[number,number,number]=[p.x-SITE.x,p.y,p.z],before:typeof local|undefined=previous?[previous.x-SITE.x,previous.y,previous.z]:undefined,now=this.battleOptions?.online()?this.battleOptions.now():this.soloNow;if(!helperIsBoss(this.battle,id)){constrainKnightBody(this.battle,local,now,before,this.owner?.actor.scale.x);constrainKnightShield(this.battle,local,before);}constrainKnightOpponentBodies(this.battle,local,before,id);p.x=SITE.x+local[0];p.z=local[2];}
  private constrainArena(p:T.Vector3,size:number){constrainMetaKnightArena(p,size,knightArenaSide(this.battle,this.battleOptions?.id()??'solo'));}
  private localActor(c:CharacterController):KnightActor{return {id:this.battleOptions?.id()??'solo',p:[c.actor.position.x-SITE.x,c.actor.position.y,c.actor.position.z],yaw:c.yaw,available:true,metaKnight:c.isMetaKnight,variant:this.battleOptions?.profiles?.().find(p=>p.id===(this.battleOptions?.id()??'solo'))?.variant};}
@@ -252,7 +252,8 @@ export class MetaKnightArenaTravel{
   this.constrainArena(c.actor.position,c.actor.scale.x);
   const floor=cosmicAirborne(battle)&&participating?cosmicHeight(battle,now):arenaPortalFloor(c.actor.position.x-SITE.x,c.actor.position.z);
   if(c.flight.active)c.actor.position.y+=floor-c.surfaceY;else c.actor.position.y=floor;c.surfaceY=floor;
-  this.syncCosmicFrame(c,this.displayedBattle,now,participating&&(life>0||celebrating));
+  // Defeated allies still belong to the travelling formation seen by their camera.
+  this.syncCosmicFrame(c,this.displayedBattle,now,participating);
   if(helper&&c.isMetaKnight)this.helperView(c).update(battle,id,now,paused?0:dt,this.camera);else this.helperViews.get(c)?.update(undefined,id,now,0);
   this.applyDefeat(c,id,now);
   if(this.playerStars)this.playerStars.update([c.actor.position.x,c.actor.position.y,c.actor.position.z],now,dazed);

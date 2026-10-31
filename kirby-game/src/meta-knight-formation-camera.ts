@@ -22,10 +22,10 @@ export function knightFormationFrame(s:KnightBattle|undefined,actors:readonly Kn
 }
 /** Bounded shoulder distance: opponents outside the view never force the camera away. */
 export function fitKnightFormationCamera(frame:NonNullable<ReturnType<typeof knightFormationFrame>>,width:number,height:number,yaw=frame.yaw,rightInset=0,topInset=120){
- const portrait=height>width,distance=portrait?28:24,sn=Math.sin(yaw),cs=Math.cos(yaw),shoulder=frame.kind==='celebration'?0:3.2;
+ const portrait=height>width,distance=portrait?36:32,sn=Math.sin(yaw),cs=Math.cos(yaw),shoulder=frame.kind==='celebration'?0:3.2;
  // HUD accommodation shifts the composition, not its distance from the player.
  const shift=Math.min(2,Math.max(0,rightInset)/Math.max(1,width)*5),lift=Math.min(3,Math.max(0,topInset)/Math.max(1,height)*6),p=frame.anchor;
- const position:KnightPoint=[p[0]+sn*distance+cs*(shoulder+shift),p[1]+9,p[2]+cs*distance-sn*(shoulder+shift)];
- const focus:KnightPoint=[p[0]-sn*7+cs*(shoulder+shift),p[1]+6+lift,p[2]-cs*7-sn*(shoulder+shift)];
+ const position:KnightPoint=[p[0]+sn*distance+cs*(shoulder+shift),p[1]+10,p[2]+cs*distance-sn*(shoulder+shift)];
+ const focus:KnightPoint=[p[0]-sn*7+cs*(shoulder+shift),p[1]+9.5+lift,p[2]-cs*7-sn*(shoulder+shift)];
  return {focus,position,fov:portrait?76:60};
 }

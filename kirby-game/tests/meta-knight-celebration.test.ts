@@ -39,10 +39,10 @@ test('victory paths remain continuous through greeting, hug, circle and repeated
  const {s}=battle();s.stage='lost';s.celebration={at:100000,boss:[-5,0,-6],helpers:{helper:[10,0,0]}};
  for(const id of ['boss','helper']){let before=knightCelebration(s,id,100000)!;for(let t=16;t<45000;t+=16){const next=knightCelebration(s,id,100000+t)!;assert(Math.hypot(...next.p.map((p,i)=>p-before.p[i]))<.35,`no teleport at ${id}:${t}`);before=next;}}
 });
-test('helper keeps its colours during target windows, uses yellow dash and six boss orbs, and has no target for projectiles',async()=>{
+test('helper keeps its colours during target windows, keeps its colours during dash and uses six boss orbs, and has no target for projectiles',async()=>{
  const make=await models(),c=make(),scene=new Scene();scene.add(c.actor);const {s,actors}=battle();s.stage='rest';s.until=1e9;
  const baseline=colours(c),view=new MetaKnightHelperView(c,()=>{}),h=s.players.helper.helper!;startHelperAbility(s,actors[1],2,100000);const dash=h.cast!;
- view.update(s,'helper',100100,0);let yellow=false;c.actor.traverse(o=>{if(o instanceof Mesh&&o.material instanceof MeshStandardMaterial&&o.material.emissive.getHex()===0xffc233)yellow=true;});assert(yellow);
+ view.update(s,'helper',100100,0);let yellow=false;c.actor.traverse(o=>{if(o instanceof Mesh&&o.material instanceof MeshStandardMaterial&&o.material.emissive.getHex()===0xffc233)yellow=true;});assert(!yellow,'the playable knight must not turn yellow during a dash');
  view.update(s,'helper',dash.end+50,0);assert(view.target.group.visible);assert(view.target.group.getObjectByName('Floating downward target arrow'));assert(view.target.group.getObjectByName('Available target window countdown'));assert.deepEqual(colours(c),baseline,'the dash yellow clears without repainting the knight green');
  startHelperAbility(s,actors[1],3,dash.recoverUntil);const spin=h.cast!;view.update(s,'helper',spin.release-100,0);assert((view as any).lanes.every((lane:any)=>!lane.visible),'spin keeps its wind-up without preliminary lanes');view.update(s,'helper',spin.release+500,0);const cores=view.group.getObjectByName('Cosmic electric orb cores') as import('three').InstancedMesh;assert.equal(cores.count,6);assert.equal(helperOrbs(spin,spin.release+500).length,6);
  startHelperAbility(s,actors[1],1,spin.recoverUntil);const shot=h.cast!;view.update(s,'helper',shot.end+50,0);assert.equal(view.target.group.visible,false);
@@ -61,7 +61,7 @@ test('the real duet rig raises both actual blades vertically and joins their tip
 });
 
 test('both real rigs take strides by distance and move their feet on circle hops',async()=>{
- const make=await models(),boss=make(),helper=make();boss.actor.scale.setScalar(3.3);const {s}=battle();s.stage='lost';s.celebration={at:100000,boss:[-5,0,-6],helpers:{helper:[10,0,0]}};
+ const make=await models(),boss=make(),helper=make();boss.actor.scale.setScalar(3.3);const {s}=battle();s.stage='lost';s.celebration={at:100000,boss:[-10,0,0],helpers:{helper:[10,0,0]}};
  const pairs=[[boss,'boss'],[helper,'helper']] as const,views=pairs.map(([c])=>new MetaKnightCelebrationView(c)),cycles:number[]=[];
  pairs.forEach(([c,id],i)=>{
   const view=views[i],run=c.actions.get('Run')!;c.setActivity('Run');const rate=run.getEffectiveTimeScale();

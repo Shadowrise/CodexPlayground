@@ -7,6 +7,8 @@ import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 
 export type KnightSide='players'|'boss';
 export type HelperAbility=1|2|3|4;
+/** Visible slots: dash, crescent/meteor, orbs, united storm. Wire IDs remain stable. */
+export const HELPER_SLOTS=[2,1,3,4] as const;
 export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:36,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:3.6} as const;
 export type HelperCast={ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
 export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{yaw?:number;at:number;from:KnightPoint;to:KnightPoint};planet?:{yaw?:number;round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
