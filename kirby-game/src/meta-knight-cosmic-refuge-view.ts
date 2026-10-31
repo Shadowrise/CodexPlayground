@@ -23,6 +23,8 @@ export class MetaKnightCosmicRefugeView{
  private starStart=new T.Vector3();private planetStart=new T.Vector3();private startRadius=0;private startAngle=0;private initialRadius=0;
  private p=new T.Vector3();private q=new T.Vector3();private tip=new T.Vector3();private sourcePoint=new T.Vector3();
  private gravityPaths:T.Vector3[][]=[];
+ private planetRadius=0;
+ get gravityPlanet(){return this.planet?.visible?{node:this.planet,radius:this.planetRadius}:undefined;}
  private foreheadFlash=makeFruitMist(0);
  get chunks(){return this.burst.group;}
  constructor(scene:T.Scene,private blade:T.Object3D){
@@ -73,7 +75,7 @@ export class MetaKnightCosmicRefugeView{
    }else if(stage==='cosmic-planet-release'){
     this.worldPoint(this.sources[r.world],this.sourcePoint);this.q.lerpVectors(new T.Vector3().fromArray(refugePlanet(s,s.since)),this.sourcePoint,easeCosmic(f));radius=T.MathUtils.lerp(R.planetRadius,this.initialRadius,easeCosmic(f));
    }
-   this.planet!.position.copy(this.q);this.planet!.scale.setScalar(radius/COSMIC_WORLDS[r.world].radius);const planetClock=((impact??now)-r.at)/1000;
+   this.planetRadius=radius;this.planet!.position.copy(this.q);this.planet!.scale.setScalar(radius/COSMIC_WORLDS[r.world].radius);const planetClock=((impact??now)-r.at)/1000;
    this.planet!.rotation.set(planetClock*.14,planetClock*.12,refugePlanetAngle(s,impact??now)*-1.15);
    const material=this.planet!.material as T.ShaderMaterial;material.uniforms.clock.value=clock;material.uniforms.surfaceDetail.value=stage==='cosmic-planet-draw'?easeCosmic(f):1;material.uniforms.fracture.value=impact!==undefined?1:stage==='cosmic-planet-sweep'?easeCosmic((now-s.until+260)/260):0;
   }

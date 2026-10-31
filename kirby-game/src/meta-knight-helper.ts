@@ -1,3 +1,4 @@
+import {knightBumpActive} from './meta-knight-opponents-contact';
 import {requestKnightDuet} from './meta-knight-duet';
 import {knightCosmicAlly} from './meta-knight-cosmic-ally';
 import {cosmicDescent} from './meta-knight-cosmic';
@@ -8,7 +9,7 @@ export type KnightSide='players'|'boss';
 export type HelperAbility=1|2|3|4;
 export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:18,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:1.8} as const;
 export type HelperCast={ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
-export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{at:number;from:KnightPoint;to:KnightPoint};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
+export type KnightHelper={cooldowns:[number,number,number,number?];duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{at:number;from:KnightPoint;to:KnightPoint};planet?:{round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
 const mix=(a:KnightPoint,b:KnightPoint,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as KnightPoint;
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
 export const helperIsBoss=(s:KnightBattle|undefined,id:string)=>s?.players[id]?.side==='boss';
@@ -26,7 +27,8 @@ export function helperVulnerable(h:KnightHelper,now:number){return !!h.cast&&h.c
 export function helperLocked(h:KnightHelper,now:number){return !!helperPosition(h,now);}
 export function startHelperAbility(s:KnightBattle|undefined,actor:KnightActor,ability:HelperAbility,now:number){
  const p=s?.players[actor.id],h=p?.helper;
- if(knightCosmicAlly(s,actor.id,now))return false;
+ if(knightBumpActive(s,actor.id,now))return false;
+ const ritual=knightCosmicAlly(s,actor.id,now);if(ritual&&!(ritual.kind==='planet'&&ability===4))return false;
  if(ability===4)return !!s&&requestKnightDuet(s,actor,now);
  if(!s||!p||p.side!=='boss'||!h||!actor.available||!actor.metaKnight||p.withdrawn||p.hp<=0||![1,2,3].includes(ability)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage)||helperLocked(h,now)||s.duet?.owner===actor.id||now<(h.cooldowns[ability-1]??0))return false;
  const meteor=ability===1&&s.phase===4,warn=ability===1?(meteor?HELPER.meteorWarnMs:HELPER.shotWarnMs):ability===2?HELPER.dashWarnMs:HELPER.spinWarnMs;

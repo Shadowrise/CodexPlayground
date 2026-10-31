@@ -263,7 +263,7 @@ export class CharacterController {
     return input.forward ? 'Run' : 'WalkBackward';
   }
 
-  setActivity(name:string) {
+  setActivity(name:string,useAuthoredClip=false) {
     this.clearKirbyDashPose();
     this.clearPigeonDashPose();
     this.fruitEating.clear();
@@ -275,7 +275,7 @@ export class CharacterController {
     this.emotion?.clear();this.emotion=undefined;
     this.flight.reset();this.cloud.visible=false;
     this.attackElapsed=this.eatElapsed=undefined;this.attackHit=false;this.pushArmed=false;
-    this.play((this.hasNativeAnimations||name==='Fly'||name==='Jump')&&this.actions.has(name)?name:'Idle');this.state=name;
+    this.play((useAuthoredClip||this.hasNativeAnimations||name==='Fly'||name==='Jump')&&this.actions.has(name)?name:'Idle');this.state=name;
     this.animationRoot.rotation.set(0,0,0);this.animationRoot.scale.setScalar(1);
   }
 

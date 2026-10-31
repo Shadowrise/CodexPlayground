@@ -1,3 +1,4 @@
+import {humanKnightFixture} from './knight-human-fixture';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,setKnightPhase,knightPartyMaximum,type KnightActor} from '../src/meta-knight-battle';
@@ -9,7 +10,7 @@ const epoch=100000;
 function fixture(extraHero=false){
  const actors:KnightActor[]=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[12,0,0],yaw:0,available:true,metaKnight:true,side:'boss'}];
  if(extraHero)actors.push({id:'friend',p:[-20,0,0],yaw:0,available:true});
- const s=startKnightBattle(actors,'hero',epoch)!;for(const id of Object.keys(s.opponents??{}))delete s.players[id];delete s.opponents;if(!extraHero)delete s.teamHp;s.stage='rest';s.since=epoch;s.until=epoch+1e9;return {s,actors,hero:actors[0],helper:actors[1],h:s.players.helper.helper!};
+ const s=humanKnightFixture(startKnightBattle(actors,'hero',epoch)!);s.stage='rest';s.since=epoch;s.until=epoch+1e9;return {s,actors,hero:actors[0],helper:actors[1],h:s.players.helper.helper!};
 }
 test('side choice includes an arena containing only Meta Knights and pauses the duel until answered',()=>{
  const {actors}=fixture();assert(helperChoiceAvailable(actors));delete actors[1].side;assert.equal(startKnightBattle(actors,'hero',epoch)!.stage,'side-choice');

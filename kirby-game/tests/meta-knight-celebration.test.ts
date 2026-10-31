@@ -1,3 +1,4 @@
+import {humanKnightFixture} from './knight-human-fixture';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -19,7 +20,7 @@ import {helperDefeated} from '../src/meta-knight-helper';
 function colours(c:CharacterController){const values:unknown[]=[];c.actor.traverse(o=>{if(o instanceof Mesh&&o.material instanceof MeshStandardMaterial)values.push([o.material.color.getHex(),o.material.emissive.getHex(),o.material.name.includes('gold')?undefined:o.material.emissiveIntensity]);});return values;}
 
 async function models(){const b=await readFile(new URL('../public/models/meta-knight-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength),'');return ()=>{const rig=createPlayerModel(gltf,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,undefined,false,gltf);return new CharacterController(rig.model,rig.clips);};}
-function battle(){const actors:KnightActor[]=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[10,0,0],yaw:0,available:true,metaKnight:true,side:'boss'}];return {actors,s:startKnightBattle(actors,'hero',100000)!};}
+function battle(){const actors:KnightActor[]=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[10,0,0],yaw:0,available:true,metaKnight:true,side:'boss'}];return {actors,s:humanKnightFixture(startKnightBattle(actors,'hero',100000)!)};}
 
 test('real rig celebration is reversible, uses smiling eyes, stows both swords, hugs then skips',async()=>{
  const make=await models(),boss=make(),helper=make(),scene=new Scene();scene.add(boss.actor,helper.actor);boss.actor.scale.setScalar(3.3);
@@ -92,4 +93,13 @@ test('both knights plant their actual boot soles between circle hops instead of 
   for(let i=0;i<120;i++){const now=107700+i*1000/60;view.update(s,id,now,1/60);scene.updateMatrixWorld(true);const sole=Math.min(...['Left','Right'].map(side=>box.setFromObject(c.actor.getObjectByName(side+'_foot_pivot')!).min.y)),pose=knightCelebration(s,id,now)!;assert(Math.abs(sole-pose.jump)<1e-6,'actual soles follow the grounded hop height');if(Math.abs(sole)<1e-6)grounded++;}
   assert(grounded>40,'each lap has clearly visible grounded steps');view.dispose();c.disposeEffects();
  }
+});
+
+test('planet support raises the actual helper blade, turns its eyes blue and joins the moving planet without another light',async()=>{
+ const make=await models(),c=make(),scene=new Scene();scene.position.set(120,0,-240);scene.add(c.actor);const {s,actors}=battle();actors[1].p=[18,180,-8];setKnightPhase(s,4,actors,100000,3);
+ const view=new MetaKnightHelperView(c,()=>{}),now=s.players.helper.helper!.planet!.arrival+100;view.update(s,'helper',now,1/60);scene.updateMatrixWorld(true);const blade=c.actor.getObjectByName('Galaxia')!,base=blade.localToWorld(new Vector3()),tip=blade.localToWorld(new Vector3(-.315,2.05,0));assert(tip.clone().sub(base).normalize().y>.999);
+ const fx=(view as any).cosmic;assert.equal(fx.lightning.hotMaterial.color.getHex(),0x609aff);assert.equal(fx.light.parent,null);assert(fx.eyeMaterials.every((e:any)=>e.mesh.material.color.getHex()===0x53adff));
+ const planet=new Mesh();planet.position.set(2028,181,30);scene.add(planet);const count=fx.lightning.hot.count;view.updatePlanetLightning(s,'helper',now,{node:planet,radius:19});assert(fx.lightning.hot.count>count+100);const actual=fx.group.worldToLocal(tip.clone());assert(fx.planetPaths[0][0].distanceTo(actual)<1e-6,'the strands originate at the real posed sword, including parent displacement');const end=fx.planetPaths[0].at(-1).clone();
+ planet.position.z-=20;view.update(s,'helper',now+100,1/60);view.updatePlanetLightning(s,'helper',now+100,{node:planet,radius:19});assert(fx.planetPaths[0].at(-1).distanceTo(end)>1);assert(fx.planetPaths.flat().every((p:Vector3)=>p.toArray().every(Number.isFinite)));
+ view.update(undefined,'helper',now+200,0);assert(!fx.group.visible);assert(fx.eyeMaterials.every((e:any)=>e.mesh.material!==e.gravity[0]));view.dispose();c.disposeEffects();
 });

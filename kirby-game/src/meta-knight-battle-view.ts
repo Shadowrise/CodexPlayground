@@ -1,5 +1,7 @@
+import {knightDefeatPose} from './meta-knight-defeat';
 import {knightDuetOpening,duetBossDazed} from './meta-knight-duet';
 import {knightCelebration} from './meta-knight-celebration';
+import {knightCosmicFormationYaw} from './meta-knight-cosmic-ally';
 import * as T from 'three';
 import type {GLTF} from 'three/addons/loaders/GLTFLoader.js';
 import {MetaKnightLifeFireflyView} from './meta-knight-life-firefly-view';
@@ -43,6 +45,7 @@ const material=(color:number,opacity=1)=>new T.MeshBasicMaterial({color,transpar
 /** Every mesh is reused; attack paths are the same geometry as the shared rules. */
 export class MetaKnightBattleView{
  readonly group=new T.Group();
+ get gravityPlanet(){return this.refuge.gravityPlanet;}
  readonly hud=document.createElement('section');
  private countdown=document.createElement('div');
  private phase=document.createElement('span');private healthBar=new MetaKnightHealthBar();private health=this.healthBar.element;private hint=document.createElement('p');
@@ -150,8 +153,9 @@ export class MetaKnightBattleView{
   const landed=!!s&&knightJumpOpening(s),impact=stage==='slam'||landed&&now-s!.since<180;
   const player=s?.players[id],participating=!!player&&!withdrawn&&!player.withdrawn,hp=player?.hp??5,reflects=player?.reflects??0;
   this.knight.actor.position.set(SITE.x+p[0],p[1],p[2]);
-  const facing=s?s.phase===4&&stage==='transition'?s.yaw*(1-easeCosmic((f-.65)/.35)):starFacing(s,now):0;
-  if(s?.phase===4&&(stage==='cosmic-descent'||stage==='won')&&s.cosmicFall){this.knight.yaw=s.cosmicFall.yaw;this.cosmicFacing=this.knight.yaw;}
+  const facing=s?s.phase===4&&stage==='transition'?s.yaw*(1-easeCosmic((f-.65)/.35)):starFacing(s,now):0,formationYaw=knightDefeatPose(s,'boss',now)?.yaw??knightCosmicFormationYaw(s,now);
+  if(formationYaw!==undefined){this.knight.yaw=formationYaw;this.cosmicFacing=formationYaw;}
+  else if(s?.phase===4&&(stage==='cosmic-descent'||stage==='won')&&s.cosmicFall){this.knight.yaw=s.cosmicFall.yaw;this.cosmicFacing=this.knight.yaw;}
   else if(cosmicRefugeStage(s)&&s?.cosmicRefuge){const yaw=refugeAngle(s,s.cosmicRefuge.impactAt??now);this.cosmicFacing??=yaw;this.cosmicFacing+=Math.atan2(Math.sin(yaw-this.cosmicFacing),Math.cos(yaw-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*6):1);this.knight.yaw=this.cosmicFacing;}
   else if(cosmicMeteorStage(s)&&s?.cosmicMeteor){const yaw=s.cosmicMeteor.yaw;this.cosmicFacing??=yaw;this.cosmicFacing+=Math.atan2(Math.sin(yaw-this.cosmicFacing),Math.cos(yaw-this.cosmicFacing))*(dt>0?1-Math.exp(-dt*8):1);this.knight.yaw=this.cosmicFacing;}
   else if(s?.stage==='cosmic-spin'&&s.cosmicSpin){this.knight.yaw=s.cosmicSpin.yaw+cosmicSpinAngle((now-s.cosmicSpin.at)/1000);this.cosmicFacing=this.knight.yaw;}

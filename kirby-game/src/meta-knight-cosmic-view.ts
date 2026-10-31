@@ -6,6 +6,7 @@ import {cosmicRefugeStage} from './meta-knight-cosmic-refuge';
 import {GALAXIA_GLOW_COLOR} from './meta-knight-blade-glow';
 import {buildCosmicSurface,surfaceEnergy} from './meta-knight-cosmic-electricity';
 import {CosmicPlasma} from './meta-knight-cosmic-plasma';
+import {refugeGravityPaths} from './meta-knight-refuge-gravity';
 
 const UP=new T.Vector3(0,1,0),CAPACITY=8192;
 const ELECTRIC_GOLD=new T.Color(GALAXIA_GLOW_COLOR),ELECTRIC_CORE=ELECTRIC_GOLD.clone().multiplyScalar(1.6);
@@ -87,6 +88,7 @@ export class MetaKnightCosmicView{
  readonly surface=buildCosmicSurface(0);private surfaceId=-1;
  private dust:T.Points<T.BufferGeometry,T.ShaderMaterial>;
  private a=new T.Vector3();private b=new T.Vector3();private eye=new T.Vector3();
+ private planetPaths:T.Vector3[][]=[];
  private active=false;
  constructor(private actor:T.Object3D,private scene:T.Object3D,private ally=false){
   this.group.name=ally?'Small Meta Knight ascent lightning':'Meta Knight fourth phase lightning';this.group.visible=false;this.group.add(this.lightning.group,this.plasma.group);if(!ally)this.group.add(this.light);
@@ -196,6 +198,12 @@ export class MetaKnightCosmicView{
   }
   this.lightning.end();this.plasma.end();
   this.dust.visible=stage==='cosmic-rise';this.dust.material.uniforms.clock.value=clock;this.dust.material.uniforms.height.value=height;this.dust.material.uniforms.strength.value=stage==='cosmic-rise'?Math.sin(Math.PI*f)**.5:0;
+ }
+ addPlanetLightning(planet:T.Object3D,radius:number,clock:number){
+  if(!this.ally||!this.active)return;
+  this.blade.localToWorld(this.a.set(-.315,2.05,0));this.group.worldToLocal(this.a);planet.getWorldPosition(this.b);this.group.worldToLocal(this.b);
+  this.lightning.setBlue(true);for(const path of refugeGravityPaths(this.a,this.b,radius,clock,this.planetPaths))for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];this.lightning.segment(a.x,a.y,a.z,b.x,b.y,b.z,.045+.012*Math.sin(clock*21+i)**2);}
+  this.lightning.end();
  }
  private setEyes(strength:number,power=3.5,blue=false){
   for(const {mesh,original,clones,gravity} of this.eyeMaterials){mesh.material=Array.isArray(original)?blue?gravity:clones:blue?gravity[0]:clones[0];clones.forEach((m,i)=>{const source=(Array.isArray(original)?original[i]:original) as T.MeshStandardMaterial;m.color.copy(source.color).lerp(blue?GRAVITY_CORE:ELECTRIC_CORE,strength);m.emissive.copy(source.emissive).lerp(blue?GRAVITY_BLUE:ELECTRIC_GOLD,strength);m.emissiveIntensity=T.MathUtils.lerp(source.emissiveIntensity,power,strength);});}

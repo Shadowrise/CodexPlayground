@@ -1,3 +1,5 @@
+import {pushKnightOpponent,knightOpponentPushCandidates,constrainKnightOpponentBodies} from '../../kirby-game/src/meta-knight-opponents-contact';
+import {knightDefeatPose} from '../../kirby-game/src/meta-knight-defeat';
 import {knightPlayerPushable} from '../../kirby-game/src/meta-knight-push';
 import {advanceKnightSideChoices,knightSideChoiceDeadline} from '../../kirby-game/src/meta-knight-side-choice';
 import {knightCosmicAlly} from '../../kirby-game/src/meta-knight-cosmic-ally';
@@ -274,10 +276,10 @@ export class GameRoom extends DurableObject<Env>{
   if(s.phase===4)for(const socket of this.players()){
    const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor,p=s.players[a.id];
    if(c?.location!=='meta-knight-arena'||!p||p.hp<=0&&p.side!=='boss'||p.withdrawn)continue;
-   const push=cosmicPlayerPush(s,a.id,now),ally=knightCosmicAlly(s,a.id,now);
+   const push=cosmicPlayerPush(s,a.id,now),ally=knightDefeatPose(s,a.id,now)??knightCosmicAlly(s,a.id,now);
    if(push&&(cosmicControlsLocked(s)||previousLaunch!==s.cosmicLaunch)){c.p[0]=META_KNIGHT_ARENA.x+push.point[0];c.p[2]=push.point[2];}
    if(cosmicControlsLocked(s)&&!cosmicAirborne(s))c.p[1]=0;
-   if(cosmicAirborne(s))c.p[1]=cosmicHeight(s,now);
+   if(cosmicAirborne(s)||s.stage==='won'&&s.cosmicFall)c.p[1]=cosmicHeight(s,now);
    if(ally)c.p=[META_KNIGHT_ARENA.x+ally.p[0],ally.p[1],ally.p[2]];
    socket.serializeAttachment(a);
   }
@@ -396,7 +398,7 @@ export class GameRoom extends DurableObject<Env>{
    if(push&&cosmicControlsLocked(r.knightBattle)&&participant&&participant.hp>0&&!participant.withdrawn){position.x=META_KNIGHT_ARENA.x+push.point[0];position.z=push.point[2];position.y=0;}
    if(cosmicAirborne(r.knightBattle)&&r.knightBattle?.players[a.id]&&!r.knightBattle.players[a.id].withdrawn)position.y=cosmicHeight(r.knightBattle,now);
    const waiting=r.knightBattle?.stage==='side-choice'?r.knightBattle.choice?.actors.find(p=>p.id===a.id):undefined;if(waiting){position.x=META_KNIGHT_ARENA.x+waiting.p[0];position.y=waiting.p[1];position.z=waiting.p[2];}
-   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}const helper=participant?.helper,locked=knightCosmicAlly(r.knightBattle,a.id,now)?.p??(helper&&helperPosition(helper,now));if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
+   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}constrainKnightOpponentBodies(r.knightBattle,p,oldKnightPoint,a.id);const helper=participant?.helper,locked=knightDefeatPose(r.knightBattle,a.id,now)?.p??knightCosmicAlly(r.knightBattle,a.id,now)?.p??(helper&&helperPosition(helper,now));if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    for(const id of WILD_PIGEONS){const offering=breadOffering(r.bread,id);if(offering&&next[id])next[id]=beginPidgieFeeding(next[id]!,offering);}
@@ -478,7 +480,8 @@ export class GameRoom extends DurableObject<Env>{
    else if(e.type==='hit'&&a.actor?.location==='meta-knight-arena'&&knightPlayerPushable(r.knightBattle,a.id,now)&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const actor=a.actor,q=actor.q,yaw=Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1]));
     const fromKnight=KIRBY_VARIANTS[a.variant]?.[0]==='Meta Knight',humans=this.players().map(s=>s.deserializeAttachment() as Attachment).filter(p=>p.id!==a.id&&p.actor?.location==='meta-knight-arena'&&knightPlayerPushable(r.knightBattle,p.id,now)&&(fromKnight||KIRBY_VARIANTS[p.variant]?.[0]==='Meta Knight'&&r.knightBattle?.players[p.id]?.side==='boss')).map(p=>({id:p.id,...p.actor!}));
-    const target=pushTarget(actor.p,yaw,actor.s,humans);if(target)this.broadcast({type:'hit',id:a.id,actor,target:target.id});
+    const bots=fromKnight?knightOpponentPushCandidates(r.knightBattle,now).map(b=>({...b,p:[b.p[0]+META_KNIGHT_ARENA.x,b.p[1],b.p[2]]})):[];
+    const target=pushTarget(actor.p,yaw,actor.s,[...humans,...bots]);if(target){if(r.knightBattle?.opponents?.[target.id]){if(pushKnightOpponent(r.knightBattle,this.knightActors(a).find(p=>p.id===a.id)!,now,target.id))changed=true;}else this.broadcast({type:'hit',id:a.id,actor,target:target.id});}
    }
    else if(e.type==='hit'&&a.actor?.location!=='meta-knight-arena'&&!holdsBread(r.bread,a.id)&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const millActor=this.millActor(a),branch=millActor?millPushTarget(r.millQuest??newMillQuest(),millActor):-1;

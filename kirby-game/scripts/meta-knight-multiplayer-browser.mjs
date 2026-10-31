@@ -6,7 +6,7 @@ import ts from 'typescript';
 import {roomSql} from '../tests/room-sql.ts';
 import {PROTOCOL} from '../src/network-protocol.ts';
 
-const output=fileURLToPath(new URL('../node_modules/.cache/meta-knight-multiplayer/',import.meta.url));await mkdir(output,{recursive:true});
+const output=process.env.QA_OUTPUT??fileURLToPath(new URL('../node_modules/.cache/meta-knight-multiplayer/',import.meta.url));await mkdir(output,{recursive:true});
 globalThis.WebSocketRequestResponsePair=class{};
 const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8')).replace("import { DurableObject } from 'cloudflare:workers';",'class DurableObject { constructor(ctx,env){this.ctx=ctx;this.env=env;} }').replaceAll('../../kirby-game/src/',new URL('../src/',import.meta.url).href).replaceAll("from './", "from '"+new URL('../../game-server/src/',import.meta.url).href).replace(/(from ['"]file:[^'"]+)(['"])/g,'$1.ts$2');
 const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -53,7 +53,8 @@ try{
   const q=arenaQA;q.stop();q.session.close();q.now=100000;Object.defineProperty(q.session,'serverNow',{get:()=>q.now});
   q.empty={forward:false,left:false,right:false};q.step=(s,now)=>{if(s)q.session.room.knightBattle=structuredClone(s);q.now=now;q.travel.update(0,now/1000,q.c,q.empty,0,0,false,false);q.travel.routeRemotes(q.remotes.entries());document.querySelector('#action-hint').textContent=q.travel.controlsHint('E','Q');q.travel.render();};
  });
- const state=structuredClone(room.room.knightBattle);Object.assign(state,{id:1000,teamHp:5,stage:'dash-warn',pattern:'flight',phase:2,since:100000,until:102000,checked:100000,from:[-12,0,-20],to:[12,0,20],yaw:Math.atan2(24,40),height:0});for(const p of Object.values(state.players))Object.assign(p,{hp:5,invulnerable:0});
+ // This synthetic fight starts afresh after the E/Q exit checks above.
+ const state=structuredClone(room.room.knightBattle);Object.assign(state,{id:1000,teamHp:5,stage:'dash-warn',pattern:'flight',phase:2,since:100000,until:102000,checked:100000,from:[-12,0,-20],to:[12,0,20],yaw:Math.atan2(24,40),height:0});for(const p of Object.values(state.players))Object.assign(p,{hp:5,invulnerable:0,withdrawn:false});
  for(const page of pages)await page.evaluate(s=>{const q=arenaQA;q.c.actor.position.set(2015,0,15);[...q.remotes.values()][0].actor.position.set(2000,0,0);q.step(s,101000);},state);
  const page=pages[0];await page.bringToFront();await page.screenshot({path:output+'two-players-dash-warning.png'});
  const personalFeedback=await page.evaluate(s=>{
@@ -99,7 +100,8 @@ try{
  await page.evaluate(s=>{
   const q=arenaQA,peer=q.session.actors.get('p1');for(let i=2;i<5;i++){s.players['p'+i]={...s.players.p1,hp:5,withdrawn:i===4};q.session.actors.set('p'+i,{...peer,name:['','','Пиджи','Meta Knight','Снежок'][i],variant:[0,0,17,18,19][i]});}q.step(s,101000);
  },state);
- const panel=await page.locator('.knight-party-list').evaluate(list=>({rows:list.children.length,scrollable:list.scrollHeight>list.clientHeight,height:list.clientHeight}));assert.equal(panel.rows,5);assert(panel.scrollable);await page.locator('.knight-party-list').evaluate(list=>list.scrollTop=list.scrollHeight);assert(await page.locator('.knight-party-list').evaluate(list=>list.scrollTop>0));await page.screenshot({path:output+'five-players-scroll.png'});
+ const panel=await page.locator('#knight-party-hud').evaluate(hud=>({rows:hud.querySelector('.knight-party-list').children.length,scrollable:hud.scrollHeight>hud.clientHeight,height:hud.clientHeight}));assert.equal(panel.rows,5);assert(!panel.scrollable);await page.screenshot({path:output+'five-players.png'});
+ await page.setViewportSize({width:1440,height:300});await page.waitForTimeout(100);await page.locator('#knight-party-hud').evaluate(hud=>{hud.scrollTop=hud.scrollHeight;});assert(await page.locator('#knight-party-hud').evaluate(hud=>hud.scrollTop>0));await page.screenshot({path:output+'five-players-scroll.png'});
  const responsive=[];
  for(const [width,height] of [[390,844],[844,390],[1024,768]]){
   await page.setViewportSize({width,height});await page.waitForTimeout(100);await page.evaluate(()=>arenaQA.step(null,101000));

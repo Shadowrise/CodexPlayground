@@ -1,3 +1,4 @@
+import {humanKnightFixture} from './knight-human-fixture';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startKnightBattle,advanceKnightBattle,cancelKnightBattle,knightPosition,knightAttack,type KnightActor} from '../src/meta-knight-battle';
@@ -5,7 +6,7 @@ import {startHelperAbility,helperPosition,helperVulnerable} from '../src/meta-kn
 import {DUET,duetActive,knightDuetOpening,duetBossDazed,duetSpots,duetOverlapFraction,type KnightDuet} from '../src/meta-knight-duet';
 import {cosmicAirborne} from '../src/meta-knight-cosmic';
 
-function fixture(phase:1|2|3|4=1){const y=phase===4?180:0,actors:KnightActor[]=[{id:'hero',p:[25,y,0],yaw:0,available:true},{id:'helper',p:[10,y,-15],yaw:0,available:true,metaKnight:true,side:'boss'}],s=startKnightBattle([{...actors[0],p:[0,0,-2]},actors[1]],'hero',100000)!;s.phase=phase;s.hp=phase===3?3:phase===4?6:phase===2?8:12;s.stage=phase===4?'cosmic-recover':'open';s.pattern='leap';s.cosmicPart=1;s.from=s.to=[0,y,0];s.since=100000;s.until=103000;return {s,actors,hero:actors[0],helper:actors[1],h:s.players.helper.helper!};}
+function fixture(phase:1|2|3|4=1){const y=phase===4?180:0,actors:KnightActor[]=[{id:'hero',p:[25,y,0],yaw:0,available:true},{id:'helper',p:[10,y,-15],yaw:0,available:true,metaKnight:true,side:'boss'}],s=humanKnightFixture(startKnightBattle([{...actors[0],p:[0,0,-2]},actors[1]],'hero',100000)!);s.phase=phase;s.hp=phase===3?3:phase===4?6:phase===2?8:12;s.stage=phase===4?'cosmic-recover':'open';s.pattern='leap';s.cosmicPart=1;s.from=s.to=[0,y,0];s.since=100000;s.until=103000;return {s,actors,hero:actors[0],helper:actors[1],h:s.players.helper.helper!};}
 function recovery(phase:1|2|3|4=1){const f=fixture(phase);startHelperAbility(f.s,f.helper,4,100000);let guard=0;while(f.s.stage!=='duet-recover'&&guard++<20)advanceKnightBattle(f.s,f.actors,f.s.until,'hero');assert(guard<20);return f;}
 for(const phase of [1,2,3,4] as const)test(`phase ${phase}: both knights have independent single-hit recovery windows and one-second dizziness`,()=>{
  const {s,actors,hero,h}=recovery(phase),since=s.since,until=s.until,bossHp=s.hp,point=knightPosition(s,since+20);assert(knightDuetOpening(s));assert(helperVulnerable(h,since+20));

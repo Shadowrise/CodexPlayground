@@ -35,6 +35,10 @@ export class MetaKnightHelperView{
   c.actor.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof T.MeshStandardMaterial&&!this.materials.has(m))this.materials.set(m,{color:m.emissive.clone(),intensity:m.emissiveIntensity});});
  }
  clear(){this.motion.clear();if(this.tinted){for(const [m,v] of this.materials){m.emissive.copy(v.color);m.emissiveIntensity=v.intensity;}this.tinted=false;}}
+ updatePlanetLightning(s:KnightBattle|undefined,id:string,now:number,planet?:{node:T.Object3D;radius:number}){
+  const ally=knightCosmicAlly(s,id,now);if(!s?.cosmicRefuge||ally?.kind!=='planet'||ally.gather||!planet)return;
+  this.cosmic?.addPlanetLightning(planet.node,planet.radius,(now-s.cosmicRefuge.at)/1000);
+ }
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,camera?:T.Camera){
   this.clear();if(this.c.actor.parent&&this.group.parent!==this.c.actor.parent)this.c.actor.parent.add(this.group);if(this.group.parent&&this.lighting.parent!==this.group.parent)this.group.parent.add(this.lighting);this.meteor.light.intensity=0;
   this.cosmic?.update(undefined,now);
@@ -43,10 +47,10 @@ export class MetaKnightHelperView{
   const ally=knightCosmicAlly(s,id,now);
   if(ally){
    this.c.actor.position.set(SITE.x+ally.p[0],ally.p[1],ally.p[2]);this.c.yaw=ally.yaw;this.c.actor.rotation.y=ally.yaw;
-   const clip=ally.gather?'Run':['cosmic-rise','cosmic-flight'].includes(s.stage)?'Fly':'Idle';if(this.c.state!==clip)this.c.setActivity(clip);this.c.updateActivity(dt);
-   if(!ally.gather)this.motion.apply(s,ally.progress);
+   const clip=ally.waiting?'Sitting':ally.kind==='planet'?'Fly':ally.gather?'Run':['cosmic-rise','cosmic-flight'].includes(s.stage)?'Fly':'Idle';if(this.c.state!==clip)this.c.setActivity(clip);this.c.updateActivity(dt);
+   if(ally.kind==='planet'&&!ally.waiting)this.motion.applyRaisedSword(ally.raise,(now-s.cosmicRefuge!.at)/1000,true);else if(!ally.gather)this.motion.apply(s,ally.progress);
    if(!this.cosmic){this.cosmic=new MetaKnightCosmicView(this.c.actor,this.group,true);this.group.add(this.cosmic.group);}
-   this.cosmic.update(ally.gather?undefined:s,now);this.c.updateKnightBladeGlow(now,!ally.gather);this.target.group.visible=false;this.stars.update(ally.p,now,false);this.crescent.group.visible=this.orbs.group.visible=this.meteor.group.visible=false;this.lanes.forEach(l=>l.visible=false);this.arrows.forEach(a=>a.visible=false);return;
+   const powered=!ally.waiting&&(ally.kind==='planet'?ally.raise>0:!ally.gather);this.cosmic.update(powered?s:undefined,now);this.c.updateKnightBladeGlow(now,powered);this.target.group.visible=false;this.stars.group.scale.setScalar(this.c.actor.scale.x*.38);this.stars.update(ally.p,now,ally.waiting);this.c.updateDuelDazedPose(now,ally.waiting);this.crescent.group.visible=this.orbs.group.visible=this.meteor.group.visible=false;this.lanes.forEach(l=>l.visible=false);this.arrows.forEach(a=>a.visible=false);return;
   }
   const locked=helperPosition(h,now),recover=helperRecovering(h,now),vulnerable=helperVulnerable(h,now),stunned=now<(h.stunnedUntil??0),dead=helperDefeated(s,id,now);
   if(locked&&!dead)this.c.actor.position.set(SITE.x+locked[0],locked[1],locked[2]);

@@ -1,20 +1,23 @@
+import {pushKnightOpponent,knightBumpActive,knightBumpDistance} from '../src/meta-knight-opponents-contact';
 import {startKnightBattle,advanceKnightBattle,knightPosition,type KnightActor} from '../src/meta-knight-battle';
 import {startHelperAbility,helperPosition,helperLocked} from '../src/meta-knight-helper';
 import {cosmicHeight} from '../src/meta-knight-cosmic';
 
 export function simulate(seed:number,policy:'idle'|'aimed'|'reckless',limit=600000){
  const a:KnightActor={id:'solo',metaKnight:true,side:'boss',variant:18,available:true,p:[0,0,-2],yaw:0},s=startKnightBattle([a],a.id,seed)!;
- let casts=0;
+ let casts=0,pushReady=seed;
  for(let now=seed;now<seed+limit;now+=50){
+  const bump=s.players.solo.bump;if(bump){const d=knightBumpDistance(bump,now)-knightBumpDistance(bump,now-50);a.p[0]+=bump.dx*d;a.p[2]+=bump.dz*d;}
   const h=s.players.solo.helper!;a.p[1]=cosmicHeight(s,now);const locked=helperPosition(h,now);if(locked)a.p=[...locked];
   if(policy!=='idle'&&!helperLocked(h,now)){
    const bots=Object.values(s.opponents!),b=bots.reduce((best,b)=>Math.hypot(b.p[0]-a.p[0],b.p[2]-a.p[2])<Math.hypot(best.p[0]-a.p[0],best.p[2]-a.p[2])?b:best);
    a.yaw=Math.atan2(b.p[0]-a.p[0],b.p[2]-a.p[2]);
    if(policy==='aimed'){
     const dx=b.p[0]-a.p[0],dz=b.p[2]-a.p[2],d=Math.hypot(dx,dz)||1;
-    if(d>12){a.p[0]+=dx/d*.35;a.p[2]+=dz/d*.35;}
-    // Use ranged shots at a distance and a dash only when it will reach the target.
-    if(startHelperAbility(s,a,d<15?2:1,now)||startHelperAbility(s,a,3,now)||startHelperAbility(s,a,4,now))casts++;
+    if(d>3.6&&!knightBumpActive(s,a.id,now)){a.p[0]+=dx/d*.35;a.p[2]+=dz/d*.35;}
+    if(now>=pushReady&&pushKnightOpponent(s,a,now)){pushReady=now+650;}
+    // Coordinate the joint storm and use ordinary shoves to interrupt nearby NPC attacks.
+    if(startHelperAbility(s,a,4,now))casts++;
    }else if(startHelperAbility(s,a,2,now)||startHelperAbility(s,a,1,now))casts++;
   }
   advanceKnightBattle(s,[a],now);

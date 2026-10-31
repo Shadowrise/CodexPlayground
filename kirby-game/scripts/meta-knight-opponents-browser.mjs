@@ -19,6 +19,25 @@ try{
  await page.locator('#knight-side-choice [data-side=boss]').click();await page.waitForFunction(()=>Object.keys(opponentsQA.travel.battle?.opponents??{}).length===3);
  await page.waitForFunction(()=>opponentsQA.travel.opponentsView.characters.size===3);
  assert.equal(await page.locator('.knight-party-row').count(),4);await page.locator('#knight-helper-actions button').first().waitFor({state:'visible'});
+ const responsive=[];
+ for(const [width,height] of [[1920,1080],[1440,900],[1024,768],[390,844],[1440,360],[844,390],[390,320],[1440,900]]){
+  await page.setViewportSize({width,height});await page.waitForTimeout(150);
+  const layout=await page.locator('#knight-party-hud').evaluate(panel=>{
+   const box=panel.getBoundingClientRect(),list=panel.querySelector('.knight-party-list'),helpers=panel.querySelector('.knight-helper-health-list'),helper=helpers.firstElementChild;
+   return {top:box.top,bottom:box.bottom,left:box.left,right:box.right,panelHeight:box.height,scrollable:panel.scrollHeight>panel.clientHeight,listScroll:list.scrollHeight>list.clientHeight,helperScroll:helpers.scrollHeight>helpers.clientHeight,padding:parseFloat(getComputedStyle(helper).paddingTop),rowHeights:[...list.children].map(row=>row.getBoundingClientRect().height)};
+  });
+  assert(layout.left>=0&&layout.right<=width&&layout.bottom<=height-15,JSON.stringify({width,height,layout}));
+  assert.equal(layout.scrollable,height<=390);assert(!layout.listScroll&&!layout.helperScroll);assert(layout.padding>=(width<=600?12:16));assert(layout.rowHeights.every(h=>h>=56));
+  if(layout.scrollable){
+   await page.locator('#knight-party-hud').focus();await page.keyboard.press('End');
+   await page.waitForFunction(()=>document.querySelector('#knight-party-hud').scrollTop>0);
+   await page.locator('#knight-party-hud').evaluate(panel=>{panel.scrollTop=panel.scrollHeight;});
+   assert(await page.locator('#knight-party-hud').evaluate(panel=>panel.querySelector('.knight-party-row:last-child').getBoundingClientRect().bottom<=panel.getBoundingClientRect().bottom));
+   await page.locator('#knight-party-hud').evaluate(panel=>{panel.scrollTop=0;});
+  }
+  responsive.push({width,height,...layout});await page.screenshot({path:output+`/party-${width}x${height}.png`});
+ }
+ await page.setViewportSize(mobile?{width:390,height:844}:{width:1440,height:900});await page.evaluate(()=>document.activeElement?.blur());
  await page.waitForTimeout(3500);if(mobile)await page.locator('#knight-helper-actions button').first().tap();else await page.keyboard.press('Digit1');await page.waitForFunction(()=>opponentsQA.travel.battle.players.solo.helper.cast?.ability===1);
  await page.screenshot({path:output+'/solo-three-opponents.png'});
  const roster=await page.evaluate(()=>Object.values(opponentsQA.travel.battle.opponents).map(a=>({variant:a.variant,p:a.p})));
@@ -30,5 +49,5 @@ try{
  // A second boss attempt can be cancelled and leaves no models behind on the meadow.
  await page.evaluate(()=>{opponentsQA.travel.cancelBattle();opponentsQA.travel.startBattle();});await page.locator('#knight-side-choice [data-side=boss]').click();await page.waitForFunction(()=>opponentsQA.travel.opponentsView.characters.size===3);
  await page.evaluate(()=>opponentsQA.travel.leave());assert.equal(await page.evaluate(()=>opponentsQA.travel.active),false);
- assert.deepEqual(errors,[]);await writeFile(output+'/report.json',JSON.stringify({soloChoice:true,threeOpponents:true,soloAbility:true,retryBothSides:true,cleanup:true,roster,errors},null,2));console.log(JSON.stringify({output,roster,errors}));
+ assert.deepEqual(errors,[]);await writeFile(output+'/report.json',JSON.stringify({soloChoice:true,threeOpponents:true,soloAbility:true,retryBothSides:true,cleanup:true,roster,responsive,errors},null,2));console.log(JSON.stringify({output,roster,responsive,errors}));
 }catch(e){await page.screenshot({path:output+'/failure.png'});console.log(errors);throw e;}finally{await browser.close();}
