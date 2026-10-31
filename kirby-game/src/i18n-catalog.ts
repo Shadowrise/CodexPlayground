@@ -1,5 +1,8 @@
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Доступна новая версия игры':['A new game version is available','Налична е нова версия на играта'],
+ 'При обновлении весь несохранённый прогресс будет потерян.':['All unsaved progress will be lost when you update.','При обновяване целият незапазен напредък ще бъде изгубен.'],
+ 'Обновить':['Update','Обнови'],
  "Гроза стихла — оба Метакнайта открыты для удара":["The storm has passed — both Meta Knights are vulnerable","Бурята отмина — и двамата Мета Найтове са уязвими"],
  "За Метакнайта · {0}/{1}":["With Meta Knight · {0}/{1}","За Мета Найт · {0}/{1}"],
  "Совместная гроза":["United thunderstorm","Обща гръмотевична буря"],
@@ -14,6 +17,11 @@ export const translations: Record<string, readonly [string, string]> = {
  "Помоги Метакнайту · способности 1, 2, 3, 4":["Help Meta Knight · abilities 1, 2, 3, 4","Помогни на Мета Найт · способности 1, 2, 3, 4"],
  "Жизни игроков":["Player hearts","Животи на играчите"],
  "Выбери сторону":["Choose your side","Избери страна"],
+ "Ждём выбора стороны":["Waiting for a side to be chosen","Изчакване на избор на страна"],
+ "← → — выбор · A — подтвердить":["← → choose · A confirm","← → избор · A потвърждение"],
+ "Выбери сторону для этой дуэли":["Choose your side for this duel","Избери страна за този двубой"],
+ "{0} выбирает, на чьей стороне сражаться":["{0} is choosing which side to fight for","{0} избира на чия страна да се бие"],
+ "Осталось {0} с · затем автоматически за игроков":["{0}s left · then automatically join the players","Остават {0} сек · после автоматично на страната на играчите"],
  "Выбор действует на следующую попытку":["Your choice applies to the next attempt","Изборът важи за следващия опит"],
  "За игроков":["With the players","На страната на играчите"],
  "За Метакнайта":["With Meta Knight","На страната на Мета Найт"],

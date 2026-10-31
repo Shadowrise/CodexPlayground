@@ -1,3 +1,4 @@
+import {OPPONENTS} from './meta-knight-opponents';
 import {HELPER} from './meta-knight-helper';
 import {KNIGHT,knightBattleActive,knightPartyHearts,knightPartyMaximum,type KnightBattle} from './meta-knight-battle';
 import {KIRBY_VARIANTS,styleVariant} from './variants';
@@ -44,11 +45,12 @@ export class MetaKnightPartyHud{
   const maximum=knightPartyMaximum(s),healthKey=`${hp}:${label}:${maximum}`;
   if(this.healthKey!==healthKey){
    this.healthKey=healthKey;this.element.dataset.shared=String(shared);this.element.dataset.defeated=String(hp===0);this.title.textContent=label;
-   const slots=Math.max(maximum,hp);
+   if(s?.opponents){this.hearts.replaceChildren(Object.assign(document.createElement('span'),{textContent:'♥ '+hp+' / '+maximum}));}
+   const slots=s?.opponents?1:Math.max(maximum,hp);
    while(this.hearts.children.length<slots){const heart=document.createElement('span');heart.setAttribute('aria-hidden','true');this.hearts.append(heart);}
    while(this.hearts.children.length>slots)this.hearts.lastElementChild!.remove();
    this.hearts.setAttribute('aria-label',`${label}. ${t('Сердца: {0}',[hp])}`);
-   Array.from(this.hearts.children).forEach((heart,i)=>{heart.classList.toggle('empty',i>=hp);heart.textContent=i<hp?'♥':'♡';});
+   Array.from(this.hearts.children).forEach((heart,i)=>{heart.classList.toggle('empty',i>=hp);if(!s?.opponents)heart.textContent=i<hp?'♥':'♡';});
   }
   this.helperHealth.hidden=helpers.length===0;
   for(const [id,bank] of this.helperBanks)if(!helpers.some(([key])=>key===id)){bank.element.remove();this.helperBanks.delete(id);}
@@ -71,7 +73,7 @@ export class MetaKnightPartyHud{
    }
    if(this.list.children[index]!==row.element)this.list.insertBefore(row.element,this.list.children[index]??null);
    const profile=this.profiles.get(id),player=s?.players[id];
-   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,defeated=!!player&&!player.withdrawn&&player.hp===0,state=player?.withdrawn?t('Дуэль прервана'):defeated?t('Сердца закончились'):knightBattleActive(s)&&!player?t('Наблюдает за боем'):player?.side==='boss'?t('За Метакнайта · {0}/{1}',[player.hp,HELPER.hearts]):'';
+   const name=profile?.name??t('Игрок'),variant=profile?.variant??0,defeated=!!player&&!player.withdrawn&&player.hp===0,state=player?.withdrawn?t('Дуэль прервана'):defeated?t('Сердца закончились'):knightBattleActive(s)&&!player?t('Наблюдает за боем'):player?.side==='boss'?t('За Метакнайта · {0}/{1}',[player.hp,HELPER.hearts]):s?.opponents?.[id]?`♥ ${player?.hp??0}/${OPPONENTS.hearts}`:'';
    const key=JSON.stringify([name,variant,hp,state,id===localId,t('Ты')]);if(row.key===key)return;row.key=key;
    styleVariant(row.element,KIRBY_VARIANTS[variant]??KIRBY_VARIANTS[0]);row.name.textContent=name;row.name.title=name;row.you.textContent=t('Ты');row.you.hidden=id!==localId;
    row.state.textContent=state;row.state.hidden=!state;row.element.dataset.defeated=String(defeated);row.element.dataset.withdrawn=String(!!player?.withdrawn);

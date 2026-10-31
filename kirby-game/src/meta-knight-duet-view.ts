@@ -16,7 +16,8 @@ export class MetaKnightDuetView{
  readonly group=new T.Group();readonly light=new T.PointLight(0xffcb4b,0,85,1.5);private lighting=new T.Group();
  readonly bolts=new CosmicLightning();private rigs=new Map<CharacterController,Rig>();
  private diskMaterial=knightWarningGlass(0xffc541);private edgeMaterial=new T.MeshBasicMaterial({color:0xffd66a,transparent:true,opacity:.95,side:T.DoubleSide,toneMapped:false,depthWrite:false});
- private spots:{group:T.Group;disk:T.Mesh;edge:T.Mesh;timer:ReturnType<typeof knightWarningCountdown>}[]=[];
+ private previewMaterial=this.diskMaterial.clone();private previewEdge=this.edgeMaterial.clone();
+ private spots:{preview:boolean;group:T.Group;disk:T.Mesh;edge:T.Mesh;timer:ReturnType<typeof knightWarningCountdown>}[]=[];
  private energyMaterial=new T.MeshBasicMaterial({color:new T.Color().setRGB(2.0,1.7,.75),toneMapped:false});private energy=new T.Mesh(new T.IcosahedronGeometry(.65,2),this.energyMaterial);
  private coronaMaterial=softMistMaterial(new T.Color().setRGB(1.6,.75,.08),.45);private coronas:T.Mesh[]=[];
  private ringMaterial=new T.MeshBasicMaterial({color:0xffd86f,transparent:true,opacity:.65,side:T.DoubleSide,blending:T.AdditiveBlending,toneMapped:false,depthWrite:false});private halos:T.Mesh[]=[];
@@ -24,10 +25,10 @@ export class MetaKnightDuetView{
  private a=new T.Vector3();private b=new T.Vector3();private tip=new T.Vector3();private merge=new T.Vector3();private dummy=new T.Object3D();private soundKey='';
  constructor(scene:T.Scene,private cue:(kind:KnightSound)=>void){
   this.group.name='Meta Knight united thunderstorm';this.group.visible=false;this.group.position.x=SITE.x;this.lighting.position.x=SITE.x;this.lighting.name='Persistent united thunderstorm lighting';this.lighting.add(this.light);scene.add(this.group,this.lighting);
-  this.diskMaterial.uniforms.baseOpacity.value=.14;this.group.add(this.bolts.group,this.energy,this.particles);this.particles.frustumCulled=false;
-  for(let i=0;i<3;i++){
-   const group=new T.Group(),disk=new T.Mesh(new T.CircleGeometry(DUET.radius,96),this.diskMaterial),edge=new T.Mesh(new T.RingGeometry(DUET.radius-.11,DUET.radius+.13,96),this.edgeMaterial),timer=knightWarningCountdown(DUET.radius,Math.PI,true);
-   for(const mesh of [disk,edge,timer]){mesh.rotation.x=-Math.PI/2;group.add(mesh);}edge.position.y=.015;timer.position.y=.025;group.name='United thunderstorm danger disk '+i;this.spots.push({group,disk,edge,timer});this.group.add(group);
+  for(const material of [this.diskMaterial,this.previewMaterial]){material.uniforms.baseOpacity.value=.14;material.uniforms.waveOpacity={value:1};material.fragmentShader='uniform float waveOpacity;\n'+material.fragmentShader.replace('gl_FragColor.a*=mask;','gl_FragColor.a*=mask*waveOpacity;');}this.group.add(this.bolts.group,this.energy,this.particles);this.particles.frustumCulled=false;
+  for(let i=0;i<6;i++){
+   const preview=i>=3;const group=new T.Group(),disk=new T.Mesh(new T.CircleGeometry(DUET.radius,96),preview?this.previewMaterial:this.diskMaterial),edge=new T.Mesh(new T.RingGeometry(DUET.radius-.11,DUET.radius+.13,96),preview?this.previewEdge:this.edgeMaterial),timer=knightWarningCountdown(DUET.radius,Math.PI,true);
+   for(const mesh of [disk,edge,timer]){mesh.rotation.x=-Math.PI/2;group.add(mesh);}edge.position.y=.015;timer.position.y=.025;group.name=(preview?'United thunderstorm preview disk ':'United thunderstorm danger disk ')+(i%3);group.renderOrder=preview?-2:-1;this.spots.push({preview,group,disk,edge,timer});this.group.add(group);if(preview)continue;
    const halo=new T.Mesh(new T.RingGeometry(1,1.025,128),this.ringMaterial);this.halos.push(halo);this.group.add(halo);
    const mist=softMist(this.coronaMaterial);this.coronas.push(mist);this.group.add(mist);
   }
@@ -59,12 +60,13 @@ export class MetaKnightDuetView{
   this.halos.forEach((halo,i)=>{halo.visible=!gather;halo.position.copy(this.merge);halo.rotation.set(Math.PI/2+i*.6,clock*.2,clock*(i%2?-.4:.4));halo.scale.setScalar((2.2+i*1.3)*power);});
   if(!gather&&rise>.6){this.a.copy(this.merge);this.b.set(Math.sin(clock*.4)*1.5,d.floor!+31,Math.cos(clock*.4)*1.5);this.bolts.arc(this.a,this.b,144,.13,clock,26,2.3);}
   this.diskMaterial.uniforms.clock.value=clock;this.diskMaterial.uniforms.tint.value.setHex(strike?0xff423c:0xffc541);this.edgeMaterial.color.setHex(strike?0xff4c3c:0xffd66a);
-  this.spots.forEach((spot,i)=>{const p=d.spots[i];spot.group.visible=!!p&&(d.stage==='warn'||strike);if(!spot.group.visible||!p)return;spot.group.position.set(p[0],p[1]+.09,p[2]);spot.timer.material.uniforms.progress.value=strike?1:T.MathUtils.clamp(f,0,1);spot.timer.material.uniforms.direction.value=1;
-   if(strike){this.a.set(p[0],p[1]+29,p[2]);this.b.set(p[0],p[1]+.12,p[2]);for(let k=0;k<4;k++)this.bolts.arc(this.a,this.b,433+i*71+k,.12+.10*(1-f),clock,30,2.1,[Math.sin(i+k)*1.5,0,Math.cos(i+k)*1.5]);this.a.copy(this.merge);this.b.set(p[0],p[1]+29,p[2]);this.bolts.arc(this.a,this.b,977+i*31,.09,clock,18,1.1);}
+  this.previewMaterial.uniforms.clock.value=clock;this.previewMaterial.uniforms.waveOpacity.value=strike?1:.30;this.previewEdge.opacity=strike?.95:.28;
+  this.spots.forEach((spot,i)=>{const preview=spot.preview,p=preview?d.preview?.spots[i%3]:d.spots[i],red=strike&&!preview;spot.group.visible=!!p&&(d.stage==='warn'||strike);if(!spot.group.visible||!p)return;spot.group.position.set(p[0],p[1]+(preview?.075:.09),p[2]);spot.timer.visible=!preview||strike;spot.timer.material.uniforms.progress.value=red?1:preview?T.MathUtils.clamp((now-d.preview!.at)/(d.preview!.until-d.preview!.at),0,1):T.MathUtils.clamp(f,0,1);spot.timer.material.uniforms.direction.value=1;
+   if(red){this.a.set(p[0],p[1]+29,p[2]);this.b.set(p[0],p[1]+.12,p[2]);for(let k=0;k<4;k++)this.bolts.arc(this.a,this.b,433+i*71+k,.12+.10*(1-f),clock,30,2.1,[Math.sin(i+k)*1.5,0,Math.cos(i+k)*1.5]);this.a.copy(this.merge);this.b.set(p[0],p[1]+29,p[2]);this.bolts.arc(this.a,this.b,977+i*31,.09,clock,18,1.1);}
   });
   this.particles.visible=!gather;for(let i=0;i<96;i++){const life=(clock*.35+i/96)%1,angle=i*2.399+clock*.4,r=(1-life)*(4+7*Math.sin(i)**2);this.dummy.position.set(Math.sin(angle)*r,d.floor!+4+life*15,Math.cos(angle)*r);this.dummy.rotation.set(clock,i,angle);this.dummy.scale.setScalar(Math.sin(Math.PI*life)*(.4+.4*power));this.dummy.updateMatrix();this.particles.setMatrixAt(i,this.dummy.matrix);}this.particles.instanceMatrix.needsUpdate=true;
   this.light.position.copy(this.merge);this.light.intensity=gather?0:30*power+(strike?50*Math.exp(-f*5):0);this.bolts.end();
   const key=`${d.at}:${d.stage}:${d.round}`;if(key!==this.soundKey){this.soundKey=key;if(d.stage==='charge')this.cue('cosmic-charge');if(d.stage==='warn')this.cue('warn');if(strike){this.cue('cosmic-impact');this.cue('slam');}}
  }
- dispose(){this.clear();this.bolts.dispose();for(const {group,disk,edge,timer} of this.spots){group.removeFromParent();disk.geometry.dispose();edge.geometry.dispose();timer.geometry.dispose();timer.material.dispose();}this.diskMaterial.dispose();this.edgeMaterial.dispose();this.energy.geometry.dispose();this.energyMaterial.dispose();this.coronaMaterial.dispose();for(const halo of this.halos)halo.geometry.dispose();this.ringMaterial.dispose();this.particles.geometry.dispose();this.particles.material.dispose();this.particles.dispose();this.group.removeFromParent();this.lighting.removeFromParent();this.rigs.clear();}
+ dispose(){this.clear();this.bolts.dispose();for(const {group,disk,edge,timer} of this.spots){group.removeFromParent();disk.geometry.dispose();edge.geometry.dispose();timer.geometry.dispose();timer.material.dispose();}this.diskMaterial.dispose();this.previewMaterial.dispose();this.edgeMaterial.dispose();this.previewEdge.dispose();this.energy.geometry.dispose();this.energyMaterial.dispose();this.coronaMaterial.dispose();for(const halo of this.halos)halo.geometry.dispose();this.ringMaterial.dispose();this.particles.geometry.dispose();this.particles.material.dispose();this.particles.dispose();this.group.removeFromParent();this.lighting.removeFromParent();this.rigs.clear();}
 }

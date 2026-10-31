@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {startKnightBattle,advanceKnightBattle,cancelKnightBattle,knightPosition,knightAttack,type KnightActor} from '../src/meta-knight-battle';
 import {startHelperAbility,helperPosition,helperVulnerable} from '../src/meta-knight-helper';
-import {DUET,duetActive,knightDuetOpening,duetBossDazed} from '../src/meta-knight-duet';
+import {DUET,duetActive,knightDuetOpening,duetBossDazed,duetSpots,duetOverlapFraction,type KnightDuet} from '../src/meta-knight-duet';
 import {cosmicAirborne} from '../src/meta-knight-cosmic';
 
 function fixture(phase:1|2|3|4=1){const y=phase===4?180:0,actors:KnightActor[]=[{id:'hero',p:[25,y,0],yaw:0,available:true},{id:'helper',p:[10,y,-15],yaw:0,available:true,metaKnight:true,side:'boss'}],s=startKnightBattle([{...actors[0],p:[0,0,-2]},actors[1]],'hero',100000)!;s.phase=phase;s.hp=phase===3?3:phase===4?6:phase===2?8:12;s.stage=phase===4?'cosmic-recover':'open';s.pattern='leap';s.cosmicPart=1;s.from=s.to=[0,y,0];s.since=100000;s.until=103000;return {s,actors,hero:actors[0],helper:actors[1],h:s.players.helper.helper!};}
@@ -31,20 +31,19 @@ test('slot four queues once, starts after the current boss pattern, and has a ni
  const half=(s.since+s.until)/2,p=helperPosition(h,half)!;assert(p[0]<helper.p[0]&&p[0]>3.3);assert.deepEqual(knightPosition(s,s.until),[-3.3,0,0]);assert.deepEqual(helperPosition(h,s.until),[3.3,0,0]);assert.equal(s.players.helper.hp,5);
  assert.equal(h.cooldowns[3],s.duet!.at!+DUET.cooldownMs);
 });
-test('three disjoint yellow warnings alternate with red damage and completely cleared gaps',()=>{
- const {s,actors,hero,helper,h}=fixture();startHelperAbility(s,helper,4,100000);advanceKnightBattle(s,actors,s.until);advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-charge');advanceKnightBattle(s,actors,s.until);
- for(let round=0;round<3;round++){
-  assert.equal(s.stage,'duet-warn');assert.equal(s.duet!.round,round);assert(s.duet!.spots.length>=2);
-  for(const [i,p] of s.duet!.spots.entries())for(const q of s.duet!.spots.slice(i+1))assert(Math.hypot(p[0]-q[0],p[2]-q[2])>DUET.radius*2);
-  const locked=structuredClone(s.duet!.spots),before=s.players.hero.hp;hero.p=[...locked[0]];advanceKnightBattle(s,actors,s.until-1);assert.equal(s.players.hero.hp,before,'yellow never damages');assert.deepEqual(s.duet!.spots,locked);
-  advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-strike');assert.equal(s.players.hero.hp,before-1);advanceKnightBattle(s,actors,s.since+300);assert.equal(s.players.hero.hp,before-1,'a red wave only hits once');
-  advanceKnightBattle(s,actors,s.until);assert.equal(s.duet!.spots.length,0);assert.equal(s.stage,round<2?'duet-gap':'duet-recover');
-  if(round<2){hero.p=[-20+round*10,0,20];advanceKnightBattle(s,actors,s.until);}
+test('five larger waves preview the next warning before each strike and promote it without an empty gap',()=>{
+ const {s,actors,hero,helper,h}=fixture();assert.equal(DUET.radius,9.5*1.5);startHelperAbility(s,helper,4,100000);for(let i=0;i<3;i++)advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-warn');
+ for(let round=0;round<DUET.waves;round++){
+  assert.equal(s.stage,'duet-warn');assert.equal(s.duet!.round,round);const locked=structuredClone(s.duet!.spots),before=s.players.hero.hp;hero.p=[...locked[0]];
+  advanceKnightBattle(s,actors,s.until-500);assert.equal(s.players.hero.hp,before,'warnings never damage');assert.deepEqual(s.duet!.spots,locked);
+  const preview=structuredClone(s.duet!.preview);if(round<DUET.waves-1){assert(preview);assert(preview.at<s.until);assert.equal(preview.until-preview.at,DUET.warnMs);}else assert.equal(preview,undefined);
+  advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-strike');assert.equal(s.players.hero.hp,before-1);assert.deepEqual(s.duet!.preview,preview);advanceKnightBattle(s,actors,s.since+300);assert.equal(s.players.hero.hp,before-1,'each strike damages once');advanceKnightBattle(s,actors,s.until);
+  if(round<DUET.waves-1){assert.equal(s.stage,'duet-warn');assert.deepEqual(s.duet!.spots,preview!.spots);assert.equal(s.since,preview!.at);assert.equal(s.until,preview!.until);assert.equal(s.duet!.preview,undefined);}else{assert.equal(s.stage,'duet-recover');assert.equal(s.duet!.spots.length,0);}
  }
- assert.equal(s.players.hero.hp,5);assert(helperVulnerable(h,s.since+10));assert.equal(h.cast!.recoverUntil-s.since,3000);advanceKnightBattle(s,actors,s.until);assert.equal(s.duet,undefined);assert(!s.stage.startsWith('duet-'));assert.deepEqual(knightPosition(s,s.since),[-3.3,0,0],'the boss continues from the centre instead of teleporting to his old attack');assert(!startHelperAbility(s,helper,4,130000));
+ assert.equal(s.players.hero.hp,3);assert(helperVulnerable(h,s.since+10));assert.equal(h.cast!.recoverUntil-s.since,3000);advanceKnightBattle(s,actors,s.until);assert.equal(s.duet,undefined);assert(!s.stage.startsWith('duet-'));assert.deepEqual(knightPosition(s,s.since),[-3.3,0,0]);assert(!startHelperAbility(s,helper,4,130000));
 });
 test('leaving a locked yellow disk before the red wave avoids damage, including jumping players',()=>{
- const {s,actors,helper,hero}=fixture();startHelperAbility(s,helper,4,100000);for(let i=0;i<3;i++)advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-warn');hero.p=[-39,3,0];advanceKnightBattle(s,actors,s.until);assert.equal(s.players.hero.hp,8);
+ const {s,actors,helper,hero}=fixture();startHelperAbility(s,helper,4,100000);for(let i=0;i<3;i++)advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-warn');const safe=Array.from({length:96},(_,i)=>[Math.sin(i*Math.PI/48)*40,3,Math.cos(i*Math.PI/48)*40] as [number,number,number]).find(p=>s.duet!.spots.every(q=>Math.hypot(p[0]-q[0],p[2]-q[2])>DUET.radius+1))!;assert(safe);hero.p=safe;advanceKnightBattle(s,actors,s.until);assert.equal(s.players.hero.hp,8);
 });
 test('the crystal shield is completed before a queued duet can begin',()=>{
  const {s,actors,helper}=fixture(3);s.stage='shield';s.until=1e12;startHelperAbility(s,helper,4,100000);advanceKnightBattle(s,actors,110000);assert.equal(s.stage,'shield');assert.equal(s.duet!.stage,'queued');s.stage='get-up';s.until=110200;advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-gather');
@@ -55,4 +54,14 @@ test('cosmic duets retain flight altitude and resume the next subphase instead o
 });
 test('queued and active duets survive snapshots and abort cleanly when the helper leaves',()=>{
  const {s,actors,helper}=fixture();startHelperAbility(s,helper,4,100000);const restored=structuredClone(s);advanceKnightBattle(restored,actors,restored.until);assert.equal(restored.stage,'duet-gather');const mid=structuredClone(restored);advanceKnightBattle(mid,actors,mid.until);assert.equal(mid.stage,'duet-charge');cancelKnightBattle(mid,'helper',mid.since+50);advanceKnightBattle(mid,actors,mid.since+100);assert.equal(mid.duet,undefined);assert(!mid.stage.startsWith('duet-'));assert.equal(mid.players.hero.hp,8);
+});
+
+test('overlap is measured by circle area and is capped at thirty percent for every disk in both waves',()=>{
+ const r=DUET.radius;assert.equal(duetOverlapFraction([0,0,0],[0,0,0]),1);assert.equal(duetOverlapFraction([0,0,0],[r*2,0,0]),0);assert(Math.abs(duetOverlapFraction([0,0,0],[r,0,0])-(2/3-Math.sqrt(3)/(2*Math.PI)))<1e-12);
+ for(let seed=0;seed<120;seed++){const {s,actors}=fixture(seed%2?4:1),d:KnightDuet=s.duet={owner:'helper',requestedAt:100000+seed*137,stage:'warn' as const,round:0,spots:[],contacts:{},floor:s.phase===4?180:0};
+  for(let round=0;round<5;round++){d.round=round;actors[0].p=[Math.sin(seed*.71+round*.8)*30,d.floor!,Math.cos(seed*.71+round*.8)*30];const previous=d.spots,next=duetSpots(d,actors,s);assert(next.length>0,'each of the five waves keeps actual danger circles');
+   for(const p of next)assert(previous.reduce((sum,q)=>sum+duetOverlapFraction(p,q),0)<=.30+1e-9,'no new disk overlaps more than thirty percent of its area');
+   for(const p of previous)assert(next.reduce((sum,q)=>sum+duetOverlapFraction(p,q),0)<=.30+1e-9,'several new disks together cannot cover more than thirty percent of an old disk');d.spots=next;
+  }
+ }
 });

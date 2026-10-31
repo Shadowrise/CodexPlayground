@@ -4,7 +4,7 @@ export const COSMIC_DESCENT={durationMs:3000,impactMs:2380,releaseMs:240,braceMs
 export type CosmicFall={at:number;yaw:number};
 export const COSMIC_SEQUENCE=[['cosmic-charge',COSMIC.chargeMs],['cosmic-strike',COSMIC.strikeMs],['cosmic-surge',COSMIC.surgeMs],['cosmic-lift',COSMIC.liftMs],['cosmic-rise',COSMIC.riseMs],['cosmic-flight',COSMIC.arrivalMs]] as const;
 export type CosmicStage=typeof COSMIC_SEQUENCE[number][0]|'cosmic-spin-warn'|'cosmic-spin'|'cosmic-open'|'cosmic-hit'|'cosmic-recover'|'cosmic-descent'|'cosmic-meteor-draw'|'cosmic-meteor-cast'|'cosmic-meteor-return'|'cosmic-meteor-gap'|'cosmic-meteor-settle'|'cosmic-star-draw'|'cosmic-star-open'|'cosmic-planet-draw'|'cosmic-planet-sweep'|'cosmic-planet-break'|'cosmic-star-strike'|'cosmic-star-stun'|'cosmic-star-retreat'|'cosmic-planet-release';
-type State={phase:number;stage:string;since:number;until:number;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall};
+type State={phase:number;stage:string;since:number;until:number;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;celebration?:{at:number;landAt?:number;boss:readonly number[]}};
 export type CosmicLaunch={at:number;players:Record<string,{from:[number,number,number];angle:number}>};
 export function cosmicControlsLocked(s:State|undefined){return s?.phase===4&&['cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage);}
 export function cosmicCombat(s:State|undefined){return s?.phase===4&&(['cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-hit','cosmic-recover'].includes(s.stage)||s.stage.startsWith('cosmic-meteor-')||s.stage.startsWith('cosmic-star-')||s.stage.startsWith('cosmic-planet-')||s.stage.startsWith('duet-'));}
@@ -18,6 +18,12 @@ export function cosmicPlayerPush(s:(State&{cosmicLaunch?:CosmicLaunch})|undefine
  return {point,progress,hit};
 }
 export const easeCosmic=(t:number)=>{t=Math.max(0,Math.min(1,t));return t*t*t*(t*(t*6-15)+10);};
+/** Winners fly back gently before their ground celebration; this is separate from the defeated boss's fall. */
+export function cosmicVictoryDescent(s:State|undefined,now:number){
+ const c=s?.celebration;if(s?.phase!==4||s.stage!=='lost'||!c?.landAt)return;
+ const progress=Math.max(0,Math.min(1,(now-c.at)/(c.landAt-c.at))),height=c.boss[1]*(1-easeCosmic(progress));
+ return {progress,height,landed:now>=c.landAt};
+}
 /** Accelerating descent and a separate ground recovery share one authoritative clock. */
 export function cosmicDescent(s:State|undefined,now:number){
  if(s?.phase!==4||!['cosmic-descent','won'].includes(s.stage))return;
@@ -28,6 +34,7 @@ export function cosmicDescent(s:State|undefined,now:number){
 export function cosmicStage(s:State|undefined):s is State&{stage:CosmicStage}{return s?.phase===4&&s.stage.startsWith('cosmic-');}
 export function cosmicAirborne(s:State|undefined){return s?.phase===4&&(s.stage==='cosmic-rise'||s.stage==='cosmic-flight'||s.stage==='cosmic-descent'||cosmicCombat(s));}
 export function cosmicHeight(s:State|undefined,now:number){
+ const returning=cosmicVictoryDescent(s,now);if(returning)return returning.height;
  if(!cosmicAirborne(s))return 0;
  return s!.stage==='cosmic-rise'?COSMIC.height*easeCosmic((now-s!.since)/COSMIC.riseMs):s!.stage==='cosmic-descent'?cosmicDescent(s,now)!.height:COSMIC.height;
 }

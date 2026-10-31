@@ -1,3 +1,6 @@
+import {knightPlayerPushable} from '../../kirby-game/src/meta-knight-push';
+import {advanceKnightSideChoices,knightSideChoiceDeadline} from '../../kirby-game/src/meta-knight-side-choice';
+import {knightCosmicAlly} from '../../kirby-game/src/meta-knight-cosmic-ally';
 import {startHelperAbility,helperChoiceAvailable,helperIsBoss,helperPosition,helperLocked} from '../../kirby-game/src/meta-knight-helper';
 import {startKnightBattle,advanceKnightBattle,knightAttack,cancelKnightBattle,knightArenaSide,type KnightActor,type KnightBattle} from '../../kirby-game/src/meta-knight-battle';
 import {constrainKnightShield} from '../../kirby-game/src/meta-knight-shield';
@@ -172,7 +175,7 @@ export class GameRoom extends DurableObject<Env>{
   const now=Date.now();this.startFestival(now,'Ветерок');
   if(finish){r.festival!.endsAt=now;r.festival!.startsAt=now-COLLECT_MS;this.finishFestival(now);}
   else this.changed();
-  await this.ctx.storage.setAlarm(Math.min(now+30000,r.festival!.endsAt+(finish?RESULTS_MS:0)));return {ok:true};
+  await this.ctx.storage.setAlarm(Math.min(knightSideChoiceDeadline(this.room),now+30000,r.festival!.endsAt+(finish?RESULTS_MS:0)));return {ok:true};
  });}
  private startFestival(now:number,initiator:string){
   const r=this.room;if(!r||r.festival)return;
@@ -240,7 +243,7 @@ export class GameRoom extends DurableObject<Env>{
  }
  private advanceNumbers(now:number,current?:Attachment){
   const r=this.room;if(!r?.numberGame)return false;const old=r.numberGame,next=advanceNumberGame(old,now,this.flowerActors(current));r.numberGame=next;
-  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
+  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(knightSideChoiceDeadline(this.room),this.numberEmptyDeadline(),r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
   this.rewardNumbers(current);return next!==old;
  }
  private flowerPlayers(current?:Attachment){return this.players().map(socket=>({socket,a:current&&(socket.deserializeAttachment() as Attachment).id===current.id?current:socket.deserializeAttachment() as Attachment}));}
@@ -253,10 +256,17 @@ export class GameRoom extends DurableObject<Env>{
  }
  private advanceFlowers(now:number,current?:Attachment){
   const r=this.room;if(!r?.flowerGame)return false;const old=r.flowerGame,next=advanceFlowerGame(old,now,this.flowerActors(current));r.flowerGame=next;
-  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),next.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
+  if(next?.emptySince!==undefined&&old.emptySince!==next.emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(knightSideChoiceDeadline(this.room),this.numberEmptyDeadline(),next.emptySince+FLOWER_EMPTY_MS,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS)));
   this.rewardFlowers(current);return next!==old;
  }
- private knightActors(current?:Attachment):KnightActor[]{return this.players().map((socket):KnightActor|undefined=>{const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor;if(!c)return undefined;const q=c.q;return {id:a.id,p:[c.p[0]-META_KNIGHT_ARENA.x,c.p[1],c.p[2]] as [number,number,number],yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),available:c.location==='meta-knight-arena'&&!c.ride,metaKnight:KIRBY_VARIANTS[a.variant]?.[0]==='Meta Knight',side:this.room?.knightSides?.[a.id]};}).filter((a):a is KnightActor=>!!a);}
+ private knightActors(current?:Attachment):KnightActor[]{return this.players().map((socket):KnightActor|undefined=>{const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor;if(!c)return undefined;const q=c.q;return {id:a.id,p:[c.p[0]-META_KNIGHT_ARENA.x,c.p[1],c.p[2]] as [number,number,number],yaw:Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1])),available:c.location==='meta-knight-arena'&&!c.ride,metaKnight:KIRBY_VARIANTS[a.variant]?.[0]==='Meta Knight',variant:a.variant,side:this.room?.knightSides?.[a.id]};}).filter((a):a is KnightActor=>!!a);}
+ private choiceAlarm=Infinity;
+ private advanceKnightChoices(now:number,current?:Attachment){
+  if(!this.room)return false;const changed=advanceKnightSideChoices(this.room,this.knightActors(current),now);
+  const until=knightSideChoiceDeadline(this.room),r=this.room;
+  if(Number.isFinite(until)&&until!==this.choiceAlarm)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(until,this.numberEmptyDeadline(),now+30000,r.festival?(now<r.festival.endsAt?r.festival.endsAt:r.festival.endsAt+RESULTS_MS):Infinity,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
+  this.choiceAlarm=until;return changed;
+ }
  private advanceKnight(now:number,current?:Attachment){
   const s=this.room?.knightBattle;if(!s)return false;const previousLaunch=s.cosmicLaunch,changed=advanceKnightBattle(s,this.knightActors(current),now);
   // The persisted launch owns all participants, including those sending no
@@ -264,10 +274,11 @@ export class GameRoom extends DurableObject<Env>{
   if(s.phase===4)for(const socket of this.players()){
    const stored=socket.deserializeAttachment() as Attachment,a=current?.id===stored.id?current:stored,c=a.actor,p=s.players[a.id];
    if(c?.location!=='meta-knight-arena'||!p||p.hp<=0&&p.side!=='boss'||p.withdrawn)continue;
-   const push=cosmicPlayerPush(s,a.id,now);
+   const push=cosmicPlayerPush(s,a.id,now),ally=knightCosmicAlly(s,a.id,now);
    if(push&&(cosmicControlsLocked(s)||previousLaunch!==s.cosmicLaunch)){c.p[0]=META_KNIGHT_ARENA.x+push.point[0];c.p[2]=push.point[2];}
    if(cosmicControlsLocked(s)&&!cosmicAirborne(s))c.p[1]=0;
    if(cosmicAirborne(s))c.p[1]=cosmicHeight(s,now);
+   if(ally)c.p=[META_KNIGHT_ARENA.x+ally.p[0],ally.p[1],ally.p[2]];
    socket.serializeAttachment(a);
   }
   if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&p.side!=='boss'&&!p.withdrawn&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??''));}}return true;}
@@ -279,7 +290,7 @@ export class GameRoom extends DurableObject<Env>{
   const actors=players.map(p=>this.bossActor(p.a)).filter((a):a is CentipedeActor=>!!a);
   const emptySince=r.centipede.emptySince,result=advanceCentipede(r.centipede,now,actors);r.centipede=result.event;let changed=result.changed;
   advanceChasers(r.centipede,actors,now);
-  if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
+  if(r.centipede?.emptySince!==undefined&&r.centipede.emptySince!==emptySince)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(knightSideChoiceDeadline(this.room),this.numberEmptyDeadline(),r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
   for(const {socket,a} of players){const c=a.actor,actor=this.bossActor(a);if(!c||!actor)continue;
    const direction=contacts?(bumpChaser(r.centipede,actor,now)??bumpCentipede(r.centipede,actor,now)):undefined;if(direction){this.send(socket,{type:'centipede-bump',direction});changed=true;}
    const p=r.centipede?.players[a.id],complete=completedCentipede(r.centipede,a.id)&&!c.achievements.includes('centipede');
@@ -384,7 +395,8 @@ export class GameRoom extends DurableObject<Env>{
    const push=cosmicPlayerPush(r.knightBattle,a.id,now),participant=r.knightBattle?.players[a.id];
    if(push&&cosmicControlsLocked(r.knightBattle)&&participant&&participant.hp>0&&!participant.withdrawn){position.x=META_KNIGHT_ARENA.x+push.point[0];position.z=push.point[2];position.y=0;}
    if(cosmicAirborne(r.knightBattle)&&r.knightBattle?.players[a.id]&&!r.knightBattle.players[a.id].withdrawn)position.y=cosmicHeight(r.knightBattle,now);
-   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}const helper=participant?.helper,locked=helper&&helperPosition(helper,now);if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
+   const waiting=r.knightBattle?.stage==='side-choice'?r.knightBattle.choice?.actors.find(p=>p.id===a.id):undefined;if(waiting){position.x=META_KNIGHT_ARENA.x+waiting.p[0];position.y=waiting.p[1];position.z=waiting.p[2];}
+   const p:[number,number,number]=[position.x-META_KNIGHT_ARENA.x,position.y,position.z];if(!helperIsBoss(r.knightBattle,a.id)){constrainKnightBody(r.knightBattle,p,now,oldKnightPoint,actor.s);constrainKnightShield(r.knightBattle,p,oldKnightPoint);}const helper=participant?.helper,locked=knightCosmicAlly(r.knightBattle,a.id,now)?.p??(helper&&helperPosition(helper,now));if(locked){p[0]=locked[0];p[1]=locked[1];p[2]=locked[2];}else if(participant?.side==='boss'&&participant.hp<=0&&oldKnightPoint){p[0]=oldKnightPoint[0];p[1]=oldKnightPoint[1];p[2]=oldKnightPoint[2];}actor.p=[p[0]+META_KNIGHT_ARENA.x,p[1],p[2]];
   }
   if(a.id===r.host&&validWorld(m.world)){const next=m.world as WorldState;world=next;r.world=next;
    for(const id of WILD_PIGEONS){const offering=breadOffering(r.bread,id);if(offering&&next[id])next[id]=beginPidgieFeeding(next[id]!,offering);}
@@ -396,7 +408,7 @@ export class GameRoom extends DurableObject<Env>{
   // Only a frame with a ready push needs deferred contact handling. Ordinary
   // frames advance the room once, regardless of how many balls are active.
   const deferContacts=hasChasers(r.centipede)&&!!a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS&&events.some(e=>e?.type==='hit');
-  let changed=this.advanceMill(now);if(this.advanceBoss(now,a,!deferContacts))changed=true;
+  let changed=this.advanceMill(now);if(this.advanceBoss(now,a,!deferContacts))changed=true;if(this.advanceKnightChoices(now,a))changed=true;
   const oldBread=r.bread??newBread(),nextBread=advanceBread(oldBread,now,r.world?.mountainSteps);if(nextBread!==oldBread){r.bread=nextBread;changed=true;}
   let flowersChanged=this.advanceFlowers(now,a),numbersChanged=this.advanceNumbers(now,a);
   for(const e of events){
@@ -410,9 +422,9 @@ export class GameRoom extends DurableObject<Env>{
    }
    else if(e.type==='knight'&&a.actor?.location==='meta-knight-arena'){
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
-    if(e.action==='side'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))&&me.metaKnight&&helperChoiceAvailable(actors)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
+    if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&me.metaKnight&&helperChoiceAvailable(actors)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
     else if(e.action==='ability'){if(startHelperAbility(r.knightBattle,me,e.ability,now))changed=true;}
-    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){const battle=startKnightBattle(actors,a.id,now);if(battle){r.knightBattle=battle;changed=true;}}
+    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
     else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }
@@ -463,6 +475,11 @@ export class GameRoom extends DurableObject<Env>{
     if(e.key.startsWith('bug:')&&validBugLanding(e.bugState)){const i=e.key.split(':')[1];(r.bugLandings??={})[i]=[...e.bugState];if(r.world)r.world.bugs[Number(i)]=[...e.bugState];}
     delete r.locks[e.key];changed=true;
    }
+   else if(e.type==='hit'&&a.actor?.location==='meta-knight-arena'&&knightPlayerPushable(r.knightBattle,a.id,now)&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
+    a.lastHit=now;const actor=a.actor,q=actor.q,yaw=Math.atan2(2*(q[0]*q[2]+q[3]*q[1]),1-2*(q[0]*q[0]+q[1]*q[1]));
+    const fromKnight=KIRBY_VARIANTS[a.variant]?.[0]==='Meta Knight',humans=this.players().map(s=>s.deserializeAttachment() as Attachment).filter(p=>p.id!==a.id&&p.actor?.location==='meta-knight-arena'&&knightPlayerPushable(r.knightBattle,p.id,now)&&(fromKnight||KIRBY_VARIANTS[p.variant]?.[0]==='Meta Knight'&&r.knightBattle?.players[p.id]?.side==='boss')).map(p=>({id:p.id,...p.actor!}));
+    const target=pushTarget(actor.p,yaw,actor.s,humans);if(target)this.broadcast({type:'hit',id:a.id,actor,target:target.id});
+   }
    else if(e.type==='hit'&&a.actor?.location!=='meta-knight-arena'&&!holdsBread(r.bread,a.id)&&a.actor&&now-(a.lastHit??0)>=PUSH_COOLDOWN_MS){
     a.lastHit=now;const millActor=this.millActor(a),branch=millActor?millPushTarget(r.millQuest??newMillQuest(),millActor):-1;
     if(pushChaser(r.centipede,this.bossActor(a)!,now)){this.broadcast({type:'hit',id:a.id,actor:a.actor,target:'centipede-ball'});changed=true;continue;}
@@ -490,6 +507,7 @@ export class GameRoom extends DurableObject<Env>{
   }
   if(r.festival&&a.actor&&!r.festival.results){const f=r.festival;if(!f.players[a.id])changed=true;const p=f.players[a.id]??={name:a.actor.name,variant:a.variant,base:0,fruits:0,size:1,bonus:0,collected:[]};p.name=a.actor.name;p.variant=a.variant;p.base=r.fruits.filter(owner=>owner===a.id).length+achievementPoints(a.actor.achievements)+(a.actor.eventPoints??0);p.fruits=r.fruits.filter(owner=>owner===a.id).length;p.size=a.actor.progress?.size??a.actor.s;p.numbersCompleted=a.actor.achievements.includes('numbers');}
   if(r.world)for(const [i,landing] of Object.entries(r.bugLandings??{}))if(!r.locks['bug:'+i])r.world.bugs[Number(i)]=reconcileBugLanding(r.world.bugs[Number(i)],landing);
+  if(this.advanceKnightChoices(now,a))changed=true;
   if(this.advanceKnight(now,a))changed=true;
   delete a.room;socket.serializeAttachment(a);
   if(changed||flockChanged)this.changed();else if(world||r.festival||flowersChanged||numbersChanged)this.persist();
@@ -525,12 +543,14 @@ export class GameRoom extends DurableObject<Env>{
   if(r.host===a.id)r.host=(remaining[0].deserializeAttachment() as Attachment).id;
   this.advanceBoss(Date.now());
   this.advanceFlowers(Date.now());this.advanceNumbers(Date.now());
+  this.advanceKnightChoices(Date.now());
   this.broadcast({type:'left',id:a.id},socket);this.broadcast({type:'presence',count:remaining.length},socket);this.changed();
  }
  async webSocketClose(socket:WebSocket,code=1000){try{socket.close(1000,'Disconnected');}catch{}await this.remove(socket,code===1000?'left':'lost');}
  async webSocketError(socket:WebSocket){await this.remove(socket,'lost');}
  async alarm(){
-  const millChanged=this.advanceMill(Date.now()),bossChanged=this.advanceBoss(Date.now()),flowersChanged=this.advanceFlowers(Date.now()),numbersChanged=this.advanceNumbers(Date.now());if(millChanged||bossChanged)this.changed();else if(flowersChanged){this.persist();this.broadcast({type:'flower-game',game:this.room?.flowerGame});}if(numbersChanged){this.persist();this.broadcast({type:'number-game',game:this.room?.numberGame});}
+  const choicesChanged=this.advanceKnightChoices(Date.now());
+  const millChanged=this.advanceMill(Date.now()),bossChanged=this.advanceBoss(Date.now()),flowersChanged=this.advanceFlowers(Date.now()),numbersChanged=this.advanceNumbers(Date.now());if(millChanged||bossChanged||choicesChanged)this.changed();else if(flowersChanged){this.persist();this.broadcast({type:'flower-game',game:this.room?.flowerGame});}if(numbersChanged){this.persist();this.broadcast({type:'number-game',game:this.room?.numberGame});}
   this.finishFestival();
   const visits:(Visit|undefined)[]=[];
   for(const s of this.players()){
@@ -543,7 +563,7 @@ export class GameRoom extends DurableObject<Env>{
   if(this.room?.festival&&Date.now()>=this.room.festival.endsAt+RESULTS_MS){
    for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;a.left=true;s.serializeAttachment(a);s.close(1000,'Festival finished');}this.pigeonDirty.clear();this.room=undefined;await this.ctx.storage.deleteAll();await this.ctx.storage.deleteAlarm();return;
   }
-for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(this.numberEmptyDeadline(),Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity,this.room?.centipede?.emptySince===undefined?Infinity:this.room.centipede.emptySince+CENTIPEDE_EMPTY_MS,this.room?.flowerGame?.emptySince===undefined?Infinity:this.room.flowerGame.emptySince+FLOWER_EMPTY_MS));}
+for(const s of this.players()){const a=s.deserializeAttachment() as Attachment;const seen=Math.max(a.seen,this.ctx.getWebSocketAutoResponseTimestamp(s)?.getTime()??0);if(Date.now()-seen>75000)await this.remove(s,'lost');}if(this.players().length)await this.ctx.storage.setAlarm(Math.min(knightSideChoiceDeadline(this.room),this.numberEmptyDeadline(),Date.now()+30000,this.room?.festival?(Date.now()<this.room.festival.endsAt?this.room.festival.endsAt:this.room.festival.endsAt+RESULTS_MS):Infinity,this.room?.centipede?.emptySince===undefined?Infinity:this.room.centipede.emptySince+CENTIPEDE_EMPTY_MS,this.room?.flowerGame?.emptySince===undefined?Infinity:this.room.flowerGame.emptySince+FLOWER_EMPTY_MS));}
 }
 export default {async fetch(request,env):Promise<Response>{
  const history=await historyRoutes(request,env);if(history)return history;

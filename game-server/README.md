@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-42`) is shared with the browser in
+Protocol 2 (`build=meadow-network-43`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,
@@ -307,3 +307,8 @@ controls across all three phases, final music/fireworks, cooldown/replay and the
 mobile HUD against the local game on5174. The client centipede-server test also
 exercises the actual Worker class with two sockets and a controlled clock,
 including restoration of a resting event from durable storage.
+
+
+### Дуэль Метакнайта с ИИ — 2026-10-31
+
+BUILD `meadow-network-44` / PROTOCOL 2. Клиент и Worker выпускать вместе. Выбор стороны доступен одинокому Meta Knight; после выбора boss общие правила создают три уникальных ИИ-персонажа из полного каталога. Каждый бот имеет 12 независимых сердец; сервер рассчитывает их движение, атаки и уклонения, сохраняет весь ИИ вместе с knight-battle. Внешние игроки исключаются из лотереи вариантов при наличии свободных моделей. Покинувший бой последний человек отменяет бой с ботами. Проверки: расширенный meta-knight-helper-server.test.ts, meta-knight-opponents.test.ts и scripts/meta-knight-opponents-balance.ts.

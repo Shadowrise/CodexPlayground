@@ -1,11 +1,13 @@
 import {initializeLocale,localizeDOM,onLocaleChange,t} from './i18n';
 import {preloadGameAssets} from './game-assets';
 import {createMenuBackdrop} from './menu-backdrop';
+import {watchClientUpdates} from './client-update-banner';
 let languageStorage:Storage|undefined;try{languageStorage=localStorage;}catch{}
 initializeLocale(languageStorage,navigator.languages?.length?navigator.languages:[navigator.language]);
 const updateTitle=()=>{document.title=t('Кирби: Полянка друзей');};
 updateTitle();onLocaleChange(updateTitle);
 localizeDOM();
+if(import.meta.env.PROD)watchClientUpdates(import.meta.env.KIRBY_CLIENT_VERSION,import.meta.env.BASE_URL);
 /** Paint the lightweight loading screen before importing the procedural scene. */
 const frame=()=>new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));
 const blocked=[...document.body.children].filter((el):el is HTMLElement=>el instanceof HTMLElement&&el.id!=='startup-loader'&&!el.inert);

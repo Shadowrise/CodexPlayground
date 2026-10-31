@@ -45,8 +45,9 @@ export function hitKnightLifeFirefly(s:KnightBattle,id:string,p:KnightPoint,yaw:
  if(Math.hypot(dx,dz)>reach+LIFE_FIREFLY.hitRadius||Math.abs(point[1]-p[1])>3.2||Math.cos(Math.atan2(dx,dz)-yaw)<=-.15)return false;
  const next=knightLifeFireflyPoint(s,now+5)??point;
  s.lifeFirefly!.hit={at:now,by:id,point,yaw:Math.atan2(next[0]-point[0],next[2]-point[2])};
+ if(s.opponents?.[id]){s.players[id].hp++;s.revision++;return true;}
  const hp=(s.teamHp??s.players[id].hp)+1;
  if(s.teamHp!==undefined)s.teamHp=hp;
- for(const player of Object.values(s.players))if(player.side!=='boss')player.hp=hp;
+ for(const [key,player] of Object.entries(s.players))if(player.side!=='boss'&&!s.opponents?.[key])player.hp=hp;
  s.revision++;return true;
 }

@@ -88,8 +88,8 @@ export class MetaKnightCosmicView{
  private dust:T.Points<T.BufferGeometry,T.ShaderMaterial>;
  private a=new T.Vector3();private b=new T.Vector3();private eye=new T.Vector3();
  private active=false;
- constructor(private actor:T.Object3D,private scene:T.Scene){
-  this.group.name='Meta Knight fourth phase lightning';this.group.visible=false;this.group.add(this.lightning.group,this.plasma.group,this.light);
+ constructor(private actor:T.Object3D,private scene:T.Object3D,private ally=false){
+  this.group.name=ally?'Small Meta Knight ascent lightning':'Meta Knight fourth phase lightning';this.group.visible=false;this.group.add(this.lightning.group,this.plasma.group);if(!ally)this.group.add(this.light);
   this.lightning.setFloor(.06);this.plasma.setFloor(.06);
   this.blade=actor.getObjectByName('Galaxia')!;this.eyes=actor.getObjectByName('Eyes_glow')!;
   const pixels=new Uint8Array(32*32*4);for(let y=0;y<32;y++)for(let x=0;x<32;x++){const d=((x-15.5)**2+(y-15.5)**2)/240,index=(y*32+x)*4;pixels[index]=pixels[index+1]=pixels[index+2]=255;pixels[index+3]=Math.round(255*Math.exp(-d*6)*Math.max(0,1-d));}
@@ -141,7 +141,15 @@ export class MetaKnightCosmicView{
    this.lightning.arc(this.a,this.b,30+k,.045+charge*.022,clock,18,1.6,[Math.sin(spin)*.35,.12,Math.cos(spin)*.35]);
   }
   const grounded=stage==='cosmic-surge'||stage==='cosmic-lift',fade=stage==='cosmic-lift'?1-f*.95:1;
-  if(grounded){
+  if(grounded&&this.ally){
+   const elapsed=now-s.since+(stage==='cosmic-lift'?COSMIC.surgeMs:0);
+   for(let i=0;i<12;i++){
+    const grow=easeCosmic((elapsed-i*24)/650);if(grow<=0)continue;
+    this.blade.localToWorld(this.a.set(-.315,2.05,0));this.group.worldToLocal(this.a);this.a.y=Math.max(.08,this.a.y);
+    const angle=i*2.399+.7,r=(24+hash(i+73)*19)*grow;this.b.set(Math.sin(angle)*r,.10,Math.cos(angle)*r);
+    this.lightning.arc(this.a,this.b,931+i,.035*fade,clock,18,1.4,[0,.25,0]);
+   }
+  }else if(grounded){
    if(this.surfaceId!==s.id){Object.assign(this.surface,buildCosmicSurface(s.id));this.surfaceId=s.id;}
    const elapsed=now-s.since+(stage==='cosmic-lift'?COSMIC.surgeMs:0);
    for(const path of this.surface.segments){

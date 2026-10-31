@@ -2,6 +2,7 @@
 #knight-side-choice[hidden],#knight-helper-actions[hidden]{display:none}
 #knight-side-choice strong{font-size:19px}#knight-side-choice p{font-size:13px;color:#d0c4e7;margin:8px 0 15px}
 #knight-side-choice>div{display:flex;gap:9px}#knight-side-choice button{flex:1;min-height:48px;padding:8px;border:1px solid #a89ac16b;border-radius:11px;background:#34324f;color:#f7efff;font:700 13px/1.3 'Manrope','Segoe UI',sans-serif;cursor:pointer}
+#knight-side-choice>[hidden]{display:none}#knight-side-choice .knight-choice-timer{color:#ffe5a5;margin:8px 0 12px;font-weight:700}
 #knight-side-choice button[aria-pressed=true]{border-color:#ffe6a1;background:#665139;color:#fff3c3;box-shadow:0 0 16px #ffd56c30}
 #knight-helper-actions{position:fixed;z-index:28;left:50%;bottom:calc(var(--dash-dock-bottom,18px) + 98px);display:flex;gap:12px;transform:translateX(-50%)}
 #knight-helper-actions button{border:0;padding:0;background:transparent;pointer-events:auto;cursor:pointer}#knight-helper-actions button:disabled{cursor:default}#knight-helper-actions button:focus-visible{outline:2px solid #fff0a9;outline-offset:4px}

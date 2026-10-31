@@ -20,7 +20,7 @@
       #menu-backdrop video {opacity:0;}
       #menu-backdrop.video-ready video {opacity:1;}
       body:not(.choosing):not(.loading) #menu-backdrop {display:none;}
-      body.choosing > :not(#character-select):not(#startup-loader):not(#menu-backdrop):not(#locked-character-tooltip):not(style):not(script) {display:none!important;}
+      body.choosing > :not(#character-select):not(#startup-loader):not(#menu-backdrop):not(#locked-character-tooltip):not(#client-update):not(style):not(script) {display:none!important;}
       #startup-loader {position:fixed;inset:0;z-index:10000;display:grid;align-items:start;justify-items:center;box-sizing:border-box;padding:clamp(32px,12svh,128px) 20px 24px;overflow-y:auto;background:#090e182e;color:#f5f0ff;font:600 18px system-ui,sans-serif;text-align:center;}
       #startup-loader[hidden] {display:none;}
       .loading-status {box-sizing:border-box;width:min(380px,100%);padding:22px 26px;border-radius:28px;background:radial-gradient(ellipse at center,#293347eb,#171e29eb 70%);}
@@ -33,6 +33,10 @@
     </style>
     <div id="menu-backdrop" aria-hidden="true" inert><img src="%BASE_URL%backgrounds/meadow-menu-poster.jpg?v=5" alt="" fetchpriority="high" /><video data-src="%BASE_URL%backgrounds/meadow-menu.mp4?v=5" muted loop playsinline preload="none" disablepictureinpicture></video></div>
     <div id="startup-loader" role="status" aria-live="polite"><div class="loading-status"><div class="loading-orbit" aria-hidden="true"></div><strong id="loading-title">Готовим приключение</strong><p id="loading-detail">Загружаем поляну и друзей…</p><button id="loading-retry" hidden>Попробовать ещё раз</button></div></div>
+    <aside id="client-update" hidden aria-labelledby="client-update-title">
+      <div class="client-update-copy" role="status"><strong id="client-update-title">Доступна новая версия игры</strong><p>При обновлении весь несохранённый прогресс будет потерян.</p></div>
+      <div class="client-update-actions"><button id="client-update-reload" type="button">Обновить</button><button id="client-update-close" type="button">Закрыть</button></div>
+    </aside>
     <section id="character-select" aria-labelledby="select-title">
       <div class="selection-card character-selection-card">
         <h2 id="select-title">Какой Кирби — ты?</h2>

@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {Vector3,Scene,Mesh,MeshStandardMaterial} from 'three';
+import {Vector3,Scene,Mesh,MeshStandardMaterial,Box3} from 'three';
 import {CharacterController} from '../src/controller';
 import {createPlayerModel} from '../src/player-model';
 import {KIRBY_VARIANTS} from '../src/variants';
-import {startKnightBattle,type KnightActor} from '../src/meta-knight-battle';
+import {startKnightBattle,setKnightPhase,type KnightActor} from '../src/meta-knight-battle';
 import {MetaKnightCelebrationView} from '../src/meta-knight-celebration-view';
 import {knightCelebration} from '../src/meta-knight-celebration';
 import {MetaKnightHelperView} from '../src/meta-knight-helper-view';
@@ -14,6 +14,7 @@ import {startHelperAbility,helperOrbs} from '../src/meta-knight-helper';
 import {advanceKnightBattle} from '../src/meta-knight-battle';
 import {MetaKnightDuetView} from '../src/meta-knight-duet-view';
 import {knightDuetOpening} from '../src/meta-knight-duet';
+import {helperDefeated} from '../src/meta-knight-helper';
 
 function colours(c:CharacterController){const values:unknown[]=[];c.actor.traverse(o=>{if(o instanceof Mesh&&o.material instanceof MeshStandardMaterial)values.push([o.material.color.getHex(),o.material.emissive.getHex(),o.material.name.includes('gold')?undefined:o.material.emissiveIntensity]);});return values;}
 
@@ -42,7 +43,7 @@ test('helper keeps its colours during target windows, uses yellow dash and six b
  const baseline=colours(c),view=new MetaKnightHelperView(c,()=>{}),h=s.players.helper.helper!;startHelperAbility(s,actors[1],2,100000);const dash=h.cast!;
  view.update(s,'helper',100100,0);let yellow=false;c.actor.traverse(o=>{if(o instanceof Mesh&&o.material instanceof MeshStandardMaterial&&o.material.emissive.getHex()===0xffc233)yellow=true;});assert(yellow);
  view.update(s,'helper',dash.end+50,0);assert(view.target.group.visible);assert(view.target.group.getObjectByName('Floating downward target arrow'));assert(view.target.group.getObjectByName('Available target window countdown'));assert.deepEqual(colours(c),baseline,'the dash yellow clears without repainting the knight green');
- startHelperAbility(s,actors[1],3,dash.recoverUntil);const spin=h.cast!;view.update(s,'helper',spin.release+500,0);const cores=view.group.getObjectByName('Cosmic electric orb cores') as import('three').InstancedMesh;assert.equal(cores.count,6);assert.equal(helperOrbs(spin,spin.release+500).length,6);
+ startHelperAbility(s,actors[1],3,dash.recoverUntil);const spin=h.cast!;view.update(s,'helper',spin.release-100,0);assert((view as any).lanes.every((lane:any)=>!lane.visible),'spin keeps its wind-up without preliminary lanes');view.update(s,'helper',spin.release+500,0);const cores=view.group.getObjectByName('Cosmic electric orb cores') as import('three').InstancedMesh;assert.equal(cores.count,6);assert.equal(helperOrbs(spin,spin.release+500).length,6);
  startHelperAbility(s,actors[1],1,spin.recoverUntil);const shot=h.cast!;view.update(s,'helper',shot.end+50,0);assert.equal(view.target.group.visible,false);
  view.dispose();c.disposeEffects();
 });
@@ -68,4 +69,27 @@ test('both real rigs take strides by distance and move their feet on circle hops
   view.update(s,id,108150,1/60);const foot=c.actor.getObjectByName('Left_foot_pivot')!,p=foot.position.clone(),q=foot.quaternion.clone();view.update(s,id,108400,1/60);assert(foot.position.distanceTo(p)>.02,`${id} foot moved ${foot.position.distanceTo(p)}`);assert(foot.quaternion.angleTo(q)>.05,`${id} foot rotated ${foot.quaternion.angleTo(q)}`);
  });
  assert(Math.abs(cycles[1]/cycles[0]-3.3)<.001,'the large knight takes proportionately fewer strides');views.forEach(v=>v.dispose());pairs.forEach(([c])=>c.disposeEffects());
+});
+
+test('the real helper raises Galaxia with the boss and emits blue floor lightning from his own sword',async()=>{
+ const make=await models(),c=make(),scene=new Scene();scene.add(c.actor);const {s,actors}=battle();setKnightPhase(s,4,actors,100000);
+ const view=new MetaKnightHelperView(c,()=>{});advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-charge');view.update(s,'helper',s.until-1,1/60);scene.updateMatrixWorld(true);
+ const blade=c.actor.getObjectByName('Galaxia')!,base=blade.localToWorld(new Vector3()),tip=blade.localToWorld(new Vector3(-.315,2.05,0));assert(tip.sub(base).normalize().y>.999);assert.equal(c.actor.position.x,2004.8);
+ advanceKnightBattle(s,actors,s.until);advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'cosmic-surge');view.update(s,'helper',s.since+800,1/60);
+ const fx=(view as any).cosmic;assert(fx.group.visible);assert(fx.lightning.hot.count>250);assert.equal(fx.lightning.hotMaterial.color.getHex(),0x609aff);assert.equal(fx.light.parent,null,'the helper reuses the arena light without adding another live light');
+ view.update(undefined,'helper',s.until,0);assert(!fx.group.visible);view.dispose();c.disposeEffects();
+});
+
+test('a defeated boss ally sits with stars even with hearts left, and does not smile while descending after a win',async()=>{
+ const make=await models(),c=make(),scene=new Scene();scene.add(c.actor);const {s}=battle();s.phase=4;s.stage='won';assert.equal(s.players.helper.hp,5);assert(helperDefeated(s,'helper',110000));
+ s.stage='lost';s.celebration={at:100000,landAt:103000,boss:[0,180,0],helpers:{helper:[10,180,0]}};const view=new MetaKnightCelebrationView(c);view.update(s,'helper',101500,1/60);assert.equal(c.state,'Fly');assert.equal(c.actor.position.y,90);assert(!c.actor.getObjectByName('Meta Knight smiling crescent eyes')!.visible);assert(c.actor.getObjectByName('Galaxia')!.visible);
+ view.update(s,'helper',106400,1/60);assert(c.actor.position.y<1);assert(c.actor.getObjectByName('Meta Knight smiling crescent eyes')!.visible);view.dispose();c.disposeEffects();
+});
+
+test('both knights plant their actual boot soles between circle hops instead of continuously hovering',async()=>{
+ const make=await models(),{s}=battle();s.stage='lost';s.celebration={at:100000,boss:[-5,0,-6],helpers:{helper:[10,0,0]}};
+ for(const id of ['boss','helper']){const c=make();c.actor.scale.setScalar(id==='boss'?3.3:1);const scene=new Scene();scene.add(c.actor);const view=new MetaKnightCelebrationView(c),box=new Box3();let grounded=0;
+  for(let i=0;i<120;i++){const now=107700+i*1000/60;view.update(s,id,now,1/60);scene.updateMatrixWorld(true);const sole=Math.min(...['Left','Right'].map(side=>box.setFromObject(c.actor.getObjectByName(side+'_foot_pivot')!).min.y)),pose=knightCelebration(s,id,now)!;assert(Math.abs(sole-pose.jump)<1e-6,'actual soles follow the grounded hop height');if(Math.abs(sole)<1e-6)grounded++;}
+  assert(grounded>40,'each lap has clearly visible grounded steps');view.dispose();c.disposeEffects();
+ }
 });

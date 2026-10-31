@@ -38,11 +38,11 @@ try{
   await page.waitForFunction(()=>arenaQA.travel.active);await page.waitForTimeout(500);console.log('Entered arena: player '+i);
  }
 
- const helper=pages[1],hero=pages[0];await helper.bringToFront();await helper.locator('#knight-side-choice').waitFor({state:'visible'});
+ const helper=pages[1],hero=pages[0];await hero.bringToFront();assert.equal(await helper.locator('#knight-side-choice').isVisible(),false);await hero.evaluate(()=>arenaQA.travel.startBattle());await helper.bringToFront();await helper.locator('#knight-side-choice').waitFor({state:'visible'});assert((await hero.locator('#knight-side-choice strong').textContent()).includes('Ждём'));
  const press=async index=>{await helper.evaluate(i=>virtualPad.press(i),index);await helper.waitForTimeout(160);await helper.evaluate(i=>virtualPad.release(i),index);await helper.waitForTimeout(130);};
- await press(14);await press(0);assert.equal(room.room.knightSides.p1,'players');await press(15);await press(0);assert.equal(room.room.knightSides.p1,'boss');
+ await press(15);await press(0);assert.equal(room.room.knightSides.p1,'boss');
  assert.equal(await helper.evaluate(()=>arenaQA.c.isMetaKnight),true);await helper.screenshot({path:output+'01-side-choice-controller.png'});
- await press(3);await helper.waitForFunction(()=>arenaQA.travel.engaged);await helper.waitForTimeout(3200);
+ await helper.waitForFunction(()=>arenaQA.travel.engaged);await helper.waitForTimeout(3200);
  const s=room.room.knightBattle;Object.assign(s,{stage:'rest',since:Date.now(),until:Date.now()+1000000});s.players.p0.hp=8;s.players.p0.invulnerable=0;room.broadcast({type:'room',room:room.room});
  assert.equal(s.players.p1.hp,5);assert.equal(s.players.p0.hp,8);assert.equal(s.players.p1.side,'boss');
  await helper.locator('#knight-helper-actions').waitFor({state:'visible'});
