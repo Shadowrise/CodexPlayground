@@ -19,6 +19,12 @@ test('arena controls expose one bottom action during a fight and finish plus att
  assert.deepEqual(knightArenaActions(s,'a',true,false,false),[{key:'interact',action:'start',label:'Ещё раз'}]);assert.deepEqual(knightArenaActions(s,'a',false,false,true),[{key:'interact',action:'leave',label:'Вернуться на поляну'}]);
 });
 
+test('the portal side never offers a start or replay after another player finishes a duel',()=>{
+ assert.deepEqual(knightArenaActions(undefined,'spectator',false,true,false,false),[]);
+ const s=battle();
+ for(const stage of ['won','lost','cancelled'] as const){s.stage=stage;assert.deepEqual(knightArenaActions(s,'spectator',false,false,false,false),[]);assert.deepEqual(knightArenaActions(s,'spectator',false,false,true,false),[{key:'interact',action:'leave',label:'Вернуться на поляну'}]);}
+});
+
 test('the solid torso blocks walking and swept crossings while leaving counterattacks reachable',()=>{
  const s=battle(),before=JSON.stringify(s),body=knightBody(s,2100);
  for(let i=0;i<16;i++){

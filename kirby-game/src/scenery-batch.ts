@@ -6,8 +6,11 @@ import {startupWork} from './startup-tasks';
 let multiDraw=false;
 export function configureSceneryBatching(enabled:boolean){multiDraw=enabled;}
 type Source={mesh:T.InstancedMesh;visibility:T.Object3D;ids:number[];shown:boolean};
-const sources=new WeakMap<T.BatchedMesh,Source[]>();
-export function scenerySources(mesh:T.BatchedMesh){return sources.get(mesh)??[];}
+const sources=new WeakMap<T.Mesh,Source[]>();
+export function scenerySources(mesh:T.Mesh){return sources.get(mesh)??[];}
+const cellBounds=new WeakMap<T.Object3D,T.Sphere>();
+const retainedSources=new WeakSet<T.Object3D>();
+export function sceneryCellBounds(object:T.Object3D){return cellBounds.get(object);}
 
 /** Batch compatible prototypes within existing culling cells. Original LODs
  * continue choosing their own levels/ranges; only the submission is combined.
@@ -15,15 +18,16 @@ export function scenerySources(mesh:T.BatchedMesh){return sources.get(mesh)??[];
 export function batchScenery(root:T.Object3D){
  for(const _ of sceneryWork(root)){}
 }
-export function batchSceneryAsync(root:T.Object3D){return startupWork(sceneryWork(root));}
-function* sceneryWork(root:T.Object3D){
+export function batchSceneryAsync(root:T.Object3D,combineCells=false){return startupWork(sceneryWork(root,combineCells));}
+function* sceneryWork(root:T.Object3D,combineCells=false){
+ if(combineCells)yield* combineInstanceCells(root);
  if(!multiDraw)return;
  root.updateMatrixWorld(true);
  const inverse=root.matrixWorld.clone().invert(),groups=new Map<string,T.InstancedMesh[]>(),families=new Map<T.InstancedMesh,string>();
  const materialKeys=new Map<T.Material,string>(),attributeKeys=new Map<T.BufferGeometry,string>();
  const metadata={textures:{},images:{}};
  root.traverse(o=>{
-  if(!(o instanceof T.InstancedMesh)||Array.isArray(o.material)||o.count===0||o.count>96)return;
+  if(!(o instanceof T.InstancedMesh)||retainedSources.has(o)||Array.isArray(o.material)||o.count===0||o.count>96)return;
   const m=o.material;
   if(m.transparent||!m.visible||!m.colorWrite||m.onBeforeCompile!==T.Material.prototype.onBeforeCompile||o.customDepthMaterial||o.geometry.morphAttributes.position)return;
   let properties=materialKeys.get(m);
@@ -98,5 +102,95 @@ function* sceneryWork(root:T.Object3D){
    T.BatchedMesh.prototype.onBeforeRender.apply(this,args);
   };
   yield;
+ }
+}
+
+type InstanceSource=Source&{matrices:Float32Array;colours:Float32Array;bounds:T.Sphere};
+
+/** Compact only the visible original cells. Unlike one multi-draw item per twig,
+ * identical geometry still uses one instanced draw. Uploads occur only when the
+ * chosen cells change, before Three uploads vertex attributes for this frame. */
+export class SceneryInstanceBatch extends T.InstancedMesh {
+ enabled=true;
+ private previousEnabled?:boolean;
+ private readonly records:InstanceSource[]=[];
+ private readonly frustum=new T.Frustum();
+ private readonly projection=new T.Matrix4();
+ private readonly eye=new T.Vector3();
+ private readonly forward=new T.Vector3();
+ private readonly offset=new T.Vector3();
+ constructor(private readonly root:T.Object3D,list:T.InstancedMesh[],material:T.Material){
+  super(list[0].geometry,material,list.reduce((n,m)=>n+m.count,0));
+  this.name='Combined scenery instances';this.matrixAutoUpdate=false;
+  const first=list[0];this.castShadow=first.castShadow;this.receiveShadow=first.receiveShadow;this.layers.mask=first.layers.mask;this.renderOrder=first.renderOrder;
+  const inverse=root.matrixWorld.clone().invert(),local=new T.Matrix4(),matrix=new T.Matrix4(),colour=new T.Color(),tint=new T.Color();
+  const bounds=new T.Box3();
+  for(const mesh of list){
+   if(!mesh.boundingSphere)mesh.computeBoundingSphere();
+   const visibility=new T.Group();visibility.name=mesh.name;visibility.visible=mesh.visible;visibility.matrix.copy(mesh.matrix);visibility.matrixAutoUpdate=false;
+   cellBounds.set(visibility,mesh.boundingSphere!.clone());
+   local.multiplyMatrices(inverse,mesh.matrixWorld);
+   const matrices=new Float32Array(mesh.count*16),colours=new Float32Array(mesh.count*3);
+   for(let i=0;i<mesh.count;i++){
+    mesh.getMatrixAt(i,matrix);matrix.premultiply(local);matrix.toArray(matrices,i*16);
+    colour.set(0xffffff);if('color' in mesh.material)colour.copy((mesh.material as T.MeshStandardMaterial).color);
+    if(mesh.instanceColor){mesh.getColorAt(i,tint);colour.multiply(tint);}colour.toArray(colours,i*3);
+   }
+   const sphere=mesh.boundingSphere!.clone().applyMatrix4(mesh.matrixWorld);
+   bounds.union(new T.Box3().setFromCenterAndSize(sphere.center,new T.Vector3().setScalar(sphere.radius*2)).applyMatrix4(inverse));
+   const parent=mesh.parent!;parent.add(visibility);mesh.removeFromParent();
+   if(parent instanceof T.LOD){const level=parent.levels.find(l=>l.object===mesh);if(level)level.object=visibility;}
+   visibility.add(mesh);mesh.matrix.identity();mesh.matrixAutoUpdate=false;mesh.visible=false;retainedSources.add(mesh);
+   this.records.push({mesh,visibility,ids:[],shown:false,matrices,colours,bounds:sphere});
+  }
+  this.boundingSphere=bounds.getBoundingSphere(new T.Sphere());this.boundingBox=bounds;
+  this.instanceMatrix.setUsage(T.DynamicDrawUsage);
+  this.instanceColor=new T.InstancedBufferAttribute(new Float32Array(this.instanceMatrix.count*3),3).setUsage(T.DynamicDrawUsage);
+  this.count=0;sources.set(this,this.records);
+ }
+ sync(camera:T.Camera,distance:number){
+  const changedMode=this.previousEnabled!==this.enabled;this.previousEnabled=this.enabled;
+  if(changedMode)for(const source of this.records)source.mesh.visible=!this.enabled;
+  this.visible=this.enabled;if(!this.enabled)return;
+  this.frustum.setFromProjectionMatrix(this.projection.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse));
+  this.eye.setFromMatrixPosition(camera.matrixWorld);this.forward.set(0,0,-1).transformDirection(camera.matrixWorld);
+  let changed=changedMode;
+  for(const source of this.records){
+   let shown=true;for(let p:T.Object3D|null=source.visibility;p;p=p.parent)if(!p.visible){shown=false;break;}
+   if(shown){const depth=this.offset.subVectors(source.bounds.center,this.eye).dot(this.forward);shown=depth-source.bounds.radius<=distance&&(!source.mesh.frustumCulled||this.frustum.intersectsSphere(source.bounds));}
+   if(shown!==source.shown){source.shown=shown;changed=true;}
+  }
+  if(!changed)return;
+  let count=0;
+  for(const source of this.records)if(source.shown){
+   (this.instanceMatrix.array as Float32Array).set(source.matrices,count*16);
+   (this.instanceColor!.array as Float32Array).set(source.colours,count*3);count+=source.mesh.count;
+  }
+  this.count=count;
+  this.instanceMatrix.clearUpdateRanges();this.instanceColor!.clearUpdateRanges();
+  if(count){this.instanceMatrix.addUpdateRange(0,count*16);this.instanceColor!.addUpdateRange(0,count*3);this.instanceMatrix.needsUpdate=true;this.instanceColor!.needsUpdate=true;}
+ }
+}
+
+function* combineInstanceCells(root:T.Object3D){
+ root.updateWorldMatrix(true,true);
+ const groups=new Map<string,T.InstancedMesh[]>(),materialKeys=new Map<T.Material,string>();
+ const metadata={textures:{},images:{}};
+ root.traverse(o=>{
+  if(!(o instanceof T.InstancedMesh)||retainedSources.has(o)||Array.isArray(o.material)||!o.count||o.userData.spatialCell===undefined)return;
+  const material=o.material;
+  if(material.transparent||!material.visible||!material.colorWrite||material.onBeforeCompile!==T.Material.prototype.onBeforeCompile||o.customDepthMaterial||o.geometry.morphAttributes.position)return;
+  let finish=materialKeys.get(material);
+  if(finish===undefined){const data=material.toJSON(metadata) as unknown as Record<string,unknown>;for(const key of ['uuid','name','color','metadata','userData'])delete data[key];finish=JSON.stringify(data);materialKeys.set(material,finish);}
+  const key=JSON.stringify([o.geometry.uuid,finish,o.castShadow,o.receiveShadow,o.layers.mask,o.renderOrder,o.frustumCulled]);
+  const list=groups.get(key)??[];list.push(o);groups.set(key,list);
+ });
+ for(const list of groups.values()){
+  if(list.length<3||new Set(list.map(o=>o.userData.spatialCell)).size<2)continue;
+  const inverse=root.matrixWorld.clone().invert(),matrix=new T.Matrix4(),local=new T.Matrix4();let reflected=false;
+  for(const mesh of list){local.multiplyMatrices(inverse,mesh.matrixWorld);for(let i=0;i<mesh.count;i++){mesh.getMatrixAt(i,matrix);if(matrix.premultiply(local).determinant()<0){reflected=true;break;}}if(reflected)break;}
+  if(reflected)continue;
+  const material=(list[0].material as T.Material).clone();if('color' in material)(material as T.MeshStandardMaterial).color.set(0xffffff);
+  root.add(new SceneryInstanceBatch(root,list,material));yield;
  }
 }

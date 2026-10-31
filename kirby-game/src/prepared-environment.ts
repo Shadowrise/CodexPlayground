@@ -19,7 +19,7 @@ export function unpackEnvironment(buffer:ArrayBuffer){
 }
 
 /** Geometry, placement, maps and bounds are identical to the procedural build. */
-export async function restoreEnvironment(doc:EnvironmentDocument){
+export async function restoreEnvironment(doc:EnvironmentDocument,combineCells=true){
  const loader=new T.ObjectLoader(),budget=startupBudget();
  // ObjectLoader.parse/parseAsync both construct the whole scene synchronously.
  // Restore shared resources once, then build nodes from the leaves upward so
@@ -75,6 +75,6 @@ export async function restoreEnvironment(doc:EnvironmentDocument){
   material.onBeforeCompile=source.onBeforeCompile;material.customProgramCacheKey=source.customProgramCacheKey;
  }
  const roots=[...world.children];
- for(const root of roots){await batchSceneryAsync(root);await startupTask();}
+ for(const root of roots){await batchSceneryAsync(root,combineCells);await startupTask();}
  return roots;
 }

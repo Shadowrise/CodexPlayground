@@ -6,6 +6,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { makeLuigi, updateLuigiIdle } from './luigi';
 import {batchRigidMeshes} from './rigid-batch';
 import {CosmeticClock} from './cosmetic-clock';
+import {CoasterDetail} from './coaster-detail';
 import {startupWork} from './startup-tasks';
 import { cloneVariant, remainingVariants, type KirbyVariant } from './variants';
 import type { CharacterController } from './controller';
@@ -47,6 +48,8 @@ export class Coaster {
   private ridden?:typeof this.carts[number];
   private riderParent?:T.Object3D;
   private sampleCount=2400;
+  private details=new Map<T.Group,CoasterDetail>();
+  detailEnabled=true;
   get riding(){return !!this.rider;}
   readonly rideMotion={speed:0,slope:0,inverted:false,turn:0};
   constructor(deferred=false) {if(!deferred)for(const _ of this.build()){};}
@@ -159,6 +162,7 @@ export class Coaster {
       }
       batchRigidMeshes(g,new Set([...wheels,...g.children.filter(o=>!!o.name)]));
       this.group.add(g);this.carts.push({group:g,distance:i*this.length/COASTER_CART_COUNT,wait:i===0?2.5:0,speed:i===0?0:64,wheels,occupied:i%2===1 || i===10 || i===META_KNIGHT_CART});
+      this.details.set(g,new CoasterDetail(g));
       yield;
     }
   }
@@ -170,6 +174,7 @@ export class Coaster {
       model.position.set(0,1.3,0);this.carts[index].group.add(model);
       const mixer=new T.AnimationMixer(model),clip=clips.find(c=>c.name==='Idle');
       if(clip)mixer.clipAction(clip).play();this.passengerMixers.push(mixer);
+      mixer.update(0);this.details.get(this.carts[index].group)!.addPassenger(model);
     }
   }
   addMetaKnightPassenger(template:T.Object3D,clips:readonly T.AnimationClip[]){
@@ -177,6 +182,7 @@ export class Coaster {
     const {model,mixer}=makeSeatedMetaKnight(template,clips);this.metaKnightAdded=true;
     model.position.set(0,1.3,-.55);model.scale.setScalar(.9);
     this.carts[META_KNIGHT_CART].group.add(model);this.passengerMixers.push(mixer);
+    this.details.get(this.carts[META_KNIGHT_CART].group)!.addPassenger(model);
   }
   pose(distance:number) {
     const u=((distance/this.length)%1+1)%1,f=u*this.sampleCount,i=Math.floor(f);
@@ -209,6 +215,7 @@ export class Coaster {
     this.rider=undefined;this.ridden=undefined;this.rideMotion.speed=0;
   }
   private cosmeticClocks=new Map<T.Object3D,CosmeticClock>();
+  updateDetail(camera?:T.Vector3){for(const cart of this.carts)this.details.get(cart.group)?.update(camera,!this.detailEnabled||cart===this.ridden);}
   update(dt:number,camera?:T.Vector3) {
     const idleDelta=(model:T.Object3D)=>{
       if(!camera)return dt;
@@ -260,5 +267,6 @@ export class Coaster {
         player.mixer.update(dt);
       }
     }
+    this.updateDetail(camera);
   }
 }

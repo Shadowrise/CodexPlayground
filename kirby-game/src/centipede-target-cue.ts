@@ -47,4 +47,5 @@ export class CentipedeTargetCue{
   this.ring.material.uniforms.progress.value=progress!==undefined&&Number.isFinite(progress)?T.MathUtils.clamp(progress,0,1):-1;
   if(camera){this.aura.quaternion.copy(camera.quaternion);this.arrow.quaternion.copy(camera.quaternion);}
  }
+ dispose(){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});this.group.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

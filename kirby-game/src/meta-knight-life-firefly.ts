@@ -39,6 +39,7 @@ export function knightLifeFireflyPoint(s:KnightBattle,now:number):KnightPoint|un
 }
 /** Called once for a consumed melee press, by the same rules on client and Worker. */
 export function hitKnightLifeFirefly(s:KnightBattle,id:string,p:KnightPoint,yaw:number,now:number,reach:number){
+ if(s.players[id]?.side==='boss')return false;
  const point=knightLifeFireflyPoint(s,now);if(!point)return false;
  const dx=point[0]-p[0],dz=point[2]-p[2];
  if(Math.hypot(dx,dz)>reach+LIFE_FIREFLY.hitRadius||Math.abs(point[1]-p[1])>3.2||Math.cos(Math.atan2(dx,dz)-yaw)<=-.15)return false;
@@ -46,6 +47,6 @@ export function hitKnightLifeFirefly(s:KnightBattle,id:string,p:KnightPoint,yaw:
  s.lifeFirefly!.hit={at:now,by:id,point,yaw:Math.atan2(next[0]-point[0],next[2]-point[2])};
  const hp=(s.teamHp??s.players[id].hp)+1;
  if(s.teamHp!==undefined)s.teamHp=hp;
- for(const player of Object.values(s.players))player.hp=hp;
+ for(const player of Object.values(s.players))if(player.side!=='boss')player.hp=hp;
  s.revision++;return true;
 }

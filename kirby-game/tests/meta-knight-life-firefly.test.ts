@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {Vector3,Mesh,Box3,Raycaster} from 'three';
+import {Vector3,Mesh,MeshStandardMaterial,Material,PerspectiveCamera,Scene,Box3,Raycaster} from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {KNIGHT,startKnightBattle,setKnightPhase,advanceKnightBattle,knightAttack,knightPartyHearts,type KnightActor} from '../src/meta-knight-battle';
 import {spawnKnightLifeFirefly,knightLifeFireflyPoint,lifeFireflyDuration} from '../src/meta-knight-life-firefly';
@@ -9,6 +9,10 @@ import {MetaKnightLifeFireflyView} from '../src/meta-knight-life-firefly-view';
 import {COSMIC} from '../src/meta-knight-cosmic';
 import {SHIELD} from '../src/meta-knight-shield';
 import {knightSound} from '../src/meta-knight-sounds';
+import {NightFireflies} from '../src/night-fireflies';
+import {StableCSM} from '../src/stable-shadows';
+
+type ShadowMaterial=MeshStandardMaterial&{defines:Record<string,unknown>};
 
 function fixture(count=1){const actors:KnightActor[]=Array.from({length:count},(_,i)=>({id:String(i),p:[i,0,-2],yaw:Math.PI,available:true}));const s=startKnightBattle(actors,'0',1000)!;return {s,actors};}
 function hitFixture(count=1,hp=5){
@@ -111,4 +115,29 @@ test('the real firefly holds the new shared heart, animates its drop, deduplicat
  view.update(s,4300,.14);view.update(s,4400,.1);assert.deepEqual(cues,['life-firefly-hit']);view.update(s,5400,.1);assert.equal(view.group.visible,false);
  let disposed=false;gltf.scene.traverse(o=>{if(o instanceof Mesh)o.geometry.addEventListener('dispose',()=>disposed=true);});view.dispose();assert.equal(disposed,false);assert(motion);
  const sound=knightSound('life-firefly-hit');assert(sound.left.some(v=>Math.abs(v)>.05));assert(sound.left.every(Number.isFinite));
+});
+
+test('heart carrier has independent arena materials after the meadow prepares the shared firefly asset',async()=>{
+ const bytes=await readFile(new URL('../public/models/firefly-animated.glb',import.meta.url)),gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const meadow=new NightFireflies(gltf),shadows=new StableCSM({camera:new PerspectiveCamera(48,1.6,.75,1200),parent:new Scene(),cascades:2,maxFar:200});shadows.fade=true;
+ const prepared=new Set<Material>();meadow.group.traverse(o=>{if(o instanceof Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m instanceof MeshStandardMaterial&&!prepared.has(m)){shadows.setupMaterial(m);prepared.add(m);}});
+ const originals=new Map<string,Mesh>();gltf.scene.traverse(o=>{if(o instanceof Mesh)originals.set(o.name,o);});
+ assert.equal((originals.get('Face')!.material as ShadowMaterial).defines.USE_CSM,1,'the real startup shares meadow face materials with the cached asset');
+ assert.equal((originals.get('Left_Leg_shape_0')!.material as ShadowMaterial).defines.USE_CSM,1);
+ const disposedSources=new Set<Material>();for(const mesh of originals.values())for(const m of Array.isArray(mesh.material)?mesh.material:[mesh.material])m.addEventListener('dispose',()=>disposedSources.add(m));
+ try{
+  for(let trip=0;trip<2;trip++){
+   const view=new MetaKnightLifeFireflyView(gltf,()=>{}),copies=new Set<Material>(),disposedCopies=new Set<Material>();
+   for(const [name,source] of originals){
+    const mesh=view.firefly.object.getObjectByName(name) as Mesh,material=mesh.material as ShadowMaterial,original=source.material as MeshStandardMaterial;
+    assert.equal(mesh.geometry,source.geometry,'the arena keeps the complete shared geometry');assert.notEqual(material,original,`${name} must not retain meadow lighting`);
+    assert.equal(material.onBeforeCompile,Material.prototype.onBeforeCompile,name);assert.equal(material.customProgramCacheKey,Material.prototype.customProgramCacheKey,name);
+    assert.equal(material.defines.USE_CSM,undefined,name);assert.equal(material.envMap,null,name);assert.equal(material.map,original.map,name);
+    if(name!=='Glow_Abdomen')assert(material.color.equals(original.color),name);copies.add(material);material.addEventListener('dispose',()=>disposedCopies.add(material));
+   }
+   view.firefly.setGlowColor('#ff3388');assert.equal(((view.firefly.object.getObjectByName('Glow_Abdomen') as Mesh).material as MeshStandardMaterial).emissive.getHexString(),'ff3388');
+   view.dispose();assert.equal(disposedCopies.size,copies.size,'leaving releases all arena material copies');assert.equal(disposedSources.size,0,'the next trip and meadow retain their cached materials');
+   assert.equal((originals.get('Face')!.material as ShadowMaterial).defines.USE_CSM,1,'arena teardown preserves meadow shadow settings');
+  }
+ }finally{shadows.dispose();shadows.remove();}
 });

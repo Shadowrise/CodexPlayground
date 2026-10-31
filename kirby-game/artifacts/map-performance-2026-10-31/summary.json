@@ -1,0 +1,5963 @@
+{
+  "date": "2026-10-31",
+  "source": ".cache/map-performance/report-1793462794524.json",
+  "metadata": {
+    "date": "2026-10-31T16:06:57.145Z",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+    "browserVisibility": "visible",
+    "pixelRatio": 1.25,
+    "viewDistance": 750,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "drawingBuffer": [
+      2400,
+      1350
+    ],
+    "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "vendor": "Google Inc. (NVIDIA)",
+    "gpuTimer": true,
+    "treehouseActive": false,
+    "npcs": 14,
+    "startupGlError": 1282,
+    "shadowCascades": 2,
+    "shadowMapSize": [
+      [
+        1024,
+        1024
+      ],
+      [
+        1024,
+        1024
+      ]
+    ],
+    "objects": 13156,
+    "multiDraw": true,
+    "worldManifest": {
+      "version": 1,
+      "hash": "90ae825e30d0655f",
+      "bytes": 21589377
+    },
+    "finalGlError": 0
+  },
+  "views": [
+    {
+      "id": "south-east",
+      "position": [
+        230,
+        10,
+        230
+      ],
+      "target": [
+        0,
+        3,
+        0
+      ],
+      "fps": 51.23214745699646,
+      "updateMs": 2.0999999940395355,
+      "renderCpuMs": 16.599999994039536,
+      "gpuMs": 11.8016,
+      "sample": {
+        "ms": 15.599999994039536,
+        "p90Ms": 15.700000017881393,
+        "cpuMs": 15.599999994039536,
+        "gpuMs": 10.184704,
+        "gpuSamples": 14,
+        "calls": 1214,
+        "triangles": 5182050
+      },
+      "inventory": {
+        "totals": {
+          "frame": 1224,
+          "calls": 1214,
+          "triangles": 5182050,
+          "points": 0,
+          "lines": 528
+        },
+        "groups": [
+          {
+            "name": "Four woodland biomes",
+            "pass": "colour",
+            "calls": 148,
+            "triangles": 2223771
+          },
+          {
+            "name": "Continuous square mountain range",
+            "pass": "colour",
+            "calls": 271,
+            "triangles": 553896
+          },
+          {
+            "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+            "pass": "colour",
+            "calls": 151,
+            "triangles": 501224
+          },
+          {
+            "name": "NPC 14 · Сапфир",
+            "pass": "colour",
+            "calls": 17,
+            "triangles": 259072
+          },
+          {
+            "name": "Фрукты на поляне",
+            "pass": "colour",
+            "calls": 26,
+            "triangles": 227348
+          },
+          {
+            "name": "Interactive watermill",
+            "pass": "colour",
+            "calls": 37,
+            "triangles": 192732
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "colour",
+            "calls": 46,
+            "triangles": 160832
+          },
+          {
+            "name": "Three colourful balloon ports",
+            "pass": "colour",
+            "calls": 15,
+            "triangles": 156642
+          },
+          {
+            "name": "Oak treehouse, lookout, swing and leaf pile",
+            "pass": "colour",
+            "calls": 25,
+            "triangles": 104797
+          },
+          {
+            "name": "Forty meadow fireflies",
+            "pass": "colour",
+            "calls": 42,
+            "triangles": 100680
+          },
+          {
+            "name": "Distant forest panorama",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 93500
+          },
+          {
+            "name": "Stone maze and golden star",
+            "pass": "colour",
+            "calls": 44,
+            "triangles": 87731
+          },
+          {
+            "name": "Biome meadow details",
+            "pass": "colour",
+            "calls": 27,
+            "triangles": 76563
+          },
+          {
+            "name": "Rainbow wishing fountain",
+            "pass": "colour",
+            "calls": 18,
+            "triangles": 74798
+          },
+          {
+            "name": "Небесная тропа — сияющие ступени",
+            "pass": "colour",
+            "calls": 98,
+            "triangles": 67476
+          },
+          {
+            "name": "Дикий Пиджи",
+            "pass": "colour",
+            "calls": 21,
+            "triangles": 50084
+          },
+          {
+            "name": "Арена Топотушки",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 40527
+          },
+          {
+            "name": "Star reward trampoline and soft leaves",
+            "pass": "colour",
+            "calls": 4,
+            "triangles": 38984
+          },
+          {
+            "name": "Kirby home and bed",
+            "pass": "colour",
+            "calls": 23,
+            "triangles": 34318
+          },
+          {
+            "name": "Drifting clouds",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 32928
+          },
+          {
+            "name": "Prepared object shadows",
+            "pass": "colour",
+            "calls": 79,
+            "triangles": 28536
+          },
+          {
+            "name": "Игрок",
+            "pass": "shadow",
+            "calls": 5,
+            "triangles": 22556
+          },
+          {
+            "name": "Colourful river boats",
+            "pass": "colour",
+            "calls": 19,
+            "triangles": 21368
+          },
+          {
+            "name": "Meta Knight portal",
+            "pass": "colour",
+            "calls": 9,
+            "triangles": 11550
+          },
+          {
+            "name": "NPC 14 · Сапфир",
+            "pass": "shadow",
+            "calls": 1,
+            "triangles": 4848
+          },
+          {
+            "name": "Tree shadows",
+            "pass": "colour",
+            "calls": 63,
+            "triangles": 4300
+          },
+          {
+            "name": "Kirby home and bed",
+            "pass": "shadow",
+            "calls": 5,
+            "triangles": 3753
+          },
+          {
+            "name": "Swimmable lakes",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3105
+          },
+          {
+            "name": "Flower memory adventure",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3002
+          },
+          {
+            "name": "Daylight sky gradient",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 528
+          },
+          {
+            "name": "Grass shadows",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 368
+          },
+          {
+            "name": "Meta Knight seal stone rests",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 224
+          },
+          {
+            "name": "Mesh",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "south-west",
+      "position": [
+        -230,
+        10,
+        230
+      ],
+      "target": [
+        0,
+        3,
+        0
+      ],
+      "fps": 53.52185237127563,
+      "updateMs": 2,
+      "renderCpuMs": 15.699999988079071,
+      "gpuMs": 11.12064,
+      "sample": {
+        "ms": 14.799999982118607,
+        "p90Ms": 15.099999994039536,
+        "cpuMs": 14.799999982118607,
+        "gpuMs": 9.348096,
+        "gpuSamples": 14,
+        "calls": 1181,
+        "triangles": 5037096
+      },
+      "inventory": {
+        "totals": {
+          "frame": 2440,
+          "calls": 1181,
+          "triangles": 5037096,
+          "points": 0,
+          "lines": 528
+        },
+        "groups": [
+          {
+            "name": "Four woodland biomes",
+            "pass": "colour",
+            "calls": 135,
+            "triangles": 2117691
+          },
+          {
+            "name": "Continuous square mountain range",
+            "pass": "colour",
+            "calls": 269,
+            "triangles": 556128
+          },
+          {
+            "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+            "pass": "colour",
+            "calls": 171,
+            "triangles": 497096
+          },
+          {
+            "name": "NPC 11 · Янтарь",
+            "pass": "colour",
+            "calls": 17,
+            "triangles": 259072
+          },
+          {
+            "name": "Interactive watermill",
+            "pass": "colour",
+            "calls": 37,
+            "triangles": 192732
+          },
+          {
+            "name": "Biome meadow details",
+            "pass": "colour",
+            "calls": 29,
+            "triangles": 189473
+          },
+          {
+            "name": "Three colourful balloon ports",
+            "pass": "colour",
+            "calls": 15,
+            "triangles": 156642
+          },
+          {
+            "name": "Фрукты на поляне",
+            "pass": "colour",
+            "calls": 28,
+            "triangles": 153696
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "colour",
+            "calls": 34,
+            "triangles": 142888
+          },
+          {
+            "name": "Oak treehouse, lookout, swing and leaf pile",
+            "pass": "colour",
+            "calls": 25,
+            "triangles": 104797
+          },
+          {
+            "name": "Forty meadow fireflies",
+            "pass": "colour",
+            "calls": 42,
+            "triangles": 100680
+          },
+          {
+            "name": "Distant forest panorama",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 93500
+          },
+          {
+            "name": "Stone maze and golden star",
+            "pass": "colour",
+            "calls": 44,
+            "triangles": 87731
+          },
+          {
+            "name": "Rainbow wishing fountain",
+            "pass": "colour",
+            "calls": 18,
+            "triangles": 74798
+          },
+          {
+            "name": "Небесная тропа — сияющие ступени",
+            "pass": "colour",
+            "calls": 98,
+            "triangles": 67476
+          },
+          {
+            "name": "Арена Топотушки",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 40527
+          },
+          {
+            "name": "Star reward trampoline and soft leaves",
+            "pass": "colour",
+            "calls": 4,
+            "triangles": 38984
+          },
+          {
+            "name": "Kirby home and bed",
+            "pass": "colour",
+            "calls": 23,
+            "triangles": 34318
+          },
+          {
+            "name": "Drifting clouds",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 32928
+          },
+          {
+            "name": "Prepared object shadows",
+            "pass": "colour",
+            "calls": 78,
+            "triangles": 28276
+          },
+          {
+            "name": "Дикий Рыжик",
+            "pass": "shadow",
+            "calls": 21,
+            "triangles": 24611
+          },
+          {
+            "name": "Игрок",
+            "pass": "shadow",
+            "calls": 5,
+            "triangles": 22556
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "shadow",
+            "calls": 1,
+            "triangles": 4848
+          },
+          {
+            "name": "Tree shadows",
+            "pass": "colour",
+            "calls": 61,
+            "triangles": 4166
+          },
+          {
+            "name": "Swimmable lakes",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3105
+          },
+          {
+            "name": "Flower memory adventure",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3002
+          },
+          {
+            "name": "Meta Knight seal · floating display",
+            "pass": "colour",
+            "calls": 3,
+            "triangles": 2484
+          },
+          {
+            "name": "Grass shadows",
+            "pass": "colour",
+            "calls": 8,
+            "triangles": 2130
+          },
+          {
+            "name": "Daylight sky gradient",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 528
+          },
+          {
+            "name": "Meta Knight seal stone rests",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 224
+          },
+          {
+            "name": "Mesh",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "north-east",
+      "position": [
+        230,
+        10,
+        -230
+      ],
+      "target": [
+        0,
+        3,
+        0
+      ],
+      "fps": 48.758233298166594,
+      "updateMs": 1.9000000059604645,
+      "renderCpuMs": 17.69999998807907,
+      "gpuMs": 12.240896,
+      "sample": {
+        "ms": 17.299999982118607,
+        "p90Ms": 17.700000017881393,
+        "cpuMs": 17.299999982118607,
+        "gpuMs": 11.482112,
+        "gpuSamples": 14,
+        "calls": 1368,
+        "triangles": 4981643
+      },
+      "inventory": {
+        "totals": {
+          "frame": 3560,
+          "calls": 1368,
+          "triangles": 4981643,
+          "points": 0,
+          "lines": 528
+        },
+        "groups": [
+          {
+            "name": "Four woodland biomes",
+            "pass": "colour",
+            "calls": 139,
+            "triangles": 1273263
+          },
+          {
+            "name": "Continuous square mountain range",
+            "pass": "colour",
+            "calls": 261,
+            "triangles": 550800
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "colour",
+            "calls": 136,
+            "triangles": 538780
+          },
+          {
+            "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+            "pass": "colour",
+            "calls": 174,
+            "triangles": 536576
+          },
+          {
+            "name": "NPC 4 · Бирюза",
+            "pass": "colour",
+            "calls": 17,
+            "triangles": 259072
+          },
+          {
+            "name": "NPC 7 · Коралл",
+            "pass": "colour",
+            "calls": 17,
+            "triangles": 259072
+          },
+          {
+            "name": "Фрукты на поляне",
+            "pass": "colour",
+            "calls": 27,
+            "triangles": 229872
+          },
+          {
+            "name": "Interactive watermill",
+            "pass": "colour",
+            "calls": 37,
+            "triangles": 192732
+          },
+          {
+            "name": "Three colourful balloon ports",
+            "pass": "colour",
+            "calls": 15,
+            "triangles": 156642
+          },
+          {
+            "name": "Forty meadow fireflies",
+            "pass": "colour",
+            "calls": 84,
+            "triangles": 123126
+          },
+          {
+            "name": "Biome meadow details",
+            "pass": "colour",
+            "calls": 31,
+            "triangles": 107516
+          },
+          {
+            "name": "Oak treehouse, lookout, swing and leaf pile",
+            "pass": "colour",
+            "calls": 25,
+            "triangles": 104797
+          },
+          {
+            "name": "Distant forest panorama",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 93500
+          },
+          {
+            "name": "Stone maze and golden star",
+            "pass": "colour",
+            "calls": 44,
+            "triangles": 87731
+          },
+          {
+            "name": "Rainbow wishing fountain",
+            "pass": "colour",
+            "calls": 18,
+            "triangles": 74798
+          },
+          {
+            "name": "Небесная тропа — сияющие ступени",
+            "pass": "colour",
+            "calls": 98,
+            "triangles": 67476
+          },
+          {
+            "name": "Дикий Снежок",
+            "pass": "colour",
+            "calls": 21,
+            "triangles": 50084
+          },
+          {
+            "name": "Арена Топотушки",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 40527
+          },
+          {
+            "name": "Star reward trampoline and soft leaves",
+            "pass": "colour",
+            "calls": 4,
+            "triangles": 38984
+          },
+          {
+            "name": "Kirby home and bed",
+            "pass": "colour",
+            "calls": 23,
+            "triangles": 34318
+          },
+          {
+            "name": "Drifting clouds",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 32928
+          },
+          {
+            "name": "Seven musical flowers",
+            "pass": "colour",
+            "calls": 3,
+            "triangles": 32186
+          },
+          {
+            "name": "Prepared object shadows",
+            "pass": "colour",
+            "calls": 77,
+            "triangles": 27794
+          },
+          {
+            "name": "Дикий Снежок",
+            "pass": "shadow",
+            "calls": 21,
+            "triangles": 24611
+          },
+          {
+            "name": "Игрок",
+            "pass": "shadow",
+            "calls": 5,
+            "triangles": 22556
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "shadow",
+            "calls": 1,
+            "triangles": 4848
+          },
+          {
+            "name": "Colourful river boats",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 4764
+          },
+          {
+            "name": "Tree shadows",
+            "pass": "colour",
+            "calls": 63,
+            "triangles": 4300
+          },
+          {
+            "name": "Swimmable lakes",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3105
+          },
+          {
+            "name": "Flower memory adventure",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3002
+          },
+          {
+            "name": "Grass shadows",
+            "pass": "colour",
+            "calls": 8,
+            "triangles": 1346
+          },
+          {
+            "name": "Daylight sky gradient",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 528
+          },
+          {
+            "name": "Mesh",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 8
+          }
+        ]
+      }
+    },
+    {
+      "id": "north-west",
+      "position": [
+        -230,
+        10,
+        -230
+      ],
+      "target": [
+        0,
+        3,
+        0
+      ],
+      "fps": 43.624543795620475,
+      "updateMs": 1.9000000059604645,
+      "renderCpuMs": 19.5,
+      "gpuMs": 13.89056,
+      "sample": {
+        "ms": 18.400000005960464,
+        "p90Ms": 18.799999982118607,
+        "cpuMs": 18.400000005960464,
+        "gpuMs": 12.42112,
+        "gpuSamples": 14,
+        "calls": 1538,
+        "triangles": 5379095
+      },
+      "inventory": {
+        "totals": {
+          "frame": 4600,
+          "calls": 1538,
+          "triangles": 5379095,
+          "points": 0,
+          "lines": 528
+        },
+        "groups": [
+          {
+            "name": "Four woodland biomes",
+            "pass": "colour",
+            "calls": 137,
+            "triangles": 1951223
+          },
+          {
+            "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+            "pass": "colour",
+            "calls": 159,
+            "triangles": 546168
+          },
+          {
+            "name": "Continuous square mountain range",
+            "pass": "colour",
+            "calls": 246,
+            "triangles": 534312
+          },
+          {
+            "name": "Mountain circuit roller coaster",
+            "pass": "colour",
+            "calls": 178,
+            "triangles": 347728
+          },
+          {
+            "name": "NPC 1 · Мандарин",
+            "pass": "colour",
+            "calls": 17,
+            "triangles": 259072
+          },
+          {
+            "name": "Biome meadow details",
+            "pass": "colour",
+            "calls": 30,
+            "triangles": 239190
+          },
+          {
+            "name": "Interactive watermill",
+            "pass": "colour",
+            "calls": 37,
+            "triangles": 192732
+          },
+          {
+            "name": "Фрукты на поляне",
+            "pass": "colour",
+            "calls": 28,
+            "triangles": 159620
+          },
+          {
+            "name": "Three colourful balloon ports",
+            "pass": "colour",
+            "calls": 15,
+            "triangles": 156642
+          },
+          {
+            "name": "Oak treehouse, lookout, swing and leaf pile",
+            "pass": "colour",
+            "calls": 25,
+            "triangles": 104797
+          },
+          {
+            "name": "Distant forest panorama",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 93500
+          },
+          {
+            "name": "Stone maze and golden star",
+            "pass": "colour",
+            "calls": 44,
+            "triangles": 87731
+          },
+          {
+            "name": "Mountain corner retracting ledges",
+            "pass": "colour",
+            "calls": 153,
+            "triangles": 86452
+          },
+          {
+            "name": "Colourful river boats",
+            "pass": "colour",
+            "calls": 68,
+            "triangles": 77548
+          },
+          {
+            "name": "Forty meadow fireflies",
+            "pass": "colour",
+            "calls": 42,
+            "triangles": 75510
+          },
+          {
+            "name": "Rainbow wishing fountain",
+            "pass": "colour",
+            "calls": 18,
+            "triangles": 74798
+          },
+          {
+            "name": "Небесная тропа — сияющие ступени",
+            "pass": "colour",
+            "calls": 98,
+            "triangles": 67476
+          },
+          {
+            "name": "Дикий Уголёк",
+            "pass": "colour",
+            "calls": 21,
+            "triangles": 50084
+          },
+          {
+            "name": "Арена Топотушки",
+            "pass": "colour",
+            "calls": 5,
+            "triangles": 40527
+          },
+          {
+            "name": "Star reward trampoline and soft leaves",
+            "pass": "colour",
+            "calls": 4,
+            "triangles": 38984
+          },
+          {
+            "name": "Kirby home and bed",
+            "pass": "colour",
+            "calls": 23,
+            "triangles": 34318
+          },
+          {
+            "name": "Drifting clouds",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 32928
+          },
+          {
+            "name": "Seven musical flowers",
+            "pass": "colour",
+            "calls": 3,
+            "triangles": 32186
+          },
+          {
+            "name": "Prepared object shadows",
+            "pass": "colour",
+            "calls": 78,
+            "triangles": 29728
+          },
+          {
+            "name": "Дикий Уголёк",
+            "pass": "shadow",
+            "calls": 21,
+            "triangles": 24611
+          },
+          {
+            "name": "Игрок",
+            "pass": "shadow",
+            "calls": 5,
+            "triangles": 22556
+          },
+          {
+            "name": "NPC 1 · Мандарин",
+            "pass": "shadow",
+            "calls": 1,
+            "triangles": 4848
+          },
+          {
+            "name": "Tree shadows",
+            "pass": "colour",
+            "calls": 63,
+            "triangles": 4300
+          },
+          {
+            "name": "Swimmable lakes",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3105
+          },
+          {
+            "name": "Flower memory adventure",
+            "pass": "colour",
+            "calls": 2,
+            "triangles": 3002
+          },
+          {
+            "name": "Grass shadows",
+            "pass": "colour",
+            "calls": 7,
+            "triangles": 1662
+          },
+          {
+            "name": "Sun disc",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 1216
+          },
+          {
+            "name": "Daylight sky gradient",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 528
+          },
+          {
+            "name": "Mesh",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 8
+          },
+          {
+            "name": "Soft sunlight halo",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 2
+          },
+          {
+            "name": "Soft sun rays",
+            "pass": "colour",
+            "calls": 1,
+            "triangles": 2
+          }
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "distance-240",
+      "name": "View distance 240m",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 4.024999998509884,
+      "gain": 21.315789458417058,
+      "minSavedMs": 3.2000000178813934,
+      "maxSavedMs": 4.5999999940395355,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "distance-240",
+          "name": "View distance 240m",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.788736,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 15,
+            "p90Ms": 15.599999994039536,
+            "cpuMs": 15,
+            "gpuMs": 10.01984,
+            "gpuSamples": 10,
+            "calls": 1114,
+            "triangles": 4460867
+          },
+          "control": {
+            "ms": 18.700000017881393,
+            "p90Ms": 18.80000001192093,
+            "cpuMs": 18.600000023841858,
+            "gpuMs": 12.832768,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.75000001490116,
+          "savedMs": 3.750000014901161,
+          "gain": 20.000000063578288,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "distance-240",
+          "name": "View distance 240m",
+          "baseline": {
+            "ms": 19.69999998807907,
+            "p90Ms": 20.5,
+            "cpuMs": 19.69999998807907,
+            "gpuMs": 13.652992,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 14.700000017881393,
+            "p90Ms": 14.800000011920929,
+            "cpuMs": 14.700000017881393,
+            "gpuMs": 9.6,
+            "gpuSamples": 10,
+            "calls": 1114,
+            "triangles": 4460867
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.63616,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19,
+          "savedMs": 4.299999982118607,
+          "gain": 22.631578853255824,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "distance-240",
+          "name": "View distance 240m",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.4688,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 13,
+            "p90Ms": 14,
+            "cpuMs": 13,
+            "gpuMs": 8.694784,
+            "gpuSamples": 10,
+            "calls": 849,
+            "triangles": 3693558
+          },
+          "control": {
+            "ms": 18.599999994039536,
+            "p90Ms": 19.69999998807907,
+            "cpuMs": 18.599999994039536,
+            "gpuMs": 12.362752,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 17.599999994039536,
+          "savedMs": 4.5999999940395355,
+          "gain": 26.136363611348774,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "distance-240",
+          "name": "View distance 240m",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.5,
+            "gpuMs": 10.92608,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 13.299999982118607,
+            "p90Ms": 13.599999994039536,
+            "cpuMs": 13.299999982118607,
+            "gpuMs": 8.696832,
+            "gpuSamples": 10,
+            "calls": 849,
+            "triangles": 3693558
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.747904,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": 3.2000000178813934,
+          "gain": 19.393939502311476,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "distance-360",
+      "name": "View distance 360m",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 2.725000001490116,
+      "gain": 16.117764526714126,
+      "minSavedMs": 2.600000023841858,
+      "maxSavedMs": 3.3499999791383743,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "distance-360",
+          "name": "View distance 360m",
+          "baseline": {
+            "ms": 20.19999998807907,
+            "p90Ms": 21.900000005960464,
+            "cpuMs": 20.19999998807907,
+            "gpuMs": 13.934592,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 15.900000005960464,
+            "p90Ms": 16.099999994039536,
+            "cpuMs": 15.900000005960464,
+            "gpuMs": 10.397696,
+            "gpuSamples": 10,
+            "calls": 1223,
+            "triangles": 4817834
+          },
+          "control": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.509184,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.24999998509884,
+          "savedMs": 3.3499999791383743,
+          "gain": 17.402597307696432,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "distance-360",
+          "name": "View distance 360m",
+          "baseline": {
+            "ms": 18.30000001192093,
+            "p90Ms": 19,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.46208,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 15.699999988079071,
+            "p90Ms": 16.100000023841858,
+            "cpuMs": 15.699999988079071,
+            "gpuMs": 10.63936,
+            "gpuSamples": 10,
+            "calls": 1223,
+            "triangles": 4817834
+          },
+          "control": {
+            "ms": 18.399999976158142,
+            "p90Ms": 19.399999976158142,
+            "cpuMs": 18.399999976158142,
+            "gpuMs": 12.576768,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.349999994039536,
+          "savedMs": 2.6500000059604645,
+          "gain": 14.44141693090594,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "distance-360",
+          "name": "View distance 360m",
+          "baseline": {
+            "ms": 16.600000023841858,
+            "p90Ms": 17.19999998807907,
+            "cpuMs": 16.600000023841858,
+            "gpuMs": 11.092992,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14.099999994039536,
+            "p90Ms": 14.599999994039536,
+            "cpuMs": 14.099999994039536,
+            "gpuMs": 8.749056,
+            "gpuSamples": 10,
+            "calls": 946,
+            "triangles": 4012228
+          },
+          "control": {
+            "ms": 16.80000001192093,
+            "p90Ms": 18.19999998807907,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.096064,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.700000017881393,
+          "savedMs": 2.600000023841858,
+          "gain": 15.56886240154448,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "distance-360",
+          "name": "View distance 360m",
+          "baseline": {
+            "ms": 17,
+            "p90Ms": 17.19999998807907,
+            "cpuMs": 17,
+            "gpuMs": 11.582464,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14,
+            "p90Ms": 14.199999988079071,
+            "cpuMs": 14,
+            "gpuMs": 8.634368,
+            "gpuSamples": 10,
+            "calls": 946,
+            "triangles": 4012228
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.300864,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.799999997019768,
+          "savedMs": 2.7999999970197678,
+          "gain": 16.66666665188377,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "landmarks",
+      "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 1.8250000029802322,
+      "gain": 10.878835813942514,
+      "minSavedMs": 1.199999988079071,
+      "maxSavedMs": 2.25,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "landmarks",
+          "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 27.400000005960464,
+            "cpuMs": 19,
+            "gpuMs": 12.906496,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 17.899999976158142,
+            "gpuMs": 12.127232,
+            "gpuSamples": 10,
+            "calls": 1431,
+            "triangles": 4921146
+          },
+          "control": {
+            "ms": 19.399999976158142,
+            "p90Ms": 19.700000017881393,
+            "cpuMs": 19.30000001192093,
+            "gpuMs": 13.550592,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.19999998807907,
+          "savedMs": 1.199999988079071,
+          "gain": 6.249999941792339,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "landmarks",
+          "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 19,
+            "gpuMs": 13.193216,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17.299999982118607,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 11.572224,
+            "gpuSamples": 10,
+            "calls": 1431,
+            "triangles": 4921146
+          },
+          "control": {
+            "ms": 19.30000001192093,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 19.30000001192093,
+            "gpuMs": 13.229056,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.150000005960464,
+          "savedMs": 2.25,
+          "gain": 11.749347254828638,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "landmarks",
+          "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+          "baseline": {
+            "ms": 17,
+            "p90Ms": 17.69999998807907,
+            "cpuMs": 17,
+            "gpuMs": 11.31008,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15,
+            "p90Ms": 15.699999988079071,
+            "cpuMs": 15,
+            "gpuMs": 9.607168,
+            "gpuSamples": 10,
+            "calls": 1166,
+            "triangles": 4147504
+          },
+          "control": {
+            "ms": 16.700000017881393,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.700000017881393,
+            "gpuMs": 10.933248,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.850000008940697,
+          "savedMs": 1.8500000089406967,
+          "gain": 10.979228533881765,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "landmarks",
+          "name": "Ponds, flowers, mushrooms, rocks, picnics and ruins",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.696704,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14.900000005960464,
+            "p90Ms": 15.100000023841858,
+            "cpuMs": 14.900000005960464,
+            "gpuMs": 9.362432,
+            "gpuSamples": 10,
+            "calls": 1166,
+            "triangles": 4147504
+          },
+          "control": {
+            "ms": 17,
+            "p90Ms": 17.799999982118607,
+            "cpuMs": 17,
+            "gpuMs": 11.300864,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.700000002980232,
+          "savedMs": 1.7999999970197678,
+          "gain": 10.778443094003263,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "mountain-woodland",
+      "name": "Mountain woodland",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 1.7000000029802322,
+      "gain": 9.727441698795957,
+      "minSavedMs": 1.5999999940395355,
+      "maxSavedMs": 1.9000000059604645,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "mountain-woodland",
+          "name": "Mountain woodland",
+          "baseline": {
+            "ms": 18.200000017881393,
+            "p90Ms": 18.799999982118607,
+            "cpuMs": 18.200000017881393,
+            "gpuMs": 12.685312,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 16.69999998807907,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 11.497472,
+            "gpuSamples": 10,
+            "calls": 1345,
+            "triangles": 5301642
+          },
+          "control": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.995584,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.450000002980232,
+          "savedMs": 1.7500000149011612,
+          "gain": 9.485094930181482,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "mountain-woodland",
+          "name": "Mountain woodland",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 20,
+            "cpuMs": 19,
+            "gpuMs": 12.609536,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.099999994039536,
+            "p90Ms": 18.5,
+            "cpuMs": 17.099999994039536,
+            "gpuMs": 11.889664,
+            "gpuSamples": 10,
+            "calls": 1345,
+            "triangles": 5301642
+          },
+          "control": {
+            "ms": 18.399999976158142,
+            "p90Ms": 20.700000017881393,
+            "cpuMs": 18.399999976158142,
+            "gpuMs": 12.776448,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.69999998807907,
+          "savedMs": 1.5999999940395355,
+          "gain": 8.556149706200578,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "mountain-woodland",
+          "name": "Mountain woodland",
+          "baseline": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 10.737664,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15,
+            "p90Ms": 15.100000023841858,
+            "cpuMs": 14.900000005960464,
+            "gpuMs": 9.710592,
+            "gpuSamples": 10,
+            "calls": 1080,
+            "triangles": 4501920
+          },
+          "control": {
+            "ms": 17.100000023841858,
+            "p90Ms": 17.599999994039536,
+            "cpuMs": 17.100000023841858,
+            "gpuMs": 11.487232,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.900000005960464,
+          "savedMs": 1.9000000059604645,
+          "gain": 11.242603581599722,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "mountain-woodland",
+          "name": "Mountain woodland",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.5,
+            "gpuMs": 11.077632,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14.900000005960464,
+            "p90Ms": 15.699999988079071,
+            "cpuMs": 14.900000005960464,
+            "gpuMs": 9.36448,
+            "gpuSamples": 10,
+            "calls": 1080,
+            "triangles": 4501920
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.5,
+            "gpuMs": 10.909696,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": 1.6499999910593033,
+          "gain": 9.96978846741043,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "forest",
+      "name": "Forest geometry",
+      "stable": 3,
+      "total": 4,
+      "savedMs": 1.6500000208616257,
+      "gain": 10.030395261779312,
+      "minSavedMs": 1.6500000059604645,
+      "maxSavedMs": 1.8000000417232513,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "forest",
+          "name": "Forest geometry",
+          "baseline": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.645376,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.099999994039536,
+            "p90Ms": 17.200000017881393,
+            "cpuMs": 17.099999994039536,
+            "gpuMs": 11.37152,
+            "gpuSamples": 10,
+            "calls": 1454,
+            "triangles": 3517138
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.747776,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.75,
+          "savedMs": 1.6500000059604645,
+          "gain": 8.800000031789144,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "forest",
+          "name": "Forest geometry",
+          "baseline": {
+            "ms": 37.19999998807907,
+            "p90Ms": 42.599999994039536,
+            "cpuMs": 37.19999998807907,
+            "gpuMs": 27.06944,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.599999994039536,
+            "p90Ms": 23.19999998807907,
+            "cpuMs": 18.5,
+            "gpuMs": 13.24032,
+            "gpuSamples": 10,
+            "calls": 1454,
+            "triangles": 3517138
+          },
+          "control": {
+            "ms": 20,
+            "p90Ms": 22.399999976158142,
+            "cpuMs": 20,
+            "gpuMs": 14.47424,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 28.599999994039536,
+          "savedMs": 10,
+          "gain": 34.96503497232195,
+          "stable": false,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "forest",
+          "name": "Forest geometry",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.5728,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14.799999982118607,
+            "p90Ms": 15.100000023841858,
+            "cpuMs": 14.799999982118607,
+            "gpuMs": 9.498624,
+            "gpuSamples": 10,
+            "calls": 1202,
+            "triangles": 3411864
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.699776,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": 1.6500000208616257,
+          "gain": 10.030395261779312,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "forest",
+          "name": "Forest geometry",
+          "baseline": {
+            "ms": 16.80000001192093,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.470848,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 14.899999976158142,
+            "p90Ms": 15,
+            "cpuMs": 14.800000011920929,
+            "gpuMs": 9.552896,
+            "gpuSamples": 10,
+            "calls": 1202,
+            "triangles": 3411864
+          },
+          "control": {
+            "ms": 16.600000023841858,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.600000023841858,
+            "gpuMs": 11.240448,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.700000017881393,
+          "savedMs": 1.8000000417232513,
+          "gain": 10.77844335207135,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "coaster",
+      "name": "Mountain circuit roller coaster",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 1.4500000104308128,
+      "gain": 8.189955745152524,
+      "minSavedMs": -2.6500000208616257,
+      "maxSavedMs": 1.6500000059604645,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "coaster",
+          "name": "Mountain circuit roller coaster",
+          "baseline": {
+            "ms": 18.899999976158142,
+            "p90Ms": 19.900000005960464,
+            "cpuMs": 18.899999976158142,
+            "gpuMs": 12.877824,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.299999982118607,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 17.299999982118607,
+            "gpuMs": 11.375616,
+            "gpuSamples": 10,
+            "calls": 1410,
+            "triangles": 5109890
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.5,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.928,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.849999994039536,
+          "savedMs": 1.550000011920929,
+          "gain": 8.22281173692863,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "coaster",
+          "name": "Mountain circuit roller coaster",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 21.19999998807907,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.182976,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 22.30000001192093,
+            "p90Ms": 26.5,
+            "cpuMs": 22.299999982118607,
+            "gpuMs": 15.858688,
+            "gpuSamples": 10,
+            "calls": 1410,
+            "triangles": 5109890
+          },
+          "control": {
+            "ms": 20.399999976158142,
+            "p90Ms": 36.69999998807907,
+            "cpuMs": 20.399999976158142,
+            "gpuMs": 14.290944,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.649999991059303,
+          "savedMs": -2.6500000208616257,
+          "gain": -13.486005201360655,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "coaster",
+          "name": "Mountain circuit roller coaster",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.123712,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15.199999988079071,
+            "p90Ms": 15.5,
+            "cpuMs": 15.199999988079071,
+            "gpuMs": 9.849856,
+            "gpuSamples": 10,
+            "calls": 1207,
+            "triangles": 4145312
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.158528,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": 1.3500000089406967,
+          "gain": 8.157099753376418,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "coaster",
+          "name": "Mountain circuit roller coaster",
+          "baseline": {
+            "ms": 17.19999998807907,
+            "p90Ms": 18,
+            "cpuMs": 17.19999998807907,
+            "gpuMs": 11.598848,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15.199999988079071,
+            "p90Ms": 15.300000011920929,
+            "cpuMs": 15.199999988079071,
+            "gpuMs": 9.87648,
+            "gpuSamples": 10,
+            "calls": 1207,
+            "triangles": 4145312
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17.19999998807907,
+            "cpuMs": 16.5,
+            "gpuMs": 11.097088,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.849999994039536,
+          "savedMs": 1.6500000059604645,
+          "gain": 9.79228490530641,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "all-prepared-shadows",
+      "name": "All prepared shadows",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 1.1000000163912773,
+      "gain": 6.534853533865247,
+      "minSavedMs": 0.7999999970197678,
+      "maxSavedMs": 1.7000000029802322,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "all-prepared-shadows",
+          "name": "All prepared shadows",
+          "baseline": {
+            "ms": 19.5,
+            "p90Ms": 20.5,
+            "cpuMs": 19.5,
+            "gpuMs": 13.548544,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.30000001192093,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 11.66848,
+            "gpuSamples": 10,
+            "calls": 1441,
+            "triangles": 5431623
+          },
+          "control": {
+            "ms": 18.700000017881393,
+            "p90Ms": 19.5,
+            "cpuMs": 18.700000017881393,
+            "gpuMs": 13.00992,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.100000008940697,
+          "savedMs": 0.7999999970197678,
+          "gain": 4.188481657828735,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "all-prepared-shadows",
+          "name": "All prepared shadows",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.5,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.169664,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 10.770432,
+            "gpuSamples": 10,
+            "calls": 1441,
+            "triangles": 5431623
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.80000001192093,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.73856,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.600000008940697,
+          "savedMs": 1.7000000029802322,
+          "gain": 9.139784957865977,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "all-prepared-shadows",
+          "name": "All prepared shadows",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.899999976158142,
+            "cpuMs": 16.5,
+            "gpuMs": 10.671104,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15.799999982118607,
+            "p90Ms": 16.30000001192093,
+            "cpuMs": 15.799999982118607,
+            "gpuMs": 9.703424,
+            "gpuSamples": 10,
+            "calls": 1191,
+            "triangles": 4650639
+          },
+          "control": {
+            "ms": 16.700000017881393,
+            "p90Ms": 18.299999982118607,
+            "cpuMs": 16.700000017881393,
+            "gpuMs": 10.748928,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.650000005960464,
+          "savedMs": 0.8500000238418579,
+          "gain": 5.105105246471892,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "all-prepared-shadows",
+          "name": "All prepared shadows",
+          "baseline": {
+            "ms": 17.200000017881393,
+            "p90Ms": 17.700000017881393,
+            "cpuMs": 17.200000017881393,
+            "gpuMs": 11.45856,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 15.599999994039536,
+            "p90Ms": 15.900000005960464,
+            "cpuMs": 15.599999994039536,
+            "gpuMs": 9.803776,
+            "gpuSamples": 10,
+            "calls": 1191,
+            "triangles": 4650639
+          },
+          "control": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 10.978304,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.950000002980232,
+          "savedMs": 1.3500000089406967,
+          "gain": 7.964601821258602,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "object-shadows",
+      "name": "Prepared object shadows",
+      "stable": 3,
+      "total": 4,
+      "savedMs": 0.8999999910593033,
+      "gain": 4.812834176020693,
+      "minSavedMs": 0.6000000089406967,
+      "maxSavedMs": 1.050000011920929,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "object-shadows",
+          "name": "Prepared object shadows",
+          "baseline": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.94336,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.80000001192093,
+            "p90Ms": 18.30000001192093,
+            "cpuMs": 17.80000001192093,
+            "gpuMs": 11.91936,
+            "gpuSamples": 10,
+            "calls": 1505,
+            "triangles": 5435924
+          },
+          "control": {
+            "ms": 18.700000017881393,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.700000017881393,
+            "gpuMs": 12.99456,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.700000002980232,
+          "savedMs": 0.8999999910593033,
+          "gain": 4.812834176020693,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "object-shadows",
+          "name": "Prepared object shadows",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.5,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.13792,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.69999998807907,
+            "p90Ms": 18.799999982118607,
+            "cpuMs": 17.69999998807907,
+            "gpuMs": 11.999232,
+            "gpuSamples": 10,
+            "calls": 1505,
+            "triangles": 5435924
+          },
+          "control": {
+            "ms": 18.599999994039536,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.599999994039536,
+            "gpuMs": 12.9536,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.75,
+          "savedMs": 1.050000011920929,
+          "gain": 5.600000063578288,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "object-shadows",
+          "name": "Prepared object shadows",
+          "baseline": {
+            "ms": 17,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 17,
+            "gpuMs": 11.21792,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.19999998807907,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.19999998807907,
+            "gpuMs": 10.482688,
+            "gpuSamples": 10,
+            "calls": 1255,
+            "triangles": 4654940
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 10.298368,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.799999997019768,
+          "savedMs": 0.6000000089406967,
+          "gain": 3.571428625280557,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "object-shadows",
+          "name": "Prepared object shadows",
+          "baseline": {
+            "ms": 20.599999994039536,
+            "p90Ms": 21.30000001192093,
+            "cpuMs": 20.599999994039536,
+            "gpuMs": 12.670976,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.400000005960464,
+            "p90Ms": 23,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.643456,
+            "gpuSamples": 10,
+            "calls": 1255,
+            "triangles": 4654940
+          },
+          "control": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17.5,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.369472,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 18.75,
+          "savedMs": 2.3499999940395355,
+          "gain": 12.53333330154419,
+          "stable": false,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "csm-update",
+      "name": "Freeze dynamic shadow maps",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.6000000089406967,
+      "gain": 3.318471746676985,
+      "minSavedMs": -0.15000000596046448,
+      "maxSavedMs": 1.1000000089406967,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "csm-update",
+          "name": "Freeze dynamic shadow maps",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 13.049856,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18,
+            "gpuMs": 11.97056,
+            "gpuSamples": 10,
+            "calls": 1511,
+            "triangles": 5327080
+          },
+          "control": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 12.891136,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.850000008940697,
+          "savedMs": 0.8500000089406967,
+          "gain": 4.5092838649206115,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "csm-update",
+          "name": "Freeze dynamic shadow maps",
+          "baseline": {
+            "ms": 18.5,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 18.5,
+            "gpuMs": 12.699648,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.5,
+            "p90Ms": 18.900000005960464,
+            "cpuMs": 18.5,
+            "gpuMs": 12.212224,
+            "gpuSamples": 10,
+            "calls": 1511,
+            "triangles": 5327080
+          },
+          "control": {
+            "ms": 18.19999998807907,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18.19999998807907,
+            "gpuMs": 12.766208,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.349999994039536,
+          "savedMs": -0.15000000596046448,
+          "gain": -0.8174387248457091,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "csm-update",
+          "name": "Freeze dynamic shadow maps",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.897408,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.099999994039536,
+            "p90Ms": 16.5,
+            "cpuMs": 16.099999994039536,
+            "gpuMs": 11.046912,
+            "gpuSamples": 10,
+            "calls": 1303,
+            "triangles": 4605756
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.986496,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": 0.3500000089406967,
+          "gain": 2.1276596284333587,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "csm-update",
+          "name": "Freeze dynamic shadow maps",
+          "baseline": {
+            "ms": 17.400000005960464,
+            "p90Ms": 18.5,
+            "cpuMs": 17.400000005960464,
+            "gpuMs": 11.28448,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.099999994039536,
+            "p90Ms": 16.30000001192093,
+            "cpuMs": 16.099999994039536,
+            "gpuMs": 11.078656,
+            "gpuSamples": 10,
+            "calls": 1303,
+            "triangles": 4605756
+          },
+          "control": {
+            "ms": 17,
+            "p90Ms": 18,
+            "cpuMs": 17,
+            "gpuMs": 11.471872,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 17.200000002980232,
+          "savedMs": 1.1000000089406967,
+          "gain": 6.39534888808198,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "mill",
+      "name": "Interactive watermill",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.5,
+      "gain": 2.685043979789696,
+      "minSavedMs": -0.19999998807907104,
+      "maxSavedMs": 0.800000011920929,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "mill",
+          "name": "Interactive watermill",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.700000017881393,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 12.854272,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.799999982118607,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.519424,
+            "gpuSamples": 10,
+            "calls": 1553,
+            "triangles": 5274582
+          },
+          "control": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.847104,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.849999994039536,
+          "savedMs": 0.550000011920929,
+          "gain": 2.9177719474527413,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "mill",
+          "name": "Interactive watermill",
+          "baseline": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.640256,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.900000005960464,
+            "p90Ms": 18,
+            "cpuMs": 17.900000005960464,
+            "gpuMs": 11.981824,
+            "gpuSamples": 10,
+            "calls": 1553,
+            "triangles": 5274582
+          },
+          "control": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.5,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.755968,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.349999994039536,
+          "savedMs": 0.44999998807907104,
+          "gain": 2.452316012126651,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "mill",
+          "name": "Interactive watermill",
+          "baseline": {
+            "ms": 16.80000001192093,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.15648,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.099999994039536,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.099999994039536,
+            "gpuMs": 10.770432,
+            "gpuSamples": 10,
+            "calls": 1303,
+            "triangles": 4491348
+          },
+          "control": {
+            "ms": 17,
+            "p90Ms": 17.399999976158142,
+            "cpuMs": 17,
+            "gpuMs": 11.646976,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.900000005960464,
+          "savedMs": 0.800000011920929,
+          "gain": 4.733727879519389,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "mill",
+          "name": "Interactive watermill",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.5,
+            "gpuMs": 11.02848,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 10.530816,
+            "gpuSamples": 10,
+            "calls": 1303,
+            "triangles": 4491348
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17.5,
+            "cpuMs": 16.5,
+            "gpuMs": 10.75712,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": -0.19999998807907104,
+          "gain": -1.212121139873158,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "oak",
+      "name": "Oak treehouse, lookout, swing and leaf pile",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.3750000074505806,
+      "gain": 2.049989769202204,
+      "minSavedMs": -0.40000002086162567,
+      "maxSavedMs": 1.3500000089406967,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "oak",
+          "name": "Oak treehouse, lookout, swing and leaf pile",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.100000023841858,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.12768,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.200000017881393,
+            "cpuMs": 18,
+            "gpuMs": 12.07808,
+            "gpuSamples": 10,
+            "calls": 1565,
+            "triangles": 5362517
+          },
+          "control": {
+            "ms": 19.900000005960464,
+            "p90Ms": 20.599999994039536,
+            "cpuMs": 19.80000001192093,
+            "gpuMs": 13.842432,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.350000008940697,
+          "savedMs": 1.3500000089406967,
+          "gain": 6.976744229028048,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "oak",
+          "name": "Oak treehouse, lookout, swing and leaf pile",
+          "baseline": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.600000023841858,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.65664,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.400000005960464,
+            "p90Ms": 19.399999976158142,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.416,
+            "gpuSamples": 10,
+            "calls": 1565,
+            "triangles": 5362517
+          },
+          "control": {
+            "ms": 19.600000023841858,
+            "p90Ms": 20.299999982118607,
+            "cpuMs": 19.600000023841858,
+            "gpuMs": 13.196288,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.950000017881393,
+          "savedMs": 0.550000011920929,
+          "gain": 2.902374730353266,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "oak",
+          "name": "Oak treehouse, lookout, swing and leaf pile",
+          "baseline": {
+            "ms": 16.799999982118607,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 16.799999982118607,
+            "gpuMs": 11.321344,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.30000001192093,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 17.30000001192093,
+            "gpuMs": 11.897856,
+            "gpuSamples": 10,
+            "calls": 1315,
+            "triangles": 4579283
+          },
+          "control": {
+            "ms": 17,
+            "p90Ms": 17.80000001192093,
+            "cpuMs": 17,
+            "gpuMs": 10.969088,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.899999991059303,
+          "savedMs": -0.40000002086162567,
+          "gain": -2.366864030019171,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "oak",
+          "name": "Oak treehouse, lookout, swing and leaf pile",
+          "baseline": {
+            "ms": 16.80000001192093,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.280384,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17.100000023841858,
+            "cpuMs": 16.5,
+            "gpuMs": 11.073536,
+            "gpuSamples": 10,
+            "calls": 1315,
+            "triangles": 4579283
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 10.65984,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.700000002980232,
+          "savedMs": 0.20000000298023224,
+          "gain": 1.1976048080511428,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "fireflies",
+      "name": "Firefly models and halos",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.3500000089406967,
+      "gain": 2.1148036797808025,
+      "minSavedMs": -0.6500000208616257,
+      "maxSavedMs": 0.45000001788139343,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "fireflies",
+          "name": "Firefly models and halos",
+          "baseline": {
+            "ms": 18.599999994039536,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.599999994039536,
+            "gpuMs": 12.96384,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.30000001192093,
+            "p90Ms": 19.900000005960464,
+            "cpuMs": 19.30000001192093,
+            "gpuMs": 13.251584,
+            "gpuSamples": 10,
+            "calls": 1548,
+            "triangles": 5391804
+          },
+          "control": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.986368,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.649999991059303,
+          "savedMs": -0.6500000208616257,
+          "gain": -3.4852548052184003,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "fireflies",
+          "name": "Firefly models and halos",
+          "baseline": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.735488,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 17.899999976158142,
+            "p90Ms": 18,
+            "cpuMs": 17.899999976158142,
+            "gpuMs": 12.14464,
+            "gpuSamples": 10,
+            "calls": 1548,
+            "triangles": 5391804
+          },
+          "control": {
+            "ms": 18.399999976158142,
+            "p90Ms": 18.5,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.450816,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.349999994039536,
+          "savedMs": 0.45000001788139343,
+          "gain": 2.452316174537127,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "fireflies",
+          "name": "Firefly models and halos",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.19999998807907,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.123712,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.19999998807907,
+            "p90Ms": 16.5,
+            "cpuMs": 16.19999998807907,
+            "gpuMs": 10.927104,
+            "gpuSamples": 10,
+            "calls": 1298,
+            "triangles": 4608570
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.5,
+            "gpuMs": 10.640384,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": 0.3500000089406967,
+          "gain": 2.1148036797808025,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "fireflies",
+          "name": "Firefly models and halos",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.5,
+            "gpuMs": 11.172864,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.19999998807907,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.19999998807907,
+            "gpuMs": 11.071488,
+            "gpuSamples": 10,
+            "calls": 1298,
+            "triangles": 4608570
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.799999982118607,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.278336,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": 0.3500000089406967,
+          "gain": 2.1148036797808025,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "water",
+      "name": "Water surfaces",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.3499999940395355,
+      "gain": 1.9696861871600528,
+      "minSavedMs": 0.14999999105930328,
+      "maxSavedMs": 0.45000000298023224,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "water",
+          "name": "Water surfaces",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.400000005960464,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.016064,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.700000017881393,
+            "p90Ms": 18.899999976158142,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.606464,
+            "gpuSamples": 10,
+            "calls": 1581,
+            "triangles": 5459095
+          },
+          "control": {
+            "ms": 19.100000023841858,
+            "p90Ms": 19.69999998807907,
+            "cpuMs": 19.100000023841858,
+            "gpuMs": 13.027328,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.05000001192093,
+          "savedMs": 0.3499999940395355,
+          "gain": 1.8372703087691118,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "water",
+          "name": "Water surfaces",
+          "baseline": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.613632,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.200000017881393,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.200000017881393,
+            "gpuMs": 12.284928,
+            "gpuSamples": 10,
+            "calls": 1581,
+            "triangles": 5459095
+          },
+          "control": {
+            "ms": 18.400000005960464,
+            "p90Ms": 19.80000001192093,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.857344,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.350000008940697,
+          "savedMs": 0.14999999105930328,
+          "gain": 0.8174386429766679,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "water",
+          "name": "Water surfaces",
+          "baseline": {
+            "ms": 17.5,
+            "p90Ms": 18,
+            "cpuMs": 17.5,
+            "gpuMs": 11.895808,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.5,
+            "gpuMs": 10.760192,
+            "gpuSamples": 10,
+            "calls": 1331,
+            "triangles": 4675861
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.858496,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.950000002980232,
+          "savedMs": 0.45000000298023224,
+          "gain": 2.654867273752868,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "water",
+          "name": "Water surfaces",
+          "baseline": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17.100000023841858,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 11.094016,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.30000001192093,
+            "p90Ms": 16.400000005960464,
+            "cpuMs": 16.299999982118607,
+            "gpuMs": 10.801152,
+            "gpuSamples": 10,
+            "calls": 1331,
+            "triangles": 4675861
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.799999982118607,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.075584,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.650000005960464,
+          "savedMs": 0.3499999940395355,
+          "gain": 2.102102065550994,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "needles",
+      "name": "Conifer needles",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.32500002533197403,
+      "gain": 1.9282441826966266,
+      "minSavedMs": 0.10000002384185791,
+      "maxSavedMs": 0.7000000029802322,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "needles",
+          "name": "Conifer needles",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.85632,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.950528,
+            "gpuSamples": 10,
+            "calls": 1570,
+            "triangles": 4600810
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 13.1072,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.80000001192093,
+          "savedMs": 0.10000002384185791,
+          "gain": 0.5319150200981314,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "needles",
+          "name": "Conifer needles",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 13.25056,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.099999994039536,
+            "p90Ms": 18.700000017881393,
+            "cpuMs": 18.099999994039536,
+            "gpuMs": 12.355584,
+            "gpuSamples": 10,
+            "calls": 1570,
+            "triangles": 4600810
+          },
+          "control": {
+            "ms": 18.799999982118607,
+            "p90Ms": 19.69999998807907,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 12.91264,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.799999997019768,
+          "savedMs": 0.7000000029802322,
+          "gain": 3.7234042717616935,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "needles",
+          "name": "Conifer needles",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 10.873856,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.299999982118607,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.299999982118607,
+            "gpuMs": 10.981376,
+            "gpuSamples": 10,
+            "calls": 1320,
+            "triangles": 4601088
+          },
+          "control": {
+            "ms": 16.700000017881393,
+            "p90Ms": 17.5,
+            "cpuMs": 16.700000017881393,
+            "gpuMs": 10.909696,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.650000005960464,
+          "savedMs": 0.3500000238418579,
+          "gain": 2.102102244543921,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "needles",
+          "name": "Conifer needles",
+          "baseline": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 10.773504,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.799999982118607,
+            "p90Ms": 17.299999982118607,
+            "cpuMs": 16.799999982118607,
+            "gpuMs": 11.58656,
+            "gpuSamples": 10,
+            "calls": 1320,
+            "triangles": 4601088
+          },
+          "control": {
+            "ms": 17.30000001192093,
+            "p90Ms": 18,
+            "cpuMs": 17.30000001192093,
+            "gpuMs": 11.876352,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 17.100000008940697,
+          "savedMs": 0.30000002682209015,
+          "gain": 1.754386120849332,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "maze",
+      "name": "Stone maze and golden star",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.32500001043081284,
+      "gain": 1.8468350021914424,
+      "minSavedMs": -0.29999998211860657,
+      "maxSavedMs": 0.4000000059604645,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "maze",
+          "name": "Stone maze and golden star",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.5,
+            "cpuMs": 19,
+            "gpuMs": 13.333504,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.299999982118607,
+            "p90Ms": 19.5,
+            "cpuMs": 19.19999998807907,
+            "gpuMs": 12.499968,
+            "gpuSamples": 10,
+            "calls": 1546,
+            "triangles": 5379583
+          },
+          "control": {
+            "ms": 19,
+            "p90Ms": 19.5,
+            "cpuMs": 19,
+            "gpuMs": 13.200384,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19,
+          "savedMs": -0.29999998211860657,
+          "gain": -1.5789472743084554,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "maze",
+          "name": "Stone maze and golden star",
+          "baseline": {
+            "ms": 18.5,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.5,
+            "gpuMs": 12.596224,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18,
+            "gpuMs": 12.075008,
+            "gpuSamples": 10,
+            "calls": 1546,
+            "triangles": 5379583
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.77952,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.400000005960464,
+          "savedMs": 0.4000000059604645,
+          "gain": 2.173913075167876,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "maze",
+          "name": "Stone maze and golden star",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.927104,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.099999994039536,
+            "p90Ms": 16.200000017881393,
+            "cpuMs": 16.099999994039536,
+            "gpuMs": 10.884096,
+            "gpuSamples": 10,
+            "calls": 1296,
+            "triangles": 4596349
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 10.923008,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": 0.4000000059604645,
+          "gain": 2.424242460366451,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "maze",
+          "name": "Stone maze and golden star",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.944512,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.19999998807907,
+            "p90Ms": 16.200000017881393,
+            "cpuMs": 16.19999998807907,
+            "gpuMs": 10.89536,
+            "gpuSamples": 10,
+            "calls": 1296,
+            "triangles": 4596349
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 11.06432,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": 0.2500000149011612,
+          "gain": 1.5197569292150086,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "far-forest-lod",
+      "name": "Coarsest distant forest LOD beyond 160m",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.30000000447034836,
+      "gain": 1.621669027067496,
+      "minSavedMs": -0.7500000149011612,
+      "maxSavedMs": 0.3500000089406967,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "far-forest-lod",
+          "name": "Coarsest distant forest LOD beyond 160m",
+          "baseline": {
+            "ms": 18.5,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.5,
+            "gpuMs": 12.75904,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.100000023841858,
+            "p90Ms": 18.5,
+            "cpuMs": 18.100000023841858,
+            "gpuMs": 12.338176,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.552192,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.400000005960464,
+          "savedMs": 0.29999998211860657,
+          "gain": 1.6304346848990494,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "far-forest-lod",
+          "name": "Coarsest distant forest LOD beyond 160m",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 20.099999994039536,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.156352,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.899999976158142,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.592128,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.683264,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.600000008940697,
+          "savedMs": 0.30000002682209015,
+          "gain": 1.6129033692359427,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "far-forest-lod",
+          "name": "Coarsest distant forest LOD beyond 160m",
+          "baseline": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17.200000017881393,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.068416,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.899999976158142,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.113472,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 17.200000017881393,
+            "p90Ms": 17.600000023841858,
+            "cpuMs": 17.200000017881393,
+            "gpuMs": 11.136,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.950000002980232,
+          "savedMs": 0.3500000089406967,
+          "gain": 2.064896807546655,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "far-forest-lod",
+          "name": "Coarsest distant forest LOD beyond 160m",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.899999976158142,
+            "cpuMs": 16.5,
+            "gpuMs": 11.035648,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.30000001192093,
+            "p90Ms": 17.80000001192093,
+            "cpuMs": 17.30000001192093,
+            "gpuMs": 11.296768,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 10.688512,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": -0.7500000149011612,
+          "gain": -4.53172214523394,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "pixel-ratio-1",
+      "name": "Render scale 100%",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.2749999985098839,
+      "gain": 1.5490251127378063,
+      "minSavedMs": -0.45000000298023224,
+      "maxSavedMs": 0.9000000059604645,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "pixel-ratio-1",
+          "name": "Render scale 100%",
+          "baseline": {
+            "ms": 19.400000005960464,
+            "p90Ms": 20.299999982118607,
+            "cpuMs": 19.400000005960464,
+            "gpuMs": 13.623296,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.827648,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 18.700000017881393,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.700000017881393,
+            "gpuMs": 12.94336,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.05000001192093,
+          "savedMs": 0.25,
+          "gain": 1.312335957184028,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "pixel-ratio-1",
+          "name": "Render scale 100%",
+          "baseline": {
+            "ms": 20.5,
+            "p90Ms": 21.599999994039536,
+            "cpuMs": 20.5,
+            "gpuMs": 14.065664,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.5,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.5,
+            "gpuMs": 12.593152,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.5,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.602368,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.400000005960464,
+          "savedMs": 0.9000000059604645,
+          "gain": 4.6391752870306595,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "pixel-ratio-1",
+          "name": "Render scale 100%",
+          "baseline": {
+            "ms": 17.400000005960464,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 17.299999982118607,
+            "gpuMs": 11.516928,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.400000005960464,
+            "p90Ms": 17.799999982118607,
+            "cpuMs": 17.400000005960464,
+            "gpuMs": 10.893312,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.857472,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.950000002980232,
+          "savedMs": -0.45000000298023224,
+          "gain": -2.654867273752868,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "pixel-ratio-1",
+          "name": "Render scale 100%",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.06432,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.802176,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 17.099999994039536,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 17.099999994039536,
+            "gpuMs": 11.041792,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.799999997019768,
+          "savedMs": 0.29999999701976776,
+          "gain": 1.7857142682915845,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "clouds",
+      "name": "Clouds",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.17500001192092896,
+      "gain": 0.9590318703933807,
+      "minSavedMs": 0.04999999701976776,
+      "maxSavedMs": 0.5,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "clouds",
+          "name": "Clouds",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.011968,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.30000001192093,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.04064,
+            "gpuSamples": 10,
+            "calls": 1589,
+            "triangles": 5434386
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.228032,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.850000008940697,
+          "savedMs": 0.04999999701976776,
+          "gain": 0.2652519734538588,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "clouds",
+          "name": "Clouds",
+          "baseline": {
+            "ms": 19.099999994039536,
+            "p90Ms": 20.19999998807907,
+            "cpuMs": 19.099999994039536,
+            "gpuMs": 13.128704,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.69999998807907,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 18.69999998807907,
+            "gpuMs": 12.404736,
+            "gpuSamples": 10,
+            "calls": 1589,
+            "triangles": 5434386
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.700000017881393,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.016064,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.950000002980232,
+          "savedMs": 0.2500000149011612,
+          "gain": 1.3192612921469349,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "clouds",
+          "name": "Clouds",
+          "baseline": {
+            "ms": 16.80000001192093,
+            "p90Ms": 17.299999982118607,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 11.05408,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.900000005960464,
+            "p90Ms": 18.30000001192093,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 11.232256,
+            "gpuSamples": 10,
+            "calls": 1339,
+            "triangles": 4651152
+          },
+          "control": {
+            "ms": 18,
+            "p90Ms": 19,
+            "cpuMs": 18,
+            "gpuMs": 12.24704,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 17.400000005960464,
+          "savedMs": 0.5,
+          "gain": 2.87356321740645,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "clouds",
+          "name": "Clouds",
+          "baseline": {
+            "ms": 16.900000005960464,
+            "p90Ms": 17.299999982118607,
+            "cpuMs": 16.900000005960464,
+            "gpuMs": 11.118592,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.799999982118607,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.206656,
+            "gpuSamples": 10,
+            "calls": 1339,
+            "triangles": 4651152
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.5,
+            "gpuMs": 11.060224,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.700000002980232,
+          "savedMs": 0.10000000894069672,
+          "gain": 0.5988024486398265,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "coverage-pass",
+      "name": "Bypass prepared shadow pass",
+      "stable": 3,
+      "total": 4,
+      "savedMs": 0.10000002384185791,
+      "gain": 0.6060607505567146,
+      "minSavedMs": -0.45000000298023224,
+      "maxSavedMs": 0.3999999910593033,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "coverage-pass",
+          "name": "Bypass prepared shadow pass",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.399999976158142,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 12.964864,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.5,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.5,
+            "gpuMs": 12.333056,
+            "gpuSamples": 10,
+            "calls": 1589,
+            "triangles": 5467313
+          },
+          "control": {
+            "ms": 18.799999982118607,
+            "p90Ms": 19,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 13.25568,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.899999991059303,
+          "savedMs": 0.3999999910593033,
+          "gain": 2.1164020700980126,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "coverage-pass",
+          "name": "Bypass prepared shadow pass",
+          "baseline": {
+            "ms": 24.69999998807907,
+            "p90Ms": 32.60000002384186,
+            "cpuMs": 24.69999998807907,
+            "gpuMs": 15.7184,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 21.19999998807907,
+            "p90Ms": 22.899999976158142,
+            "cpuMs": 21.19999998807907,
+            "gpuMs": 13.786112,
+            "gpuSamples": 10,
+            "calls": 1589,
+            "triangles": 5467313
+          },
+          "control": {
+            "ms": 19.700000017881393,
+            "p90Ms": 21,
+            "cpuMs": 19.700000017881393,
+            "gpuMs": 13.225984,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 22.200000002980232,
+          "savedMs": 1.0000000149011612,
+          "gain": 4.504504571022147,
+          "stable": false,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "coverage-pass",
+          "name": "Bypass prepared shadow pass",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.5,
+            "gpuMs": 10.665984,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.399999976158142,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.399999976158142,
+            "gpuMs": 10.133504,
+            "gpuSamples": 10,
+            "calls": 1339,
+            "triangles": 4684079
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.5,
+            "gpuMs": 10.86976,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": 0.10000002384185791,
+          "gain": 0.6060607505567146,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "coverage-pass",
+          "name": "Bypass prepared shadow pass",
+          "baseline": {
+            "ms": 16.80000001192093,
+            "p90Ms": 17.200000017881393,
+            "cpuMs": 16.80000001192093,
+            "gpuMs": 10.911744,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17,
+            "p90Ms": 18.5,
+            "cpuMs": 17,
+            "gpuMs": 11.076608,
+            "gpuSamples": 10,
+            "calls": 1339,
+            "triangles": 4684079
+          },
+          "control": {
+            "ms": 16.299999982118607,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.299999982118607,
+            "gpuMs": 10.715136,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.549999997019768,
+          "savedMs": -0.45000000298023224,
+          "gain": -2.719033251125473,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "forest-lod1",
+      "name": "Force lowest existing forest detail",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.09999999403953552,
+      "gain": 0.5235601783808489,
+      "minSavedMs": -0.7999999970197678,
+      "maxSavedMs": 0.29999998211860657,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "forest-lod1",
+          "name": "Force lowest existing forest detail",
+          "baseline": {
+            "ms": 19.299999982118607,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 19.299999982118607,
+            "gpuMs": 13.386752,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.30000001192093,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.150208,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5037198
+          },
+          "control": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.034496,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.099999994039536,
+          "savedMs": 0.19999998807907104,
+          "gain": 1.0471203567616978,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "forest-lod1",
+          "name": "Force lowest existing forest detail",
+          "baseline": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.400000005960464,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.014016,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.5,
+            "p90Ms": 20.30000001192093,
+            "cpuMs": 19.5,
+            "gpuMs": 13.175808,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5037198
+          },
+          "control": {
+            "ms": 18.5,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.5,
+            "gpuMs": 12.613632,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.700000002980232,
+          "savedMs": -0.7999999970197678,
+          "gain": -4.27807484969129,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "forest-lod1",
+          "name": "Force lowest existing forest detail",
+          "baseline": {
+            "ms": 16.69999998807907,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 11.164672,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 16.600000023841858,
+            "cpuMs": 16.5,
+            "gpuMs": 10.868736,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4159056
+          },
+          "control": {
+            "ms": 16.899999976158142,
+            "p90Ms": 17.5,
+            "cpuMs": 16.899999976158142,
+            "gpuMs": 10.821632,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.799999982118607,
+          "savedMs": 0.29999998211860657,
+          "gain": 1.7857141811780781,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "forest-lod1",
+          "name": "Force lowest existing forest detail",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.5,
+            "gpuMs": 10.758144,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.19999998807907,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.078656,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4159056
+          },
+          "control": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 10.81344,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.599999994039536,
+          "savedMs": 0,
+          "gain": 0,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "forest-leaves",
+      "name": "Deciduous leaves",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.09999998658895493,
+      "gain": 0.5733004990734818,
+      "minSavedMs": 1.4901161193847656e-8,
+      "maxSavedMs": 1.1500000059604645,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "forest-leaves",
+          "name": "Deciduous leaves",
+          "baseline": {
+            "ms": 19.099999994039536,
+            "p90Ms": 19.700000017881393,
+            "cpuMs": 19.099999994039536,
+            "gpuMs": 13.033472,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.099999994039536,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 19.099999994039536,
+            "gpuMs": 12.816384,
+            "gpuSamples": 10,
+            "calls": 1542,
+            "triangles": 5369682
+          },
+          "control": {
+            "ms": 19.100000023841858,
+            "p90Ms": 19.5,
+            "cpuMs": 19.100000023841858,
+            "gpuMs": 13.215744,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.100000008940697,
+          "savedMs": 1.4901161193847656e-8,
+          "gain": 7.801655071660959e-8,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "forest-leaves",
+          "name": "Deciduous leaves",
+          "baseline": {
+            "ms": 18.399999976158142,
+            "p90Ms": 18.5,
+            "cpuMs": 18.399999976158142,
+            "gpuMs": 12.602368,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.600000023841858,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.47744,
+            "gpuSamples": 10,
+            "calls": 1542,
+            "triangles": 5369682
+          },
+          "control": {
+            "ms": 18.599999994039536,
+            "p90Ms": 19,
+            "cpuMs": 18.599999994039536,
+            "gpuMs": 12.750848,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.49999998509884,
+          "savedMs": 0.09999997913837433,
+          "gain": 0.5405404282103845,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "forest-leaves",
+          "name": "Deciduous leaves",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.5,
+            "gpuMs": 10.96704,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.5,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.640384,
+            "gpuSamples": 10,
+            "calls": 1291,
+            "triangles": 4241232
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.899999976158142,
+            "cpuMs": 16.5,
+            "gpuMs": 11.041792,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": 0.09999999403953552,
+          "gain": 0.606060569936579,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "forest-leaves",
+          "name": "Deciduous leaves",
+          "baseline": {
+            "ms": 20.600000023841858,
+            "p90Ms": 22.900000005960464,
+            "cpuMs": 20.5,
+            "gpuMs": 13.63968,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 18.099999994039536,
+            "p90Ms": 24.099999994039536,
+            "cpuMs": 18.099999994039536,
+            "gpuMs": 12.049408,
+            "gpuSamples": 10,
+            "calls": 1291,
+            "triangles": 4241232
+          },
+          "control": {
+            "ms": 17.899999976158142,
+            "p90Ms": 18.900000005960464,
+            "cpuMs": 17.899999976158142,
+            "gpuMs": 12.306432,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 19.25,
+          "savedMs": 1.1500000059604645,
+          "gain": 5.974026004989426,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "grass",
+      "name": "Meadow grass",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 0.07499997317790985,
+      "gain": 0.44001645175341675,
+      "minSavedMs": -0.09999999403953552,
+      "maxSavedMs": 0.29999999701976776,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "grass",
+          "name": "Meadow grass",
+          "baseline": {
+            "ms": 18.799999982118607,
+            "p90Ms": 19.80000001192093,
+            "cpuMs": 18.799999982118607,
+            "gpuMs": 12.807168,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.5,
+            "p90Ms": 18.700000017881393,
+            "cpuMs": 18.5,
+            "gpuMs": 12.644352,
+            "gpuSamples": 10,
+            "calls": 1579,
+            "triangles": 5374944
+          },
+          "control": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.900000005960464,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.074432,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.799999997019768,
+          "savedMs": 0.29999999701976776,
+          "gain": 1.5957446652517269,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "grass",
+          "name": "Meadow grass",
+          "baseline": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.710912,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.200000017881393,
+            "p90Ms": 18.30000001192093,
+            "cpuMs": 18.200000017881393,
+            "gpuMs": 12.521472,
+            "gpuSamples": 10,
+            "calls": 1579,
+            "triangles": 5374944
+          },
+          "control": {
+            "ms": 18.19999998807907,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18.19999998807907,
+            "gpuMs": 12.509184,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.24999998509884,
+          "savedMs": 0.049999967217445374,
+          "gain": 0.2739724233329887,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "grass",
+          "name": "Meadow grass",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.600000023841858,
+            "cpuMs": 16.30000001192093,
+            "gpuMs": 10.978304,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.5,
+            "gpuMs": 10.949632,
+            "gpuSamples": 10,
+            "calls": 1329,
+            "triangles": 4646550
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.600000023841858,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.96192,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.400000005960464,
+          "savedMs": -0.09999999403953552,
+          "gain": -0.6097560609950685,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "grass",
+          "name": "Meadow grass",
+          "baseline": {
+            "ms": 16.399999976158142,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.399999976158142,
+            "gpuMs": 10.89536,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.891264,
+            "gpuSamples": 10,
+            "calls": 1329,
+            "triangles": 4646550
+          },
+          "control": {
+            "ms": 16.599999994039536,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.599999994039536,
+            "gpuMs": 11.062272,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.49999998509884,
+          "savedMs": 0.09999997913837433,
+          "gain": 0.6060604801738447,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "npcs",
+      "name": "All NPCs",
+      "stable": 3,
+      "total": 4,
+      "savedMs": 0.04999999701976776,
+      "gain": 0.30395134960917514,
+      "minSavedMs": -0.2499999850988388,
+      "maxSavedMs": 0.75,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "npcs",
+          "name": "All NPCs",
+          "baseline": {
+            "ms": 19.400000005960464,
+            "p90Ms": 19.900000005960464,
+            "cpuMs": 19.400000005960464,
+            "gpuMs": 12.966912,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.900000005960464,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.28288,
+            "gpuSamples": 10,
+            "calls": 1571,
+            "triangles": 5198546
+          },
+          "control": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.01504,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.150000005960464,
+          "savedMs": 0.75,
+          "gain": 3.9164490849428795,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "npcs",
+          "name": "All NPCs",
+          "baseline": {
+            "ms": 19,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 13.212672,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 20.69999998807907,
+            "p90Ms": 28.200000017881393,
+            "cpuMs": 20.69999998807907,
+            "gpuMs": 13.840384,
+            "gpuSamples": 10,
+            "calls": 1571,
+            "triangles": 5198546
+          },
+          "control": {
+            "ms": 28.80000001192093,
+            "p90Ms": 31.80000001192093,
+            "cpuMs": 28.80000001192093,
+            "gpuMs": 22.061056,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 23.900000005960464,
+          "savedMs": 3.2000000178813934,
+          "gain": 13.389121410390542,
+          "stable": false,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "npcs",
+          "name": "All NPCs",
+          "baseline": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.620928,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 11.195392,
+            "gpuSamples": 10,
+            "calls": 1322,
+            "triangles": 4420160
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.543104,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": -0.2499999850988388,
+          "gain": -1.5197567480458756,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "npcs",
+          "name": "All NPCs",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.025408,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.400000005960464,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.916864,
+            "gpuSamples": 10,
+            "calls": 1322,
+            "triangles": 4420160
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.091968,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": 0.04999999701976776,
+          "gain": 0.30395134960917514,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "forest-wood",
+      "name": "Tree trunks and branches",
+      "stable": 4,
+      "total": 4,
+      "savedMs": 7.450580596923828e-9,
+      "gain": 0.055927094278794776,
+      "minSavedMs": -0.4500000327825546,
+      "maxSavedMs": 0.3500000089406967,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "forest-wood",
+          "name": "Tree trunks and branches",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 13.02528,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.5,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.36992,
+            "gpuSamples": 10,
+            "calls": 1522,
+            "triangles": 4481274
+          },
+          "control": {
+            "ms": 18.700000017881393,
+            "p90Ms": 19,
+            "cpuMs": 18.700000017881393,
+            "gpuMs": 12.874752,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.75000001490116,
+          "savedMs": -0.14999999105930328,
+          "gain": -0.7999999516805013,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "forest-wood",
+          "name": "Tree trunks and branches",
+          "baseline": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.69999998807907,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.660736,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.299999982118607,
+            "cpuMs": 18,
+            "gpuMs": 12.314624,
+            "gpuSamples": 10,
+            "calls": 1522,
+            "triangles": 4481274
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.689408,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.350000008940697,
+          "savedMs": 0.3500000089406967,
+          "gain": 1.9073569960227015,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "forest-wood",
+          "name": "Tree trunks and branches",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.5,
+            "gpuMs": 11.124736,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.299999982118607,
+            "p90Ms": 16.400000005960464,
+            "cpuMs": 16.299999982118607,
+            "gpuMs": 10.560512,
+            "gpuSamples": 10,
+            "calls": 1271,
+            "triangles": 3937704
+          },
+          "control": {
+            "ms": 16.399999976158142,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.399999976158142,
+            "gpuMs": 10.938368,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.44999998807907,
+          "savedMs": 0.15000000596046448,
+          "gain": 0.9118541402380909,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "forest-wood",
+          "name": "Tree trunks and branches",
+          "baseline": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 11.086848,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.200000017881393,
+            "p90Ms": 17.5,
+            "cpuMs": 17.100000023841858,
+            "gpuMs": 11.346944,
+            "gpuSamples": 10,
+            "calls": 1271,
+            "triangles": 3937704
+          },
+          "control": {
+            "ms": 16.799999982118607,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 16.799999982118607,
+            "gpuMs": 11.06944,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.74999998509884,
+          "savedMs": -0.4500000327825546,
+          "gain": -2.6865673622858766,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "shadow-filter",
+      "name": "Disable stable shadow filtering",
+      "stable": 4,
+      "total": 4,
+      "savedMs": -0.024999991059303284,
+      "gain": -0.130548256143718,
+      "minSavedMs": -0.15000000596046448,
+      "maxSavedMs": 0.3500000089406967,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "shadow-filter",
+          "name": "Disable stable shadow filtering",
+          "baseline": {
+            "ms": 18.700000017881393,
+            "p90Ms": 19.200000017881393,
+            "cpuMs": 18.700000017881393,
+            "gpuMs": 12.906496,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.19999998807907,
+            "p90Ms": 19.599999994039536,
+            "cpuMs": 19.19999998807907,
+            "gpuMs": 13.279232,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 19.599999994039536,
+            "p90Ms": 20.099999994039536,
+            "cpuMs": 19.599999994039536,
+            "gpuMs": 13.584384,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.150000005960464,
+          "savedMs": -0.04999998211860657,
+          "gain": -0.261096512287436,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "shadow-filter",
+          "name": "Disable stable shadow filtering",
+          "baseline": {
+            "ms": 18.400000005960464,
+            "p90Ms": 19.30000001192093,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.70784,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.5,
+            "p90Ms": 19.19999998807907,
+            "cpuMs": 18.5,
+            "gpuMs": 12.667904,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "control": {
+            "ms": 18.299999982118607,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.299999982118607,
+            "gpuMs": 12.742656,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.349999994039536,
+          "savedMs": -0.15000000596046448,
+          "gain": -0.8174387248457091,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "shadow-filter",
+          "name": "Disable stable shadow filtering",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.69999998807907,
+            "cpuMs": 16.5,
+            "gpuMs": 10.868736,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.5,
+            "gpuMs": 11.229184,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17.100000023841858,
+            "cpuMs": 16.5,
+            "gpuMs": 10.80832,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": 0,
+          "gain": 0,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "shadow-filter",
+          "name": "Disable stable shadow filtering",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.5,
+            "gpuMs": 10.968064,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.975232,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "control": {
+            "ms": 17.200000017881393,
+            "p90Ms": 17.400000005960464,
+            "cpuMs": 17.200000017881393,
+            "gpuMs": 10.917888,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.850000008940697,
+          "savedMs": 0.3500000089406967,
+          "gain": 2.07715138726994,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "shrubs",
+      "name": "Meadow shrubs",
+      "stable": 4,
+      "total": 4,
+      "savedMs": -0.04999999701976776,
+      "gain": -0.30395134960917514,
+      "minSavedMs": -0.34999997913837433,
+      "maxSavedMs": 0.45000001788139343,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "shrubs",
+          "name": "Meadow shrubs",
+          "baseline": {
+            "ms": 19.5,
+            "p90Ms": 20,
+            "cpuMs": 19.5,
+            "gpuMs": 13.328384,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.599999994039536,
+            "p90Ms": 19.099999994039536,
+            "cpuMs": 18.599999994039536,
+            "gpuMs": 12.6976,
+            "gpuSamples": 10,
+            "calls": 1580,
+            "triangles": 5330298
+          },
+          "control": {
+            "ms": 18.600000023841858,
+            "p90Ms": 19.400000005960464,
+            "cpuMs": 18.600000023841858,
+            "gpuMs": 12.650496,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.05000001192093,
+          "savedMs": 0.45000001788139343,
+          "gain": 2.362204816796833,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "shrubs",
+          "name": "Meadow shrubs",
+          "baseline": {
+            "ms": 19.200000017881393,
+            "p90Ms": 27.30000001192093,
+            "cpuMs": 19.200000017881393,
+            "gpuMs": 13.53216,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.099999994039536,
+            "p90Ms": 19.900000005960464,
+            "cpuMs": 19.099999994039536,
+            "gpuMs": 13.088768,
+            "gpuSamples": 10,
+            "calls": 1580,
+            "triangles": 5330298
+          },
+          "control": {
+            "ms": 18.30000001192093,
+            "p90Ms": 19,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.801024,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.75000001490116,
+          "savedMs": -0.34999997913837433,
+          "gain": -1.8666665539211698,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "shrubs",
+          "name": "Meadow shrubs",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 11.066368,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.097088,
+            "gpuSamples": 10,
+            "calls": 1329,
+            "triangles": 4624680
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.700000017881393,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.669056,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": -0.04999999701976776,
+          "gain": -0.30395134960917514,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "shrubs",
+          "name": "Meadow shrubs",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.5,
+            "gpuMs": 11.108352,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.5,
+            "p90Ms": 17.30000001192093,
+            "cpuMs": 16.5,
+            "gpuMs": 11.290624,
+            "gpuSamples": 10,
+            "calls": 1329,
+            "triangles": 4624680
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 16.80000001192093,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 10.761216,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.450000002980232,
+          "savedMs": -0.04999999701976776,
+          "gain": -0.30395134960917514,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "tree-shadows",
+      "name": "Prepared tree shadows",
+      "stable": 4,
+      "total": 4,
+      "savedMs": -0.125,
+      "gain": -0.7366089038931491,
+      "minSavedMs": -0.5499999821186066,
+      "maxSavedMs": 0.44999998807907104,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "tree-shadows",
+          "name": "Prepared tree shadows",
+          "baseline": {
+            "ms": 19.400000005960464,
+            "p90Ms": 19.69999998807907,
+            "cpuMs": 19.400000005960464,
+            "gpuMs": 13.454336,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 19.200000017881393,
+            "p90Ms": 19.80000001192093,
+            "cpuMs": 19.200000017881393,
+            "gpuMs": 13.085696,
+            "gpuSamples": 10,
+            "calls": 1527,
+            "triangles": 5463014
+          },
+          "control": {
+            "ms": 18.900000005960464,
+            "p90Ms": 19.30000001192093,
+            "cpuMs": 18.900000005960464,
+            "gpuMs": 12.841984,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.150000005960464,
+          "savedMs": -0.050000011920928955,
+          "gain": -0.26109666791314035,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "tree-shadows",
+          "name": "Prepared tree shadows",
+          "baseline": {
+            "ms": 19.19999998807907,
+            "p90Ms": 19.69999998807907,
+            "cpuMs": 19.099999994039536,
+            "gpuMs": 13.19936,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.400000005960464,
+            "p90Ms": 19.299999982118607,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.582912,
+            "gpuSamples": 10,
+            "calls": 1527,
+            "triangles": 5463014
+          },
+          "control": {
+            "ms": 18.5,
+            "p90Ms": 18.900000005960464,
+            "cpuMs": 18.5,
+            "gpuMs": 12.663808,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.849999994039536,
+          "savedMs": 0.44999998807907104,
+          "gain": 2.3872678420231477,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "tree-shadows",
+          "name": "Prepared tree shadows",
+          "baseline": {
+            "ms": 16.599999994039536,
+            "p90Ms": 17.099999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 10.917888,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 16.69999998807907,
+            "p90Ms": 17,
+            "cpuMs": 16.69999998807907,
+            "gpuMs": 11.144192,
+            "gpuSamples": 10,
+            "calls": 1277,
+            "triangles": 4679780
+          },
+          "control": {
+            "ms": 16.400000005960464,
+            "p90Ms": 17,
+            "cpuMs": 16.400000005960464,
+            "gpuMs": 11.267072,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": -0.19999998807907104,
+          "gain": -1.212121139873158,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "tree-shadows",
+          "name": "Prepared tree shadows",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.900000005960464,
+            "cpuMs": 16.5,
+            "gpuMs": 10.707968,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.099999994039536,
+            "p90Ms": 17.700000017881393,
+            "cpuMs": 17.099999994039536,
+            "gpuMs": 11.230208,
+            "gpuSamples": 10,
+            "calls": 1277,
+            "triangles": 4679780
+          },
+          "control": {
+            "ms": 16.600000023841858,
+            "p90Ms": 18.099999994039536,
+            "cpuMs": 16.600000023841858,
+            "gpuMs": 11.189248,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.55000001192093,
+          "savedMs": -0.5499999821186066,
+          "gain": -3.3232627294407417,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    },
+    {
+      "id": "meadow-decor",
+      "name": "Meadow details",
+      "stable": 4,
+      "total": 4,
+      "savedMs": -0.15000000596046448,
+      "gain": -1.034255637814224,
+      "minSavedMs": -10.050000011920929,
+      "maxSavedMs": 1.25,
+      "pairs": [
+        {
+          "view": "north-west",
+          "round": 0,
+          "id": "meadow-decor",
+          "name": "Meadow details",
+          "baseline": {
+            "ms": 19.80000001192093,
+            "p90Ms": 20.299999982118607,
+            "cpuMs": 19.80000001192093,
+            "gpuMs": 13.75744,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18.400000005960464,
+            "p90Ms": 19.400000005960464,
+            "cpuMs": 18.30000001192093,
+            "gpuMs": 12.481536,
+            "gpuSamples": 10,
+            "calls": 1560,
+            "triangles": 5228124
+          },
+          "control": {
+            "ms": 19.5,
+            "p90Ms": 20.200000017881393,
+            "cpuMs": 19.5,
+            "gpuMs": 13.893632,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 19.650000005960464,
+          "savedMs": 1.25,
+          "gain": 6.361323153286695,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-west",
+          "round": 1,
+          "id": "meadow-decor",
+          "name": "Meadow details",
+          "baseline": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.700000017881393,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.725248,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "variant": {
+            "ms": 18,
+            "p90Ms": 18.099999994039536,
+            "cpuMs": 18,
+            "gpuMs": 12.188672,
+            "gpuSamples": 10,
+            "calls": 1560,
+            "triangles": 5228124
+          },
+          "control": {
+            "ms": 18.400000005960464,
+            "p90Ms": 18.599999994039536,
+            "cpuMs": 18.400000005960464,
+            "gpuMs": 12.665856,
+            "gpuSamples": 10,
+            "calls": 1590,
+            "triangles": 5467314
+          },
+          "referenceMs": 18.400000005960464,
+          "savedMs": 0.4000000059604645,
+          "gain": 2.173913075167876,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 0,
+          "id": "meadow-decor",
+          "name": "Meadow details",
+          "baseline": {
+            "ms": 18.80000001192093,
+            "p90Ms": 21.099999994039536,
+            "cpuMs": 18.80000001192093,
+            "gpuMs": 12.191744,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 27.900000005960464,
+            "p90Ms": 30,
+            "cpuMs": 27.900000005960464,
+            "gpuMs": 19.729408,
+            "gpuSamples": 10,
+            "calls": 1309,
+            "triangles": 4576564
+          },
+          "control": {
+            "ms": 16.899999976158142,
+            "p90Ms": 18,
+            "cpuMs": 16.899999976158142,
+            "gpuMs": 11.430912,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 17.849999994039536,
+          "savedMs": -10.050000011920929,
+          "gain": -56.30252109398779,
+          "stable": true,
+          "glError": 0
+        },
+        {
+          "view": "north-east",
+          "round": 1,
+          "id": "meadow-decor",
+          "name": "Meadow details",
+          "baseline": {
+            "ms": 16.5,
+            "p90Ms": 16.599999994039536,
+            "cpuMs": 16.5,
+            "gpuMs": 11.067392,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "variant": {
+            "ms": 17.200000017881393,
+            "p90Ms": 18.400000005960464,
+            "cpuMs": 17.200000017881393,
+            "gpuMs": 11.11552,
+            "gpuSamples": 10,
+            "calls": 1309,
+            "triangles": 4576564
+          },
+          "control": {
+            "ms": 16.5,
+            "p90Ms": 17,
+            "cpuMs": 16.5,
+            "gpuMs": 10.841088,
+            "gpuSamples": 10,
+            "calls": 1340,
+            "triangles": 4684080
+          },
+          "referenceMs": 16.5,
+          "savedMs": -0.7000000178813934,
+          "gain": -4.242424350796324,
+          "stable": true,
+          "glError": 0
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "verification": {
+    "source": ".cache/map-performance/report-1793463236932.json",
+    "metadata": {
+      "date": "2026-10-31T16:14:22.455Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "browserVisibility": "visible",
+      "pixelRatio": 1.25,
+      "viewDistance": 750,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "drawingBuffer": [
+        2400,
+        1350
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "gpuTimer": true,
+      "treehouseActive": false,
+      "npcs": 14,
+      "startupGlError": 1282,
+      "shadowCascades": 2,
+      "shadowMapSize": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "objects": 13156,
+      "multiDraw": true,
+      "worldManifest": {
+        "version": 1,
+        "hash": "e627dd6199c1463c",
+        "bytes": 21589316
+      },
+      "finalGlError": 0
+    },
+    "visual": [
+      {
+        "view": "north-east",
+        "pixels": 3240000,
+        "changedPixels": 462,
+        "over2": 102,
+        "maxDelta": 23,
+        "meanChannelDelta": 0.0002316872427983539,
+        "glError": 0
+      }
+    ],
+    "liveVariants": [
+      {
+        "view": "north-east",
+        "distance": 750,
+        "fps": 33.601103718373786,
+        "updateMs": 2.699999988079071,
+        "renderCpuMs": 24.80000001192093
+      },
+      {
+        "view": "north-east",
+        "distance": 360,
+        "fps": 49.39919893190921,
+        "updateMs": 2.100000023841858,
+        "renderCpuMs": 15.900000005960464
+      }
+    ],
+    "pairs": [
+      {
+        "view": "north-east",
+        "round": 0,
+        "id": "distance-360",
+        "name": "View distance 360m",
+        "baseline": {
+          "ms": 19,
+          "p90Ms": 20.100000023841858,
+          "cpuMs": 18.900000005960464,
+          "gpuMs": 12.412928,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 15.400000005960464,
+          "p90Ms": 16.900000005960464,
+          "cpuMs": 15.400000005960464,
+          "gpuMs": 10.10176,
+          "gpuSamples": 10,
+          "calls": 1107,
+          "triangles": 4185307
+        },
+        "control": {
+          "ms": 19.80000001192093,
+          "p90Ms": 21.19999998807907,
+          "cpuMs": 19.80000001192093,
+          "gpuMs": 12.43648,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 19.400000005960464,
+        "savedMs": 4,
+        "gain": 20.618556694696075,
+        "stable": true,
+        "glError": 0
+      },
+      {
+        "view": "north-east",
+        "round": 0,
+        "id": "mountain-batched",
+        "name": "Snapshot: merge visible mountain tree instances",
+        "baseline": {
+          "ms": 19.400000005960464,
+          "p90Ms": 20.100000023841858,
+          "cpuMs": 19.400000005960464,
+          "gpuMs": 12.424192,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 16.599999994039536,
+          "p90Ms": 17.69999998807907,
+          "cpuMs": 16.599999994039536,
+          "gpuMs": 10.714112,
+          "gpuSamples": 10,
+          "calls": 1243,
+          "triangles": 4857951
+        },
+        "control": {
+          "ms": 18.299999982118607,
+          "p90Ms": 18.900000005960464,
+          "cpuMs": 18.299999982118607,
+          "gpuMs": 11.720704,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 18.849999994039536,
+        "savedMs": 2.25,
+        "gain": 11.936339526320749,
+        "stable": true,
+        "glError": 0
+      },
+      {
+        "view": "north-east",
+        "round": 1,
+        "id": "distance-360",
+        "name": "View distance 360m",
+        "baseline": {
+          "ms": 19.599999994039536,
+          "p90Ms": 20.5,
+          "cpuMs": 19.599999994039536,
+          "gpuMs": 13.305856,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 15.800000011920929,
+          "p90Ms": 17.599999994039536,
+          "cpuMs": 15.800000011920929,
+          "gpuMs": 11.004928,
+          "gpuSamples": 10,
+          "calls": 1107,
+          "triangles": 4185307
+        },
+        "control": {
+          "ms": 18.599999994039536,
+          "p90Ms": 19.100000023841858,
+          "cpuMs": 18.599999994039536,
+          "gpuMs": 12.100608,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 19.099999994039536,
+        "savedMs": 3.2999999821186066,
+        "gain": 17.277486822766626,
+        "stable": true,
+        "glError": 0
+      },
+      {
+        "view": "north-east",
+        "round": 1,
+        "id": "mountain-batched",
+        "name": "Snapshot: merge visible mountain tree instances",
+        "baseline": {
+          "ms": 22,
+          "p90Ms": 23.100000023841858,
+          "cpuMs": 22,
+          "gpuMs": 13.901824,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 22.599999994039536,
+          "p90Ms": 26.80000001192093,
+          "cpuMs": 22.599999994039536,
+          "gpuMs": 15.910912,
+          "gpuSamples": 10,
+          "calls": 1243,
+          "triangles": 4857951
+        },
+        "control": {
+          "ms": 35.19999998807907,
+          "p90Ms": 40.599999994039536,
+          "cpuMs": 35.099999994039536,
+          "gpuMs": 25.414656,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 28.599999994039536,
+        "savedMs": 6,
+        "gain": 20.97902098339317,
+        "stable": false,
+        "glError": 0
+      },
+      {
+        "view": "north-east",
+        "round": 2,
+        "id": "mountain-batched",
+        "name": "Snapshot: merge visible mountain tree instances",
+        "baseline": {
+          "ms": 23.400000005960464,
+          "p90Ms": 24.400000005960464,
+          "cpuMs": 23.400000005960464,
+          "gpuMs": 14.980096,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 18.80000001192093,
+          "p90Ms": 21.400000005960464,
+          "cpuMs": 18.80000001192093,
+          "gpuMs": 11.727872,
+          "gpuSamples": 10,
+          "calls": 1243,
+          "triangles": 4857951
+        },
+        "control": {
+          "ms": 24.099999994039536,
+          "p90Ms": 25.19999998807907,
+          "cpuMs": 24.099999994039536,
+          "gpuMs": 16.656384,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 23.75,
+        "savedMs": 4.949999988079071,
+        "gain": 20.84210521296451,
+        "stable": true,
+        "glError": 0
+      },
+      {
+        "view": "north-east",
+        "round": 2,
+        "id": "distance-360",
+        "name": "View distance 360m",
+        "baseline": {
+          "ms": 22.200000017881393,
+          "p90Ms": 23.299999982118607,
+          "cpuMs": 22.200000017881393,
+          "gpuMs": 14.521344,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "variant": {
+          "ms": 18.19999998807907,
+          "p90Ms": 19.80000001192093,
+          "cpuMs": 18.19999998807907,
+          "gpuMs": 12.066816,
+          "gpuSamples": 10,
+          "calls": 1107,
+          "triangles": 4185307
+        },
+        "control": {
+          "ms": 21.599999994039536,
+          "p90Ms": 24.200000017881393,
+          "cpuMs": 21.599999994039536,
+          "gpuMs": 14.099456,
+          "gpuSamples": 10,
+          "calls": 1501,
+          "triangles": 4857159
+        },
+        "referenceMs": 21.900000005960464,
+        "savedMs": 3.7000000178813934,
+        "gain": 16.894977246001712,
+        "stable": true,
+        "glError": 0
+      }
+    ],
+    "errors": []
+  },
+  "method": {
+    "date": "2026-10-31",
+    "totalPairs": 112,
+    "stablePairs": 108,
+    "frameTiming": "Medians of 12 measured render/gl.finish frames after 6 warmup frames per baseline/variant/control; fixed scene and camera.",
+    "stableCriterion": "Baseline/control drift <=15%. A stable pair may still contain variant outliers.",
+    "caveat": "Group removal is a full-cost upper bound, savings overlap and must not be added. Live FPS across runs is not a causal before/after comparison."
+  },
+  "environmentSpotCheck": {
+    "context": "During slower incomplete survey; not a synchronized per-frame trace or a causal power diagnosis",
+    "gpu": "RTX 3060 Laptop",
+    "pstate": "P5",
+    "graphicsClockMHz": 495,
+    "memoryClockMHz": 810,
+    "utilizationPercent": 40,
+    "temperatureC": 38
+  },
+  "slowSurvey": {
+    "source": "node_modules/.cache/scene-research-checkpoints/1793463069307-4.json",
+    "status": "Incomplete diagnostic run; four live views completed; not used for pairwise savings",
+    "views": [
+      {
+        "id": "south-east",
+        "fps": 27.09022470628494,
+        "sample": {
+          "ms": 32.69999998807907,
+          "p90Ms": 35.70000001788139,
+          "cpuMs": 32.599999994039536,
+          "gpuMs": 22.969344,
+          "gpuSamples": 14,
+          "calls": 1193,
+          "triangles": 5053726
+        }
+      },
+      {
+        "id": "south-west",
+        "fps": 22.038409799937025,
+        "sample": {
+          "ms": 34.599999994039536,
+          "p90Ms": 41.69999998807907,
+          "cpuMs": 34.5,
+          "gpuMs": 22.519808,
+          "gpuSamples": 14,
+          "calls": 1212,
+          "triangles": 5075875
+        }
+      },
+      {
+        "id": "north-east",
+        "fps": 23.952095808383234,
+        "sample": {
+          "ms": 30.599999994039536,
+          "p90Ms": 33,
+          "cpuMs": 30.599999994039536,
+          "gpuMs": 20.632576,
+          "gpuSamples": 14,
+          "calls": 1261,
+          "triangles": 4616458
+        }
+      },
+      {
+        "id": "north-west",
+        "fps": 26.046138874577803,
+        "sample": {
+          "ms": 34,
+          "p90Ms": 37,
+          "cpuMs": 34,
+          "gpuMs": 23.625728,
+          "gpuSamples": 14,
+          "calls": 1535,
+          "triangles": 5618404
+        }
+      }
+    ]
+  }
+}

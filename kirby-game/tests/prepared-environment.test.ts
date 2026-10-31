@@ -12,7 +12,8 @@ test('prepared scenery restores placement, raw geometry, culling bounds, LOD and
  const {raw}=await decodeEnvironment(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
  assert.equal((await decodeEnvironment(raw)).doc.scene.object.name,'Prepared meadow','HTTP-decoded responses load without decompressing twice');
  configureSceneryBatching(false);
- const roots=await restoreEnvironment(doc),world=new T.Group();world.add(...roots);world.updateMatrixWorld(true);
+ // Inspect the raw round-trip before runtime aggregation replaces cell meshes.
+ const roots=await restoreEnvironment(doc,false),world=new T.Group();world.add(...roots);world.updateMatrixWorld(true);
  assert.deepEqual(roots.map(root=>root.name),['Four woodland biomes','Biome meadow details','Ponds, flowers, mushrooms, rocks, picnics and ruins','Continuous square mountain range']);
  const forest=roots[0],decor=roots[1];assert(forest.userData.treePositions.length>500);assert(forest.userData.meadowLayout.paths.length>10);
  assert(decor.userData.sites.length>100);assert(decor.userData.grassBlades>10000);

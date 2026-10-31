@@ -1,7 +1,7 @@
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import {COSMIC} from './meta-knight-cosmic';
-import {COSMIC_SPIN,cosmicOrbs,cosmicSpinAngle} from './meta-knight-cosmic-spin';
+import {COSMIC_SPIN,cosmicOrbs,cosmicSpinAngle,type CosmicOrb} from './meta-knight-cosmic-spin';
 import {CosmicLightning} from './meta-knight-cosmic-view';
 
 const hash=(n:number)=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);};
@@ -63,12 +63,12 @@ export class MetaKnightCosmicOrbs{
   this.group.add(this.halos,this.cores,this.electricity.group,this.warning);
   this.electricity.begin(0);this.electricity.end();
  }
- update(s:KnightBattle|undefined,now:number){
-  const visible=s?.phase===4&&['cosmic-spin-warn','cosmic-spin','cosmic-open'].includes(s.stage);this.group.visible=visible;
+ update(s:KnightBattle|undefined,now:number,external?:CosmicOrb[]){
+  const visible=external?external.length>0:s?.phase===4&&['cosmic-spin-warn','cosmic-spin','cosmic-open'].includes(s.stage);this.group.visible=visible;
   if(!visible){this.cores.count=this.halos.count=0;this.electricity.begin(0);this.electricity.end();return;}
   const time=now/1000;this.clock.value=time;this.electricity.begin(.94,time);
-  this.warning.visible=s.stage!=='cosmic-open';this.warningMaterial.uniforms.progress.value=Math.min(1,(now-s.since)/Math.max(1,s.until-s.since));this.warningMaterial.uniforms.charged.value=s.stage==='cosmic-spin'?1:0;
-  const shots=cosmicOrbs(s,now);let count=0;
+  this.warning.visible=!external&&s?.stage!=='cosmic-open';if(s){this.warningMaterial.uniforms.progress.value=Math.min(1,(now-s.since)/Math.max(1,s.until-s.since));this.warningMaterial.uniforms.charged.value=s.stage==='cosmic-spin'?1:0;}
+  const shots=external??cosmicOrbs(s!,now);let count=0;
   for(const shot of shots){
    if(count>=COSMIC_SPIN.capacity||shot.distance>COSMIC_SPIN.outerRadius)continue;
    const x=shot.p[0],y=shot.p[1],z=shot.p[2],dx=Math.sin(shot.angle),dz=Math.cos(shot.angle),key=shot.id*7.31;
@@ -91,7 +91,7 @@ export class MetaKnightCosmicOrbs{
    if(shot.id%3===0){this.a.set(x,y,z);this.b.set(x+dz*.9,y+.65*Math.sin(time*21+key),z-dx*.9);this.electricity.arc(this.a,this.b,key+19,.026,time,3,.7);}
   }
   // A short curved wake makes the visibly accelerating sword easy to follow.
-  if(s.stage==='cosmic-spin'&&s.cosmicSpin){
+  if(!external&&s?.stage==='cosmic-spin'&&s.cosmicSpin){
    const elapsed=(now-s.cosmicSpin.at)/1000;
    for(let line=0;line<3;line++){
     const r=COSMIC_SPIN.emitRadius-line*.25;

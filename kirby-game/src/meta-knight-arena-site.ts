@@ -6,7 +6,7 @@ export type KnightArenaSide='arena'|'annex';
 /** Local coordinates along the bridge, which passes between two crystals. */
 export function knightAnnexCoordinates(x:number,z:number){return {across:x*Math.cos(ANNEX_ANGLE)-z*Math.sin(ANNEX_ANGLE),along:x*Math.sin(ANNEX_ANGLE)+z*Math.cos(ANNEX_ANGLE)};}
 export function knightAnnexPoint(across:number,along:number){return {x:across*Math.cos(ANNEX_ANGLE)+along*Math.sin(ANNEX_ANGLE),z:-across*Math.sin(ANNEX_ANGLE)+along*Math.cos(ANNEX_ANGLE)};}
-export function insideKnightFightingArea(p:readonly number[]){const {along}=knightAnnexCoordinates(p[0],p[2]);return Math.hypot(p[0],p[2])<=META_KNIGHT_ARENA.walkRadius+1e-6&&along<=META_KNIGHT_ANNEX.gate;}
+export function insideKnightFightingArea(p:readonly number[]){const {along}=knightAnnexCoordinates(p[0],p[2]);return Math.hypot(p[0],p[2])<=META_KNIGHT_ARENA.walkRadius+1e-6&&along<META_KNIGHT_ANNEX.gate-1e-6;}
 /** Save validation includes the bridge and portal landing, not the void around them. */
 export function insideMetaKnightArena(x:number,z:number){const {across,along}=knightAnnexCoordinates(x,z);return Math.hypot(x,z)<=META_KNIGHT_ARENA.radius||Math.abs(across)<=META_KNIGHT_ANNEX.bridgeHalfWidth&&along>=META_KNIGHT_ANNEX.start&&along<=META_KNIGHT_ANNEX.portalRadius||Math.hypot(across,along-META_KNIGHT_ANNEX.portalRadius)<=META_KNIGHT_ANNEX.radius;}
 export function arenaPortalFloor(x:number,z:number){return portalLocalFloor(x-META_KNIGHT_ARENA.exitX,z-META_KNIGHT_ARENA.exitZ);}

@@ -42,10 +42,11 @@ export class MetaKnightCosmicMeteorView{
   for(const mesh of [this.flame,this.smoke,this.embers]){mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);mesh.frustumCulled=false;}
   this.group.add(this.smoke,this.flame,this.rock,this.fireShell,this.embers,this.light,this.lightning.group);this.group.visible=false;
  }
- update(s:KnightBattle|undefined,now:number){
-  const point=s?meteorPoint(s,now):undefined;this.group.visible=!!point;if(!s||!point)return;
+ update(s:KnightBattle|undefined,now:number,path?:{point:(time:number)=>[number,number,number]|undefined;release:number;since:number;returned:boolean;yaw:number}){
+  const sample=(time:number)=>path?path.point(time):s?meteorPoint(s,time):undefined,point=sample(now);this.group.visible=!!point;if(!point||!s&&!path)return;
+  const stage=path?(path.returned?'cosmic-meteor-return':now<path.release?'cosmic-meteor-draw':'cosmic-meteor-cast'):s!.stage,since=path?.since??s!.since;
   // Epoch seconds lose animation and noise precision in GPU floats.
-  const m=s.cosmicMeteor!,clock=(now-m.at)/1000;this.clock.value=clock;this.returned.value=s.stage==='cosmic-meteor-return'?1:0;this.p.fromArray(point);this.old.fromArray(meteorPoint(s,Math.max(s.since,now-16))??point);this.velocity.subVectors(this.p,this.old);
+  const m=path?{at:path.release,index:0,yaw:path.yaw}:s!.cosmicMeteor!,clock=(now-m.at)/1000;this.clock.value=clock;this.returned.value=stage==='cosmic-meteor-return'?1:0;this.p.fromArray(point);this.old.fromArray(sample(Math.max(since,now-16))??point);this.velocity.subVectors(this.p,this.old);
   const speed=this.velocity.length()/.016;if(this.velocity.lengthSq()<.00001)this.velocity.set(Math.sin(m.yaw),.1,Math.cos(m.yaw));this.velocity.normalize();
   this.rock.position.copy(this.p);this.rock.rotation.set(clock*1.2+m.index,clock*.83,clock*.49);this.rock.scale.setScalar(M.radius);
   this.rotation.setFromUnitVectors(this.up,this.velocity);this.fireShell.position.copy(this.p);this.fireShell.quaternion.copy(this.rotation);this.fireShell.scale.set(1.72,1.88,1.72);
@@ -56,23 +57,23 @@ export class MetaKnightCosmicMeteorView{
    this.scale.set(.34+.18*pulse,.80+.70*pulse,.34+.18*pulse);this.matrix.compose(this.old,this.rotation,this.scale);this.flame.setMatrixAt(i,this.matrix);
   }
   for(let i=0;i<TAIL_FLAMES;i++){
-   const age=i/TAIL_FLAMES,t=now-age*720,past=meteorPoint(s,Math.max(s.since,t))??point,earlier=meteorPoint(s,Math.max(s.since,t-16))??past;this.old.fromArray(past);
+   const age=i/TAIL_FLAMES,t=now-age*720,past=sample(Math.max(since,t))??point,earlier=sample(Math.max(since,t-16))??past;this.old.fromArray(past);
    this.tailDirection.set(past[0]-earlier[0],past[1]-earlier[1],past[2]-earlier[2]);if(this.tailDirection.lengthSq()<.00001)this.tailDirection.copy(this.velocity);this.quaternion.setFromUnitVectors(this.up,this.tailDirection.normalize());
    this.old.addScaledVector(this.velocity,-age*4*(1-Math.min(1,speed/10)));
    const a=i*2.399+clock*3,r=(.12+age*.70)*Math.sin(age*Math.PI);this.old.x+=Math.cos(a)*r;this.old.y+=Math.sin(a)*r;this.old.z+=Math.cos(a*.7)*r;
    this.scale.setScalar((1.65+age*.20)*(1-age)**.50*(.86+.14*Math.sin(clock*23+i*7)));this.scale.y*=2.2;this.matrix.compose(this.old,this.quaternion,this.scale);this.flame.setMatrixAt(BODY_FLAMES+i,this.matrix);
   }
   for(let i=0;i<18;i++){
-   const age=(i+3)/21,past=meteorPoint(s,Math.max(s.since,now-age*490))??point;this.old.fromArray(past).add(new T.Vector3(Math.sin(i*13+clock)*age,age*.9,Math.cos(i*7+clock)*age));
+   const age=(i+3)/21,past=sample(Math.max(since,now-age*490))??point;this.old.fromArray(past).add(new T.Vector3(Math.sin(i*13+clock)*age,age*.9,Math.cos(i*7+clock)*age));
    this.scale.setScalar((1.1+age)*(.8+.2*Math.sin(i+clock*3)));this.matrix.compose(this.old,this.quaternion,this.scale);this.smoke.setMatrixAt(i,this.matrix);
   }
   for(let i=0;i<72;i++){
-   const age=(i/72+clock*.35)%1,past=meteorPoint(s,Math.max(s.since,now-age*450))??point,a=i*2.399;this.old.fromArray(past).add(new T.Vector3(Math.sin(a)*age*2.8,Math.cos(a*1.3)*age*2.3,Math.cos(a)*age*2.8));
+   const age=(i/72+clock*.35)%1,past=sample(Math.max(since,now-age*450))??point,a=i*2.399;this.old.fromArray(past).add(new T.Vector3(Math.sin(a)*age*2.8,Math.cos(a*1.3)*age*2.3,Math.cos(a)*age*2.8));
    this.scale.set(.045,.10+.24*age,.045).multiplyScalar(1-age*.75);this.matrix.compose(this.old,this.rotation,this.scale);this.embers.setMatrixAt(i,this.matrix);
   }
   this.flame.instanceMatrix.needsUpdate=this.smoke.instanceMatrix.needsUpdate=this.embers.instanceMatrix.needsUpdate=true;
   this.lightning.begin(1,clock);
-  if(s.stage==='cosmic-meteor-draw'||s.stage==='cosmic-meteor-cast'&&now<m.at){
+  if(stage==='cosmic-meteor-draw'||stage==='cosmic-meteor-cast'&&now<m.at){
    this.blade.localToWorld(this.tip.set(-.315,2.05,0));this.group.worldToLocal(this.tip);
    for(let k=0;k<5;k++){this.old.copy(this.p).add(new T.Vector3(Math.sin(clock*6+k)*M.radius,Math.cos(clock*8+k)*M.radius,Math.cos(clock*6+k)*M.radius));this.lightning.arc(this.tip,this.old,421+k,.035,clock,22,1.6,[0,2,0]);}
   }

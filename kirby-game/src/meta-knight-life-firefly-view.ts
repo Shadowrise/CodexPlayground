@@ -8,6 +8,7 @@ import {knightLifeFireflyPoint,LIFE_FIREFLY} from './meta-knight-life-firefly';
 import type {KnightSound} from './meta-knight-sounds';
 import {softMist,softMistMaterial} from './soft-mist';
 import {COSMIC} from './meta-knight-cosmic';
+import {arenaMaterials} from './meta-knight-arena-materials';
 
 const BUG_SCALE=1.4,HEART_SCALE=.9,HEART_Y=-.18,HEART_Z=-.04;
 
@@ -19,11 +20,15 @@ export class MetaKnightLifeFireflyView{
  readonly firefly:Firefly;
  readonly halo=softMist(softMistMaterial('#baff55',.5));
  private motion:T.Object3D;
+ private restoreMaterials:()=>void;
  private legs:{joint:T.Object3D;rotation:T.Quaternion}[]=[];
  private key='';private hitKey='';private point=new T.Vector3();private flying=false;
  constructor(gltf:GLTF,private cue:(kind:KnightSound)=>void){
   this.group.name='Meta Knight life firefly';this.carrier.name='Life firefly carrier';
   const object=clone(gltf.scene) as T.Group;this.firefly=new Firefly({...gltf,scene:object});this.firefly.setMode('Fly');
+  // Meadow instances share the cached asset's CSM materials. The arena needs
+  // its own clean lighting shaders for the head, legs and every other surface.
+  this.restoreMaterials=arenaMaterials(object);
   // Reuse emission, without introducing a shadow light into the arena.
   const lights:T.Object3D[]=[];object.traverse(o=>{if(o instanceof T.Light)lights.push(o);if(o instanceof T.Mesh)o.castShadow=o.receiveShadow=false;});for(const light of lights)light.removeFromParent();
   this.motion=object.getObjectByName('Motion')!;
@@ -76,6 +81,7 @@ export class MetaKnightLifeFireflyView{
  buzzLevel(listener:T.Vector3){if(!this.group.visible||!this.flying)return 0;this.carrier.getWorldPosition(this.point);return Math.max(0,1-this.point.distanceTo(listener)/24)**2;}
  dispose(){
   this.heart.dispose();this.halo.material.dispose();this.firefly.mixer.stopAllAction();this.firefly.mixer.uncacheRoot(this.firefly.object);
+  this.restoreMaterials();
   this.firefly.object.traverse(o=>{if(o instanceof T.Mesh)for(const m of Array.isArray(o.material)?o.material:[o.material])if(m.name==='Firefly_Glow')m.dispose();});this.group.removeFromParent();
  }
 }

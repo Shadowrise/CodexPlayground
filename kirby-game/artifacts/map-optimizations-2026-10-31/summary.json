@@ -1,0 +1,1246 @@
+{
+  "date": "2026-10-31",
+  "method": "Baseline and optimized pages share the same prepared world, 750m distance and 125% scale. Static-only captures exclude moving actors; full-game frozen captures have independent actor positions. Cross-run timing is informational because hardware load changes. Cart detail also has same-scene baseline/variant/control pairs.",
+  "before": {
+    "method": {
+      "browser": "Isolated Chrome, hardware renderer recorded below; Vite serves existing prepared world, HMR/network rooms disabled.",
+      "ab": "Fixed scene and camera. 12 warmup + 20 measured render/gl.finish frames per sample. Paired baseline before/after each toggle. Effects overlap, savings must not be added.",
+      "live": "Actual game loop at four fixed map-corner cameras; CPU update/render submission and asynchronous EXT_disjoint_timer_query_webgl2 GPU time. Separate from forced gl.finish A/B tests."
+    },
+    "metadata": {
+      "date": "2026-10-31T16:34:39.355Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "browserVisibility": "visible",
+      "pixelRatio": 1.25,
+      "viewDistance": 750,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "drawingBuffer": [
+        2400,
+        1350
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "gpuTimer": true,
+      "treehouseActive": false,
+      "npcs": 14,
+      "startupGlError": 1282,
+      "shadowCascades": 2,
+      "shadowMapSize": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "objects": 13169,
+      "batches": 0,
+      "finalGlError": 0
+    },
+    "live": [],
+    "angleTime": [],
+    "ab": [],
+    "inventory": [],
+    "errors": [],
+    "mode": "baseline",
+    "samples": [
+      {
+        "id": "south-east",
+        "kind": "full",
+        "sample": {
+          "ms": 42.60000002384186,
+          "p90Ms": 47.70000001788139,
+          "cpuMs": 42.60000002384186,
+          "gpuMs": 28.210176,
+          "gpuSamples": 16,
+          "calls": 1523,
+          "triangles": 7874575
+        }
+      },
+      {
+        "id": "south-west",
+        "kind": "full",
+        "sample": {
+          "ms": 37.900000005960464,
+          "p90Ms": 42.099999994039536,
+          "cpuMs": 37.900000005960464,
+          "gpuMs": 24.267776,
+          "gpuSamples": 16,
+          "calls": 1479,
+          "triangles": 7597807
+        }
+      },
+      {
+        "id": "north-east",
+        "kind": "full",
+        "sample": {
+          "ms": 38.900000005960464,
+          "p90Ms": 45,
+          "cpuMs": 38.900000005960464,
+          "gpuMs": 27.419648,
+          "gpuSamples": 16,
+          "calls": 1619,
+          "triangles": 6903597
+        }
+      },
+      {
+        "id": "north-west",
+        "kind": "full",
+        "sample": {
+          "ms": 43.19999998807907,
+          "p90Ms": 55,
+          "cpuMs": 43.19999998807907,
+          "gpuMs": 31.17568,
+          "gpuSamples": 16,
+          "calls": 1595,
+          "triangles": 7650938
+        }
+      },
+      {
+        "id": "south-east",
+        "kind": "static",
+        "sample": {
+          "ms": 17.600000023841858,
+          "p90Ms": 20.400000005960464,
+          "cpuMs": 17.600000023841858,
+          "gpuMs": 9.562112,
+          "gpuSamples": 14,
+          "calls": 634,
+          "triangles": 3168472
+        }
+      },
+      {
+        "id": "south-west",
+        "kind": "static",
+        "sample": {
+          "ms": 19,
+          "p90Ms": 23.19999998807907,
+          "cpuMs": 18.900000005960464,
+          "gpuMs": 11.301888,
+          "gpuSamples": 14,
+          "calls": 637,
+          "triangles": 3175082
+        }
+      },
+      {
+        "id": "north-east",
+        "kind": "static",
+        "sample": {
+          "ms": 20.900000005960464,
+          "p90Ms": 23.400000005960464,
+          "cpuMs": 20.900000005960464,
+          "gpuMs": 11.189248,
+          "gpuSamples": 14,
+          "calls": 638,
+          "triangles": 2364940
+        }
+      },
+      {
+        "id": "north-west",
+        "kind": "static",
+        "sample": {
+          "ms": 18.80000001192093,
+          "p90Ms": 21.099999994039536,
+          "cpuMs": 18.80000001192093,
+          "gpuMs": 10.923008,
+          "gpuSamples": 14,
+          "calls": 608,
+          "triangles": 3037222
+        }
+      },
+      {
+        "id": "north-west-night",
+        "kind": "static",
+        "sample": {
+          "ms": 20.099999994039536,
+          "p90Ms": 21.700000017881393,
+          "cpuMs": 20.099999994039536,
+          "gpuMs": 9.6768,
+          "gpuSamples": 14,
+          "calls": 607,
+          "triangles": 3036004
+        }
+      },
+      {
+        "id": "orchard-close",
+        "kind": "static",
+        "sample": {
+          "ms": 18.099999994039536,
+          "p90Ms": 23.5,
+          "cpuMs": 18,
+          "gpuMs": 8.348672,
+          "gpuSamples": 14,
+          "calls": 373,
+          "triangles": 1826424
+        }
+      }
+    ],
+    "pairs": [],
+    "visual": [],
+    "gpuTelemetry": "2026/10/31 18:33:58.148, P0, 16, 1425, 7001, 20.65, 38\r\n2026/10/31 18:33:59.180, P0, 6, 1425, 7001, 26.03, 39\r\n2026/10/31 18:34:00.211, P0, 10, 1425, 7001, 26.11, 39\r\n2026/10/31 18:34:01.244, P0, 12, 1425, 7001, 28.77, 39\r\n2026/10/31 18:34:02.285, P0, 8, 1425, 7001, 28.65, 39\r\n2026/10/31 18:34:03.298, P5, 11, 592, 810, 25.96, 39\r\n2026/10/31 18:34:04.317, P5, 47, 967, 810, 19.10, 38\r\n2026/10/31 18:34:05.336, P0, 15, 1267, 6001, 24.18, 38\r\n2026/10/31 18:34:06.353, P5, 10, 712, 810, 26.99, 39\r\n2026/10/31 18:34:07.376, P5, 32, 637, 810, 20.35, 38\r\n2026/10/31 18:34:08.384, P5, 33, 570, 810, 19.29, 38\r\n2026/10/31 18:34:09.429, P5, 41, 622, 810, 19.55, 38\r\n2026/10/31 18:34:10.446, P5, 35, 630, 810, 19.34, 38\r\n2026/10/31 18:34:11.469, P3, 24, 1335, 6001, 22.55, 38\r\n2026/10/31 18:34:12.497, P0, 13, 1335, 7001, 27.53, 39\r\n2026/10/31 18:34:13.518, P3, 23, 697, 6001, 25.48, 38\r\n2026/10/31 18:34:14.524, P3, 24, 570, 6001, 23.58, 38\r\n2026/10/31 18:34:15.537, P5, 43, 502, 810, 21.82, 38\r\n2026/10/31 18:34:16.562, P5, 42, 600, 810, 19.71, 38\r\n2026/10/31 18:34:17.602, P5, 40, 982, 810, 20.17, 38\r\n2026/10/31 18:34:18.630, P3, 24, 1327, 6001, 22.85, 38\r\n2026/10/31 18:34:19.652, P0, 11, 1327, 7001, 27.02, 39\r\n2026/10/31 18:34:20.676, P5, 36, 690, 810, 24.97, 38\r\n2026/10/31 18:34:21.699, P3, 22, 1035, 6001, 20.58, 38\r\n2026/10/31 18:34:22.713, P3, 17, 1035, 6001, 23.63, 38\r\n2026/10/31 18:34:23.749, P3, 21, 667, 6001, 23.11, 38\r\n2026/10/31 18:34:24.840, P3, 20, 667, 6001, 23.39, 38\r\n2026/10/31 18:34:25.871, P3, 34, 637, 6001, 24.31, 38\r\n2026/10/31 18:34:26.891, P5, 29, 547, 810, 23.48, 38\r\n2026/10/31 18:34:27.924, P5, 36, 607, 810, 19.82, 38\r\n2026/10/31 18:34:28.957, P5, 37, 697, 810, 19.84, 38\r\n2026/10/31 18:34:29.991, P5, 29, 697, 810, 19.78, 38\r\n2026/10/31 18:34:31.009, P5, 35, 675, 810, 19.68, 38\r\n2026/10/31 18:34:32.054, P3, 27, 1252, 6001, 20.83, 38\r\n2026/10/31 18:34:33.099, P0, 16, 1252, 7001, 26.25, 38\r\n2026/10/31 18:34:34.140, P3, 22, 705, 6001, 26.18, 38\r\n2026/10/31 18:34:35.171, P5, 29, 645, 810, 20.89, 38\r\n2026/10/31 18:34:36.204, P5, 33, 637, 810, 19.61, 38\r\n2026/10/31 18:34:37.232, P3, 80, 1095, 6001, 19.67, 38\r\n2026/10/31 18:34:38.290, P3, 15, 1095, 6001, 23.75, 38\r\n2026/10/31 18:34:39.335, P0, 75, 1410, 7001, 23.92, 38\r\n2026/10/31 18:34:40.357, P0, 32, 1410, 7001, 26.93, 39\r\n2026/10/31 18:34:41.387, P3, 29, 885, 6001, 29.90, 39\r\n2026/10/31 18:34:42.409, P3, 31, 787, 6001, 25.98, 38\r\n2026/10/31 18:34:43.440, P3, 34, 750, 6001, 26.90, 38\r\n2026/10/31 18:34:44.496, P3, 39, 667, 6001, 25.92, 38\r\n2026/10/31 18:34:45.520, P3, 40, 937, 6001, 26.26, 38\r\n2026/10/31 18:34:46.543, P3, 31, 952, 6001, 26.07, 38\r\n2026/10/31 18:34:47.614, P3, 12, 750, 6001, 25.04, 38\r\n2026/10/31 18:34:48.700, P3, 14, 645, 6001, 24.82, 38\r\n2026/10/31 18:34:49.738, P3, 8, 600, 6001, 24.36, 38\r\n2026/10/31 18:34:50.781, P0, 8, 1515, 7001, 24.90, 38\r\n2026/10/31 18:34:51.835, P0, 19, 1515, 7001, 31.41, 39\r\n2026/10/31 18:34:52.904, P3, 37, 960, 6001, 28.36, 38\r\n"
+  },
+  "after": {
+    "method": {
+      "browser": "Isolated Chrome, hardware renderer recorded below; Vite serves existing prepared world, HMR/network rooms disabled.",
+      "ab": "Fixed scene and camera. 12 warmup + 20 measured render/gl.finish frames per sample. Paired baseline before/after each toggle. Effects overlap, savings must not be added.",
+      "live": "Actual game loop at four fixed map-corner cameras; CPU update/render submission and asynchronous EXT_disjoint_timer_query_webgl2 GPU time. Separate from forced gl.finish A/B tests."
+    },
+    "metadata": {
+      "date": "2026-10-31T16:36:17.852Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "browserVisibility": "visible",
+      "pixelRatio": 1.25,
+      "viewDistance": 750,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "drawingBuffer": [
+        2400,
+        1350
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "gpuTimer": true,
+      "treehouseActive": false,
+      "npcs": 14,
+      "startupGlError": 1282,
+      "shadowCascades": 2,
+      "shadowMapSize": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "objects": 16827,
+      "batches": 135,
+      "finalGlError": 0
+    },
+    "live": [],
+    "angleTime": [],
+    "ab": [],
+    "inventory": [],
+    "errors": [],
+    "mode": "current",
+    "samples": [
+      {
+        "id": "south-east",
+        "kind": "full",
+        "sample": {
+          "ms": 31.80000001192093,
+          "p90Ms": 39.69999998807907,
+          "cpuMs": 31.80000001192093,
+          "gpuMs": 18.390016,
+          "gpuSamples": 16,
+          "calls": 850,
+          "triangles": 6755330
+        }
+      },
+      {
+        "id": "south-west",
+        "kind": "full",
+        "sample": {
+          "ms": 32.5,
+          "p90Ms": 34.79999998211861,
+          "cpuMs": 32.400000005960464,
+          "gpuMs": 17.755136,
+          "gpuSamples": 16,
+          "calls": 823,
+          "triangles": 6709213
+        }
+      },
+      {
+        "id": "north-east",
+        "kind": "full",
+        "sample": {
+          "ms": 33.400000005960464,
+          "p90Ms": 40.400000005960464,
+          "cpuMs": 33.30000001192093,
+          "gpuMs": 22.104064,
+          "gpuSamples": 16,
+          "calls": 901,
+          "triangles": 6030184
+        }
+      },
+      {
+        "id": "north-west",
+        "kind": "full",
+        "sample": {
+          "ms": 39.19999998807907,
+          "p90Ms": 48.900000005960464,
+          "cpuMs": 39.19999998807907,
+          "gpuMs": 24.4992,
+          "gpuSamples": 16,
+          "calls": 1062,
+          "triangles": 7093333
+        }
+      },
+      {
+        "id": "south-east",
+        "kind": "static",
+        "sample": {
+          "ms": 16.599999994039536,
+          "p90Ms": 19.900000005960464,
+          "cpuMs": 16.5,
+          "gpuMs": 4.995072,
+          "gpuSamples": 14,
+          "calls": 150,
+          "triangles": 3171076
+        }
+      },
+      {
+        "id": "south-west",
+        "kind": "static",
+        "sample": {
+          "ms": 16.899999976158142,
+          "p90Ms": 20.700000017881393,
+          "cpuMs": 16.80000001192093,
+          "gpuMs": 5.6064,
+          "gpuSamples": 14,
+          "calls": 145,
+          "triangles": 3173282
+        }
+      },
+      {
+        "id": "north-east",
+        "kind": "static",
+        "sample": {
+          "ms": 18.900000005960464,
+          "p90Ms": 21.599999994039536,
+          "cpuMs": 17.599999994039536,
+          "gpuMs": 3.6096,
+          "gpuSamples": 14,
+          "calls": 149,
+          "triangles": 2362180
+        }
+      },
+      {
+        "id": "north-west",
+        "kind": "static",
+        "sample": {
+          "ms": 16.80000001192093,
+          "p90Ms": 23.30000001192093,
+          "cpuMs": 16.700000017881393,
+          "gpuMs": 4.962304,
+          "gpuSamples": 14,
+          "calls": 141,
+          "triangles": 3033902
+        }
+      },
+      {
+        "id": "north-west-night",
+        "kind": "static",
+        "sample": {
+          "ms": 17.80000001192093,
+          "p90Ms": 20.599999994039536,
+          "cpuMs": 17.80000001192093,
+          "gpuMs": 3.78368,
+          "gpuSamples": 14,
+          "calls": 140,
+          "triangles": 3032684
+        }
+      },
+      {
+        "id": "orchard-close",
+        "kind": "static",
+        "sample": {
+          "ms": 15.199999988079071,
+          "p90Ms": 17.900000005960464,
+          "cpuMs": 15.099999994039536,
+          "gpuMs": 3.683328,
+          "gpuSamples": 14,
+          "calls": 127,
+          "triangles": 1819512
+        }
+      }
+    ],
+    "pairs": [
+      {
+        "view": "north-east",
+        "round": 0,
+        "before": {
+          "ms": 43.5,
+          "p90Ms": 51.89999997615814,
+          "cpuMs": 43.5,
+          "gpuMs": 25.618432,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "after": {
+          "ms": 36.400000005960464,
+          "p90Ms": 43,
+          "cpuMs": 36.400000005960464,
+          "gpuMs": 22.059008,
+          "gpuSamples": 14,
+          "calls": 909,
+          "triangles": 6203518
+        },
+        "control": {
+          "ms": 41.60000002384186,
+          "p90Ms": 46.900000005960464,
+          "cpuMs": 41.5,
+          "gpuMs": 25.590784,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "savedMs": 6.1500000059604645,
+        "stable": true
+      },
+      {
+        "view": "north-east",
+        "round": 1,
+        "before": {
+          "ms": 55,
+          "p90Ms": 61.69999998807907,
+          "cpuMs": 55,
+          "gpuMs": 34.2016,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "after": {
+          "ms": 34.79999998211861,
+          "p90Ms": 42.400000005960464,
+          "cpuMs": 34.79999998211861,
+          "gpuMs": 19.434496,
+          "gpuSamples": 14,
+          "calls": 909,
+          "triangles": 6203518
+        },
+        "control": {
+          "ms": 35.70000001788139,
+          "p90Ms": 41.29999998211861,
+          "cpuMs": 35.70000001788139,
+          "gpuMs": 20.685824,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "savedMs": 10.55000002682209,
+        "stable": false
+      },
+      {
+        "view": "north-east",
+        "round": 2,
+        "before": {
+          "ms": 34.599999994039536,
+          "p90Ms": 37.60000002384186,
+          "cpuMs": 34.599999994039536,
+          "gpuMs": 20.727808,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "after": {
+          "ms": 29.400000005960464,
+          "p90Ms": 35.29999998211861,
+          "cpuMs": 29.400000005960464,
+          "gpuMs": 20.150272,
+          "gpuSamples": 14,
+          "calls": 909,
+          "triangles": 6203518
+        },
+        "control": {
+          "ms": 35.70000001788139,
+          "p90Ms": 39.19999998807907,
+          "cpuMs": 35.70000001788139,
+          "gpuMs": 21.752832,
+          "gpuSamples": 14,
+          "calls": 1132,
+          "triangles": 7068736
+        },
+        "savedMs": 5.75,
+        "stable": true
+      },
+      {
+        "view": "north-west",
+        "round": 0,
+        "before": {
+          "ms": 33.400000005960464,
+          "p90Ms": 35.5,
+          "cpuMs": 33.400000005960464,
+          "gpuMs": 21.783552,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "after": {
+          "ms": 43.80000001192093,
+          "p90Ms": 46.30000001192093,
+          "cpuMs": 43.80000001192093,
+          "gpuMs": 25.069568,
+          "gpuSamples": 14,
+          "calls": 1062,
+          "triangles": 7093333
+        },
+        "control": {
+          "ms": 32.099999994039536,
+          "p90Ms": 35.60000002384186,
+          "cpuMs": 32,
+          "gpuMs": 19.165184,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "savedMs": -11.050000011920929,
+        "stable": true
+      },
+      {
+        "view": "north-west",
+        "round": 1,
+        "before": {
+          "ms": 30.599999994039536,
+          "p90Ms": 34.60000002384186,
+          "cpuMs": 30.5,
+          "gpuMs": 18.89792,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "after": {
+          "ms": 26.19999998807907,
+          "p90Ms": 30.30000001192093,
+          "cpuMs": 26.19999998807907,
+          "gpuMs": 15.689728,
+          "gpuSamples": 14,
+          "calls": 1062,
+          "triangles": 7093333
+        },
+        "control": {
+          "ms": 30.400000005960464,
+          "p90Ms": 31.69999998807907,
+          "cpuMs": 30.400000005960464,
+          "gpuMs": 17.64864,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "savedMs": 4.300000011920929,
+        "stable": true
+      },
+      {
+        "view": "north-west",
+        "round": 2,
+        "before": {
+          "ms": 28.400000005960464,
+          "p90Ms": 31.69999998807907,
+          "cpuMs": 28.30000001192093,
+          "gpuMs": 18.14016,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "after": {
+          "ms": 28.599999994039536,
+          "p90Ms": 33.30000001192093,
+          "cpuMs": 28.599999994039536,
+          "gpuMs": 16.533504,
+          "gpuSamples": 14,
+          "calls": 1062,
+          "triangles": 7093333
+        },
+        "control": {
+          "ms": 30.400000005960464,
+          "p90Ms": 33.599999994039536,
+          "cpuMs": 30.400000005960464,
+          "gpuMs": 18.169856,
+          "gpuSamples": 14,
+          "calls": 1123,
+          "triangles": 7639770
+        },
+        "savedMs": 0.800000011920929,
+        "stable": true
+      }
+    ],
+    "visual": [
+      {
+        "id": "south-east",
+        "pixels": 2073600,
+        "changed": 681,
+        "over2": 79,
+        "max": 13,
+        "meanChannel": 0.0003166795267489712
+      },
+      {
+        "id": "south-west",
+        "pixels": 2073600,
+        "changed": 467,
+        "over2": 54,
+        "max": 16,
+        "meanChannel": 0.00022215792181069958
+      },
+      {
+        "id": "north-east",
+        "pixels": 2073600,
+        "changed": 830,
+        "over2": 134,
+        "max": 19,
+        "meanChannel": 0.00041489840534979423
+      },
+      {
+        "id": "north-west",
+        "pixels": 2073600,
+        "changed": 2467,
+        "over2": 199,
+        "max": 27,
+        "meanChannel": 0.0010447209362139918
+      },
+      {
+        "id": "north-west-night",
+        "pixels": 2073600,
+        "changed": 1733,
+        "over2": 162,
+        "max": 12,
+        "meanChannel": 0.0005811149691358025
+      },
+      {
+        "id": "orchard-close",
+        "pixels": 2073600,
+        "changed": 757,
+        "over2": 113,
+        "max": 44,
+        "meanChannel": 0.0004071823559670782
+      },
+      {
+        "cart": {
+          "distance": 12,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 90,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 100,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 115,
+          "far": true,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 145,
+          "far": true,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 90,
+          "far": false,
+          "triangles": 12167
+        }
+      }
+    ],
+    "approaches": [
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1
+      }
+    ],
+    "gpuTelemetry": "2026/10/31 18:35:36.794, P5, 21, 292, 810, 17.56, 37\r\n2026/10/31 18:35:37.846, P8, 43, 420, 405, 16.84, 37\r\n2026/10/31 18:35:38.914, P0, 21, 1425, 7001, 23.35, 38\r\n2026/10/31 18:35:39.948, P0, 8, 1425, 7001, 27.25, 38\r\n2026/10/31 18:35:40.965, P0, 11, 1425, 7001, 26.35, 38\r\n2026/10/31 18:35:41.984, P5, 13, 645, 810, 26.50, 37\r\n2026/10/31 18:35:43.007, P5, 36, 607, 810, 19.22, 37\r\n2026/10/31 18:35:44.068, P5, 45, 690, 810, 19.67, 37\r\n2026/10/31 18:35:45.113, P5, 39, 825, 810, 19.97, 37\r\n2026/10/31 18:35:46.166, P3, 33, 1132, 6001, 23.80, 38\r\n2026/10/31 18:35:47.201, P3, 17, 810, 6001, 24.63, 38\r\n2026/10/31 18:35:48.237, P3, 22, 660, 6001, 23.48, 37\r\n2026/10/31 18:35:49.271, P3, 29, 570, 6001, 23.58, 38\r\n2026/10/31 18:35:50.286, P5, 50, 967, 810, 21.04, 37\r\n2026/10/31 18:35:51.323, P3, 17, 1005, 6001, 22.64, 38\r\n2026/10/31 18:35:52.371, P5, 33, 810, 810, 23.59, 38\r\n2026/10/31 18:35:53.389, P0, 12, 1410, 7001, 27.17, 38\r\n2026/10/31 18:35:54.436, P3, 17, 795, 6001, 28.62, 38\r\n2026/10/31 18:35:55.457, P3, 23, 645, 6001, 23.62, 38\r\n2026/10/31 18:35:56.497, P5, 43, 652, 810, 21.08, 37\r\n2026/10/31 18:35:57.542, P5, 45, 832, 810, 19.83, 38\r\n2026/10/31 18:35:58.581, P3, 17, 1012, 6001, 23.00, 38\r\n2026/10/31 18:35:59.603, P3, 30, 877, 6001, 24.19, 38\r\n2026/10/31 18:36:00.635, P5, 40, 847, 810, 22.16, 38\r\n2026/10/31 18:36:01.661, P3, 16, 1140, 6001, 21.60, 38\r\n2026/10/31 18:36:02.679, P3, 17, 1140, 6001, 24.16, 38\r\n2026/10/31 18:36:03.804, P5, 42, 810, 810, 21.95, 38\r\n2026/10/31 18:36:04.817, P3, 14, 1057, 6001, 22.75, 38\r\n2026/10/31 18:36:05.867, P3, 40, 1057, 6001, 24.11, 38\r\n2026/10/31 18:36:06.900, P3, 19, 855, 6001, 24.06, 38\r\n2026/10/31 18:36:07.918, P5, 35, 705, 810, 22.17, 38\r\n2026/10/31 18:36:08.956, P5, 31, 705, 810, 19.67, 38\r\n2026/10/31 18:36:09.974, P5, 33, 690, 810, 19.68, 38\r\n2026/10/31 18:36:11.000, P5, 37, 652, 810, 19.49, 38\r\n2026/10/31 18:36:12.024, P5, 68, 630, 810, 19.60, 38\r\n2026/10/31 18:36:13.054, P3, 17, 1170, 6001, 24.07, 38\r\n2026/10/31 18:36:14.074, P3, 16, 735, 6001, 24.19, 38\r\n2026/10/31 18:36:15.102, P3, 24, 592, 6001, 23.39, 38\r\n2026/10/31 18:36:16.142, P3, 29, 570, 6001, 23.53, 38\r\n2026/10/31 18:36:17.167, P5, 36, 742, 810, 20.63, 38\r\n2026/10/31 18:36:18.200, P3, 11, 1080, 6001, 21.00, 38\r\n2026/10/31 18:36:19.239, P3, 35, 1080, 6001, 23.95, 38\r\n2026/10/31 18:36:20.285, P3, 32, 1012, 6001, 27.17, 38\r\n2026/10/31 18:36:21.313, P3, 31, 922, 6001, 26.94, 38\r\n2026/10/31 18:36:22.330, P3, 30, 825, 6001, 26.09, 38\r\n2026/10/31 18:36:23.855, P3, 12, 705, 6001, 24.36, 38\r\n2026/10/31 18:36:24.890, P3, 29, 1042, 6001, 23.76, 38\r\n2026/10/31 18:36:25.949, P3, 22, 1042, 6001, 26.16, 38\r\n2026/10/31 18:36:26.970, P3, 13, 742, 6001, 22.25, 38\r\n2026/10/31 18:36:28.014, P3, 11, 780, 6001, 23.04, 38\r\n2026/10/31 18:36:29.030, P3, 11, 660, 6001, 24.09, 38\r\n2026/10/31 18:36:30.060, P5, 72, 795, 810, 20.38, 38\r\n2026/10/31 18:36:31.083, P0, 8, 1365, 7001, 25.03, 38\r\n2026/10/31 18:36:32.097, P3, 26, 1050, 6001, 29.27, 39\r\n2026/10/31 18:36:33.111, P3, 27, 870, 6001, 23.11, 38\r\n2026/10/31 18:36:34.122, P3, 9, 720, 6001, 23.90, 38\r\n2026/10/31 18:36:35.144, P5, 62, 922, 810, 21.79, 38\r\n2026/10/31 18:36:36.161, P3, 20, 1252, 6001, 25.64, 38\r\n2026/10/31 18:36:37.184, P3, 27, 817, 6001, 28.76, 38\r\n2026/10/31 18:36:38.196, P3, 28, 742, 6001, 25.65, 38\r\n2026/10/31 18:36:39.214, P3, 43, 690, 6001, 25.72, 38\r\n2026/10/31 18:36:40.225, P3, 34, 855, 6001, 25.90, 38\r\n2026/10/31 18:36:41.240, P3, 29, 855, 6001, 26.05, 38\r\n2026/10/31 18:36:42.249, P3, 38, 735, 6001, 26.25, 38\r\n2026/10/31 18:36:43.264, P3, 39, 705, 6001, 26.39, 38\r\n2026/10/31 18:36:44.279, P3, 38, 690, 6001, 26.56, 38\r\n2026/10/31 18:36:45.290, P3, 33, 802, 6001, 26.70, 38\r\n2026/10/31 18:36:46.292, P3, 48, 930, 6001, 27.06, 38\r\n2026/10/31 18:36:47.307, P3, 36, 1057, 6001, 27.19, 38\r\n2026/10/31 18:36:48.322, P3, 35, 1057, 6001, 27.89, 38\r\n2026/10/31 18:36:49.337, P3, 39, 1012, 6001, 28.49, 38\r\n2026/10/31 18:36:50.348, P3, 39, 1012, 6001, 27.85, 38\r\n2026/10/31 18:36:51.352, P3, 36, 967, 6001, 26.63, 38\r\n2026/10/31 18:36:52.367, P3, 36, 1012, 6001, 27.84, 38\r\n2026/10/31 18:36:53.367, P3, 18, 1012, 6001, 22.24, 38\r\n2026/10/31 18:36:54.382, P5, 16, 630, 810, 21.60, 37\r\n"
+  },
+  "comparison": [
+    {
+      "id": "south-east",
+      "kind": "full",
+      "before": {
+        "ms": 42.60000002384186,
+        "p90Ms": 47.70000001788139,
+        "cpuMs": 42.60000002384186,
+        "gpuMs": 28.210176,
+        "gpuSamples": 16,
+        "calls": 1523,
+        "triangles": 7874575
+      },
+      "after": {
+        "ms": 31.80000001192093,
+        "p90Ms": 39.69999998807907,
+        "cpuMs": 31.80000001192093,
+        "gpuMs": 18.390016,
+        "gpuSamples": 16,
+        "calls": 850,
+        "triangles": 6755330
+      },
+      "callsSaved": 673,
+      "callsReductionPercent": 44.189100459619176,
+      "renderSavedMs": 10.800000011920929
+    },
+    {
+      "id": "south-west",
+      "kind": "full",
+      "before": {
+        "ms": 37.900000005960464,
+        "p90Ms": 42.099999994039536,
+        "cpuMs": 37.900000005960464,
+        "gpuMs": 24.267776,
+        "gpuSamples": 16,
+        "calls": 1479,
+        "triangles": 7597807
+      },
+      "after": {
+        "ms": 32.5,
+        "p90Ms": 34.79999998211861,
+        "cpuMs": 32.400000005960464,
+        "gpuMs": 17.755136,
+        "gpuSamples": 16,
+        "calls": 823,
+        "triangles": 6709213
+      },
+      "callsSaved": 656,
+      "callsReductionPercent": 44.354293441514535,
+      "renderSavedMs": 5.4000000059604645
+    },
+    {
+      "id": "north-east",
+      "kind": "full",
+      "before": {
+        "ms": 38.900000005960464,
+        "p90Ms": 45,
+        "cpuMs": 38.900000005960464,
+        "gpuMs": 27.419648,
+        "gpuSamples": 16,
+        "calls": 1619,
+        "triangles": 6903597
+      },
+      "after": {
+        "ms": 33.400000005960464,
+        "p90Ms": 40.400000005960464,
+        "cpuMs": 33.30000001192093,
+        "gpuMs": 22.104064,
+        "gpuSamples": 16,
+        "calls": 901,
+        "triangles": 6030184
+      },
+      "callsSaved": 718,
+      "callsReductionPercent": 44.348363187152565,
+      "renderSavedMs": 5.5
+    },
+    {
+      "id": "north-west",
+      "kind": "full",
+      "before": {
+        "ms": 43.19999998807907,
+        "p90Ms": 55,
+        "cpuMs": 43.19999998807907,
+        "gpuMs": 31.17568,
+        "gpuSamples": 16,
+        "calls": 1595,
+        "triangles": 7650938
+      },
+      "after": {
+        "ms": 39.19999998807907,
+        "p90Ms": 48.900000005960464,
+        "cpuMs": 39.19999998807907,
+        "gpuMs": 24.4992,
+        "gpuSamples": 16,
+        "calls": 1062,
+        "triangles": 7093333
+      },
+      "callsSaved": 533,
+      "callsReductionPercent": 33.41692789968652,
+      "renderSavedMs": 4
+    },
+    {
+      "id": "south-east",
+      "kind": "static",
+      "before": {
+        "ms": 17.600000023841858,
+        "p90Ms": 20.400000005960464,
+        "cpuMs": 17.600000023841858,
+        "gpuMs": 9.562112,
+        "gpuSamples": 14,
+        "calls": 634,
+        "triangles": 3168472
+      },
+      "after": {
+        "ms": 16.599999994039536,
+        "p90Ms": 19.900000005960464,
+        "cpuMs": 16.5,
+        "gpuMs": 4.995072,
+        "gpuSamples": 14,
+        "calls": 150,
+        "triangles": 3171076
+      },
+      "callsSaved": 484,
+      "callsReductionPercent": 76.34069400630915,
+      "renderSavedMs": 1.0000000298023224
+    },
+    {
+      "id": "south-west",
+      "kind": "static",
+      "before": {
+        "ms": 19,
+        "p90Ms": 23.19999998807907,
+        "cpuMs": 18.900000005960464,
+        "gpuMs": 11.301888,
+        "gpuSamples": 14,
+        "calls": 637,
+        "triangles": 3175082
+      },
+      "after": {
+        "ms": 16.899999976158142,
+        "p90Ms": 20.700000017881393,
+        "cpuMs": 16.80000001192093,
+        "gpuMs": 5.6064,
+        "gpuSamples": 14,
+        "calls": 145,
+        "triangles": 3173282
+      },
+      "callsSaved": 492,
+      "callsReductionPercent": 77.2370486656201,
+      "renderSavedMs": 2.100000023841858
+    },
+    {
+      "id": "north-east",
+      "kind": "static",
+      "before": {
+        "ms": 20.900000005960464,
+        "p90Ms": 23.400000005960464,
+        "cpuMs": 20.900000005960464,
+        "gpuMs": 11.189248,
+        "gpuSamples": 14,
+        "calls": 638,
+        "triangles": 2364940
+      },
+      "after": {
+        "ms": 18.900000005960464,
+        "p90Ms": 21.599999994039536,
+        "cpuMs": 17.599999994039536,
+        "gpuMs": 3.6096,
+        "gpuSamples": 14,
+        "calls": 149,
+        "triangles": 2362180
+      },
+      "callsSaved": 489,
+      "callsReductionPercent": 76.64576802507837,
+      "renderSavedMs": 2
+    },
+    {
+      "id": "north-west",
+      "kind": "static",
+      "before": {
+        "ms": 18.80000001192093,
+        "p90Ms": 21.099999994039536,
+        "cpuMs": 18.80000001192093,
+        "gpuMs": 10.923008,
+        "gpuSamples": 14,
+        "calls": 608,
+        "triangles": 3037222
+      },
+      "after": {
+        "ms": 16.80000001192093,
+        "p90Ms": 23.30000001192093,
+        "cpuMs": 16.700000017881393,
+        "gpuMs": 4.962304,
+        "gpuSamples": 14,
+        "calls": 141,
+        "triangles": 3033902
+      },
+      "callsSaved": 467,
+      "callsReductionPercent": 76.80921052631578,
+      "renderSavedMs": 2
+    },
+    {
+      "id": "north-west-night",
+      "kind": "static",
+      "before": {
+        "ms": 20.099999994039536,
+        "p90Ms": 21.700000017881393,
+        "cpuMs": 20.099999994039536,
+        "gpuMs": 9.6768,
+        "gpuSamples": 14,
+        "calls": 607,
+        "triangles": 3036004
+      },
+      "after": {
+        "ms": 17.80000001192093,
+        "p90Ms": 20.599999994039536,
+        "cpuMs": 17.80000001192093,
+        "gpuMs": 3.78368,
+        "gpuSamples": 14,
+        "calls": 140,
+        "triangles": 3032684
+      },
+      "callsSaved": 467,
+      "callsReductionPercent": 76.93574958813838,
+      "renderSavedMs": 2.2999999821186066
+    },
+    {
+      "id": "orchard-close",
+      "kind": "static",
+      "before": {
+        "ms": 18.099999994039536,
+        "p90Ms": 23.5,
+        "cpuMs": 18,
+        "gpuMs": 8.348672,
+        "gpuSamples": 14,
+        "calls": 373,
+        "triangles": 1826424
+      },
+      "after": {
+        "ms": 15.199999988079071,
+        "p90Ms": 17.900000005960464,
+        "cpuMs": 15.099999994039536,
+        "gpuMs": 3.683328,
+        "gpuSamples": 14,
+        "calls": 127,
+        "triangles": 1819512
+      },
+      "callsSaved": 246,
+      "callsReductionPercent": 65.95174262734585,
+      "renderSavedMs": 2.9000000059604645
+    }
+  ],
+  "finalVisual": {
+    "metadata": {
+      "date": "2026-10-31T16:43:54.823Z",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "browserVisibility": "visible",
+      "pixelRatio": 1.25,
+      "viewDistance": 750,
+      "viewport": [
+        1920,
+        1080
+      ],
+      "drawingBuffer": [
+        2400,
+        1350
+      ],
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Laptop GPU (0x00002560) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "gpuTimer": true,
+      "treehouseActive": false,
+      "npcs": 14,
+      "startupGlError": 1282,
+      "shadowCascades": 2,
+      "shadowMapSize": [
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "objects": 16827,
+      "batches": 135,
+      "finalGlError": 0
+    },
+    "approaches": [
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Mountain evergreen crowns",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Decorative forest wood",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      },
+      {
+        "name": "Weathered meadow rocks",
+        "level": 0,
+        "visible": true,
+        "active": 1,
+        "submitted": true
+      }
+    ],
+    "cartCaptures": [
+      {
+        "cart": {
+          "distance": 12,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 90,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 100,
+          "far": false,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 115,
+          "far": true,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 145,
+          "far": true,
+          "triangles": 12167
+        }
+      },
+      {
+        "cart": {
+          "distance": 90,
+          "far": false,
+          "triangles": 12167
+        }
+      }
+    ],
+    "errors": []
+  },
+  "validation": {
+    "fullSuite": {
+      "tests": 984,
+      "passed": 983,
+      "failed": 1,
+      "note": "Only the raw-restoration fixture failed; it was updated to disable runtime aggregation explicitly."
+    },
+    "targetedAfterFix": {
+      "tests": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    "productionBuild": "passed; main-DsrDVRKc.js"
+  }
+}

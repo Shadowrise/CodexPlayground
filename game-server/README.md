@@ -1,7 +1,7 @@
 # One shared Kirby meadow
 
 Cloudflare Worker + one SQLite Durable Object (`main`), up to 14 WebSocket players.
-Protocol 2 (`build=meadow-network-41`) is shared with the browser in
+Protocol 2 (`build=meadow-network-42`) is shared with the browser in
 `../kirby-game/src/network-protocol.ts`. Deploy client and server together.
 
 Active Meta Knight fighters send their actor at 10 Hz even when stationary,

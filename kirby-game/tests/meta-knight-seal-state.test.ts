@@ -71,7 +71,7 @@ test('network snapshots accept the peak route and legacy eleven- and thirteen-st
   for(const count of [11,13])assert(validWorld({...world,mountainSteps:Array.from({length:count},()=>[0,0,0])}));
   assert(!validWorld({...world,mountainSteps:[...world.mountainSteps,[0,0,0]]}));
   assert(!validWorld({...world,mountainSteps:world.mountainSteps.map((v,i)=>i===0?[2,5,0]:v)}));
-  assert.equal(BUILD,'meadow-network-41');assert.equal(PROTOCOL,2);
+  assert.equal(BUILD,'meadow-network-42');assert.equal(PROTOCOL,2);
 });
 
 test('network room and welcome carry authoritative progress without adding it to movement frames',async()=>{

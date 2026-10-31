@@ -1,7 +1,7 @@
 import * as T from 'three';
 import type {Daylight} from './day-cycle';
 import {CELESTIAL_MAX_HEIGHT} from './day-cycle';
-import {scenerySources} from './scenery-batch';
+import {scenerySources,sceneryCellBounds} from './scenery-batch';
 import {GROUND_SHADOW_OPACITY,groundShadowOpacity} from './ground-shadow-style';
 import {startupTask,startupBudget} from './startup-tasks';
 
@@ -48,8 +48,8 @@ export function shadowParts(root:T.Object3D,include:(mesh:T.Mesh)=>boolean=()=>t
  root.updateWorldMatrix(true,true);
  const inverse=root.matrixWorld.clone().invert(),parts:ShadowPart[]=[],instance=new T.Matrix4();
  const visit=(object:T.Object3D,matrix:T.Matrix4)=>{
-  if(object.userData.characterShadow||object.userData.preparedShadow||object.name==='Soft patterned tree shadows')return;
-  if(object instanceof T.BatchedMesh){
+  if(object.userData.characterShadow||object.userData.preparedShadow||object.userData.renderOnlyDetail||sceneryCellBounds(object)||object.name==='Soft patterned tree shadows')return;
+  if(object instanceof T.Mesh&&scenerySources(object).length){
    for(const source of scenerySources(object)){
     let duplicate=false;
     for(let p:T.Object3D|null=source.visibility;p&&p!==root;p=p.parent)if(p.parent instanceof T.LOD&&p!==p.parent.levels[0]?.object){duplicate=true;break;}

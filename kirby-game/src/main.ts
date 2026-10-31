@@ -30,7 +30,7 @@ import {MetaKnightSealHud} from './meta-knight-seal-hud';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
 import {createMetaKnightPortal} from './meta-knight-portal';
-import {META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
+import {META_KNIGHT_ARENA,META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
 import {META_KNIGHT_SEAL_SITES} from './meta-knight-seal-sites';
 import {newSealProgress,allSealsCollected,canCollectSeal,collectSeal,type SealProgress,type SealActor} from './meta-knight-seal-state';
 import {applyBread,advanceBread,canPickBread,canFeedPidgie,newBread,grantBread,breadOffering,type BreadActor,type BreadAction} from './bread-state';
@@ -674,7 +674,7 @@ await preparedShadows.finishPreparation();
 await startupTask();
 const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
-const sceneryVisibility=new SceneryVisibility(environmentRoots);
+const sceneryVisibility=new SceneryVisibility(environmentRoots,scene);
 const forestDetail=new ForestDetail(environmentRoots);
 languageSetting.after(createRenderScaleControl(scale=>{renderScale=scale;renderer.setPixelRatio(scale);},mobile));
 let viewDistance:number=parseViewDistance(null,mobile);
@@ -706,6 +706,7 @@ window.addEventListener('keydown', event => {
   if(gamepad.input.active !== 'keyboard' || !audioPanel.hidden)return;
   if (event.target instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)) return;
   const digit=/^(?:Digit|Numpad)([1-6])$/.exec(event.code);
+  if(digit&&Number(digit[1])<=4&&audioPanel.hidden&&!event.repeat&&cosmicArena.digit(Number(digit[1]))){event.preventDefault();return;}
   const emote=digit?emotesFor(character?.isPigeon)[Number(digit[1])-1]:undefined;
   if(emote && audioPanel.hidden && !event.repeat){event.preventDefault();pendingEmote=emote.id;return;}
   if(event.target instanceof HTMLElement && event.target.closest('button') && (event.code==='Space'||event.code==='Enter'))return;
@@ -745,7 +746,7 @@ const stopDragging = () => {
 let tutorialStorage:Storage|undefined;try{tutorialStorage=localStorage;}catch{}
 const clearTutorialInput=()=>{keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;emoteWheel.close();stopDragging();touch?.reset();};
 gamepad.onChange(clearTutorialInput);
-const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
+const cosmicArena:MetaKnightArenaTravel=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  clearTutorialInput();interactionOutline.update(undefined);wayfinder.selectDestination('');
  document.body.classList.toggle('in-meta-knight-arena',cosmicArena.active||cosmicArena.loading);
  if(character){cameraTarget.copy(character.actor.position).y+=.9*character.actor.scale.x;viewScale=character.actor.scale.x;}
@@ -753,7 +754,7 @@ const cosmicArena=new MetaKnightArenaTravel(renderer,scene,followCamera,()=>{
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]==='Meta Knight')!,loadedPigeon,false,loadedMetaKnight);
  return new CharacterController(model.model,model.clips);
-},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected)},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
+},{online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],sides:()=>network?.room.knightSides,chooseSide:side=>network?.event({type:'knight',action:'side',side}),ability:ability=>network?.event({type:'knight',action:'ability',ability}),profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),location:cosmicArena.active?'meta-knight-arena':undefined,p:character?[character.actor.position.x-META_KNIGHT_ARENA.x,character.actor.position.y,character.actor.position.z]:undefined},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location,p:[a.p[0]-META_KNIGHT_ARENA.x,a.p[1],a.p[2]]}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
 function completeKnightVictory(local=false){
  if(!character)return;
  if(local){localLog.push(metaKnightVictoryLog(nameInput.value));if(localLog.length>10)localLog.shift();}
@@ -1139,12 +1140,14 @@ renderer.setAnimationLoop((time: number) => {
   }
   const padKeys=new Set<string>();
   if(usingPad && !settingsOpen && !wasChoosing && !wheelUsed) {
-    if(pad.pressed.has(14))wayfinder.cycle(-1);
+    if(cosmicArena.active&&cosmicArena.choosingSide){cosmicArena.sidePad(pad.pressed.has(14)||pad.x<-.65?-1:pad.pressed.has(15)||pad.x>.65?1:0,pad.pressed.has(0));pad.pressed.delete(0);pad.held.delete(0);}
+    else if(cosmicArena.helperMode){if(pad.pressed.has(14))cosmicArena.digit(1);if(pad.pressed.has(12))cosmicArena.digit(2);if(pad.pressed.has(15))cosmicArena.digit(3);if(pad.pressed.has(13))cosmicArena.digit(4);}
+    else if(pad.pressed.has(14))wayfinder.cycle(-1);
     else if(pad.pressed.has(15))wayfinder.cycle(1);
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
-    followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
+    if(!cosmicArena.helperMode&&!cosmicArena.choosingSide)followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;
@@ -1165,7 +1168,7 @@ renderer.setAnimationLoop((time: number) => {
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
       const moveStick=settingsOpen||wheelUsed||touchBlocked?{x:0,y:0}:usingPad?{x:pad.x,y:pad.y}:usingTouch?Math.hypot(touch!.x,touch!.y)<.18?{x:0,y:0}:{x:touch!.x,y:touch!.y}:undefined;
-      cosmicArena.update(dt,time*.001,character,{cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
+      cosmicArena.update(dt,time*.001,character,{scheme:usingPad?'gamepad':usingTouch?'touch':'keyboard',cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'Q');
       setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
       sounds.update(dt,character,[],followCamera.azimuth);
@@ -1173,7 +1176,7 @@ renderer.setAnimationLoop((time: number) => {
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
     updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.entries()??[]);
     const knightBattle=network?.room.knightBattle,knightPlayer=knightBattle?.players[network?.id??''];
-    if(knightBattle?.stage==='won'&&knightPlayer&&!knightPlayer.withdrawn&&knightPlayer.hp>0&&knightPlayer.hits+knightPlayer.reflects>0)completeKnightVictory();
+    if(knightBattle?.stage==='won'&&knightPlayer&&knightPlayer.side!=='boss'&&!knightPlayer.withdrawn&&knightPlayer.hp>0&&knightPlayer.hits+knightPlayer.reflects>0)completeKnightVictory();
     checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();cosmicArena.render();
     return;
   }

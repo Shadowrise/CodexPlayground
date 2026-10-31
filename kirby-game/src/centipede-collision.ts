@@ -48,6 +48,10 @@ export class CentipedeCollision{
   const foot=.6*size,head=1.8*size;
   for(let pass=0;pass<2;pass++)for(const b of this.bodies){
    if(!b.rx||p.y>=b.y+b.ry-.06||p.y+head<=b.y-b.ry)continue;
+   // Feet on the curved surface are already outside the body. Comparing only
+   // with the crown turns its rounded back into a vertical wall and pushes
+   // supported walkers off the slope and the joints between segments.
+   const h=this.top(b,p.x,p.z,size);if(h!==undefined&&p.y>=h-.06)continue;
    let dx=p.x-b.x,dz=p.z-b.z,rx=b.rx+foot,rz=b.rz+foot,u=Math.hypot(dx/rx,dz/rz);
    if(u>=1)continue;
    if(u<.0001){dx=previous.x-b.x;dz=previous.z-b.z;u=Math.hypot(dx/rx,dz/rz);if(u<.0001){dx=rx;dz=0;u=1;}}

@@ -214,6 +214,14 @@ export class MetaKnightBattleMotion{
   this.axis.set(Math.sin(turn)*.75*raise,T.MathUtils.lerp(Math.cos(.48),.82,raise),T.MathUtils.lerp(Math.sin(.48),Math.cos(turn)*.75,raise));this.aim(this.axis);this.twoHands(raise);
   this.cosmicFeet(clock,1,.35*raise);this.cosmicCape(clock,1,.35*raise);this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(-.12+.05*Math.sin(clock*4.8),side*(.86+.14*raise+.07*Math.sin(clock*5)),side*.10);});
  }
+ applyRaisedSword(rise:number,clock:number,air=false){
+  this.savePose();const r=easeCosmic(Math.max(0,Math.min(1,rise)));
+  this.motion.position.set(0,0,0);this.motion.rotation.set(0,0,0);this.body.position.set(0,1.13+.02*Math.sin(clock*4),0);this.body.rotation.set(.035,0,.012*Math.sin(clock*3));
+  this.arm.position.x=.52;this.left.position.x=-.52;this.q.setFromUnitVectors(this.armAxis,this.axis.set(-.15,.8,.65).normalize());this.arm.quaternion.copy(this.q);this.left.rotation.set(-.28,0,-.62);
+  this.placeHilt(T.MathUtils.lerp(.72,.10,r),T.MathUtils.lerp(1.4,2.35,r),T.MathUtils.lerp(1.35,1.05,r));const tilt=(1-r)*.48;this.aim(this.axis.set(0,Math.cos(tilt),Math.sin(tilt)));this.twoHands(r);
+  if(air)this.cosmicFeet(clock,1,.5*r);else this.feet.forEach((foot,i)=>{const side=i?1:-1;foot.position.set(side*(.47+.04*r),.25,.1);foot.rotation.set(0,0,side*.04);});
+  this.cosmicCape(clock,air?1:0,.5*r);this.wings.forEach((wing,i)=>{const side=i?1:-1;wing.rotation.set(-.1+.035*Math.sin(clock*5),side*(.5+.55*r+.05*Math.sin(clock*4)),side*.08);});
+ }
  apply(s:KnightBattle,f:number){
   if(s.phase===4&&(s.stage==='cosmic-descent'||s.stage==='won')){this.cosmicFallPose(s,f);return;}
   if(cosmicRefugeStage(s)){this.cosmicRefugePose(s,f);return;}

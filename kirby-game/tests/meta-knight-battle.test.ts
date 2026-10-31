@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {KNIGHT,startKnightBattle,advanceKnightBattle,setKnightPhase,knightDashHalfWidth,knightAttack,knightDanger,knightPosition,knightProjectile,knightShotOrigin,knightShotPath,knightImpactProgress,knightStartCount,knightJumpOpening,knightPressureWave,cancelKnightBattle,knightBattleActive,knightArenaSide,type KnightActor,type KnightBattle} from '../src/meta-knight-battle';
-import {META_KNIGHT_ARENA as ARENA} from '../src/meta-knight-arena-site';
+import {META_KNIGHT_ARENA as ARENA,META_KNIGHT_ANNEX,knightAnnexPoint} from '../src/meta-knight-arena-site';
 import {metaKnightVictoryLog} from '../src/world-log';
 import {CharacterUnlocks} from '../src/character-unlocks';
 import {STAR_FLIGHT_STEP,STAR_SHIELD_STEP} from '../src/meta-knight-star-assault';
@@ -25,6 +25,17 @@ test('duel captures every arena player up to the edge, excludes the portal landi
  assert.deepEqual(Object.keys(s.players).sort(),['a','edge']);assert.equal(knightArenaSide(s,'waiting'),'annex');assert.equal(knightArenaSide(s,'edge'),'arena');
  assert(!knightAttack(s,waiting,5000));cancelKnightBattle(s,'edge',5000);assert.equal(knightArenaSide(s,'edge'),'arena','withdrawal cannot reopen a running duel gate');
  assert.equal(knightArenaSide(s,'late arrival'),'annex');cancelKnightBattle(s,'a',5001);assert.equal(knightArenaSide(s,'edge'),undefined);assert.equal(knightArenaSide(s,'waiting'),undefined);
+});
+
+test('only players who have crossed the gate join, even if others stand or fly right at the threshold',()=>{
+ const owner=actor(),people=[owner];
+ for(const height of [0,5])for(const along of [META_KNIGHT_ANNEX.gate-.1,META_KNIGHT_ANNEX.gate,META_KNIGHT_ANNEX.gate+.1,56,64]){
+  const p=knightAnnexPoint(0,along);people.push({...actor(`${height}:${along}`),p:[p.x,height,p.z]});
+ }
+ const s=startKnightBattle(people,'a',1000)!;
+ assert.deepEqual(Object.keys(s.players),['a','0:41.9','5:41.9']);
+ for(const person of people.slice(1))if(!s.players[person.id]){assert.equal(knightArenaSide(s,person.id),'annex');person.p=[0,0,-2];assert(!knightAttack(s,person,5000));}
+ advanceKnightBattle(s,people,5000);assert.deepEqual(Object.keys(s.players),['a','0:41.9','5:41.9'],'moving after the start cannot enroll a spectator');
 });
 
 test('both forward dashes pass through every arena edge target without rotating the locked line or stopping short',()=>{

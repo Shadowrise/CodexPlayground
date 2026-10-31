@@ -64,7 +64,7 @@ export class InteractionOutline {
           this.group.add(mesh);this.parts.push({source:transform,instanceSource:object instanceof T.InstancedMesh?object:undefined,instances:object instanceof T.InstancedMesh?selected:undefined,mesh});
         };
         target.root.traverseVisible(object=>{
-          if(object instanceof T.BatchedMesh){for(const source of scenerySources(object)){let visible=true;for(let p:T.Object3D|null=source.visibility;p;p=p.parent)if(!p.visible){visible=false;break;}if(visible)collect(source.mesh,source.visibility);}}
+          if(object instanceof T.Mesh&&scenerySources(object).length){for(const source of scenerySources(object)){let visible=true;for(let p:T.Object3D|null=source.visibility;p;p=p.parent)if(!p.visible){visible=false;break;}if(visible)collect(source.mesh,source.visibility);}}
           else if(object instanceof T.Mesh)collect(object);
         });
       }

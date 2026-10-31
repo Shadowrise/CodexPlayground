@@ -7,7 +7,7 @@ export type CosmicStage=typeof COSMIC_SEQUENCE[number][0]|'cosmic-spin-warn'|'co
 type State={phase:number;stage:string;since:number;until:number;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall};
 export type CosmicLaunch={at:number;players:Record<string,{from:[number,number,number];angle:number}>};
 export function cosmicControlsLocked(s:State|undefined){return s?.phase===4&&['cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage);}
-export function cosmicCombat(s:State|undefined){return s?.phase===4&&(['cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-hit','cosmic-recover'].includes(s.stage)||s.stage.startsWith('cosmic-meteor-')||s.stage.startsWith('cosmic-star-')||s.stage.startsWith('cosmic-planet-'));}
+export function cosmicCombat(s:State|undefined){return s?.phase===4&&(['cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-hit','cosmic-recover'].includes(s.stage)||s.stage.startsWith('cosmic-meteor-')||s.stage.startsWith('cosmic-star-')||s.stage.startsWith('cosmic-planet-')||s.stage.startsWith('duet-'));}
 export function cosmicOpening(s:State|undefined){return s?.phase===4&&s.stage==='cosmic-open';}
 /** The electrical front reaches each player before a timed, outward recoil. */
 export function cosmicPlayerPush(s:(State&{cosmicLaunch?:CosmicLaunch})|undefined,id:string,now:number){
