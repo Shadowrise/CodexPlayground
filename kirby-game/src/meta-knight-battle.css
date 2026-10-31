@@ -9,6 +9,7 @@
 .knight-health-phase[data-state=current] .knight-health-hit[data-filled=true]{border-color:#e8d1ff;background:linear-gradient(180deg,#edd6ff,#ad7df4);box-shadow:0 0 5px #bb89ef40}
 .knight-health-phase[data-state=completed] .knight-health-hit{background:#241e33;border-color:#8673942e}
 .knight-hint{font-size:13px;margin:3px 0 0;color:#f0e8ff;min-height:2.8em}
+#knight-battle-hud>#action-hint{position:static;transform:none;box-sizing:border-box;width:fit-content;max-width:100%;margin:6px auto 0;padding:8px 14px;font-size:13px}
 body.in-meta-knight-arena #cosmic-arena-caption{display:none}body.in-meta-knight-arena #character-unlock{z-index:80}
 body.in-meta-knight-arena #action-hint[data-hold=true]{background:linear-gradient(90deg,#a24f78 var(--interaction-progress,0%),#24203c var(--interaction-progress,0%));border-color:#a88ce2;color:#f7f0ff}
 @media(max-width:600px){#knight-battle-hud{top:12px;left:80px;transform:none;width:calc(100vw - 96px);max-width:440px}.knight-battle-top{flex-wrap:wrap;justify-content:center;gap:2px 8px}.knight-battle-top strong{font-size:14px}.knight-battle-top span{font-size:11px}.knight-hint{font-size:12px}}

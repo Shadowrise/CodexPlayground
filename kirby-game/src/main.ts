@@ -559,6 +559,7 @@ const balloons=new Balloons((kind,position)=>{if(character){const gain=Math.max(
 const navigationHud=document.createElement('div');navigationHud.id='navigation-hud';document.body.append(navigationHud);
 const routePanel=document.createElement('div');routePanel.className='panel route-panel';
 const rideHint=document.createElement('div');rideHint.id='action-hint';rideHint.className='panel interaction-hint';rideHint.setAttribute('role','status');navigationHud.append(rideHint);
+const placeInteractionHint=(host:HTMLElement=navigationHud)=>{if(rideHint.parentElement!==host)host.append(rideHint);};
 document.querySelector('.tasks-panel')!.before(routePanel);
 const destinations:Destination[]=[
  {id:'meta-knight-portal',name:'Портал Метакнайта',x:META_KNIGHT_PORTAL.x,z:META_KNIGHT_PORTAL.z+META_KNIGHT_PORTAL.returnOffset},
@@ -1037,7 +1038,7 @@ function returnToMenu(){
   soloPortalOverride=undefined;
   soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
-  interactionOutline.update(undefined);rideHint.textContent='';touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
+  interactionOutline.update(undefined);rideHint.textContent='';placeInteractionHint();touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
   settingsToggle.setAttribute('aria-expanded','false');audioPanel.hidden=controlsPanel.hidden=true;onlineRoster.hidden=true;onlineRoster.textContent='';
   saveButton.hidden=saveMessage.hidden=false;saveMessage.textContent='';taskList.update(new Set());
   viewScale=1;cameraTarget.set(0,.9,0);followCamera.reset(0);menuRepeat=0;
@@ -1171,7 +1172,9 @@ renderer.setAnimationLoop((time: number) => {
       cosmicArena.update(dt,time*.001,character,{scheme:usingPad?'gamepad':usingTouch?'touch':'keyboard',cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       if(character.attackHit){if(network)network.event({type:'hit'});else cosmicArena.pushOpponents();character.attackHit=false;}
       const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'Q');
-      setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
+      setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);
+      placeInteractionHint(!usingTouch&&cosmicArena.engaged?document.getElementById('knight-battle-hud')??navigationHud:navigationHud);
+      touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
       sounds.update(dt,character,[],followCamera.azimuth);
     }
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
@@ -1258,7 +1261,7 @@ renderer.setAnimationLoop((time: number) => {
     const interaction=occupied?'Занято другим игроком':availableInteraction?.text;
     touch?.setInteraction(!occupied&&interaction?.includes('E —')?interaction:undefined);
     interactionOutline.update(playing && !settingsOpen && !wheelUsed && !occupied ? availableInteraction?.target : undefined);
-    setText(rideHint,interaction ? t(interaction).replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —') : (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
+    placeInteractionHint();setText(rideHint,interaction ? t(interaction).replace('E —',usingPad?'Y —':usingTouch?t('Действие —'):'E —') : (maze.contains(character.actor.position,5) ? (character.starRemaining>0?`★ Скорость и прыжок ×2: ${Math.ceil(character.starRemaining)} с`:character.starCooldown>0?`★ Новая звезда через ${Math.ceil(character.starCooldown)} с`:'Найди звезду в глубине лабиринта · здесь только пешком') : ''));
     const movingOrTurning = previousX !== character.actor.position.x || previousZ !== character.actor.position.z || previousYaw !== character.yaw;
 
     followCamera.update(dt, character.yaw, movingOrTurning,
