@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { deadZone, devices, GamepadInput, INPUT_STORAGE, stickSteering, type Pad } from '../src/gamepad';
+import { deadZone, devices, GamepadInput, INPUT_STORAGE, stickSteering, gamepadCameraZoom, type Pad } from '../src/gamepad';
+
+test('triggers zoom during helper abilities while the D-pad retains its combat bindings',()=>{
+ assert.equal(gamepadCameraZoom(new Set([12]),true),0);assert.equal(gamepadCameraZoom(new Set([13]),true),0);
+ for(const helper of [false,true]){assert.equal(gamepadCameraZoom(new Set([7]),helper),-1);assert.equal(gamepadCameraZoom(new Set([6]),helper),1);assert.equal(gamepadCameraZoom(new Set([6,7]),helper),0);}
+ assert.equal(gamepadCameraZoom(new Set([12])),-1);assert.equal(gamepadCameraZoom(new Set([13])),1);assert.equal(gamepadCameraZoom(new Set([7,12])),-1);
+});
 
 test('forward corridor ignores sideways drift but intentional tilt steers proportionally',()=>{
   for(const y of [-1,1])for(const x of [-.5,-.3,0,.3,.5])assert.equal(Math.abs(stickSteering(deadZone(x),deadZone(y))),0);

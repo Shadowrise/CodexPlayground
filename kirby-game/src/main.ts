@@ -123,7 +123,7 @@ import {touchMotion,wantsTouchControls} from './touch-input';
 import {TURN_RATE} from './movement-input';
 import {createFullscreenControls} from './fullscreen';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
-import { createGamepadInput, stickSteering } from './gamepad';
+import { createGamepadInput, stickSteering, gamepadCameraZoom } from './gamepad';
 import {MetaKnightPlayerDashHud} from './meta-knight-player-dash-hud';
 const knightDashHud=new MetaKnightPlayerDashHud();
 const gamepad = createGamepadInput();
@@ -1148,7 +1148,7 @@ renderer.setAnimationLoop((time: number) => {
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
-    if(!cosmicArena.helperMode&&!cosmicArena.choosingSide)followCamera.zoom((Number(pad.held.has(13))-Number(pad.held.has(12)))*dt*600);
+    if(!cosmicArena.choosingSide)followCamera.zoom(gamepadCameraZoom(pad.held,cosmicArena.helperMode)*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;

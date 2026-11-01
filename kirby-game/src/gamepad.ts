@@ -5,6 +5,10 @@ export const INPUT_STORAGE = 'kirby-input-device-v1';
 export function deadZone(value: number, threshold = .2) {
   return Math.abs(value) <= threshold ? 0 : Math.sign(value) * Math.min(1, (Math.abs(value)-threshold)/(1-threshold));
 }
+/** Triggers always zoom; the helper's D-pad remains reserved for abilities. */
+export function gamepadCameraZoom(held:ReadonlySet<number>,helper=false){
+ return Math.max(-1,Math.min(1,Number(held.has(6))-Number(held.has(7))+(helper?0:Number(held.has(13))-Number(held.has(12)))));
+}
 /** Wider straight-ahead corridor while moving; output ramps up without a jump. */
 export function stickSteering(x:number,y:number) {
   const threshold=Math.max(.35,Math.abs(y)*.5);
