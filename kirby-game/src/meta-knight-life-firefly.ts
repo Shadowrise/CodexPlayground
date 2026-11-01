@@ -2,6 +2,7 @@ import {knightBattleActive,knightPosition,type KnightBattle,type KnightPoint} fr
 import {META_KNIGHT_ARENA as ARENA} from './meta-knight-arena-site';
 import {COSMIC} from './meta-knight-cosmic';
 import {COSMIC_REFUGE,refugeActive,refugeStar,refugePlanet} from './meta-knight-cosmic-refuge';
+import {HELPER} from './meta-knight-helper';
 
 export const LIFE_FIREFLY={speed:.005,height:1.35,clearance:2,detour:14,hitRadius:1.1,dropMs:1100} as const;
 export type KnightLifeFirefly={phase:1|2|3|4;at:number;angle:number;color:number;side:1|-1;hit?:{at:number;by:string;point:KnightPoint;yaw:number}};
@@ -39,14 +40,18 @@ export function knightLifeFireflyPoint(s:KnightBattle,now:number):KnightPoint|un
 }
 /** Called once for a consumed melee press, by the same rules on client and Worker. */
 export function hitKnightLifeFirefly(s:KnightBattle,id:string,p:KnightPoint,yaw:number,now:number,reach:number){
- if(s.players[id]?.side==='boss')return false;
+ const player=s.players[id];if(!player||player.withdrawn||player.hp<=0||player.side==='boss'&&!player.helper)return false;
  const point=knightLifeFireflyPoint(s,now);if(!point)return false;
  const dx=point[0]-p[0],dz=point[2]-p[2];
  if(Math.hypot(dx,dz)>reach+LIFE_FIREFLY.hitRadius||Math.abs(point[1]-p[1])>3.2||Math.cos(Math.atan2(dx,dz)-yaw)<=-.15)return false;
  const next=knightLifeFireflyPoint(s,now+5)??point;
  s.lifeFirefly!.hit={at:now,by:id,point,yaw:Math.atan2(next[0]-point[0],next[2]-point[2])};
- const hp=(s.teamHp??s.players[id].hp)+1;
- if(s.teamHp!==undefined)s.teamHp=hp;
- for(const [key,player] of Object.entries(s.players))if(player.side!=='boss')player.hp=hp;
+ if(player.side==='boss'){
+  player.hp++;player.helper!.bonusHearts=Math.max(player.helper!.bonusHearts??0,player.hp-HELPER.hearts);
+ }else{
+  const hp=(s.teamHp??player.hp)+1;
+  if(s.teamHp!==undefined)s.teamHp=hp;
+  for(const player of Object.values(s.players))if(player.side!=='boss')player.hp=hp;
+ }
  s.revision++;return true;
 }

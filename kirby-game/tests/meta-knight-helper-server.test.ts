@@ -11,6 +11,7 @@ import {KIRBY_VARIANTS} from '../src/variant-palette';
 import {setKnightPhase} from '../src/meta-knight-battle';
 import {knightCosmicAlly} from '../src/meta-knight-cosmic-ally';
 import {knightDefeatPose} from '../src/meta-knight-defeat';
+import {spawnKnightLifeFirefly,knightLifeFireflyPoint} from '../src/meta-knight-life-firefly';
 
 test('actual Worker owns side selection, cast locks, persistence, independent hearts and rewards',async()=>{
  const source=(await readFile(new URL('../../game-server/src/index.ts',import.meta.url),'utf8'))
@@ -40,6 +41,10 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightBattle.stage,'intro','a wakeup immediately after confirming must not restore the old choice screen');
   const id=helper.data.id,s=room.room.knightBattle;assert.equal(s.players[id].side,'boss');assert.equal(s.players[id].hp,5);assert.equal(s.players[hero.data.id].hp,56);assert.equal(s.teamHp,56);
   now+=3500;send(hero,actor());Object.assign(s,{stage:'rest',until:now+1e9});
+  const sharedHp=s.teamHp;spawnKnightLifeFirefly(s,now-4000);const firefly=knightLifeFireflyPoint(s,now+400)!;
+  const collecting=actor(2000+firefly[0],firefly[2]-2);send(helper,collecting,[{type:'knight',action:'attack'}]);send(helper,collecting);
+  assert.equal(s.lifeFirefly.hit?.by,id);assert.equal(s.players[id].hp,6);assert.equal(s.teamHp,sharedHp,'a helper collects a personal heart without healing opponents');
+  send(helper,collecting,[{type:'knight',action:'attack'}]);assert.equal(s.players[id].hp,6,'repeated packets cannot collect the same firefly twice');
   const beforePush=[s.players[id].hp,s.players[hero.data.id].hp];send(hero,actor(2012,-2));send(helper,actor(2012,0));send(hero,actor(2012,-2),[{type:'hit'}]);assert(helper.messages.some(m=>m.type==='hit'&&m.target===id),'players can push the opposing playable Meta Knight');
   send(hero,actor(2012,2));send(helper,actor(2012,0),[{type:'hit'}]);assert(hero.messages.some(m=>m.type==='hit'&&m.target===hero.data.id),'the helper can push players in return');assert.deepEqual([s.players[id].hp,s.players[hero.data.id].hp],beforePush,'ordinary pushes do not consume hearts');
 
@@ -47,14 +52,14 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   assert.equal(s.players[id].helper.cast.ability,2);assert.equal(s.players[id].side,'boss');assert.equal(room.room.knightSides[id],'boss');
   send(helper,actor(2012,0),[{type:'knight',action:'ability',ability:4}]);assert.equal(s.duet.stage,'queued');assert.equal(s.players[id].helper.cooldowns[3],now+90000);
   const cooldowns=structuredClone(s.players[id].helper.cooldowns);send(helper,actor(2038,0));assert.equal(helper.data.actor.p[0],2012,'the server rejects movement during wind-up');
-  await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightSides[id],'boss');assert.equal(room.room.knightBattle.duet.stage,'queued');assert.deepEqual(room.room.knightBattle.players[id].helper.cooldowns,cooldowns);assert.equal(room.room.knightBattle.players[id].hp,5);
+  await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightSides[id],'boss');assert.equal(room.room.knightBattle.duet.stage,'queued');assert.deepEqual(room.room.knightBattle.players[id].helper.cooldowns,cooldowns);assert.equal(room.room.knightBattle.players[id].hp,6,'the collected bonus heart survives Worker hibernation');
   const resumed=room.room.knightBattle;resumed.stage='open';resumed.until=now+1e9;resumed.from=resumed.to=[12,0,0];const hp=resumed.hp;
   send(helper,actor(2012,0),[{type:'knight',action:'attack'}]);now+=1000;send(hero,actor());assert.equal(resumed.hp,hp,'ordinary Q never damages the allied boss');
   now=Math.max(now,resumed.players[id].helper.cast.recoverUntil)+100;resumed.until=now+200;send(hero,actor(1980,0));assert.equal(resumed.stage,'duet-gather');
   let guard=0;while(resumed.stage!=='duet-recover'&&guard++<20){now=resumed.until-200;send(hero,actor(1980,0));}assert(guard<20);const until=resumed.until,bossHp=resumed.hp;
   const facing=resumed.duet.yaw??0,bp=knightFormationSide(-3.3,facing),helperPoint=resumed.players[id].helper.cast.from,aimed=(p:number[],back:number)=>({...actor(2000+p[0]-Math.sin(facing)*back,p[2]-Math.cos(facing)*back),q:[0,Math.sin(facing/2),0,Math.cos(facing/2)]});
   send(hero,aimed(bp,3.7),[{type:'knight',action:'attack'}]);now+=150;send(hero,aimed(bp,3.7));assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.stage,'duet-recover');assert.equal(resumed.until,until);
-  now+=400;send(hero,aimed(helperPoint,2),[{type:'knight',action:'attack'}]);send(hero,aimed(helperPoint,2));assert.equal(resumed.players[id].hp,4);assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.until,until);
+  now+=400;send(hero,aimed(helperPoint,2),[{type:'knight',action:'attack'}]);send(hero,aimed(helperPoint,2));assert.equal(resumed.players[id].hp,5);assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.until,until);
   resumed.stage='won';resumed.players[id].hits=10;resumed.players[hero.data.id].hits=1;send(hero,actor());
   assert(!helper.messages.some(m=>m.type==='knight-victory'));assert(hero.messages.some(m=>m.type==='knight-victory'));
   // The same authoritative Worker supports a lone knight while the other player is on the meadow.

@@ -16,7 +16,7 @@ test('side choice includes an arena containing only Meta Knights and pauses the 
  const {actors}=fixture();assert(helperChoiceAvailable(actors));delete actors[1].side;assert.equal(startKnightBattle(actors,'hero',epoch)!.stage,'side-choice');
  actors[0].metaKnight=true;assert(helperChoiceAvailable(actors));assert.equal(startKnightBattle(actors,'hero',epoch)!.players.helper.hp,5);
 });
-test('helpers have five independent hearts and are never boss targets or Q attackers',()=>{
+test('helpers start with five independent hearts and never become boss targets',()=>{
  const {s,actors,helper}=fixture(true);assert.equal(s.players.helper.hp,HELPER.hearts);assert.equal(s.teamHp,HELPER.opponentHearts);assert.equal(knightAttack(s,helper,epoch),false);
  s.teamHp=2;advanceKnightBattle(s,actors,epoch+20);assert.equal(s.players.hero.hp,2);assert.equal(s.players.helper.hp,HELPER.hearts);assert.notEqual(s.target,'helper');
 });
@@ -33,9 +33,45 @@ test('old active snapshots cap helper hearts without healing heroes',()=>{
 test('hero parries remain usable when helper attacks overlap the cosmic planet mechanic',()=>{
  const {s,helper,hero}=fixture();s.phase=4;s.stage='cosmic-planet-sweep';assert(startHelperAbility(s,helper,1,epoch));assert(knightAttack(s,hero,epoch+100));
 });
-test('shared healing cannot change helper hearts or be collected by the helper',()=>{
+test('a hero collecting shared healing cannot change helper hearts',()=>{
  const {s,actors}=fixture(true);s.players.helper.hp=3;spawnKnightLifeFirefly(s,epoch);const point=knightLifeFireflyPoint(s,epoch+500)!;
- assert(!hitKnightLifeFirefly(s,'helper',point,0,epoch+500,4.8));assert(hitKnightLifeFirefly(s,'hero',point,0,epoch+500,4.8));assert.equal(s.players.helper.hp,3);assert.equal(s.teamHp,HELPER.opponentHearts+1);advanceKnightBattle(s,actors,epoch+500);assert.equal(s.players.helper.hp,3);
+ assert(hitKnightLifeFirefly(s,'hero',point,0,epoch+500,4.8));assert.equal(s.players.helper.hp,3);assert.equal(s.teamHp,HELPER.opponentHearts+1);advanceKnightBattle(s,actors,epoch+500);assert.equal(s.players.helper.hp,3);
+});
+
+test('a helper can melee the firefly in every phase and keep one personal heart after restoring the snapshot',()=>{
+ for(const phase of [1,2,3,4] as const)for(const hp of [3,5]){
+  const {s,actors,helper,h}=fixture(true),height=phase===4?180:0;
+  Object.assign(s,{phase,hp:phase===3?3:12,from:[0,height,0],to:[0,height,0]});h.phase=phase;
+  for(const a of actors)a.p[1]=height;
+  actors.push({...helper,id:'other-helper',p:[-30,height,0]});s.players['other-helper']={...s.players.helper,helper:{cooldowns:[0,0,0],phase}};
+  s.players.helper.hp=hp;spawnKnightLifeFirefly(s,epoch);
+  const point=knightLifeFireflyPoint(s,epoch+660)!;helper.p=[point[0],height,point[2]-2];helper.yaw=0;
+  assert(knightAttack(s,helper,epoch+500));assert(!knightAttack(s,helper,epoch+550),'repeated packets respect the attack cooldown');advanceKnightBattle(s,actors,epoch+660);
+  assert.equal(s.lifeFirefly!.hit?.by,'helper');assert.equal(s.players.helper.hp,hp+1);assert.equal(s.players['other-helper'].hp,5);
+  assert.equal(s.teamHp,HELPER.opponentHearts);assert.equal(s.players.hero.hp,HELPER.opponentHearts);assert.equal(s.players.friend.hp,HELPER.opponentHearts);assert.equal(s.hp,phase===3?3:12);
+  const restored=JSON.parse(JSON.stringify(s));advanceKnightBattle(restored,actors,epoch+800);advanceKnightBattle(restored,actors,epoch+1200);
+  assert.equal(restored.players.helper.hp,hp+1,'wakeup neither removes nor duplicates the collected heart');assert(!hitKnightLifeFirefly(restored,'hero',helper.p,0,epoch+1200,4.8));
+ }
+});
+
+test('helper firefly strikes require a fresh, available melee attack in range and facing the carrier',()=>{
+ for(const mode of ['dead','withdrawn','unavailable','stunned','cast','stale','facing','distance','height'] as const){
+  const {s,actors,helper,h}=fixture();spawnKnightLifeFirefly(s,epoch);const point=knightLifeFireflyPoint(s,epoch+660)!;
+  helper.p=[point[0],0,point[2]-2];helper.yaw=0;
+  if(mode==='dead')s.players.helper.hp=0;if(mode==='withdrawn')s.players.helper.withdrawn=true;if(mode==='unavailable')helper.available=false;
+  if(mode==='stunned'){h.stunnedUntil=epoch+2000;h.anchor=[...helper.p];}if(mode==='cast')assert(startHelperAbility(s,helper,2,epoch+400));
+  if(mode==='facing')helper.yaw=Math.PI;if(mode==='distance')helper.p[0]+=12;if(mode==='height')helper.p[1]=10;
+  const before=s.players.helper.hp;knightAttack(s,helper,mode==='stale'?epoch:epoch+500);advanceKnightBattle(s,actors,epoch+660);
+  assert.equal(s.lifeFirefly!.hit,undefined,mode);assert.equal(s.players.helper.hp,before,mode);
+ }
+});
+
+test('a helper melee press for the firefly cannot damage the allied boss or break its shield crystal',()=>{
+ for(const stage of ['open','shield'] as const){
+  const {s,actors,helper}=fixture();s.stage=stage;if(stage==='shield'){s.phase=3;s.hp=3;s.activeCrystal=0;helper.p=[0,0,40];helper.yaw=0;}else{helper.p=[0,0,3];helper.yaw=Math.PI;}
+  spawnKnightLifeFirefly(s,epoch);const hp=s.hp;assert(knightAttack(s,helper,epoch+500));advanceKnightBattle(s,actors,epoch+660);
+  assert.equal(s.hp,hp);assert.equal(s.activeCrystal,stage==='shield'?0:undefined);assert.equal(s.players.helper.hits,0);
+ }
 });
 test('casts lock movement, use independent cooldowns, and cannot be queued or spoofed',()=>{
  const {s,helper,h,hero}=fixture();assert(!startHelperAbility(s,hero,1,epoch));assert(!startHelperAbility(s,helper,5 as 1,epoch));assert(startHelperAbility(s,helper,2,epoch));

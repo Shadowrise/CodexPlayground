@@ -4,8 +4,8 @@ import type {KnightBump} from './meta-knight-opponents-contact';
 import {prepareKnightDefeat,knightDefeatPose,type KnightDefeat} from './meta-knight-defeat';
 import {OPPONENTS,createKnightOpponents,advanceKnightOpponents,type KnightOpponent} from './meta-knight-opponents';
 import {beginKnightDuet,duetActive,duetBossPosition,advanceKnightDuetStep,previewKnightDuetWave,endKnightDuet,duetOwnerAvailable,duetDanger,knightDuetOpening,type KnightDuet,type DuetStage} from './meta-knight-duet';
-import {prepareKnightCosmicAllies,prepareKnightPlanetAllies,knightPlanetAssistStage} from './meta-knight-cosmic-ally';
-import {HELPER,cancelHelperCast,helperShotExitAt,helperChoiceAvailable,helperPosition,helperProjectile,helperOrbs,helperVulnerable,helperSegmentDistance,type KnightHelper,type KnightSide} from './meta-knight-helper';
+import {prepareKnightCosmicAllies,prepareKnightPlanetAllies,knightPlanetAssistStage,knightCosmicAlly} from './meta-knight-cosmic-ally';
+import {HELPER,cancelHelperCast,helperShotExitAt,helperChoiceAvailable,helperPosition,helperLocked,helperProjectile,helperOrbs,helperVulnerable,helperSegmentDistance,type KnightHelper,type KnightSide} from './meta-knight-helper';
 /** Shared encounter rules. Coordinates are local to the cosmic arena; time is ms. */
 import {META_KNIGHT_ARENA,insideKnightFightingArea,type KnightArenaSide} from './meta-knight-arena-site';
 import {STAR_SEQUENCE,starSequence,starPosition,starDanger,STAR_ASSAULT,planStarRoute,lockStarFlight,lockStarCross,crossWarningDuration} from './meta-knight-star-assault';
@@ -130,7 +130,8 @@ function damageRefugePlayer(s:KnightBattle,id:string,now:number,protectedPlayer?
 }
 /** One fresh press; holding and repeated packets cannot keep a reflection active. */
 export function knightAttack(s:KnightBattle|undefined,actor:KnightActor,now:number){
- const p=s?.players[actor.id];if(!s||!p||p.side==='boss'||p.hp<=0||p.withdrawn||!actor.available||cosmicStage(s)&&!(cosmicCombat(s)&&(knightLifeFireflyPoint(s,now)||Object.values(s.players).some(p=>p.side==='boss'&&p.hp>0&&!p.withdrawn)))&&!['cosmic-flight','cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-recover','cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-gap','cosmic-meteor-settle','cosmic-star-open'].includes(s.stage)||['won','lost','cancelled','transition','intro','side-choice'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
+ const p=s?.players[actor.id];if(!s||!p||p.hp<=0||p.withdrawn||!actor.available||cosmicStage(s)&&!(cosmicCombat(s)&&(knightLifeFireflyPoint(s,now)||Object.values(s.players).some(p=>p.side==='boss'&&p.hp>0&&!p.withdrawn)))&&!['cosmic-flight','cosmic-spin-warn','cosmic-spin','cosmic-open','cosmic-recover','cosmic-meteor-draw','cosmic-meteor-cast','cosmic-meteor-gap','cosmic-meteor-settle','cosmic-star-open'].includes(s.stage)||['won','lost','cancelled','transition','intro','side-choice'].includes(s.stage)||now-p.attackAt<KNIGHT.attackCooldown)return false;
+ if(p.side==='boss'&&(!p.helper||helperLocked(p.helper,now)||knightCosmicAlly(s,actor.id,now)||!knightLifeFireflyPoint(s,now)))return false;
  p.attackAt=now;return true;
 }
 /** Leaving the duel never teleports the player or grants a victory. Friends can continue. */
@@ -343,7 +344,7 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
  // Preserve destroyed crystals when a saved four-hit third phase resumes.
  if(s.phase===3){const broken=((s.brokenCrystals??0)&255).toString(2).replace(/0/g,'').length,remaining=Math.max(0,KNIGHT_PHASE_HITS[3]-broken);if(s.hp>remaining){s.hp=remaining;s.revision++;if(!remaining&&s.stage!=='crystal-break')setKnightPhase(s,4,actors,now);}}
  if(s.teamHp===undefined&&Object.entries(s.players).filter(([,p])=>p.side!=='boss').length>1){s.teamHp=Math.min(...Object.values(s.players).filter(p=>p.side!=='boss').map(p=>p.hp));s.revision++;}
- for(const p of Object.values(s.players))if(p.side==='boss'&&p.hp>HELPER.hearts){p.hp=HELPER.hearts;s.revision++;}
+ for(const p of Object.values(s.players))if(p.side==='boss'&&p.hp>HELPER.hearts+(p.helper?.bonusHearts??0)){p.hp=HELPER.hearts+(p.helper?.bonusHearts??0);s.revision++;}
  // Keep player health as a projection for movement, defeat poses and older clients.
  if(s.teamHp!==undefined)for(const [id,p] of Object.entries(s.players))if(p.side!=='boss'&&p.hp!==s.teamHp){p.hp=s.teamHp;s.revision++;}
  if(s.impactWave&&!knightPressureWave(s,now)&&now>=s.impactWave.at){delete s.impactWave;s.revision++;}
@@ -371,11 +372,15 @@ export function advanceKnightBattle(s:KnightBattle,actors:KnightActor[],now:numb
  }
  if(!living(s,actors).length){enter(s,'lost',1e12,now,actors);return true;}
  // A counterattack must not skip another fighter's independent wave contact.
- for(const a of alive){
+ for(const a of actors){
   const p=s.players[a.id];
-  if(p.hp<=0)continue;
+  if(!a.available||!p||p.hp<=0||p.withdrawn)continue;
   if(p.handled<p.attackAt&&now>=p.attackAt+140){
    p.handled=p.attackAt;const pos=knightPosition(s,now);
+   if(p.side==='boss'){
+    if(p.helper&&!helperLocked(p.helper,now)&&!knightCosmicAlly(s,a.id,now)&&now-p.attackAt<550&&hitKnightLifeFirefly(s,a.id,a.p,a.yaw,now,KNIGHT.meleeReach))return true;
+    continue;
+   }
    if(now-p.attackAt<550){for(const opponent of actors){const victim=s.players[opponent.id],h=victim?.helper;if(!h||victim.withdrawn||victim.hp<=0||!helperVulnerable(h,now))continue;const point=helperPosition(h,now)??opponent.p;if(distance(a.p,point)<KNIGHT.meleeReach&&Math.abs(a.p[1]-point[1])<2.4&&Math.cos(angle(a.p,point)-a.yaw)>-.15){h.cast!.hit=true;damageHelper(s,opponent,now);break;}}}
    if(now-p.attackAt<550&&hitKnightLifeFirefly(s,a.id,a.p,a.yaw,now,KNIGHT.meleeReach))return true;
    if(s.stage==='shield'&&s.activeCrystal!==undefined&&now-p.attackAt<550){
