@@ -54,6 +54,12 @@ the world updates and room changes described above, without extra periodic reque
 
 ## Shared rules and synchronization
 
+Meta Knight opponents are selected when the duel starts. A captured human on the
+player team suppresses AI opponents and retains the original eight shared player
+hearts and five personal helper hearts. If humans join only the boss team, the
+duel creates three AI opponents sharing 48 hearts. Spectators and meadow players
+do not count as opposing fighters; leaving does not add bots or refill lives.
+
 The same controllers, NPC AI, fruit pickup/speed boosts, combat, score rules, flight,
 and attractions run offline and online. One visible client is elected to simulate
 NPCs and the shared world; the server transfers that role on disconnect or when

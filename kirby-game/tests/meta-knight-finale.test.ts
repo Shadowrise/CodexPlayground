@@ -7,16 +7,16 @@ import {HELPER,startHelperAbility} from '../src/meta-knight-helper';
 import {constrainKnightPlanetCamera} from '../src/meta-knight-planet-camera';
 import {refugePlanet,COSMIC_REFUGE} from '../src/meta-knight-cosmic-refuge';
 
-function fixture(phase:1|4=4){
- const actors:KnightActor[]=[{id:'helper',p:[0,0,-2],yaw:0,available:true,metaKnight:true,side:'boss'},{id:'human',p:[20,0,10],yaw:1,available:true}],s=startKnightBattle(actors,'helper',100000)!;
- s.phase=phase;if(phase===4)s.cosmicRefuge={at:100000,angle:0,world:0,contacts:{}};const y=phase===4?180:0;actors.forEach(a=>a.p[1]=y);Object.values(s.opponents!).forEach((a,i)=>{a.p=[-20+i*10,y,20];a.goal=[...a.p];});Object.assign(s,{stage:phase===4?'cosmic-star-stun':'rest',from:[0,y,0],to:[0,y,0],since:101000,checked:101000,until:102000});return {s,actors};
+function fixture(phase:1|4=4,human=true){
+ const actors:KnightActor[]=[{id:'helper',p:[0,0,-2],yaw:0,available:true,metaKnight:true,side:'boss'}];if(human)actors.push({id:'human',p:[20,0,10],yaw:1,available:true});const s=startKnightBattle(actors,'helper',100000)!;
+ s.phase=phase;if(phase===4)s.cosmicRefuge={at:100000,angle:0,world:0,contacts:{}};const y=phase===4?180:0;actors.forEach(a=>a.p[1]=y);Object.values(s.opponents??{}).forEach((a,i)=>{a.p=[-20+i*10,y,20];a.goal=[...a.p];});Object.assign(s,{stage:phase===4?'cosmic-star-stun':'rest',from:[0,y,0],to:[0,y,0],since:101000,checked:101000,until:102000});return {s,actors};
 }
-for(const phase of [1,4] as const)for(const won of [false,true])test(`phase ${phase}: every fighter lands, then ${won?'celebrates repeatedly':'sits dazed'} until finish/retry`,()=>{
- const {s,actors}=fixture(phase);
+for(const phase of [1,4] as const)for(const won of [false,true])for(const human of [false,true])test(`phase ${phase}, ${human?'human':'AI'} opposition: every fighter lands, then ${won?'celebrates repeatedly':'sits dazed'} until finish/retry`,()=>{
+ const {s,actors}=fixture(phase,human);
  if(won&&phase===4){s.hp=0;advanceKnightBattle(s,actors,102000);assert.equal(s.stage,'cosmic-descent');}
  else if(won){s.stage='won';prepareKnightFightersFinale(s,actors,102000);}
  else{s.teamHp=0;advanceKnightBattle(s,actors,101100);assert.equal(s.stage,'lost');}
- const f=s.fightersFinale!;assert(f);assert.equal(Object.keys(f.actors).length,4,'three AI plus a human');assert(!f.actors.helper);
+ const f=s.fightersFinale!;assert(f);assert.equal(Object.keys(f.actors).length,human?1:3);assert(!f.actors.helper);
  for(const id of Object.keys(f.actors)){
   const first=knightFighterFinale(s,id,f.at)!;assert.equal(first.won,won);assert.deepEqual(first.p,f.actors[id].from);
   if(phase===4){const middle=knightFighterFinale(s,id,(f.at+f.landAt)/2)!;assert(middle.p[1]>0&&middle.p[1]<180);assert(!middle.landed);assert(!middle.joy);if(won)assert.equal(middle.p[1],cosmicDescent(s,(f.at+f.landAt)/2)!.height,'the returning fighter stays at the camera and boss descent altitude');}
@@ -24,8 +24,8 @@ for(const phase of [1,4] as const)for(const won of [false,true])test(`phase ${ph
   assert.deepEqual(knightFighterFinale(structuredClone(s),id,f.landAt+777),knightFighterFinale(s,id,f.landAt+777));
   const poses=Array.from({length:70},(_,i)=>knightFighterFinale(s,id,f.landAt+i*200)!);assert(poses.every(p=>p.p[1]===0));assert.equal(poses.some(p=>p.joy),won);assert(poses.some(p=>!p.joy));
  }
- advanceKnightBattle(s,actors,f.landAt+14000);for(const a of Object.values(s.opponents!)){assert.equal(a.p[1],0);assert.equal(a.moving,false);}
- cancelKnightBattle(s,'human',f.landAt+15000);assert.equal(knightFighterFinale(s,'human',f.landAt+15000),undefined);actors.forEach(a=>a.p[1]=0);const next=startKnightBattle(actors,'helper',f.landAt+16000)!;assert.equal(next.fightersFinale,undefined);
+ advanceKnightBattle(s,actors,f.landAt+14000);for(const a of Object.values(s.opponents??{})){assert.equal(a.p[1],0);assert.equal(a.moving,false);}
+ cancelKnightBattle(s,human?'human':'helper',f.landAt+15000);assert.equal(knightFighterFinale(s,human?'human':'helper',f.landAt+15000),undefined);actors.forEach(a=>a.p[1]=0);const next=startKnightBattle(actors,'helper',f.landAt+16000)!;assert.equal(next.fightersFinale,undefined);
 });
 for(const ability of [1,2,3] as const)test(`unreleased ability ${ability} is refunded on a phase transition; a released ability keeps its cooldown`,()=>{
  for(const released of [false,true]){

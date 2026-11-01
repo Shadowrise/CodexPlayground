@@ -109,7 +109,8 @@ export function startKnightBattle(actors:KnightActor[],owner:string,now:number):
  if(!a)return;
  const eligible=helperChoiceAvailable(actors),choosing=eligible&&actors.some(a=>a.available&&insideKnightFightingArea(a.p)&&a.metaKnight&&!a.side);
  const assisted=eligible&&actors.some(a=>a.available&&insideKnightFightingArea(a.p)&&a.metaKnight&&a.side==='boss'),partyHearts=assisted?HELPER.opponentHearts:KNIGHT.hearts;
- const opponents=!choosing&&assisted?createKnightOpponents(now,actors.map(a=>a.variant)):undefined;
+ const humanOpposition=actors.some(a=>a.available&&insideKnightFightingArea(a.p)&&!(a.metaKnight&&a.side==='boss'));
+ const opponents=!choosing&&assisted&&!humanOpposition?createKnightOpponents(now,actors.map(a=>a.variant)):undefined;
  const players:KnightBattle['players']={};for(const actor of [...actors,...Object.values(opponents??{})])if(actor.available&&insideKnightFightingArea(actor.p))players[actor.id]={hp:opponents?.[actor.id]?OPPONENTS.hearts:eligible&&actor.metaKnight&&actor.side==='boss'?HELPER.hearts:partyHearts,invulnerable:0,attackAt:-1e9,handled:-1e9,hits:0,reflects:0,...(eligible&&actor.metaKnight&&actor.side==='boss'?{side:'boss' as const,helper:{cooldowns:[0,0,0] as [number,number,number],phase:1}}:{})};
  const humanHeroes=Object.entries(players).filter(([id,p])=>p.side!=='boss'&&!opponents?.[id]).length,pool=opponents?Object.keys(opponents).length*OPPONENTS.hearts+(humanHeroes?partyHearts:0):partyHearts;
  if(opponents)for(const player of Object.values(players))if(player.side!=='boss')player.hp=pool;

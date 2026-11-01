@@ -39,7 +39,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   send(hero,actor(),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.stage,'side-choice');send(hero,actor(),[{type:'knight',action:'side',side:'boss'}]);assert.equal(room.room.knightSides[waitingId],undefined,'Kirby cannot choose the boss team');
   send(helper,actor(2012,0),[{type:'knight',action:'side',side:'boss'}]);send(hero,actor(),[{type:'knight',action:'start'}]);
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightBattle.stage,'intro','a wakeup immediately after confirming must not restore the old choice screen');
-  const id=helper.data.id,s=room.room.knightBattle;assert.equal(s.players[id].side,'boss');assert.equal(s.players[id].hp,5);assert.equal(s.players[hero.data.id].hp,56);assert.equal(s.teamHp,56);
+  const id=helper.data.id,s=room.room.knightBattle;assert.equal(s.players[id].side,'boss');assert.equal(s.players[id].hp,5);assert.equal(s.players[hero.data.id].hp,8);assert.equal(s.teamHp,undefined);assert.equal(s.teamMaxHp,8);assert.equal(s.opponents,undefined,'the network duel has a real human opponent');
   now+=3500;send(hero,actor());Object.assign(s,{stage:'rest',until:now+1e9});
   const sharedHp=s.teamHp;spawnKnightLifeFirefly(s,now-4000);const firefly=knightLifeFireflyPoint(s,now+400)!;
   const collecting=actor(2000+firefly[0],firefly[2]-2);send(helper,collecting,[{type:'knight',action:'attack'}]);send(helper,collecting);
@@ -58,6 +58,8 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   now=Math.max(now,resumed.players[id].helper.cast.recoverUntil)+100;resumed.until=now+200;send(hero,actor(1980,0));assert.equal(resumed.stage,'duet-gather');
   let guard=0;while(resumed.stage!=='duet-recover'&&guard++<20){now=resumed.until-200;send(hero,actor(1980,0));}assert(guard<20);const until=resumed.until,bossHp=resumed.hp;
   const facing=resumed.duet.yaw??0,bp=knightFormationSide(-3.3,facing),helperPoint=resumed.players[id].helper.cast.from,aimed=(p:number[],back:number)=>({...actor(2000+p[0]-Math.sin(facing)*back,p[2]-Math.cos(facing)*back),q:[0,Math.sin(facing/2),0,Math.cos(facing/2)]});
+  // With one opponent the pair faces that player; approach the opening around the solid boss.
+  send(hero,actor(2020,-20));send(hero,aimed(bp,18));
   send(hero,aimed(bp,3.7),[{type:'knight',action:'attack'}]);now+=150;send(hero,aimed(bp,3.7));assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.stage,'duet-recover');assert.equal(resumed.until,until);
   now+=400;send(hero,aimed(helperPoint,2),[{type:'knight',action:'attack'}]);send(hero,aimed(helperPoint,2));assert.equal(resumed.players[id].hp,5);assert.equal(resumed.hp,bossHp-1);assert.equal(resumed.until,until);
   resumed.stage='won';resumed.players[id].hits=10;resumed.players[hero.data.id].hits=1;send(hero,actor());
@@ -65,7 +67,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   // The same authoritative Worker supports a lone knight while the other player is on the meadow.
   now+=10000;send(hero,{...actor(),location:undefined});send(helper,actor(2000,-2),[{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.stage,'side-choice');
   send(helper,actor(2000,-2),[{type:'knight',action:'side',side:'boss'}]);
-  const solo=room.room.knightBattle;assert.equal(solo.stage,'intro');assert.equal(Object.keys(solo.opponents).length,3);assert.equal(solo.players[id].side,'boss');assert(!solo.players[hero.data.id]);
+  const solo=room.room.knightBattle;assert.equal(solo.stage,'intro');assert.equal(Object.keys(solo.opponents).length,3);assert.equal(solo.teamHp,48);assert.equal(solo.players[id].side,'boss');assert(!solo.players[hero.data.id]);
   const variants=Object.values(solo.opponents).map((b:any)=>b.variant);assert.equal(new Set(variants).size,3);assert(!variants.includes(0),'the meadow player is excluded too');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.deepEqual(room.room.knightBattle.opponents,solo.opponents);
   now+=3500;send(helper,actor(2000,-2));send(helper,actor(2000,-2),[{type:'knight',action:'ability',ability:1}]);assert.equal(room.room.knightBattle.players[id].helper.cast.ability,1);
