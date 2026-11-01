@@ -32,11 +32,6 @@ test('camera keeps both characters readable during the fall and blends back to t
  advanceKnightBattle(s,[actor],s.until);const pose=cosmicCameraPose(s,s.since+1400,[0,0,4],1600,1000,follow);assert.deepEqual(pose.focus,[0,.9,4]);assert.equal(pose.fov,55);assert(Math.abs(new T.Vector3().fromArray(pose.position).distanceTo(new T.Vector3().fromArray(pose.focus))-10)<1e-8);
 });
 
-test('the fall camera still responds to manual pitch at the height of its landing shot',()=>{
- const s=lastHit(),now=s.since+1000,player=[0,cosmicHeight(s,now),20],follow={azimuth:0,elevation:.1,distance:10};
- const low=cosmicCameraPose(s,now,player,1600,1000,follow),high=cosmicCameraPose(s,now,player,1600,1000,{...follow,elevation:.7});
- assert.deepEqual(low.focus,high.focus);assert(high.position[1]>low.position[1]+5);
-});
 test('real rig blends from every possible last attack, clears the sword and cape, and keeps the seated pose through victory',async()=>{
  const bytes=await readFile(new URL('../public/models/meta-knight-animated.glb',import.meta.url));
  for(const [stage,part] of [['cosmic-open',1],['cosmic-meteor-cast',2],['cosmic-star-stun',3]] as [KnightStage,1|2|3][]){

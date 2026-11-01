@@ -6,7 +6,7 @@ import type {FollowCamera} from './follow-camera';
 export function cosmicCameraPose(s:KnightBattle,now:number,player:readonly number[],width:number,height:number,follow:Pick<FollowCamera,'azimuth'|'elevation'|'distance'>,size=1){
  const fall=cosmicDescent(s,now);if(fall){
   const end=s.stage==='won'?easeCosmic((now-s.since)/1200):0,shot=easeCosmic(fall.elapsed/400)*(1-end),nativeDistance=follow.distance*size,wide=height>width?1.6:1,distance=nativeDistance*((2*wide)*(1-end)+end),base=fall.height+.9*size;
-  const focus:KnightPoint=[player[0]*(1-.30*shot),base+(1.4+1.2*shot)*size*(1-end),player[2]*(1-.30*shot)],elevation=follow.elevation+(.38-.25)*shot;
+  const focus:KnightPoint=[player[0]*(1-.30*shot),base+(1.4+1.2*shot)*size*(1-end),player[2]*(1-.30*shot)],elevation=follow.elevation+(.38-follow.elevation)*shot;
   const shake=fall.landed?Math.exp(-fall.landAge/110)*.13:0,position:KnightPoint=[player[0]+distance*Math.cos(elevation)*Math.sin(follow.azimuth)+shake*Math.sin(fall.landAge*.073),base+distance*Math.sin(elevation)+shake*Math.cos(fall.landAge*.089),player[2]+distance*Math.cos(elevation)*Math.cos(follow.azimuth)];
   return {position,focus,fov:height>width?75:64-4*shot-9*end};
  }

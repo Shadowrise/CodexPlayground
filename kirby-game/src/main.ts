@@ -1148,7 +1148,7 @@ renderer.setAnimationLoop((time: number) => {
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
     if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
     if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
-    if(!cosmicArena.choosingSide)followCamera.zoom(gamepadCameraZoom(pad.held,cosmicArena.helperMode)*dt*600);
+    if(!cosmicArena.choosingSide)followCamera.zoom(gamepadCameraZoom(pad.held,cosmicArena.helperMode,cosmicArena.jointCamera)*dt*600);
   }
   const editingUi=document.activeElement instanceof HTMLElement && ['SELECT','INPUT','TEXTAREA'].includes(document.activeElement.tagName);
   const mouseTurning=!usingPad && !usingTouch && rightMouseHeld && document.pointerLockElement===canvas && !settingsOpen;

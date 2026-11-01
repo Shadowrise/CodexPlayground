@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { deadZone, devices, GamepadInput, INPUT_STORAGE, stickSteering, gamepadCameraZoom, type Pad } from '../src/gamepad';
 
-test('triggers zoom during helper abilities while the D-pad retains its combat bindings',()=>{
+test('trigger zoom is limited to shared helper scenes and ordinary play keeps its original controls',()=>{
  assert.equal(gamepadCameraZoom(new Set([12]),true),0);assert.equal(gamepadCameraZoom(new Set([13]),true),0);
- for(const helper of [false,true]){assert.equal(gamepadCameraZoom(new Set([7]),helper),-1);assert.equal(gamepadCameraZoom(new Set([6]),helper),1);assert.equal(gamepadCameraZoom(new Set([6,7]),helper),0);}
+ for(const button of [6,7]){assert.equal(gamepadCameraZoom(new Set([button])),0);assert.equal(gamepadCameraZoom(new Set([button]),true),0);}
+ assert.equal(gamepadCameraZoom(new Set([7]),true,true),-1);assert.equal(gamepadCameraZoom(new Set([6]),true,true),1);assert.equal(gamepadCameraZoom(new Set([6,7]),true,true),0);
  assert.equal(gamepadCameraZoom(new Set([12])),-1);assert.equal(gamepadCameraZoom(new Set([13])),1);assert.equal(gamepadCameraZoom(new Set([7,12])),-1);
 });
 

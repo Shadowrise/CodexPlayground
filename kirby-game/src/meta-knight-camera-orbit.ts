@@ -1,5 +1,14 @@
-import type {KnightPoint} from './meta-knight-battle';
 import type {FollowCamera} from './follow-camera';
+import {knightBattleActive,type KnightBattle,type KnightPoint} from './meta-knight-battle';
+import {knightCosmicAlly} from './meta-knight-cosmic-ally';
+import {duetActive} from './meta-knight-duet';
+import {helperLocked} from './meta-knight-helper';
+
+/** Only the participating boss ally loses movement during these shared actions. */
+export function knightJointCamera(s:KnightBattle|undefined,id:string,now:number){
+ const p=s?.players[id];if(!s||!knightBattleActive(s)||!p||p.side!=='boss'||!p.helper||p.hp<=0||p.withdrawn)return false;
+ return !!knightCosmicAlly(s,id,now)||duetActive(s)&&s.duet?.owner===id&&helperLocked(p.helper,now);
+}
 
 /** Keep each encounter's composition while giving the player its heading, tilt and zoom. */
 export function orbitKnightCamera<P extends {position:KnightPoint;focus:KnightPoint}>(pose:P,follow:Pick<FollowCamera,'azimuth'|'elevation'|'distance'>,floor=0):P{

@@ -26,7 +26,7 @@ const travel=new MetaKnightArenaTravel(renderer,new T.Scene(),follow,()=>{},make
 await travel.enter(c);
 const idle={forward:false,left:false,right:false};
 function tick(count=1,horizontal=0,vertical=0,input=idle){for(let i=0;i<count;i++){if(!frozen)clock+=1000/60;travel.update(1/60,clock/1000,c,input,horizontal,vertical,false,false);}travel.render();}
-function snapshot(){const target=c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.9*c.actor.scale.x,0)),direction=travel.camera.getWorldDirection(new T.Vector3());return {stage:battle.stage,spectating:travel.spectating,helperMode:travel.helperMode,position:travel.camera.position.toArray(),target:target.toArray(),distance:travel.camera.position.distanceTo(target),heading:Math.atan2(-direction.x,-direction.z),pitch:Math.asin(-direction.y),zoom:follow.distance,azimuth:follow.azimuth,elevation:follow.elevation,actor:c.actor.position.toArray(),state:c.state,hp:battle.players[localId].hp,events:[...events],drift:(travel as any).cosmicFrame.position.length()};}
+function snapshot(){const target=c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.9*c.actor.scale.x,0)),direction=travel.camera.getWorldDirection(new T.Vector3());return {stage:battle.stage,spectating:travel.spectating,helperMode:travel.helperMode,jointCamera:travel.jointCamera,position:travel.camera.position.toArray(),target:target.toArray(),distance:travel.camera.position.distanceTo(target),heading:Math.atan2(-direction.x,-direction.z),pitch:Math.asin(-direction.y),zoom:follow.distance,azimuth:follow.azimuth,elevation:follow.elevation,actor:c.actor.position.toArray(),state:c.state,hp:battle.players[localId].hp,events:[...events],drift:(travel as any).cosmicFrame.position.length()};}
 function setup(phase:number,planet=false,hp=0,role='helper'){clock+=100000;localId=role;frozen=false;events.length=0;actors=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[30,0,9],yaw:.7,available:true,metaKnight:true,side:'boss'},{id:'ally',p:[-20,0,10],yaw:0,available:true,metaKnight:true,side:'boss'}];battle=startKnightBattle(actors,'hero',clock)!;for(const id of Object.keys(battle.opponents??{}))delete battle.players[id];delete battle.opponents;delete battle.sharedOpponents;delete battle.teamHp;battle.players.helper.hp=hp;actors[0].p=[-25,0,15];
 setKnightPhase(battle,phase,actors,clock,phase===4?planet?3:1:undefined);if(phase!==4){battle.stage=phase===3?'shield':'rest';battle.until=clock+1e9;if(phase===3)battle.activeCrystal=0;}else for(const a of actors)a.p[1]=180;
 const actor=actors.find(a=>a.id===localId)!;c.actor.position.set(2000+actor.p[0],actor.p[1],actor.p[2]);c.yaw=actor.yaw;c.actor.rotation.y=c.yaw;follow.reset(c.yaw);tick(20);return snapshot();}
@@ -35,12 +35,13 @@ function beginAscent(){setKnightPhase(battle,4,actors,clock);frozen=true;tick();
 function scene(kind:string,role='helper'){
  setup(kind==='ground2'?2:kind==='shield'?3:kind==='planet'||kind==='duet-cosmic'||kind==='fall'||kind==='won'?4:1,kind==='planet',5,role);
  if(kind==='transition'||kind.startsWith('cosmic-')){beginAscent();let guard=0;while(kind!=='transition'&&battle.stage!==kind&&guard++<12)advance();if(guard>=12)throw Error('Unknown ascent stage '+kind);}
- if(kind.startsWith('duet')){if(!startHelperAbility(battle,actors[1],4,clock)||!beginKnightDuet(battle,actors,clock,knightPosition(battle,clock)))throw Error('Duet did not start');advance();}
+ if(kind.startsWith('duet')||kind==='other-duet'){if(!startHelperAbility(battle,actors[kind==='other-duet'?2:1],4,clock)||!beginKnightDuet(battle,actors,clock,knightPosition(battle,clock)))throw Error('Duet did not start');advance();}
+ if(kind.startsWith('individual-')){const ability=kind==='individual-shot'?1:kind==='individual-dash'?2:3;if(!startHelperAbility(battle,actors[1],ability,clock))throw Error('Individual ability did not start');}
  if(kind==='fall'||kind==='won'){battle.hp=0;battle.stage='cosmic-star-stun';battle.until=clock+1;advance();if(kind==='won')advance();}
  if(kind==='celebration'){battle.stage='lost';battle.celebration={at:clock,facing:.7,boss:[0,0,-9],helpers:{helper:[30,0,9],ally:[-20,0,10]}};}
  frozen=true;if(kind!=='won')clock=battle.since+Math.min(1000,(battle.until-battle.since)/2);tick(30);return snapshot();
 }
-(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode)*10);tick();}},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
+(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode,travel.jointCamera)*10);tick();}},run(){tick(120,1,.2,{...idle,forward:true});return snapshot();},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
 document.body.dataset.ready='true';
 `);
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),errors=[],report=[];
@@ -66,9 +67,10 @@ try{
   report.push({phase,planet,initial,orbited,near,far,held});console.log('PASS: defeated helper orbit, pitch, zoom and immobility in phase '+phase+(planet?' with planetary formation':''));
  }
  await page.screenshot({path:output+'cosmic-spectator.png'});
- const cases=['ground1','ground2','shield','duet-ground','transition','cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-flight','planet','duet-cosmic','fall','won','celebration'];
- for(const role of ['helper','hero'])for(const kind of cases){
+ const cases=['duet-ground','transition','cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-flight','planet','duet-cosmic'];
+ for(const role of ['helper'])for(const kind of cases){
   const initial=await page.evaluate(({kind,role})=>qa.scene(kind,role),{kind,role});
+  assert(initial.jointCamera,kind+': only the shared action enables the new camera');
   await page.evaluate(()=>qa.orbit(-160,60));const turned=await page.evaluate(()=>qa.snapshot());
   const turn=Math.atan2(Math.sin(turned.heading-initial.heading),Math.cos(turned.heading-initial.heading));assert(Math.abs(turn)>.5,role+' '+kind+': rendered orbit');assert(turned.pitch>initial.pitch+.15,role+' '+kind+': rendered pitch');
   await page.evaluate(()=>qa.zoom(-600));const near=await page.evaluate(()=>qa.snapshot());assert(near.distance<turned.distance*.8,role+' '+kind+': zoom in');
@@ -77,12 +79,29 @@ try{
   if(kind==='duet-ground'||kind==='cosmic-rise')await page.screenshot({path:output+role+'-'+kind+'.png'});
   report.push({role,kind,initial,turned,near,far});console.log('PASS: '+role+' camera orbit, pitch, zoom and controller during '+kind);
  }
- await page.evaluate(()=>{qa.setup(1,false,5);qa.orbit(-160,60);qa.zoom(-400);});const chosen=await page.evaluate(()=>qa.snapshot());
- let next=await page.evaluate(()=>qa.beginAscent());for(let i=0;i<7;i++){
+ for(const role of ['helper','hero'])for(const kind of role==='helper'?['ground1','ground2','shield','individual-shot','individual-dash','individual-orbs','other-duet','fall','celebration']:['ground1','ground2','shield','duet-ground','duet-cosmic','planet']){
+  const initial=await page.evaluate(({kind,role})=>{qa.scene(kind,role);qa.tick(240);return qa.snapshot();},{kind,role});assert(!initial.jointCamera,role+' '+kind+': no shared action camera');
+  await page.evaluate(()=>{qa.orbit(-160,60);qa.zoom(-600);qa.padZoom(6);qa.tick(60,1,-.2);});const after=await page.evaluate(()=>qa.snapshot());
+  assert(Math.hypot(...after.position.map((value,i)=>value-initial.position[i]))<.01,role+' '+kind+': original camera position is unchanged by manual inputs');
+  assert(Math.abs(after.heading-initial.heading)<.001&&Math.abs(after.pitch-initial.pitch)<.001,role+' '+kind+': original camera direction is unchanged');
+  report.push({role,kind,initial,after});console.log('PASS: '+role+' retains the original camera during '+kind);
+ }
+ for(const [role,kind] of [['helper','won'],['hero','won'],['hero','celebration']]){
+  const initial=await page.evaluate(({kind,role})=>qa.scene(kind,role),{kind,role});assert(!initial.jointCamera);
+  await page.evaluate(()=>qa.zoom(-600));const zoomed=await page.evaluate(()=>qa.snapshot());assert(zoomed.distance<initial.distance*.8,'the original post-fight camera remains available');
+ }
+ const beforeRun=await page.evaluate(()=>qa.scene('ground1'));const running=await page.evaluate(()=>qa.run());
+ assert(Math.hypot(...running.actor.map((value,i)=>value-beforeRun.actor[i]))>1,'the helper really runs in the ordinary combat regression');
+ assert(Math.abs(running.heading)<.001&&Math.abs(running.pitch-Math.atan2(.68,.82))<.001,'running keeps the original fixed camera despite camera stick input');
+ await page.evaluate(()=>{qa.setup(1,false,5);qa.orbit(-160,60);qa.zoom(-400);});const entry=await page.evaluate(()=>qa.beginAscent());
+ assert(Math.abs(entry.zoom-10)<.001&&Math.abs(entry.elevation-.25)<.001,'shared scenes start with their original framing, ignoring inactive camera inputs from ordinary combat');
+ await page.evaluate(()=>{qa.orbit(-160,60);qa.zoom(-400);});const chosen=await page.evaluate(()=>qa.snapshot());
+ let next=chosen;for(let i=0;i<7;i++){
   assert(Math.abs(next.zoom-chosen.zoom)<.0001,'ascent transitions preserve zoom');assert(Math.abs(next.elevation-chosen.elevation)<.0001,'ascent transitions preserve pitch');
   assert(Math.abs(Math.atan2(Math.sin(next.azimuth-chosen.azimuth),Math.cos(next.azimuth-chosen.azimuth)))<.001,'ascent transitions preserve orbit');
   next=await page.evaluate(()=>qa.advance());
  }
+ assert(!next.jointCamera&&Math.abs(next.zoom-10)<.001&&Math.abs(next.elevation-.25)<.001,'after the shared ascent the original combat camera is restored');
  assert.deepEqual(errors,[]);await writeFile(output+'report.json',JSON.stringify({report,errors},null,2));
- console.log('PASS: manual camera settings survive the entire ascent; no browser errors');
+ console.log('PASS: running retains the original camera; joint actions and defeat spectating allow manual control; no browser errors');
 }finally{await browser.close();}

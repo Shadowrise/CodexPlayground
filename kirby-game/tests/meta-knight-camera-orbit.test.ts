@@ -1,9 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Vector3} from 'three';
-import {orbitKnightCamera} from '../src/meta-knight-camera-orbit';
+import {orbitKnightCamera,knightJointCamera} from '../src/meta-knight-camera-orbit';
 import {fitKnightFormationCamera} from '../src/meta-knight-formation-camera';
 import {FollowCamera} from '../src/follow-camera';
+import {startKnightBattle,setKnightPhase,advanceKnightBattle,type KnightActor} from '../src/meta-knight-battle';
+import {startHelperAbility,helperLocked} from '../src/meta-knight-helper';
+import {beginKnightDuet} from '../src/meta-knight-duet';
+import {humanKnightFixture} from './knight-human-fixture';
+
+function fixture(){const actors:KnightActor[]=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[12,0,0],yaw:0,available:true,metaKnight:true,side:'boss'},{id:'other',p:[-12,0,0],yaw:0,available:true,metaKnight:true,side:'boss'}],s=humanKnightFixture(startKnightBattle(actors,'hero',100000)!);s.stage='rest';s.until=1e9;return {s,actors};}
+
+test('running, standing and individual ability locks never enable the new joint camera',()=>{
+ const {s}=fixture();assert(!knightJointCamera(s,'helper',100000));assert(!knightJointCamera(s,'hero',100000));
+ for(const ability of [1,2,3] as const){const {s,actors}=fixture();assert(startHelperAbility(s,actors[1],ability,100000));assert(helperLocked(s.players.helper.helper!,100100));assert(!knightJointCamera(s,'helper',100100));}
+});
+
+test('only the participating knight gets the joint camera throughout ascent and planet support',()=>{
+ const {s,actors}=fixture();setKnightPhase(s,4,actors,100000);
+ for(const stage of ['transition','cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-flight']){
+  assert.equal(s.stage,stage);assert(knightJointCamera(s,'helper',s.since+1));assert(!knightJointCamera(s,'hero',s.since+1));advanceKnightBattle(s,actors,s.until,'hero');
+ }
+ assert(!knightJointCamera(s,'helper',s.since+1),'ordinary space combat returns to the existing camera');
+ setKnightPhase(s,4,actors,s.until,3);assert(knightJointCamera(s,'helper',s.since+1));
+ s.players.helper.withdrawn=true;assert(!knightJointCamera(s,'helper',s.since+1));delete s.players.helper.withdrawn;s.players.helper.hp=0;assert(!knightJointCamera(s,'helper',s.since+1));
+});
+
+test('a shared storm unlocks its owner camera while the other knight and heroes keep their previous camera',()=>{
+ const {s,actors}=fixture();assert(startHelperAbility(s,actors[1],4,100000));assert(beginKnightDuet(s,actors,100000,[0,0,-9]));
+ for(let i=0;i<4;i++){
+  assert(knightJointCamera(s,'helper',s.since+1));assert(!knightJointCamera(s,'other',s.since+1));assert(!knightJointCamera(s,'hero',s.since+1));advanceKnightBattle(s,actors,s.until,'hero');
+ }
+ s.stage='lost';assert(!knightJointCamera(s,'helper',s.since+1));
+});
 
 test('the default formation composition is preserved and orbit, pitch and zoom work on desktop and phone',()=>{
  for(const [width,height] of [[1280,800],[390,844],[844,390]]){
