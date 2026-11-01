@@ -4,6 +4,8 @@ import { test } from 'node:test';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Quaternion, Vector3 } from 'three';
 import { CharacterController, type Input } from '../src/controller';
+import {TURN_RATE} from '../src/movement-input';
+import {COSMIC} from '../src/meta-knight-cosmic';
 
 const idle: Input = { forward: false, left: false, right: false };
 test('an immediate resize replaces pending growth without changing earned fruits or points',async()=>{
@@ -64,6 +66,18 @@ test('analog steering runs continuously, stops immediately and scales with stick
   assert(Math.abs(c.yaw-(yaw-Math.PI*1.1/60))<1e-6);
   for(let i=0;i<90;i++)c.update(1/60,{...idle,steer:-1});
   assert.equal(c.state,'RotateRight');assert(c.actions.get('RotateRight')!.isRunning());
+});
+
+test('the cosmic flight speed boost keeps the ordinary analog turn rate at every stick strength and frame rate',async()=>{
+ for(const fps of [30,60,120])for(const steer of [-1,-.5,-.1,0,.1,.5,1]){
+  const normal=await create(),cosmic=await create();
+  for(let frame=0;frame<fps;frame++){
+   normal.update(1/fps,{...idle,forward:true,steer});cosmic.flight.holdPlane();cosmic.update(1/fps,{...idle,forward:true,steer,movementMultiplier:COSMIC.flightSpeedMultiplier});
+   assert(Math.abs(normal.yaw-cosmic.yaw)<1e-8,`${fps} fps, stick ${steer}, frame ${frame}`);
+  }
+  assert(Math.abs(cosmic.yaw-steer*TURN_RATE)<1e-8);
+  normal.disposeEffects();cosmic.disposeEffects();
+ }
 });
 
 test('running and backing turn without losing movement or animation cadence',async()=>{

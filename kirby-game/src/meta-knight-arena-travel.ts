@@ -261,7 +261,9 @@ export class MetaKnightArenaTravel{
   this.applyDefeat(c,id,now);
   if(this.playerStars)this.playerStars.update([c.actor.position.x,c.actor.position.y,c.actor.position.z],now,dazed);
   this.celebrate(c,id,now,paused?0:dt);this.fighterFinale(c,id,now,paused?0:dt);
-  this.follow.update(dt,c.yaw,!this.jointCamera&&!this.spectating&&(previous.distanceToSquared(c.actor.position)>.00001||previousYaw!==c.yaw),horizontal,vertical,dragging||this.jointCamera);this.placeCamera(c,dt);
+  // Keep the touch joystick's camera reference stable, just as on the meadow.
+  const touchSteering=input.scheme==='touch'&&Math.hypot(input.moveStick?.x??0,input.moveStick?.y??0)>.18;
+  this.follow.update(dt,c.yaw,!this.jointCamera&&!this.spectating&&(previous.distanceToSquared(c.actor.position)>.00001||previousYaw!==c.yaw),horizontal,vertical,dragging||this.jointCamera||touchSteering);this.placeCamera(c,dt);
   this.current!.updateOcclusion(this.camera,battle?.phase===4&&participating?c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,1.1*c.actor.scale.x,0)):undefined,dt);
   this.current!.annex.setClosed(knightBattleActive(battle));this.current!.update(seconds,battle,now);
   this.opponentsView?.update(this.displayedBattle,this.current!.scene,this.cosmicFrame,now,paused?0:dt);

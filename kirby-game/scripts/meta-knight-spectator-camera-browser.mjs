@@ -15,7 +15,9 @@ import {MetaKnightArenaTravel} from '/src/meta-knight-arena-travel';
 import {startKnightBattle,setKnightPhase,advanceKnightBattle,knightPosition} from '/src/meta-knight-battle';
 import {startHelperAbility} from '/src/meta-knight-helper';
 import {beginKnightDuet} from '/src/meta-knight-duet';
-import {gamepadCameraZoom} from '/src/gamepad';
+import {gamepadCameraZoom,stickSteering} from '/src/gamepad';
+import {touchMotion} from '/src/touch-input';
+import {TURN_RATE} from '/src/movement-input';
 import {KIRBY_VARIANTS} from '/src/variant-palette';
 import '/src/style.css';
 const asset=await new GLTFLoader().loadAsync('/models/meta-knight-animated.glb'),make=()=>new CharacterController(clone(asset.scene),asset.animations);
@@ -41,7 +43,17 @@ function scene(kind:string,role='helper'){
  if(kind==='celebration'){battle.stage='lost';battle.celebration={at:clock,facing:.7,boss:[0,0,-9],helpers:{helper:[30,0,9],ally:[-20,0,10]}};}
  frozen=true;if(kind!=='won')clock=battle.since+Math.min(1000,(battle.until-battle.since)/2);tick(30);return snapshot();
 }
-(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode,travel.jointCamera)*10);tick();}},run(){tick(120,1,.2,{...idle,forward:true});return snapshot();},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
+function steering(scheme:'touch'|'gamepad',x:number,y:number,fps:number,role:string){
+ setup(4,false,5,role);frozen=true;const normal=make(),normalCamera=new FollowCamera(),start=c.yaw,dt=1/fps;normal.yaw=start;normalCamera.reset(start);follow.reset(start);
+ let difference=0,fastest=0;const motion=(camera:FollowCamera,yaw:number)=>scheme==='touch'?touchMotion(x,y,camera.azimuth,yaw,dt):{forward:y<-.05,backward:y>.05,steer:stickSteering(x,y)};
+ for(let i=0;i<fps*3;i++){
+  const before=normal.yaw;normal.update(dt,{...idle,...motion(normalCamera,normal.yaw)});normalCamera.update(dt,normal.yaw,before!==normal.yaw,0,0,scheme==='touch'&&Math.hypot(x,y)>.18);
+  const previous=c.yaw;travel.update(dt,clock/1000,c,{...idle,...motion(follow,c.yaw),scheme,moveStick:{x,y}},0,0,false,false);
+  difference=Math.max(difference,Math.abs((c.yaw-start)-(normal.yaw-start)));fastest=Math.max(fastest,Math.abs(c.yaw-previous)/dt);
+ }
+ travel.render();const result={scheme,x,y,fps,role,ordinary:(normal.yaw-start)*180/Math.PI,cosmic:(c.yaw-start)*180/Math.PI,difference,fastest,maximum:TURN_RATE};normal.disposeEffects();return result;
+}
+(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,steering,orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode,travel.jointCamera)*10);tick();}},run(){tick(120,1,.2,{...idle,forward:true});return snapshot();},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
 document.body.dataset.ready='true';
 `);
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),errors=[],report=[];
@@ -54,6 +66,13 @@ try{
  await page.routeWebSocket(/^ws:\/\/127\.0\.0\.1:\d+\//,ws=>ws.onMessage(()=>{}));
  await page.route('**/knight-spectator-camera-qa',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><html><body><script type="module" src="/.cache/knight-spectator-camera-qa.ts"></script></body></html>'}));
  await Promise.race([page.goto((process.env.GAME_URL??'http://127.0.0.1:5197')+'/knight-spectator-camera-qa').then(()=>page.waitForFunction(()=>document.body.dataset.ready==='true',{},{timeout:180000})),failed]);
+ if(process.env.KNIGHT_STEERING_ONLY){
+  for(const role of ['helper','hero'])for(const scheme of ['touch','gamepad'])for(const fps of [30,60,120])for(const [x,y] of [[1,0],[-1,0],[.7,-.7],[-.7,-.7],[0,1],[.2,-1],[0,0]]){
+   const result=await page.evaluate(({scheme,x,y,fps,role})=>qa.steering(scheme,x,y,fps,role),{scheme,x,y,fps,role});report.push(result);
+   assert(result.difference<1e-7,'ordinary and fourth-phase turn trajectories must match: '+JSON.stringify(result));assert(result.fastest<=result.maximum+1e-7,'turning cannot exceed the ordinary limit');
+  }
+  assert.deepEqual(errors,[]);await writeFile(output+'steering-report.json',JSON.stringify(report,null,2));console.log('PASS: 84 joystick turn comparisons match ordinary play, both roles, touch and gamepad, 30/60/120 fps');
+ }else{
  for(const [phase,planet] of [[1,false],[2,false],[3,false],[4,false],[4,true]]){
   const initial=await page.evaluate(({phase,planet})=>qa.setup(phase,planet),{phase,planet});assert(initial.spectating);assert(!initial.helperMode,'D-pad zoom is available after helper abilities are disabled');
   await page.evaluate(()=>qa.orbit(-160,60));const orbited=await page.evaluate(()=>qa.snapshot());
@@ -104,4 +123,5 @@ try{
  assert(!next.jointCamera&&Math.abs(next.zoom-10)<.001&&Math.abs(next.elevation-.25)<.001,'after the shared ascent the original combat camera is restored');
  assert.deepEqual(errors,[]);await writeFile(output+'report.json',JSON.stringify({report,errors},null,2));
  console.log('PASS: running retains the original camera; joint actions and defeat spectating allow manual control; no browser errors');
+ }
 }finally{await browser.close();}
