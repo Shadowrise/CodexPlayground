@@ -690,4 +690,6 @@ export const translations: Record<string, readonly [string, string]> = {
  "Отбито! Метеорит летит в Мета Пиджи":["Reflected! The meteor is heading toward Meta Pidgie","Отбито! Метеоритът лети към Мета Пиджи"],
  "Звёздочка летит в Мета Пиджи":["The star is flying toward Meta Pidgie","Звездичката лети към Мета Пиджи"],
  "Мета Пиджи восстанавливает силы":["Meta Pidgie is regaining strength","Мета Пиджи възстановява силите си"],
+ 'Мета Пиджи с уважением смотрит на {0}.':['Meta Pidgie looks at {0} with respect.','Мета Пиджи гледа с уважение към {0}.'],
+ 'Победа! Мета Пиджи уважает твоё мастерство':['Victory! Meta Pidgie respects your skill','Победа! Мета Пиджи уважава уменията ти'],
 };

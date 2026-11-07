@@ -63,7 +63,7 @@ test('admin opens the shared portal without awarding badges; opening is idempote
   const battle=room.room.knightBattle,clock=Date.now();Object.assign(battle,{hp:4,phase:2,stage:'get-up',since:clock-300,until:clock,checked:clock-300});battle.players[a.data.id].hits=8;
   room.advanceKnight(clock);assert.equal(battle.stage,'transition');assert.equal(battle.phase,3);assert(!battle.rewarded);
   Object.assign(battle,{hp:0,phase:4,stage:'cosmic-descent',since:clock-3000,until:clock,checked:clock-3000,from:[0,0,0],to:[0,0,0],cosmicFall:{at:clock-3000,yaw:0}});room.advanceKnight(clock);assert.equal(battle.stage,'won');assert.equal(battle.phase,4);assert.equal(battle.rewarded,true);
-  assert(a.messages.some(m=>m.type==='knight-victory'));assert(a.messages.some(m=>m.type==='log'&&m.entry.text==='Host победил Мета Пиджи!'));
+  assert(a.messages.some(m=>m.type==='knight-victory'));assert(a.messages.some(m=>m.type==='log'&&m.entry.text==='Мета Пиджи с уважением смотрит на Host.'));
   room.room.knightBattle={stage:'intro'};assert.equal((await room.adminOpenPortal(id,'meta-knight')).ok,false);assert.equal(room.room.portalBoss,'metapidgie');delete room.room.knightBattle;
   const reset=await room.adminRecreate(id);assert.equal(reset.ok,true);
   assert.equal((await room.adminOnline()).room.portalOpen,false);

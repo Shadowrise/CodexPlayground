@@ -1,3 +1,4 @@
+import {PIDGEY_SPIN_EXIT} from './metapidgie-cosmic-emitter';
 import {knightHelperEligible,type KnightBoss} from './knight-boss';
 import {knightBumpActive} from './meta-knight-opponents-contact';
 import {requestKnightDuet} from './meta-knight-duet';
@@ -11,7 +12,7 @@ export type HelperAbility=1|2|3|4;
 /** Visible slots: dash, crescent/meteor, orbs, united storm. Wire IDs remain stable. */
 export const HELPER_SLOTS=[2,1,3,4] as const;
 export const HELPER={hearts:5,opponentHearts:8,cooldowns:[10000,8000,14000,90000],recoverMs:3000,stunMs:1000,shotWarnMs:1760,meteorWarnMs:1800,dashWarnMs:1600,spinWarnMs:2800,dashMs:700,dashDistance:36,spinMs:1200,shotMs:300,projectileMs:4500,returnMs:650,shotSpeed:28,meteorSpeed:34,orbSpeed:13.5,orbRadius:.72,shotRadius:1.15,dashHalfWidth:3.6} as const;
-export type HelperCast={ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
+export type HelperCast={beak?:true;beakScale?:number;ability:HelperAbility;meteor:boolean;at:number;release:number;end:number;recoverUntil:number;from:KnightPoint;to:KnightPoint;yaw:number;hit:boolean;returned?:{at:number;from:KnightPoint;by:string};resolved?:boolean;contacts?:Record<string,number>};
 export type KnightHelper={cooldowns:[number,number,number,number?];bonusHearts?:number;duet?:{at:number;arrival:number;until:number;from:KnightPoint;to:KnightPoint};ascent?:{yaw?:number;at:number;from:KnightPoint;to:KnightPoint};planet?:{yaw?:number;round:number;at:number;arrival:number;from:KnightPoint;side?:number};cast?:HelperCast;stunnedUntil?:number;anchor?:KnightPoint;phase:number};
 const mix=(a:KnightPoint,b:KnightPoint,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as KnightPoint;
 const clamp=(n:number)=>Math.max(0,Math.min(1,n));
@@ -47,7 +48,7 @@ export function startHelperAbility(s:KnightBattle|undefined,actor:KnightActor,ab
  const meteor=ability===1&&s.phase===4,warn=ability===1?(meteor?HELPER.meteorWarnMs:HELPER.shotWarnMs):ability===2?HELPER.dashWarnMs:HELPER.spinWarnMs;
  const from:KnightPoint=[...actor.p],dx=Math.sin(actor.yaw),dz=Math.cos(actor.yaw),b=from[0]*dx+from[2]*dz,radius=META_KNIGHT_ARENA.walkRadius-1;
  const distance=Math.min(HELPER.dashDistance,Math.max(0,-b+Math.sqrt(Math.max(0,b*b+radius*radius-from[0]**2-from[2]**2)))),to:KnightPoint=[from[0]+dx*distance,from[1],from[2]+dz*distance];
- h.cast={ability,meteor,at:now,release:now+warn,end:now+warn+(ability===1?HELPER.shotMs:ability===2?HELPER.dashMs:HELPER.spinMs),recoverUntil:now+warn+(ability===1?HELPER.shotMs:ability===2?HELPER.dashMs:HELPER.spinMs)+HELPER.recoverMs,from,to,yaw:actor.yaw,hit:false};
+ h.cast={...(actor.variant!==undefined&&!actor.metaKnight&&knightHelperEligible(actor,s.boss)?{beak:true as const,beakScale:actor.size??1}:{}),ability,meteor,at:now,release:now+warn,end:now+warn+(ability===1?HELPER.shotMs:ability===2?HELPER.dashMs:HELPER.spinMs),recoverUntil:now+warn+(ability===1?HELPER.shotMs:ability===2?HELPER.dashMs:HELPER.spinMs)+HELPER.recoverMs,from,to,yaw:actor.yaw,hit:false};
  h.cooldowns[ability-1]=now+HELPER.cooldowns[ability-1];h.phase=s.phase;delete h.stunnedUntil;delete h.anchor;s.revision++;return true;
 }
 /** Shared curved meteor / straight crescent paths, including the return to their sender. */
@@ -58,9 +59,9 @@ export function helperProjectile(c:HelperCast,now:number,sender?:KnightPoint):Kn
  const distance=1.8+elapsed/1000*(c.meteor?HELPER.meteorSpeed:HELPER.shotSpeed),bend=c.meteor?Math.sin(Math.min(1,distance/45)*Math.PI)*3:0;
  return [c.from[0]+Math.sin(c.yaw)*distance+Math.cos(c.yaw)*bend,c.from[1]+1.25,c.from[2]+Math.cos(c.yaw)*distance-Math.sin(c.yaw)*bend];
 }
+export function helperOrbExit(c:HelperCast){return c.beak?{radius:PIDGEY_SPIN_EXIT.radius/PIDGEY_SPIN_EXIT.scale*(c.beakScale??1),height:PIDGEY_SPIN_EXIT.height/PIDGEY_SPIN_EXIT.scale*(c.beakScale??1)}:{radius:2.1,height:1.25};}
 export function helperOrbs(c:HelperCast,now:number){
  if(c.ability!==3||now<c.release||now>c.release+HELPER.projectileMs)return [];
- const distance=2.1+(now-c.release)/1000*HELPER.orbSpeed;
- return Array.from({length:6},(_,i)=>{const angle=c.yaw+i*Math.PI/3;return [c.from[0]+Math.sin(angle)*distance,c.from[1]+1.25,c.from[2]+Math.cos(angle)*distance] as KnightPoint;});
+ return Array.from({length:6},(_,i)=>{const birth=c.release+(c.beak?i*HELPER.spinMs/6:0);if(now<birth)return;const exit=helperOrbExit(c),distance=exit.radius+(now-birth)/1000*HELPER.orbSpeed,age=Math.max(0,(now-birth)/1000),height=1.25+(exit.height-1.25)*(1-(clamp(age/.35)**2*(3-2*clamp(age/.35)))),angle=c.yaw+i*Math.PI/3;return [c.from[0]+Math.sin(angle)*distance,c.from[1]+height,c.from[2]+Math.cos(angle)*distance] as KnightPoint;}).filter((p):p is KnightPoint=>!!p);
 }
 export function helperSegmentDistance(a:KnightPoint,b:KnightPoint,p:KnightPoint){const d=b.map((v,i)=>v-a[i]),length=d.reduce((v,n)=>v+n*n,0),t=length?clamp(p.reduce((v,n,i)=>v+(n-a[i])*d[i],0)/length):0;return Math.hypot(...p.map((v,i)=>v-a[i]-t*d[i]));}

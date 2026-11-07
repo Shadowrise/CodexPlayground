@@ -124,13 +124,13 @@ export class MetaKnightCosmicView{
   const tired=['cosmic-open','cosmic-hit','cosmic-star-stun','cosmic-recover'].includes(stage),blue=['cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-star-draw','cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep','cosmic-meteor-draw'].includes(stage)||stage==='cosmic-meteor-cast'&&now<(s.cosmicMeteor?.at??-Infinity),stunned=stage==='cosmic-star-stun';
   const charge=stage==='cosmic-charge'?easeCosmic(f):tired?.45:1,flight=stage==='cosmic-flight'||cosmicCombat(s),height=cosmicHeight(s,now),pulse=.85+.15*Math.sin(clock*29)**2;
   this.lightning.setBlue(blue);this.plasma.setBlue(blue);this.light.color.copy(blue?GRAVITY_BLUE:ELECTRIC_GOLD);this.dust.material.uniforms.blue.value=blue?1:0;
-  this.setEyes(.25+.75*charge,cosmicRefugeStage(s)?5.2:3.5,blue);this.light.intensity=(flight?8*charge:12+charge*22)*pulse+(stage==='cosmic-surge'?90*Math.exp(-f*9):0);this.light.position.set(0,height+6,3);
-  this.lightning.begin((flight?.88*charge:.65+.35*charge)*pulse,clock);this.plasma.begin(clock);
+  this.setEyes(.25+.75*charge,cosmicRefugeStage(s)?5.2:3.5,blue);this.light.intensity=(flight?8*charge:12+charge*22)*pulse+(stage==='cosmic-surge'?90*Math.exp(-f*9):0);if(this.bird)this.light.intensity*=.35;this.light.position.set(0,height+6,3);
+  this.lightning.begin((flight?.88*charge:.65+.35*charge)*pulse*(this.bird?.45:1),clock);this.plasma.begin(clock);
   this.actor.updateWorldMatrix(true,true);this.group.updateWorldMatrix(true,false);
   // Short, irregular branches spring OUT from the visor, with real world depth.
   for(const side of [-1,1]){
    if(this.bird){const eye=this.actor.getObjectByName(side===-1?'Left_glowing_eye':'Right_glowing_eye') as T.Mesh;eye.geometry.computeBoundingSphere();eye.localToWorld(this.eye.copy(eye.geometry.boundingSphere!.center));}else this.eyes.localToWorld(this.eye.set(side*.30,-.015,.81));this.group.worldToLocal(this.eye);
-   for(const halo of this.eyeHalos[side===-1?0:1]){halo.position.copy(this.eye);halo.material.color.copy(blue?GRAVITY_BLUE:ELECTRIC_GOLD);halo.material.opacity=stunned?0:(.3+.6*charge)*pulse;}
+   for(const halo of this.eyeHalos[side===-1?0:1]){halo.position.copy(this.eye);halo.material.color.copy(blue?GRAVITY_BLUE:ELECTRIC_GOLD);halo.material.opacity=stunned?0:(.3+.6*charge)*pulse*(this.bird?.55:1);}
    for(let k=0;k<5;k++){
     this.b.copy(this.eye).add(this.a.set(side*(.8+k*.24)*charge,.22*Math.sin(clock*8+k)+.15*k,.14+.12*k));
     if(!stunned&&!this.bird)this.lightning.arc(this.eye,this.b,61+k+side*7,.025+charge*.018,clock,5);

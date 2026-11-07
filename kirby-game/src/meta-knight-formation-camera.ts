@@ -11,6 +11,7 @@ export function knightFormationFrame(s:KnightBattle|undefined,actors:readonly Kn
  const id=localId??actors.find(a=>s.players[a.id]?.side==='boss')?.id,actor=actors.find(a=>a.id===id),player=id?s.players[id]:undefined;
  if(!actor||!player||player.withdrawn)return;
  const defeat=knightDefeatPose(s,id!,now),celebration=knightCelebration(s,id!,now),ally=knightCosmicAlly(s,id!,now),duet=duetActive(s);
+ if(celebration&&'birdClip' in celebration&&celebration.phase!=='descent')return {kind:'pidgey-feast',yaw:(s.celebration?.facing??0)+Math.PI/2,anchor:[0,0,0] as KnightPoint,points:[[0,0,0]] as KnightPoint[],elevation:.42};
  const active=defeat||celebration||duet||Object.keys(s.players).some(id=>knightCosmicAlly(s,id,now));if(!active)return;
  let p:KnightPoint=[...actor.p],heading=actor.yaw,kind='ascent';
  if(defeat){p=defeat.p;heading=defeat.yaw;kind='defeat';}
@@ -22,6 +23,7 @@ export function knightFormationFrame(s:KnightBattle|undefined,actors:readonly Kn
 }
 /** Bounded shoulder distance: opponents outside the view never force the camera away. */
 export function fitKnightFormationCamera(frame:NonNullable<ReturnType<typeof knightFormationFrame>>,width:number,height:number,yaw=frame.yaw,rightInset=0,topInset=120){
+ if(frame.kind==='pidgey-feast'){const distance=height>width?38:31;return {focus:[0,3,0] as KnightPoint,position:[Math.sin(yaw)*distance,18,Math.cos(yaw)*distance] as KnightPoint,fov:height>width?76:60};}
  const portrait=height>width,distance=portrait?36:32,sn=Math.sin(yaw),cs=Math.cos(yaw),shoulder=frame.kind==='celebration'?0:3.2;
  // HUD accommodation shifts the composition, not its distance from the player.
  const shift=Math.min(2,Math.max(0,rightInset)/Math.max(1,width)*5),lift=Math.min(3,Math.max(0,topInset)/Math.max(1,height)*6),p=frame.anchor;

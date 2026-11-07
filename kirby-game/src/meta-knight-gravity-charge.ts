@@ -36,7 +36,7 @@ export class MetaKnightGravityCharge{
  get radius(){return this.group.scale.x;}
  clear(){this.group.visible=false;}
  update(s:KnightBattle,now:number,blade:T.Object3D,root:T.Object3D,arcs:CosmicLightning){
-  this.beak=blade.name==='Metapidgie_beak_tip';const radius=gravityChargeRadius(s,now),active=radius>0;
+  this.beak=blade.name==='Metapidgie_beak_tip';const radius=gravityChargeRadius(s,now)*(this.beak?.45:1),active=radius>0;
   this.group.visible=active;if(!active)return;
   const clock=Math.max(0,now-s.cosmicRefuge!.at)/1000;
   this.clock.value=clock;this.group.scale.setScalar(radius);

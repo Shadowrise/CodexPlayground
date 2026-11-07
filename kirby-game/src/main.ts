@@ -198,7 +198,7 @@ let selected: KirbyVariant = KIRBY_VARIANTS[0];
 let loadedModel: GLTF | undefined;
 let loadedPigeon: GLTF | undefined;
 let loadedSnowball: GLTF | undefined;
-let loadedPlumages:Record<WildPigeonId|'metapidgie',GLTF>;
+let loadedPlumages:Record<WildPigeonId|'metapidgie',GLTF>;let loadedBread:import('three').Object3D|undefined;
 let loadedMetaKnight: GLTF | undefined;
 let loadedFirefly: GLTF | undefined;
 let startupComplete=false;
@@ -757,7 +757,7 @@ const cosmicArena:MetaKnightArenaTravel=new MetaKnightArenaTravel(renderer,scene
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]===(boss==='metapidgie'?'Мета Пиджи':'Meta Knight'))!,loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);
  return new CharacterController(model.model,model.clips);
-},{boss:selectedPortalBoss,online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],sides:()=>network?.room.knightSides,chooseSide:side=>network?.event({type:'knight',action:'side',side}),ability:ability=>network?.event({type:'knight',action:'ability',ability}),pushCue:()=>sounds.playBoing(.7),makeOpponent:variant=>{if(!loadedModel)return;const model=createPlayerModel(loadedModel,KIRBY_VARIANTS[variant],loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);return new CharacterController(model.model,model.clips);},profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),location:cosmicArena.active?'meta-knight-arena':undefined,p:character?[character.actor.position.x-META_KNIGHT_ARENA.x,character.actor.position.y,character.actor.position.z]:undefined},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location,p:[a.p[0]-META_KNIGHT_ARENA.x,a.p[1],a.p[2]]}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
+},{boss:selectedPortalBoss,online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],sides:()=>network?.room.knightSides,chooseSide:side=>network?.event({type:'knight',action:'side',side}),ability:ability=>network?.event({type:'knight',action:'ability',ability}),pushCue:()=>sounds.playBoing(.7),makeOpponent:variant=>{if(!loadedModel)return;const model=createPlayerModel(loadedModel,KIRBY_VARIANTS[variant],loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);return new CharacterController(model.model,model.clips);},profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),location:cosmicArena.active?'meta-knight-arena':undefined,p:character?[character.actor.position.x-META_KNIGHT_ARENA.x,character.actor.position.y,character.actor.position.z]:undefined},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location,p:[a.p[0]-META_KNIGHT_ARENA.x,a.p[1],a.p[2]]}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),bread:()=>loadedBread,firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
 function completeKnightVictory(local=false){
  if(!character)return;
  const boss=cosmicArena.battle?.boss??'meta-knight';
@@ -879,7 +879,7 @@ async function loadCharacter() {
     metaKnightReflections.update(daylight(currentDayPhase()));
     coaster.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
     boats.addMetaKnightPassenger(metaKnightModel.scene,metaKnightModel.animations);
-    watermill.bakery.setBreadModel(breadModel.scene.clone(true));bread.setModel(breadModel.scene);
+    loadedBread=breadModel.scene.clone(true);watermill.bakery.setBreadModel(breadModel.scene.clone(true));bread.setModel(breadModel.scene);
     arenaCentipede=new ArenaCentipede(centipedeModel);arenaCentipede.group.userData.characterShadow=true;scene.add(arenaCentipede.group);
     await startupTask();
     home.dogHouse.placeDog(shibaModel.scene);

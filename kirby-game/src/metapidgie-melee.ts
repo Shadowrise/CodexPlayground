@@ -15,5 +15,5 @@ export function meleeBeakGlow(name:string,time:number,duration:number){
  const hit=(name==='Boss_slash'||name==='Boss_slash-backhand')&&time<=duration+.000001?.62+.55*Math.sin(Math.PI*u):0;
  const after=Math.max(...meleeTrailTimes(name,time).map(t=>t>=PIDGEY_MELEE_FX.strike?.62*(1-ease((t-PIDGEY_MELEE_FX.strike)/.30)):0));
  const flight=name==='Boss_dash'?.9:name==='Boss_dash-warn'||name==='Boss_dash-warn-recharge'?.25+.55*ease(u):name==='Boss_dive-warn'?.3+.5*ease(u):name==='Boss_dive'?.85*(1-ease((u-.88)/.12)):name==='Boss_transition-phase2'?.75*Math.sin(Math.PI*u)**2:name==='Boss_duet-charge'?.8*ease(u):['Boss_duet-warn','Boss_duet-strike','Boss_duet-gap'].includes(name)?.9:0;
- return Math.max(wind,hit,after,flight,name.startsWith('Boss_cosmic-')&&!/open|hit|recover|descent|stun/.test(name)?.8:name==='Boss_ricochet'||name==='Boss_cross'?.9:0);
+ return Math.max(wind,hit,after,flight,name==='Boss_cosmic-spin-warn'?.8*ease((u-.65)/.25):name.startsWith('Boss_cosmic-')&&!/open|hit|recover|descent|stun/.test(name)?.8:name==='Boss_ricochet'||name==='Boss_cross'?.9:0);
 }

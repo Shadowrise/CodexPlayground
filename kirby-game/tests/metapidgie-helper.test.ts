@@ -35,16 +35,16 @@ test('the side deadline defaults to players and mixed helpers must all choose',(
  const solo={knightBattle:startKnightBattle([a],a.id,epoch,'metapidgie')!,knightSides:{} as Record<string,'boss'|'players'>};
  advanceKnightSideChoices(solo,[a],epoch+15000);assert.equal(solo.knightSides.bird,'players');assert.equal(solo.knightBattle.players.bird.helper,undefined);
 });
-test('the bird casts all three attacks, damages the NPC pool and cannot use unfinished duet phases',()=>{
+test('the bird casts all three attacks, damages the NPC pool and can request the united storm',()=>{
  for(const ability of [1,2,3] as const){
   const {a,s,h}=fixture();a.p=[0,0,0];a.yaw=0;const bots=Object.values(s.opponents!);
   for(const [i,bot] of bots.entries()){bot.p=i===0?[0,0,7]:[25+i*2,0,-20];bot.goal=[...bot.p];bot.thinkAt=1e12;bot.shoveReady=1e12;}
   assert(startHelperAbility(s,a,ability,epoch));const cast=h.cast!,hp=s.teamHp!;
-  if(ability===3)assert.equal(helperOrbs(cast,cast.release+1).length,6);
+  if(ability===3)assert.equal(helperOrbs(cast,cast.release+1).length,1);
   // At this sample, every attack crosses the NPC at z=7.
   advanceKnightBattle(s,[a],cast.release+250);advanceKnightBattle(s,[a],cast.release+450);assert(s.teamHp!<hp,`ability ${ability}`);assert.equal(s.hp,12);assert.equal(s.players.bird.hp,HELPER.hearts);
  }
- const {a,s}=fixture();assert.equal(startHelperAbility(s,a,4,epoch),false);
+ const {a,s}=fixture();assert.equal(startHelperAbility(s,a,4,epoch),true);delete s.duet;
  const restored=structuredClone(s);assert(startHelperAbility(restored,a,1,epoch));assert.equal(restored.players.bird.side,'boss');
 });
 test('ordinary shoves work both ways for the bird and NPCs',()=>{
@@ -57,7 +57,7 @@ test('actual bird helper presentation uses native poses and finite effects witho
  const bytes=await readFile(new URL('../public/models/metapidgie-animated.glb',import.meta.url)),loader=new GLTFLoader();loader.register(()=>({name:'NodeTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
  const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),''),model=createPlayerModel({scene:new Group(),animations:[]} as unknown as GLTF,KIRBY_VARIANTS[variant],undefined,false,undefined,undefined,{metapidgie:gltf});
  const c=new CharacterController(model.model,model.clips),scene=new Scene();scene.add(c.actor);
- const view=new MetaKnightHelperView(c,()=>{});assert.equal(view.prepareEyes(),undefined);assert(c.isPigeon&&!c.isMetaKnight);
+ const view=new MetaKnightHelperView(c,()=>{});assert(view.prepareEyes());assert(c.isPigeon&&!c.isMetaKnight);
  for(const ability of [1,2,3] as const){const {a,s,h}=fixture();assert(startHelperAbility(s,a,ability,epoch));const cast=h.cast!;
   for(const now of [cast.at,cast.release-1,cast.release+100,cast.end+100,cast.recoverUntil+1]){
    view.update(s,a.id,now,1/60,new PerspectiveCamera());scene.updateMatrixWorld(true);

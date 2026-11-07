@@ -53,7 +53,7 @@ export class MetapidgieBattleView extends MetaKnightBattleView{
   this.pigeon.actor.scale.setScalar(KNIGHT.modelScale);this.pigeon.actor.updateMatrixWorld(true);
   if(this.pidgeyBattleId!==(s?.id??0)){this.pidgeyBattleId=s?.id??0;this.trailBirth.fill(-Infinity);}
   meleeTrailTimes(name,time).forEach((age,i)=>{if(age>=0)this.trailBirth[i]=now-age*1000;});
-  if(camera)this.fx.update(name,time,duration,camera,this.trailBirth.map(at=>(now-at)/1000));
+  if(camera)this.fx.update(name,time,duration,camera,this.trailBirth.map(at=>(now-at)/1000),s?.phase===4?.20:1);
   super.updateActorEffects(s,now,camera);
   this.pigeon.actor.getObjectByName('Metapidgie_beak_tip')!.getWorldPosition(this.point);this.point.x-=SITE.x;this.beakLaunch.update(s,now,this.point,true);
   this.pigeon.actor.getObjectByName('Tail')!.getWorldPosition(this.point);this.group.worldToLocal(this.point);if(camera)this.flightTrail.update(s,now,this.point,camera);

@@ -43,7 +43,7 @@ export class MetaKnightDuetView{
   this.merge.set(0,d.floor!+19,0);this.bolts.begin(.65+.35*power,clock);this.bolts.setFloor(d.floor!+.04);
   const rigActors=[boss,helper];
   rigActors.forEach((c,index)=>{
-   if(!c)return;const bird=index===0&&s.boss==='metapidgie'&&c.isPigeon;if(!c.isMetaKnight&&!bird)return;const rig=bird?undefined:this.rig(c),point=index===0?duetBossPosition(s,now):s.players[d.owner]?.helper?helperPosition(s.players[d.owner].helper!,now):undefined;
+   if(!c)return;const bird=!!c.actor.getObjectByName('Metapidgie_beak_tip');if(!c.isMetaKnight&&!bird)return;const rig=bird?undefined:this.rig(c),point=index===0?duetBossPosition(s,now):s.players[d.owner]?.helper?helperPosition(s.players[d.owner].helper!,now):undefined;
    if(Array.isArray(point))c.actor.position.set(SITE.x+point[0],point[1],point[2]);
    const from=(index?d.helperFrom!:d.bossFrom!),to=knightFormationSide(index?3.3:-3.3,d.yaw??0,d.floor!);c.yaw=gather?knightGatherYaw(from,to,d.yaw??0,f):d.yaw??0;c.actor.rotation.y=c.yaw;
    if(!bird){const clip=gather?s.phase===4?'Fly':'Run':s.phase===4?'Fly':'Idle';if(c.state!==clip)c.setActivity(clip);c.updateActivity(0);}

@@ -1,3 +1,4 @@
+import {knightHelperEligible} from './knight-boss';
 import {knightAudienceYaw,knightFormationSide} from './meta-knight-staging';
 import type {KnightActor,KnightBattle,KnightPoint} from './meta-knight-battle';
 import {helperLocked,helperPosition,HELPER} from './meta-knight-helper';
@@ -10,10 +11,10 @@ export const duetActive=(s:KnightBattle|undefined)=>!!s?.duet&&s.duet.stage!=='q
 export const knightDuetOpening=(s:KnightBattle|undefined)=>s?.stage==='duet-recover'&&s.duet?.stage==='recover'&&!s.openHit&&s.hp>0;
 export const duetBossDazed=(s:KnightBattle|undefined,now:number)=>s?.stage==='duet-recover'&&s.duet?.bossHit!==undefined&&now>=s.duet.bossHit&&now-s.duet.bossHit<HELPER.stunMs;
 export function requestKnightDuet(s:KnightBattle,actor:KnightActor,now:number){
- const p=s.players[actor.id],h=p?.helper;if(!p||!h||p.side!=='boss'||p.hp<=0||p.withdrawn||!actor.available||!actor.metaKnight||s.duet||now<(h.cooldowns[3]??0)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage))return false;
+ const p=s.players[actor.id],h=p?.helper;if(!p||!h||p.side!=='boss'||p.hp<=0||p.withdrawn||!actor.available||!knightHelperEligible(actor,s.boss)||s.duet||now<(h.cooldowns[3]??0)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage))return false;
  s.duet={owner:actor.id,requestedAt:now,stage:'queued',round:0,spots:[],contacts:{}};h.cooldowns[3]=now+DUET.cooldownMs;s.revision++;return true;
 }
-export function duetOwnerAvailable(s:KnightBattle,actors:KnightActor[]){const id=s.duet?.owner,p=id?s.players[id]:undefined;return !!p&&p.hp>0&&!p.withdrawn&&actors.some(a=>a.id===id&&a.available&&a.metaKnight);}
+export function duetOwnerAvailable(s:KnightBattle,actors:KnightActor[]){const id=s.duet?.owner,p=id?s.players[id]:undefined;return !!p&&p.hp>0&&!p.withdrawn&&actors.some(a=>a.id===id&&a.available&&knightHelperEligible(a,s.boss));}
 export function beginKnightDuet(s:KnightBattle,actors:KnightActor[],now:number,boss:KnightPoint){
  const d=s.duet;if(!d||d.stage!=='queued'||!duetOwnerAvailable(s,actors))return false;
  const h=s.players[d.owner].helper!;if(helperLocked(h,now))return false;

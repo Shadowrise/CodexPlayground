@@ -29,6 +29,8 @@ test('actual Worker authorizes bird helpers, persists their side and spawns NPC 
   assert.equal(room.room.knightBattle.boss,'metapidgie');assert.equal(room.room.knightSides[id],'boss');assert.equal(room.room.knightBattle.players[id].hp,5);
   now+=3500;send();Object.assign(room.room.knightBattle,{stage:'rest',until:now+1e9});
   send([{type:'knight',action:'ability',ability:2}]);assert.equal(room.room.knightBattle.players[id].helper.cast.ability,2);
+  delete room.room.knightBattle.players[id].helper.cast;Object.assign(room.room.knightBattle,{stage:'rest',since:now,until:now+10000});send([{type:'knight',action:'ability',ability:4}]);assert.equal(room.room.knightBattle.duet.owner,id);assert(room.room.knightBattle.players[id].helper.cooldowns[3]>now+85000);
+  await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightBattle.duet.owner,id,'bird storm reservation survives Worker wakeup');
   send([{type:'knight',action:'cancel'}]);send([{type:'knight',action:'start'}]);assert.equal(room.room.knightBattle.stage,'side-choice');assert.equal(room.room.knightSides[id],undefined,'retry clears the previous boss-side choice for the bird');
   now=room.room.knightBattle.choice.until;await room.alarm();assert.equal(room.room.knightSides[id],'players');assert.equal(room.room.knightBattle.players[id].helper,undefined);
  }finally{Date.now=oldNow;globals.WebSocketPair=oldPair;globals.WebSocketRequestResponsePair=oldResponse;}

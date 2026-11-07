@@ -39,8 +39,8 @@ export function cosmicOrbs(s:State|undefined,now:number,previous=now):CosmicOrb[
  for(let id=first;id<=last;id++){
   const birth=cosmicOrbBirth(id);if(birth>time+1e-9||before-birth>cosmicOrbLife)continue;
   const angle=spin.yaw+id*COSMIC_SPIN.stepAngle,d=radius+Math.max(0,time-birth)*COSMIC_SPIN.speed;
-  const old=radius+Math.max(0,before-birth)*COSMIC_SPIN.speed,x=Math.sin(angle),z=Math.cos(angle),y=COSMIC.height+(s.boss==='metapidgie'?PIDGEY_SPIN_EXIT.height:COSMIC_SPIN.orbHeight);
-  shots.push({id,at:spin.at+birth*1000,angle,p:[x*d,y,z*d],from:[x*old,y,z*old],distance:d});
+  const old=radius+Math.max(0,before-birth)*COSMIC_SPIN.speed,x=Math.sin(angle),z=Math.cos(angle),y=COSMIC.height+COSMIC_SPIN.orbHeight+(s.boss==='metapidgie'?(PIDGEY_SPIN_EXIT.height-COSMIC_SPIN.orbHeight)*(1-easeCosmic(Math.max(0,time-birth)/.5)):0);
+  shots.push({id,at:spin.at+birth*1000,angle,p:[x*d,y,z*d],from:[x*old,COSMIC.height+COSMIC_SPIN.orbHeight+(s.boss==='metapidgie'?(PIDGEY_SPIN_EXIT.height-COSMIC_SPIN.orbHeight)*(1-easeCosmic(Math.max(0,before-birth)/.5)):0),z*old],distance:d});
  }return shots;
 }
 export function cosmicSpinDanger(s:State,p:readonly number[],now:number,previous=now,bodyRadius=.65){
@@ -49,7 +49,9 @@ export function cosmicSpinDanger(s:State,p:readonly number[],now:number,previous
  for(const shot of cosmicOrbs(s,now,previous)){
   const dx=shot.p[0]-shot.from[0],dz=shot.p[2]-shot.from[2],n=dx*dx+dz*dz;
   const t=n?Math.max(0,Math.min(1,((p[0]-shot.from[0])*dx+(p[2]-shot.from[2])*dz)/n)):0;
-  if(Math.hypot(p[0]-shot.from[0]-dx*t,p[2]-shot.from[2]-dz*t)<radius)return true;
+  if(s.boss!=='metapidgie'){if(Math.hypot(p[0]-shot.from[0]-dx*t,p[2]-shot.from[2]-dz*t)<radius)return true;continue;}
+  const dy=shot.p[1]-shot.from[1],length=n+dy*dy,u=length?Math.max(0,Math.min(1,((p[0]-shot.from[0])*dx+(p[1]+.9-shot.from[1])*dy+(p[2]-shot.from[2])*dz)/length)):0;
+  if(Math.hypot(p[0]-shot.from[0]-dx*u,p[1]+.9-shot.from[1]-dy*u,p[2]-shot.from[2]-dz*u)<radius)return true;
  }
  // The visibly electrified blade sweeps the inner blind spot of the emitters.
  if(s.stage==='cosmic-spin'){

@@ -106,26 +106,26 @@ export function createMetapidgieCombatFx(model:T.Group,clips:T.AnimationClip[]){
  const light=new T.PointLight(0xffc126,0,2.0,2);light.name='Gold_beak_spill_light';group.add(light);
  const tip=model.getObjectByName('Metapidgie_beak_tip')!,point=new T.Vector3(),rotation=new T.Quaternion();
  group.traverse(node=>{node.userData.phase1Effect=true;});
- let power=0;
+ const originalEmission=new Map([...goldMaterials].map(([m])=>[m,m.emissive.clone()]));let power=0;
  function extentPoints(name:string){
   if(!['Boss_slash-warn','Boss_slash','Boss_slash-warn-backhand','Boss_slash-backhand','Boss_open','Boss_open-melee'].includes(name))return [];
   const points:T.Vector3[]=[];
   for(let i=0;i<=32;i++){const angle=-PIDGEY_MELEE_FX.halfAngle+2*PIDGEY_MELEE_FX.halfAngle*i/32;for(const r of [PIDGEY_MELEE_FX.inner,PIDGEY_MELEE_FX.radius])for(const y of [2.20,2.70])points.push(new T.Vector3(Math.sin(angle)*r,y,Math.cos(angle)*r));}
   return points;
  }
- return {group,trails,light,goldMaterials,extentPoints,parameters:PIDGEY_MELEE_FX,get glow(){return power;},bounds(name:string){
+ return {group,trails,light,goldMaterials,extentPoints,reset(){for(const [m,base] of goldMaterials){m.emissive.copy(originalEmission.get(m)!);m.emissiveIntensity=base;}for(const [m,base] of auraMaterials)m.opacity=base;light.intensity=0;halo.visible=false;for(const t of trails)t.root.visible=false;},parameters:PIDGEY_MELEE_FX,get glow(){return power;},bounds(name:string){
   if(!['Boss_slash-warn','Boss_slash','Boss_slash-warn-backhand','Boss_slash-backhand','Boss_open','Boss_open-melee'].includes(name))return new T.Box3();
   const width=PIDGEY_MELEE_FX.radius*Math.sin(PIDGEY_MELEE_FX.halfAngle);
   return new T.Box3(new T.Vector3(-width-.12,1.9,0),new T.Vector3(width+.12,2.95,PIDGEY_MELEE_FX.radius+.12));
- },update(name:string,time:number,duration:number,camera:T.Camera,retainedTimes?:readonly number[]){
+ },update(name:string,time:number,duration:number,camera:T.Camera,retainedTimes?:readonly number[],glowGain=1){
   const elapsed=meleeTrailTimes(name,time);
   elapsed.forEach((value,i)=>{if(value<0&&retainedTimes)elapsed[i]=retainedTimes[i];});
   trails.forEach((trail,i)=>{trail.elapsed=elapsed[i];trail.uniforms.uElapsed.value=elapsed[i];trail.root.visible=elapsed[i]>=0&&elapsed[i]<PIDGEY_MELEE_FX.sweep+PIDGEY_MELEE_FX.fade;});
   power=Math.max(meleeBeakGlow(name,time,duration),...elapsed.map(t=>t>=PIDGEY_MELEE_FX.strike?.62*(1-ease((t-PIDGEY_MELEE_FX.strike)/.30)):0));
-  for(const [material,base] of goldMaterials){material.emissive.setHex(0xffbc18);material.emissiveIntensity=base+power*2.0;}
-  for(const [material,base] of auraMaterials)material.opacity=Math.min(.75,base*(1+power*4));
+  for(const [material,base] of goldMaterials){material.emissive.setHex(0xffbc18);material.emissiveIntensity=base*(.45+.55*glowGain)+power*glowGain*2.0;}
+  for(const [material,base] of auraMaterials)material.opacity=Math.min(.75,base*(.45+.55*glowGain)*(1+power*glowGain*4));
   tip.getWorldPosition(point);model.worldToLocal(point);halo.position.copy(point);light.position.copy(point);light.position.z+=.055;
   model.getWorldQuaternion(rotation).invert();halo.quaternion.copy(rotation).multiply(camera.getWorldQuaternion(new T.Quaternion()));
-  halo.material.uniforms.uPower.value=power;halo.visible=power>.001;light.intensity=power*2.8;
+  halo.material.uniforms.uPower.value=power*glowGain;halo.visible=power>.001;light.intensity=power*glowGain*2.8;
  }};
 }

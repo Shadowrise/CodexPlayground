@@ -1,3 +1,4 @@
+import {pidgeyFeast} from './metapidgie-feast';
 import type {KnightBattle,KnightPoint} from './meta-knight-battle';
 import {cosmicVictoryDescent,easeCosmic} from './meta-knight-cosmic';
 
@@ -5,6 +6,7 @@ const smooth=(n:number)=>{n=Math.max(0,Math.min(1,n));return n*n*(3-2*n);};
 const mix=(a:KnightPoint,b:KnightPoint,t:number)=>a.map((v,i)=>v+(b[i]-v)*t) as KnightPoint;
 /** One shared clock for every client: run together, a warm hug, then skipping in a circle. */
 export function knightCelebration(s:KnightBattle|undefined,id:string,now:number){
+ const feast=pidgeyFeast(s,id,now);if(feast)return feast;
  const c=s?.celebration;if(!s||s.stage!=='lost'||!c)return;
  const ids=Object.keys(c.helpers).filter(id=>!s.players[id]?.withdrawn).sort();if(!ids.length||id!=='boss'&&!ids.includes(id))return;
  const little=id!=='boss',index=little?ids.indexOf(id):0,first=c.helpers[ids[0]],y=c.landAt?0:c.boss[1];
