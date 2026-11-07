@@ -79,6 +79,8 @@ test('save round trip restores size, independent speed, fruit boosts, visibility
   const snapshot=captureGame(player,variant,npcs,world,false,undefined,false,undefined,undefined,undefined,undefined,undefined,portal);
   portal.open=!open;assert.deepEqual(parseSave(JSON.stringify(snapshot)).portal,{open,override:open});
  }
+ for(const boss of ['metapidgie','meta-knight'] as const){const portal={open:true,override:true,boss};assert.deepEqual(parseSave(JSON.stringify({...save,portal})).portal,portal);}
+ assert.throws(()=>parseSave(JSON.stringify({...save,portal:{open:true,boss:'unknown'}})));
  const automatic=parseSave(JSON.stringify({...save,portal:{open:false}}));assert.equal(automatic.portal?.override,undefined);
  assert.equal(parseSave(JSON.stringify(save)).portal,undefined);
  for(const portal of [null,{},true,{open:1},{open:true,override:'yes'},{open:true,override:false}])assert.throws(()=>parseSave(JSON.stringify({...save,portal})));

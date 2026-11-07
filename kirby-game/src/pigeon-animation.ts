@@ -7,13 +7,13 @@ export const PIGEON_PECK_CORRECTION_PHASES=[0,.25,.5,.75,1] as const;
 type Leg={hip:T.Group;knee:T.Group;foot:T.Group;side:number};
 type PigeonRig={
   root:T.Group;rigs:T.Object3D[];motion:T.Group;body:T.Bone;neck:T.Bone;head:T.Bone;sculpt:T.SkinnedMesh;
-  wings:T.Group[];wingVanes:T.Group[];tail:T.Group;tuft:T.Group;eyelids:T.Group[];pupils:T.Group[];jaw:T.Group;
+  wings:T.Group[];wingVanes:T.Group[];volumeWings:T.Mesh[];tail:T.Group;tuft:T.Group;eyelids:T.Group[];pupils:T.Group[];jaw:T.Group;
   legs:Leg[];legPose:(leg:Leg,z:number,lift:number,pitch:number)=>void;
 };
 
 /** Bake articulated bird poses, so they also work outside this game's controller. */
 export function createPigeonAnimations(rig:PigeonRig){
-  const {root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose}=rig;
+  const {root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,volumeWings,tail,tuft,eyelids,pupils,jaw,legs,legPose}=rig;
   const rest=rigs.map(node=>({node,p:node.position.clone(),q:node.quaternion.clone(),s:node.scale.clone()}));
   const base=new Map(rest.map(row=>[row.node,row]));
   const tau=Math.PI*2,smooth=T.MathUtils.smoothstep,clamp=T.MathUtils.clamp;
@@ -23,6 +23,7 @@ export function createPigeonAnimations(rig:PigeonRig){
   const reset=()=>{
     rest.forEach(row=>{row.node.position.copy(row.p);row.node.quaternion.copy(row.q);row.node.scale.copy(row.s);});
     sculpt.morphTargetInfluences!.fill(0);
+    volumeWings.forEach(mesh=>mesh.morphTargetInfluences!.fill(0));
   };
 
   function closeEyes(amount:number,left=amount,right=amount){
@@ -62,6 +63,7 @@ export function createPigeonAnimations(rig:PigeonRig){
     // The folded sculpt inherits the torso's curved side. Flatten only that
     // curvature during flight, retaining its outline, feather paint and UVs.
     vane.scale.x=.30;vane.quaternion.copy(roll);wing.quaternion.copy(q);
+    volumeWings[index].morphTargetInfluences![0]=1;
   }
   function feetTucked(lift=.29,z=.08){
     for(const leg of legs){leg.hip.position.y=.43;legPose(leg,z,lift,.48);}
@@ -293,13 +295,14 @@ export function createPigeonAnimations(rig:PigeonRig){
     const count=(definition.name==='Walk'?84:Math.max(32,Math.ceil(definition.duration/cycles*40)))*cycles;
     const times=Array.from({length:count+1},(_,i)=>i/count*definition.duration);
     const values=rest.map(()=>({p:[] as number[],q:[] as number[],s:[] as number[]}));
-    const yaw:number[]=[],belly:number[]=[];
+    const yaw:number[]=[],belly:number[]=[],wingMorphs=volumeWings.map(()=>[] as number[]);
     for(let frame=0;frame<=count;frame++){
       reset();root.quaternion.identity();
       // Exact first/last samples make repeatable wingbeats and rides seamless.
       const u=definition.loop&&frame===count?0:frame/count;
       animate(definition.name,u);
       belly.push(...sculpt.morphTargetInfluences!);
+      volumeWings.forEach((mesh,i)=>wingMorphs[i].push(...mesh.morphTargetInfluences!));
       rest.forEach((row,i)=>{values[i].p.push(...row.node.position.toArray());values[i].q.push(...row.node.quaternion.toArray());values[i].s.push(...row.node.scale.toArray());});
       if(definition.name==='RotateLeft'||definition.name==='RotateRight')yaw.push(...root.quaternion.toArray());
     }
@@ -310,6 +313,7 @@ export function createPigeonAnimations(rig:PigeonRig){
       new T.VectorKeyframeTrack(`${row.node.name}.scale`,times,values[i].s),
     ));
     tracks.push(new T.NumberKeyframeTrack(`${sculpt.name}.morphTargetInfluences`,times,belly));
+    volumeWings.forEach((mesh,i)=>tracks.push(new T.NumberKeyframeTrack(`${mesh.name}.morphTargetInfluences`,times,wingMorphs[i])));
     if(yaw.length)tracks.push(new T.QuaternionKeyframeTrack(`${root.name}.quaternion`,times,yaw));
     const clip=new T.AnimationClip(definition.name,definition.duration,tracks);clip.optimize();return clip;
   });

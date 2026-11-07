@@ -2,6 +2,7 @@
 #knight-battle-hud[hidden],#knight-battle-hud [hidden]{display:none}
 .knight-battle-top{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:0 3px 7px}.knight-battle-top strong{font-size:18px;letter-spacing:.06em}.knight-battle-top span{font-size:12px;color:#c2b8e5}
 .knight-health{display:flex;flex-direction:row-reverse;align-items:stretch;height:18px;padding:2px;border:1px solid #a699c18c;border-radius:6px;background:#17152eee;box-shadow:0 2px 8px #070b2033;box-sizing:border-box}
+.knight-health>[hidden]{display:none}
 .knight-health-phase{display:flex;flex:1;min-width:0;gap:2px}
 .knight-health-divider{flex:0 0 3px;margin:0 4px;border-radius:1px;background:#c9a76d linear-gradient(180deg,#b38645,#ffe0a0 45%,#bd914f);box-shadow:0 0 4px #e3b96840}
 .knight-health-hit{display:block;flex:1;min-width:0;border:1px solid #9986b331;border-radius:2px;background:#302842;transition:background .2s,box-shadow .2s;box-sizing:border-box}

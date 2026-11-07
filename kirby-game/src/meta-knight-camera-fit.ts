@@ -10,11 +10,11 @@ const project=([x,y,z]:KnightPoint)=>({x,up:(y-3)*DEPTH-z*RISE,depth:(y-3)*RISE+
 const ARENA_PROJECTION=ARENA_POINTS.map(project);
 
 /** Fit the projected arena, rather than a sphere, and centre it inside the HUD insets. */
-export function fitKnightArenaCamera(width:number,height:number,actors:readonly KnightPoint[]=[],top=96,bottom=24){
+export function fitKnightArenaCamera(width:number,height:number,actors:readonly KnightPoint[]=[],top=96,bottom=24,includeArena=true){
  width=Math.max(1,width);height=Math.max(1,height);
  const fov=height>width?75:55,tan=Math.tan(fov*Math.PI/360),aspect=width/height;
  const upper=1-2*Math.min(height*.3,Math.max(8,top))/height,lower=-1+2*Math.min(height*.25,Math.max(8,bottom))/height,horizontal=1-2*Math.min(20,width*.04)/width;
- const points=[...ARENA_PROJECTION,...actors.map(project)];
+ const points=[...(includeArena?ARENA_PROJECTION:[]),...actors.map(project)];
  let minDistance=1;for(const p of points)minDistance=Math.max(minDistance,p.depth+Math.abs(p.x)/(tan*aspect*horizontal),p.depth+1);
  const limits=(distance:number)=>{let min=-Infinity,max=Infinity;for(const p of points){const span=tan*(distance-p.depth);min=Math.max(min,p.up-upper*span);max=Math.min(max,p.up-lower*span);}return {min,max};};
  let low=minDistance,high=minDistance;while(limits(high).min>limits(high).max)high*=1.5;

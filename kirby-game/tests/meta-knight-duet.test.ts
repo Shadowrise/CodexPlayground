@@ -33,6 +33,21 @@ test('slot four queues once, starts after the current boss pattern, and has a ni
  const half=(s.since+s.until)/2,p=helperPosition(h,half)!;assert(p[0]<helper.p[0]);assert.deepEqual(knightPosition(s,s.until),knightFormationSide(-3.3,s.duet!.yaw??0));assert(Math.hypot(...helperPosition(h,s.until)!.map((v,i)=>v-knightFormationSide(3.3,s.duet!.yaw??0)[i]))<1e-8);assert.equal(s.players.helper.hp,5);
  assert.equal(h.cooldowns[3],s.duet!.at!+DUET.cooldownMs);
 });
+for(const phase of [1,2,3] as const)test(`phase ${phase}: a helper airborne when the duet begins approaches on the platform`,()=>{
+ const {s,actors,helper,h}=fixture(phase);helper.p=[27,2.9,-18];
+ assert(startHelperAbility(s,helper,4,100000));advanceKnightBattle(s,actors,s.until);
+ assert.equal(s.stage,'duet-gather');assert.equal(s.duet!.floor,0);
+ assert.deepEqual(s.duet!.helperFrom,[27,0,-18]);assert.deepEqual(h.duet!.from,s.duet!.helperFrom);
+ const restored=structuredClone(s);
+ for(const fraction of [0,.1,.25,.5,.75,.99,1]){
+  const now=s.since+(s.until-s.since)*fraction,p=helperPosition(h,now)!;
+  assert.equal(p[1],0,'automatic movement must keep the helper on the platform');
+  assert.deepEqual(helperPosition(restored.players.helper.helper!,now),p,'snapshots keep the same grounded path');
+ }
+ assert.deepEqual(helper.p,[27,2.9,-18],'the input actor is not mutated');
+ advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-charge');assert.equal(helperPosition(h,s.since+500)![1],0);
+});
+
 test('five larger waves preview the next warning before each strike and promote it without an empty gap',()=>{
  const {s,actors,hero,helper,h}=fixture();assert.equal(DUET.radius,9.5*1.5);startHelperAbility(s,helper,4,100000);for(let i=0;i<3;i++)advanceKnightBattle(s,actors,s.until);assert.equal(s.stage,'duet-warn');
  for(let round=0;round<DUET.waves;round++){

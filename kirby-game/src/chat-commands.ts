@@ -8,7 +8,7 @@ export const TELE_ALIASES:Readonly<Record<string,string>>={
  swing:'sw',mill:'ml',depot:'rc',maze:'mz','balloon-0':'bf','balloon-1':'bs','balloon-2':'bc',
  'musical-flowers':'fl',
 };
-export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'|'kurlyk'}|{kind:'time';hour:number}|{kind:'portal';open:boolean}|{kind:'phase';phase:1|2|3|4;subphase?:1|2|3}|{kind:'godmode'};
+export type ChatCommand={kind:'size';size:number}|{kind:'tele';destination:Destination}|{kind:'unlock';character:'metapidgie'|'bandana'|'pidgie'|'meta-knight'|'snowball'|'ugolyok'|'ryzhik'|'kurlyk'}|{kind:'time';hour:number}|{kind:'portal';open:boolean;boss?:'metapidgie'}|{kind:'phase';phase:1|2|3|4;subphase?:1|2|3}|{kind:'godmode'};
 export type CommandResult={command:ChatCommand;error?:never}|{error:string;command?:never};
 export type CommandSuggestion={value:string;label:string;description:string;complete:boolean};
 export type ChatCommandOptions={
@@ -22,7 +22,7 @@ const commands=[
  {name:'tele',description:'Телепортироваться к приключению'},
  {name:'unlock',description:'Разблокировать персонажа'},
  {name:'time',description:'Установить час в игре: 0–23'},
- {name:'portal',description:'Портал Метакнайта: 1 — открыть, 0 — закрыть'},
+ {name:'portal',description:'Портал: 1 — Метакнайт, 2 — Мета Пиджи, 0 — закрыть'},
 ];
 // English command aliases are independent of stable save/network character IDs.
 const unlockCharacters=[
@@ -33,6 +33,7 @@ const unlockCharacters=[
  {character:'ugolyok',alias:'cinder',name:'Уголёк'},
  {character:'ryzhik',alias:'ginger',name:'Рыжик'},
  {character:'kurlyk',alias:'coo-king',name:'Курлык'},
+ {character:'metapidgie',alias:'metapidgie',name:'Мета Пиджи'},
 ] as const;
 const duelCommands=[{name:'phase',description:'Переключить фазу Метакнайта: 1–4'},{name:'godmode',description:'Включить или выключить неуязвимость до конца дуэли'}];
 function parts(text:string){return /^\/(\S*)(?:\s+(.*))?$/.exec(text.trimStart());}
@@ -49,8 +50,8 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
   return /^[1234]$/.test(argument)?{command:{kind:'phase',phase:Number(argument) as 1|2|3|4}}:{error:'Введи /phase 1, /phase 2, /phase 3, /phase 4, /phase 4-1, /phase 4-2 или /phase 4-3.'};
  }
  if(name==='portal'){
-  if(argument!=='0'&&argument!=='1')return {error:'Введи /portal 1, чтобы открыть портал, или /portal 0, чтобы закрыть.'};
-  return {command:{kind:'portal',open:argument==='1'}};
+  if(!['0','1','2'].includes(argument))return {error:'Введи /portal 1 — Метакнайт, /portal 2 — Мета Пиджи, /portal 0 — закрыть.'};
+  return {command:{kind:'portal',open:argument!=='0',...(argument==='2'?{boss:'metapidgie' as const}:{})}};
  }
  if(name==='size'){
   // Reject partial numbers, NaN and out-of-range values rather than silently clamping.
@@ -69,7 +70,7 @@ export function parseChatCommand(text:string,enabled:boolean,destinations:readon
  }
  if(name==='unlock'){
   const target=unlockCharacters.find(entry=>entry.alias===argument.toLowerCase());
-  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock cinder, /unlock ginger или /unlock coo-king, чтобы открыть персонажа.'};
+  return target?{command:{kind:'unlock',character:target.character}}:{error:'Введи /unlock bandana, /unlock pidgie, /unlock meta-knight, /unlock snowball, /unlock cinder, /unlock ginger, /unlock coo-king или /unlock metapidgie, чтобы открыть персонажа.'};
  }
  return {error:duelActive?'Доступные команды: /size, /tele, /unlock, /time, /portal, /phase и /godmode.':'Доступные команды: /size, /tele, /unlock, /time и /portal.'};
 }
@@ -79,7 +80,7 @@ export function commandSuggestions(text:string,enabled:boolean,destinations:read
  const match=parts(text);if(!match)return [];
  const name=match[1].toLowerCase(),argument=match[2]?.trim().toLowerCase()??'';
  if(name==='phase')return duelActive?['1','2','3','4','4-1','4-2','4-3'].filter(phase=>phase.startsWith(argument)).map(phase=>({value:`/phase ${phase}`,label:phase,description:phase==='4-1'?t('Грозовой вихрь'):phase==='4-2'?t('Гравитационный удар'):phase==='4-3'?t('Звёздное убежище'):t('Фаза {0}',[phase]),complete:true})):[];
- if(name==='portal')return [{value:'1',description:'Открыть портал'},{value:'0',description:'Закрыть портал'}].filter(option=>option.value.startsWith(argument)).map(option=>({value:`/portal ${option.value}`,label:option.value,description:t(option.description),complete:true}));
+ if(name==='portal')return [{value:'1',description:'Открыть портал'},{value:'2',description:'Мета Пиджи'},{value:'0',description:'Закрыть портал'}].filter(option=>option.value.startsWith(argument)).map(option=>({value:`/portal ${option.value}`,label:option.value,description:t(option.description),complete:true}));
  if(name==='tele')return destinations.filter(d=>TELE_ALIASES[d.id]?.startsWith(argument)).map(d=>({
   value:`/tele ${TELE_ALIASES[d.id]}`,label:TELE_ALIASES[d.id],description:t(d.name),complete:true,
  }));

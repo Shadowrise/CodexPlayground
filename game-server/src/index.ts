@@ -145,17 +145,19 @@ export class GameRoom extends DurableObject<Env>{
   this.log(a,delta>.0?`вырос до ${pct}% — Ветерок налепил немного жирка.`:`уменьшился до ${pct}% — Ветерок сдул лишний жирок.`);
   this.broadcast({type:'frame',id:a.id,actor:a.actor},socket);this.changed();return {ok:true,size:next};
  });}
- adminOpenPortal(roomId:string){return this.ctx.blockConcurrencyWhile(async()=>{
+ adminOpenPortal(roomId:string,boss:import('../../kirby-game/src/knight-boss').KnightBoss='meta-knight'){return this.ctx.blockConcurrencyWhile(async()=>{
   const r=this.room;if(!r||r.id!==roomId||!this.players().length)return {ok:false,error:'Активной комнаты уже нет. Обнови список.'};
   if(r.festival?.results)return {ok:false,error:'Игра уже завершена.'};
-  if(r.metaKnightPortalOpen||allSealsCollected(r.sealProgress??newSealProgress()))return {ok:true};
-  r.metaKnightPortalOpen=true;
-  this.logEntry({id:crypto.randomUUID(),name:'',variant:-1,text:'Портал на космическую арену открыт!',chat:false});
+  if(boss!=='meta-knight'&&boss!=='metapidgie')return {ok:false,error:'Неизвестный босс.'};
+  if((r.metaKnightPortalOpen||allSealsCollected(r.sealProgress??newSealProgress()))&&(r.portalBoss??'meta-knight')===boss)return {ok:true};
+  if(r.knightBattle&&!['won','lost','cancelled'].includes(r.knightBattle.stage))return {ok:false,error:'Дождись окончания текущей дуэли.'};
+  r.metaKnightPortalOpen=true;r.portalBoss=boss;delete r.knightBattle;r.knightSides={};
+  this.logEntry({id:crypto.randomUUID(),name:'',variant:-1,text:boss==='metapidgie'?'Портал Мета Пиджи открыт!':'Портал на космическую арену открыт!',chat:false});
   this.changed();return {ok:true};
  });}
  adminOnline(){return this.ctx.blockConcurrencyWhile(async()=>{
   const room=this.room??await this.ctx.storage.get<RoomState>('prepared-room');
-  return {room:room?{id:room.id,createdAt:room.epoch,portalOpen:room.metaKnightPortalOpen===true||allSealsCollected(room.sealProgress??newSealProgress()),festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const size=a.actor?Math.round((a.actor.progress?.size??a.actor.s)*1000)/1000:1;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null,size,ready:!!a.actor};})};
+  return {room:room?{id:room.id,createdAt:room.epoch,portalBoss:room.portalBoss??'meta-knight',duelActive:!!room.knightBattle&&!['won','lost','cancelled'].includes(room.knightBattle.stage),portalOpen:room.metaKnightPortalOpen===true||allSealsCollected(room.sealProgress??newSealProgress()),festival:room.festival?.results?'finished':room.festival?'running':'none'}:null,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;const size=a.actor?Math.round((a.actor.progress?.size??a.actor.s)*1000)/1000:1;return {id:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,host:a.id===room?.host,joinedAt:a.history?.startedAt??null,size,ready:!!a.actor};})};
  });}
  adminDisconnect(roomId:string,playerId:string){return this.ctx.blockConcurrencyWhile(async()=>{
   if(this.room?.id!==roomId)return {ok:false,error:'Комната уже изменилась. Обнови список.'};
@@ -284,7 +286,7 @@ export class GameRoom extends DurableObject<Env>{
    if(ally)c.p=[META_KNIGHT_ARENA.x+ally.p[0],ally.p[1],ally.p[2]];
    socket.serializeAttachment(a);
   }
-  if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&p.side!=='boss'&&!p.withdrawn&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??''));}}return true;}
+  if(s.stage==='won'&&!s.rewarded){s.rewarded=true;s.revision++;for(const socket of this.players()){const a=(current&&(socket.deserializeAttachment() as Attachment).id===current.id)?current:socket.deserializeAttachment() as Attachment,p=s.players[a.id];if(p&&p.side!=='boss'&&!p.withdrawn&&p.hp>0&&p.hits+p.reflects>0){this.send(socket,{type:'knight-victory'});this.logEntry(metaKnightVictoryLog(a.name??a.actor?.name??'',s.boss));}}return true;}
   return changed;
  }
  private advanceBoss(now:number,current?:Attachment,contacts=true){
@@ -427,7 +429,7 @@ export class GameRoom extends DurableObject<Env>{
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
     if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&me.metaKnight&&helperChoiceAvailable(actors)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
     else if(e.action==='ability'){if(startHelperAbility(r.knightBattle,me,e.ability,now))changed=true;}
-    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
+    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now,r.portalBoss);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
     else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }

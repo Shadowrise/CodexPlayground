@@ -16,7 +16,7 @@ import {META_KNIGHT_ARENA,insideMetaKnightArena} from './meta-knight-arena-site'
 import type { Vector3 } from 'three';
 export const SAVE_KEY='kirby-save-v1';
 type ActorSave={variant:string;x:number;z:number;yaw:number;size:number;speed?:number;fruitBoost?:FruitBoostState;fruitsEaten:number;achievements?:ScoreAction[];eventPoints?:number;location?:'meta-knight-arena'};
-export type PortalSave={open:boolean;override?:boolean};
+export type PortalSave={open:boolean;override?:boolean;boss?:import('./knight-boss').KnightBoss};
 export type GameSave={version:1;savedAt:string;player:ActorSave;npcs:ActorSave[];fruits:boolean[];mazeStar?:boolean;starRemaining?:number;starCooldown?:number;night?:boolean;dayPhase?:number;festival?:StarfallState;skyCheckpoint?:number;mountainCheckpoint?:number;bread?:BreadState;pidgie?:PidgieState;snowball?:PidgieState;ugolyok?:PidgieState;ryzhik?:PidgieState;kurlyk?:PidgieState;seals?:SealProgress;millQuest?:MillQuest;portal?:PortalSave};
 export function captureGame(player:CharacterController,variant:KirbyVariant,npcs:readonly KirbyNpc[],fruits:FruitWorld,riding=false,safePosition?:(c:CharacterController|KirbyNpc)=>Vector3|undefined,night=false,dayPhase?:number,bread?:BreadState,pidgie?:PidgieState,seals?:SealProgress,millQuest?:MillQuest,portal?:PortalSave,snowball?:PidgieState,extraBirds:Partial<Record<'ugolyok'|'ryzhik'|'kurlyk',PidgieState>>={}):GameSave {
   const actor=(c:CharacterController|KirbyNpc,name:string):ActorSave=>{const p=safePosition?.(c)??c.actor.position;return {variant:name,x:p.x,z:p.z,yaw:c.yaw,size:c.savedSize,fruitBoost:c.fruitBoost.snapshot(),fruitsEaten:c.fruitsEaten,achievements:[...c.achievements],...('eventPoints' in c?{eventPoints:c.eventPoints,speed:c.savedSpeedSize}:{})};};
@@ -28,7 +28,7 @@ export function captureGame(player:CharacterController,variant:KirbyVariant,npcs
 }
 export function parseSave(raw:string):GameSave {
   const data=JSON.parse(raw) as GameSave;
-  if(data?.portal!==undefined&&(!data.portal||typeof data.portal.open!=='boolean'||data.portal.override!==undefined&&(typeof data.portal.override!=='boolean'||data.portal.override!==data.portal.open)))throw Error('Сохранение повреждено или несовместимо.');
+  if(data?.portal!==undefined&&(!data.portal||typeof data.portal.open!=='boolean'||data.portal.override!==undefined&&(typeof data.portal.override!=='boolean'||data.portal.override!==data.portal.open)||data.portal.boss!==undefined&&!['meta-knight','metapidgie'].includes(data.portal.boss)))throw Error('Сохранение повреждено или несовместимо.');
   if(data?.player?.location!==undefined&&(data.player.location!=='meta-knight-arena'||!Number.isFinite(data.player.x)||!Number.isFinite(data.player.z)||!insideMetaKnightArena(data.player.x-META_KNIGHT_ARENA.x,data.player.z-META_KNIGHT_ARENA.z)))throw Error('Сохранение повреждено или несовместимо.');
   if(data?.bread!==undefined&&!validBread(data.bread))throw Error('Сохранение повреждено или несовместимо.');
   if(data?.bread)data.bread=normalizeBread(data.bread);

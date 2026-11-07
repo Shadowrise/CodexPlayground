@@ -53,7 +53,7 @@ test('new plumages embed their own feather atlases and preserve the complete aut
 });
 
 test('new selectable players and remote players use their native paint and pigeon controller without moving saved variant IDs',()=>{
- assert.deepEqual(KIRBY_VARIANTS.slice(17).map(v=>v[0]),['Пиджи','Meta Knight','Снежок','Уголёк','Рыжик','Курлык']);
+ assert.deepEqual(KIRBY_VARIANTS.slice(17,23).map(v=>v[0]),['Пиджи','Meta Knight','Снежок','Уголёк','Рыжик','Курлык']);
  const remote=new RemotePlayers(new Scene(),kirby,templates.pidgie,undefined,undefined,templates.snowball,templates);
  for(const id of ['ugolyok','ryzhik','kurlyk'] as const){
   const variant=KIRBY_VARIANTS.find(v=>v[0]===wildPigeonName(id))!,index=KIRBY_VARIANTS.indexOf(variant);

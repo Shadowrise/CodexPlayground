@@ -428,7 +428,7 @@ test('flight wings spread in a horizontal plane and keep outer feathers out of t
    const mesh=meshes(wing)[0],positions=mesh.geometry.attributes.position;
    let nearestSeam=Infinity;
    for(let vertex=0;vertex<positions.count;vertex+=4){
-    point.fromBufferAttribute(positions,vertex);
+    mesh.getVertexPosition(vertex,point);
     const span=-point.z;
     point.applyMatrix4(mesh.matrixWorld);
     if(span<.20){nearestSeam=Math.min(nearestSeam,inside.gap(point));continue;} // only the shoulder seam may overlap skin
@@ -456,7 +456,7 @@ test('takeoff and landing blends keep visible wing feathers outside the animated
     const mesh=meshes(wing)[0],positions=mesh.geometry.attributes.position;
     let nearestSeam=Infinity;
     for(let vertex=0;vertex<positions.count;vertex+=4){
-     point.fromBufferAttribute(positions,vertex);
+     mesh.getVertexPosition(vertex,point);
      const span=-point.z;
      point.applyMatrix4(mesh.matrixWorld);
      if(span<.20){nearestSeam=Math.min(nearestSeam,inside.gap(point));continue;}

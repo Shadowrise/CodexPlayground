@@ -19,6 +19,7 @@ export function styleVariant(element:HTMLElement,variant:KirbyVariant){
   element.classList.toggle('ugolyok-character',variant[0]==='Уголёк');
   element.classList.toggle('ryzhik-character',variant[0]==='Рыжик');
   element.classList.toggle('kurlyk-character',variant[0]==='Курлык');
+  element.classList.toggle('metapidgie-character',variant[0]==='Мета Пиджи');
   element.classList.toggle('meta-knight-character',variant[0]==='Meta Knight');
 }
 

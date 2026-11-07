@@ -1,3 +1,4 @@
+import {pidgeyAirHeight} from './knight-boss';
 import {prepareKnightFightersFinale,projectKnightFightersFinale,type KnightFightersFinale} from './meta-knight-fighters-finale';
 import {knightAudienceYaw} from './meta-knight-staging';
 import type {KnightBump} from './meta-knight-opponents-contact';
@@ -21,7 +22,7 @@ export type KnightStage=DuetStage|CosmicStage|'side-choice'|'intro'|'approach'|'
 export type KnightPlayer={hp:number;invulnerable:number;attackAt:number;handled:number;hits:number;reflects:number;withdrawn?:boolean;side?:KnightSide;helper?:KnightHelper;bump?:KnightBump};
 export type KnightCross={pairs:[[number,number],[number,number]];side:0|1};
 export type KnightImpactWave={at:number;origin:KnightPoint};
-export type KnightBattle={fightersFinale?:KnightFightersFinale;defeat?:KnightDefeat;id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;teamMaxHp?:number;players:Record<string,KnightPlayer>;opponents?:Record<string,KnightOpponent>;sharedOpponents?:true;partyInvulnerable?:number;choice?:{owner:string;until:number;actors:KnightActor[]};target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;starSequenceVersion?:1;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number;duet?:KnightDuet;celebration?:{facing?:number;at:number;landAt?:number;heading?:number;boss:KnightPoint;helpers:Record<string,KnightPoint>}};
+export type KnightBattle={boss?:import('./knight-boss').KnightBoss;fightersFinale?:KnightFightersFinale;defeat?:KnightDefeat;id:number;revision:number;stage:KnightStage;since:number;until:number;checked:number;phase:1|2|3|4;hp:number;teamHp?:number;teamMaxHp?:number;players:Record<string,KnightPlayer>;opponents?:Record<string,KnightOpponent>;sharedOpponents?:true;partyInvulnerable?:number;choice?:{owner:string;until:number;actors:KnightActor[]};target:string;from:KnightPoint;to:KnightPoint;yaw:number;height:number;cycle:number;step:number;pattern:'sword'|'leap'|'flight'|'dive'|'crescent'|'star';openHit:boolean;impactWave?:KnightImpactWave;returnFrom?:KnightPoint;shotContacts?:Record<string,number>;rewarded?:boolean;activeCrystal?:number;brokenCrystals?:number;lastCrystal?:number;starRoute?:number[];starAims?:KnightPoint[];starCross?:KnightCross;starSequenceVersion?:1;cosmicLaunch?:CosmicLaunch;cosmicFall?:CosmicFall;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3;cosmicRefuge?:CosmicRefuge;cosmicMeteor?:CosmicMeteor;lifeFirefly?:KnightLifeFirefly;lifeFireflyPhases?:number;duet?:KnightDuet;celebration?:{facing?:number;at:number;landAt?:number;heading?:number;boss:KnightPoint;helpers:Record<string,KnightPoint>}};
 export const KNIGHT={effectScale:2,modelScale:3.3,health:12,hearts:5,sideChoiceMs:15000,introMs:3000,hitStunMs:1000,getUpMs:260,reflectMs:300,parryGraceMs:160,shotReleaseMs:220,shotLaunchMs:160,aimLockMs:260,hoverHeight:1.2,attackCooldown:650,invulnerableMs:1200,sharedContactMs:800,bodyRadius:.65,slashRadius:11.6,slashHalfAngle:1.05,laneHalfWidth:3,impactRadius:5,waveSpeed:.014,waveHeight:.85,projectileRadius:2.4,projectileWidthScale:1.6,projectileSpeed:.028,projectileHeight:1.2,meleeReach:4.8,shotHiltY:.55,shotHiltZ:1.32,bladeLength:Math.hypot(.315,2.05)} as const;
 export function knightBattleActive(s:KnightBattle|undefined){return !!s&&!['won','lost','cancelled'].includes(s.stage);}
 /** Old room snapshots inherit the lowest remaining health, never extra lives. */
@@ -61,6 +62,7 @@ export function knightPosition(s:KnightBattle,now:number):KnightPoint{
  const star=starPosition(s,now);if(star)return star;
  const t=knightProgress(s,now),p=['approach','jump','dash','dive','return'].includes(s.stage)?mix(s.from,s.to,t):[...s.from] as KnightPoint;
  if(s.stage==='cancelled')return [0,0,-9];
+ if(s.boss==='metapidgie')return [p[0],pidgeyAirHeight(s.stage,t,s.step)*KNIGHT.modelScale,p[2]];
  if(s.stage==='jump')p[1]+=Math.sin(t*Math.PI)*5;
  if(s.stage==='dive-warn')p[1]+=Math.sin(t*Math.PI/2)*5;
  if(s.stage==='dive')p[1]+=5*(1-t);
@@ -92,7 +94,7 @@ const recipes:Record<KnightBattle['pattern'],[KnightStage,number][]>={
 export function knightJumpOpening(s:KnightBattle){return s.stage==='open'&&(s.pattern==='leap'||s.pattern==='dive');}
 /** The circular warning counts all the way through flight to the sword impact. */
 export function knightImpactProgress(s:KnightBattle,now:number){
- const dive=s.stage.startsWith('dive'),recipe=recipes[dive?'dive':'leap'],warning=warningDuration(recipe[0][1],s.phase),air=recipe[1][1];
+ const dive=s.stage.startsWith('dive'),recipe=recipes[dive?'dive':'leap'],warning=warningDuration(recipe[0][1],s.phase),air=s.boss==='metapidgie'?1200:recipe[1][1];
  if(s.stage==='jump-warn'||s.stage==='dive-warn'){const duration=s.until-s.since;return knightProgress(s,now)*duration/(duration+air);}
  if(s.stage==='jump'||s.stage==='dive')return (warning+knightProgress(s,now)*(s.until-s.since))/(warning+s.until-s.since);
  return s.stage==='slam'?1:0;
@@ -104,7 +106,7 @@ export function knightStartCount(s:KnightBattle|undefined,now:number):'3'|'2'|'1
 }
 function living(s:KnightBattle,actors:KnightActor[]){return actors.filter(a=>a.available&&s.players[a.id]?.hp>0&&s.players[a.id].side!=='boss'&&!s.players[a.id].withdrawn);}
 function target(s:KnightBattle,actors:KnightActor[]){const alive=living(s,actors);return alive.find(a=>a.id===s.target)??alive[0];}
-export function startKnightBattle(actors:KnightActor[],owner:string,now:number):KnightBattle|undefined{
+export function startKnightBattle(actors:KnightActor[],owner:string,now:number,boss:import('./knight-boss').KnightBoss='meta-knight'):KnightBattle|undefined{
  const a=actors.find(a=>a.id===owner&&a.available&&distance(a.p,[0,0,-9])<9&&a.p[1]<1);
  if(!a)return;
  const eligible=helperChoiceAvailable(actors),choosing=eligible&&actors.some(a=>a.available&&insideKnightFightingArea(a.p)&&a.metaKnight&&!a.side);
@@ -114,7 +116,7 @@ export function startKnightBattle(actors:KnightActor[],owner:string,now:number):
  const players:KnightBattle['players']={};for(const actor of [...actors,...Object.values(opponents??{})])if(actor.available&&insideKnightFightingArea(actor.p))players[actor.id]={hp:opponents?.[actor.id]?OPPONENTS.hearts:eligible&&actor.metaKnight&&actor.side==='boss'?HELPER.hearts:partyHearts,invulnerable:0,attackAt:-1e9,handled:-1e9,hits:0,reflects:0,...(eligible&&actor.metaKnight&&actor.side==='boss'?{side:'boss' as const,helper:{cooldowns:[0,0,0] as [number,number,number],phase:1}}:{})};
  const humanHeroes=Object.entries(players).filter(([id,p])=>p.side!=='boss'&&!opponents?.[id]).length,pool=opponents?Object.keys(opponents).length*OPPONENTS.hearts+(humanHeroes?partyHearts:0):partyHearts;
  if(opponents)for(const player of Object.values(players))if(player.side!=='boss')player.hp=pool;
- return {id:now,revision:1,stage:choosing?'side-choice':'intro',since:now,until:now+(choosing?KNIGHT.sideChoiceMs:KNIGHT.introMs),...(choosing?{choice:{owner,until:now+KNIGHT.sideChoiceMs,actors:actors.filter(a=>a.available&&insideKnightFightingArea(a.p)).map(a=>({...a,p:[...a.p] as KnightPoint}))}}:{}),checked:now,phase:1,hp:12,...(assisted?{teamMaxHp:pool}:{}),...(Object.values(players).filter(p=>p.side!=='boss').length>1?{teamHp:pool}:{}),...(opponents?{opponents,sharedOpponents:true as const}:{}),players,target:players[owner]?.side==='boss'?Object.keys(players).find(id=>players[id].side!=='boss')!:owner,from:[0,0,-9],to:[0,0,-9],yaw:0,height:0,cycle:0,step:-1,pattern:'sword',openHit:false};
+ return {...(boss==='metapidgie'?{boss}:{}),id:now,revision:1,stage:choosing?'side-choice':'intro',since:now,until:now+(choosing?KNIGHT.sideChoiceMs:KNIGHT.introMs),...(choosing?{choice:{owner,until:now+KNIGHT.sideChoiceMs,actors:actors.filter(a=>a.available&&insideKnightFightingArea(a.p)).map(a=>({...a,p:[...a.p] as KnightPoint}))}}:{}),checked:now,phase:1,hp:12,...(assisted?{teamMaxHp:pool}:{}),...(Object.values(players).filter(p=>p.side!=='boss').length>1?{teamHp:pool}:{}),...(opponents?{opponents,sharedOpponents:true as const}:{}),players,target:players[owner]?.side==='boss'?Object.keys(players).find(id=>players[id].side!=='boss')!:owner,from:[0,0,-9],to:[0,0,-9],yaw:0,height:0,cycle:0,step:-1,pattern:'sword',openHit:false};
 }
 /** All fighters against the knights share one health pool; contact feedback belongs to the struck fighter. */
 function damageKnightPlayer(s:KnightBattle,id:string,now:number){
@@ -186,7 +188,7 @@ function enter(s:KnightBattle,stage:KnightStage,ms:number,now:number,actors:Knig
  }
 }
 function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
- if(s.phase!==4&&beginKnightDuet(s,actors,now,knightPosition(s,now)))return;
+ if(s.boss!=='metapidgie'&&s.phase!==4&&beginKnightDuet(s,actors,now,knightPosition(s,now)))return;
  if(s.phase===4){const [stage,ms]=cosmicNext('transition');s.cycle=1;s.step=0;s.pattern='sword';enter(s,stage,ms,now,actors);s.from=s.to=[0,0,0];s.yaw=0;return;}
  const alive=living(s,actors);s.target=alive[s.cycle%Math.max(1,alive.length)]?.id??s.target;
  if(s.phase===3){s.pattern='star';s.starSequenceVersion=1;s.cycle++;s.step=0;delete s.starCross;enter(s,'star-rise',STAR_SEQUENCE[0][1],now,actors);planStarRoute(s,target(s,actors)?.p??[0,0,1]);s.to=crystalPoint(s.starRoute![0],STAR_ASSAULT.ricochetRadius,STAR_ASSAULT.hover);s.yaw=angle(s.from,s.to);return;}
@@ -197,6 +199,7 @@ function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
 }
 /** Both melee and returned crescents use the same phase and victory boundaries. */
 function finishKnightDamage(s:KnightBattle,now:number,actors:KnightActor[]){
+ if(s.boss==='metapidgie'&&s.hp<=8){enter(s,'won',1e12,now,actors);return true;}
  if(s.phase===3&&s.hp<=0){setKnightPhase(s,4,actors,now);return true;}
  if(s.hp<=0){enter(s,'won',1e12,now,actors);return true;}
  if(s.phase===4)return false;
@@ -212,7 +215,7 @@ function damageKnight(s:KnightBattle,now:number,actors:KnightActor[],reaction?:'
 }
 /** Local duel command: replace the phase without carrying an old attack across. */
 export function setKnightPhase(s:KnightBattle,phase:1|2|3|4,actors:KnightActor[],now:number,subphase?:1|2|3){
- if(!knightBattleActive(s)||![1,2,3,4].includes(phase)||!living(s,actors).length)return false;
+ if(s.boss==='metapidgie'&&phase!==1||!knightBattleActive(s)||![1,2,3,4].includes(phase)||!living(s,actors).length)return false;
  const wasCosmic=s.phase===4;
  enter(s,'transition',1500,now,actors);s.phase=phase;s.hp=KNIGHT_PHASE_HEALTH[phase];
  if(phase===4){s.from[1]=0;s.to=[0,0,0];s.yaw=Math.atan2(-s.from[0],-s.from[2]);prepareKnightCosmicAllies(s,actors,now);}else if(wasCosmic){s.from=s.to=[0,0,-9];}
@@ -249,7 +252,7 @@ function nextStep(s:KnightBattle,now:number,actors:KnightActor[],protectedPlayer
  }
  const old=s.stage,oldFrom=[...s.from] as KnightPoint,oldTo=[...s.to] as KnightPoint,oldHeight=s.height;
  const starFrom=s.pattern==='star'?knightPosition(s,now):undefined;
- if(old==='stunned'||old==='crystal-break'){if(s.hp<=0){finishKnightDamage(s,now,actors);return;}enter(s,'get-up',KNIGHT.getUpMs,now,actors);return;}
+ if(old==='stunned'||old==='crystal-break'){if(s.hp<=0||s.boss==='metapidgie'&&s.hp<=8){finishKnightDamage(s,now,actors);return;}enter(s,'get-up',KNIGHT.getUpMs,now,actors);return;}
  if(old==='get-up'){if(finishKnightDamage(s,now,actors))return;delete s.activeCrystal;nextPattern(s,now,actors);return;}
  if(old==='intro'||old==='rest'||old==='open'){delete s.activeCrystal;nextPattern(s,now,actors);return;}
  if(old==='transition'){s.cycle=0;nextPattern(s,now,actors);return;}
@@ -258,7 +261,7 @@ function nextStep(s:KnightBattle,now:number,actors:KnightActor[],protectedPlayer
  const recipe=s.pattern==='star'?starSequence(s):recipes[s.pattern],next=recipe[s.step];
  if(!next){nextPattern(s,now,actors);return;}
  // Wider attacks retain time to move out with the ordinary controls.
- const duration=s.pattern==='star'?next[1]:next[0]==='shot-warn'?next[1]-(s.phase===3?200:0):next[0].endsWith('-warn')?warningDuration(next[1],s.phase):next[0]==='open'?next[1]*1.25:next[1];
+ const duration=s.boss==='metapidgie'&&next[0]==='jump'?1200:s.pattern==='star'?next[1]:next[0]==='shot-warn'?next[1]-(s.phase===3?200:0):next[0].endsWith('-warn')?warningDuration(next[1],s.phase):next[0]==='open'?next[1]*1.25:next[1];
  enter(s,next[0],duration,now,actors);
  if(starFrom&&s.pattern==='star')s.from=starFrom;
  if(s.stage==='cross-warn'){const p=target(s,actors)?.p??[0,0,1];lockStarCross(s,p);s.until=s.since+Math.max(crossWarningDuration(s,p),...living(s,actors).map(a=>crossWarningDuration(s,a.p)));}

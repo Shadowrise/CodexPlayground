@@ -3,10 +3,13 @@ import {knightBattleActive,type KnightBattle,type KnightPoint} from './meta-knig
 import {knightCosmicAlly} from './meta-knight-cosmic-ally';
 import {duetActive} from './meta-knight-duet';
 import {helperLocked} from './meta-knight-helper';
+import {knightCelebration} from './meta-knight-celebration';
 
-/** Only the participating boss ally loses movement during these shared actions. */
+/** Boss allies can orbit during shared actions and their victory celebration. */
 export function knightJointCamera(s:KnightBattle|undefined,id:string,now:number){
- const p=s?.players[id];if(!s||!knightBattleActive(s)||!p||p.side!=='boss'||!p.helper||p.hp<=0||p.withdrawn)return false;
+ const p=s?.players[id];if(!s||!p||p.side!=='boss'||!p.helper||p.withdrawn)return false;
+ if(knightCelebration(s,id,now))return true;
+ if(!knightBattleActive(s)||p.hp<=0)return false;
  return !!knightCosmicAlly(s,id,now)||duetActive(s)&&s.duet?.owner===id&&helperLocked(p.helper,now);
 }
 

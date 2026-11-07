@@ -10,16 +10,17 @@ export class MetaKnightHealthBar{
   const cells=Array.from({length:p.maximum},()=>{const cell=document.createElement('i');cell.className='knight-health-hit';element.append(cell);return cell;});
   return {element,cells};
  });
- private state?:Pick<KnightBattle,'phase'|'hp'>;
+ private state?:Pick<KnightBattle,'phase'|'hp'|'boss'>;
  private unsubscribe=onLocaleChange(()=>this.update(this.state));
  constructor(){
   this.element.className='knight-health';this.element.setAttribute('role','progressbar');this.element.setAttribute('aria-valuemin','0');
   this.sections.forEach((p,i)=>{if(i){const divider=document.createElement('span');divider.className='knight-health-divider';divider.setAttribute('aria-hidden','true');this.element.append(divider);}this.element.append(p.element);});this.update(undefined);
  }
- update(s:Pick<KnightBattle,'phase'|'hp'>|undefined){
-  this.state=s?{phase:s.phase,hp:s.hp}:undefined;const phases=knightHealthPhases(s),remaining=phases.reduce((n,p)=>n+p.remaining,0),maximum=phases.reduce((n,p)=>n+p.maximum,0);
-  this.element.setAttribute('aria-label',t('Здоровье Метакнайта'));this.element.setAttribute('aria-valuemax',String(maximum));this.element.setAttribute('aria-valuenow',String(remaining));
+ update(s:Pick<KnightBattle,'phase'|'hp'|'boss'>|undefined){
+  this.state=s?{phase:s.phase,hp:s.hp,boss:s.boss}:undefined;const phases=knightHealthPhases(s),remaining=phases.reduce((n,p)=>n+p.remaining,0),maximum=phases.reduce((n,p)=>n+p.maximum,0);
+  this.element.setAttribute('aria-label',t(s?.boss==='metapidgie'?'Здоровье Мета Пиджи':'Здоровье Метакнайта'));this.element.setAttribute('aria-valuemax',String(maximum));this.element.setAttribute('aria-valuenow',String(remaining));
   this.element.setAttribute('aria-valuetext',phases.map(p=>t('Фаза {0}: осталось попаданий {1} из {2}',[p.phase,p.remaining,p.maximum])).join('. '));
+  for(const node of this.element.children){const phase=node instanceof HTMLElement&&node.dataset.phase;node.toggleAttribute('hidden',s?.boss==='metapidgie'&&(!phase||phase!=='1'));}
   phases.forEach((p,i)=>{const section=this.sections[i];section.element.dataset.state=p.state;section.cells.forEach((cell,hit)=>cell.dataset.filled=String(hit<p.remaining));});
  }
  dispose(){this.unsubscribe();this.element.remove();}

@@ -10,7 +10,7 @@ const colors=new Map([
  ['#767c84','#e9a0b4'],['#646c78','#d685a1'],['#b9b8ac','#f3bdc7'],
 ].map(([from,to])=>[new Color(from).toArray().join(','),new Color(to).toArray()]));
 for(const node of gltf.nodes){
- if(node.mesh===undefined||!/^(Beak|Lower_beak|Forehead_tuft|Left_eyelid|Right_eyelid)_sculpt_paint$/.test(node.name))continue;
+ if(node.mesh===undefined||(!node.extras?.beakPaint&&!/^(Beak|Lower_beak|Forehead_tuft|Left_eyelid|Right_eyelid)_sculpt_paint$/.test(node.name)))continue;
  for(const primitive of gltf.meshes[node.mesh].primitives){
   const accessor=gltf.accessors[primitive.attributes.COLOR_0],view=gltf.bufferViews[accessor.bufferView];
   if(accessor.componentType!==5126||accessor.type!=='VEC3')throw Error('Unexpected pigeon colour encoding');
@@ -18,7 +18,10 @@ for(const node of gltf.nodes){
   for(let vertex=0;vertex<accessor.count;vertex++){
    const offset=start+vertex*stride,current=[0,1,2].map(c=>binary.readFloatLE(offset+c*4));
    let target=current;
-   if(/eyelid|tuft/.test(node.name))target=[1,1,1];
+   if(node.extras?.beakPaint){
+    const paint=node.extras.beakPaint,from=new Color(paint.base).toArray(),to=new Color(({upper:'#e9a0b4',lower:'#d685a1',cere:'#f3bdc7'} as Record<string,string>)[paint.tone]).toArray();
+    target=current.map((value,c)=>Math.min(1,value/from[c]*to[c]));
+   }else if(/eyelid|tuft/.test(node.name))target=[1,1,1];
    else for(const [from,to] of colors)if(from.split(',').every((v,c)=>Math.abs(Number(v)-current[c])<1e-6)){target=to;break;}
    target.forEach((value,c)=>{binary.writeFloatLE(value,offset+c*4);min[c]=Math.min(min[c],value);max[c]=Math.max(max[c],value);});
   }

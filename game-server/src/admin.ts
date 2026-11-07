@@ -61,7 +61,8 @@ export async function historyRoutes(request:Request,env:Env):Promise<Response|un
  if(path==='/admin/api/online/open-portal'&&request.method==='POST'){
   let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}
   if(!data||typeof data.roomId!=='string'||!data.roomId||data.roomId.length>80)return json({error:'Некорректный идентификатор'},400);
-  try{const result=await env.ROOMS.getByName('main').adminOpenPortal(data.roomId);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось открыть портал'},503);}
+  if(data.boss!==undefined&&data.boss!=='meta-knight'&&data.boss!=='metapidgie')return json({error:'Неизвестный босс'},400);
+  try{const result=await env.ROOMS.getByName('main').adminOpenPortal(data.roomId,data.boss);return json(result,result.ok?200:409);}catch{return json({error:'Не удалось открыть портал'},503);}
  }
  if(path==='/admin/api/online/clear-pigeons'&&request.method==='POST'){
   let data:any;try{data=JSON.parse(await smallBody(request));}catch{return json({error:'Некорректный запрос'},400);}

@@ -4,7 +4,7 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {cloneVariant,isPigeonVariant, type KirbyVariant} from './variants';
 import {clonePigeon} from './pigeon-appearance';
 import {wildPigeonId,type WildPigeonId} from './wild-pigeons';
-export type PigeonModels=Partial<Record<WildPigeonId,GLTF>>;
+export type PigeonModels=Partial<Record<WildPigeonId|'metapidgie',GLTF>>;
 
 export type PlayerModel = {model: Object3D; clips: AnimationClip[]; character: 'kirby' | 'pigeon' | 'meta-knight'};
 
@@ -14,7 +14,7 @@ export function createPlayerModel(kirby: GLTF, variant: KirbyVariant, pigeon?: G
   if (!isPigeonVariant(variant[0])&&!knight) {
     return {model: cloneVariant(kirby.scene, variant, npc), clips: kirby.animations, character: 'kirby'};
   }
-  const id=wildPigeonId(variant[0]),source=knight?metaKnight:id==='pidgie'?pigeon:id==='snowball'?snowball:id?plumages[id]:undefined;
+  const id=wildPigeonId(variant[0]),source=variant[0]==='Мета Пиджи'?plumages.metapidgie:knight?metaKnight:id==='pidgie'?pigeon:id==='snowball'?snowball:id?plumages[id]:undefined;
   if (!source) throw new Error(knight?'Модель Meta Knight ещё не загрузилась':id==='snowball'?'Модель Снежка ещё не загрузилась':`Модель ${variant[0]} ещё не загрузилась`);
   if(!knight)return {model:clonePigeon(source.scene),clips:source.animations,character:'pigeon'};
   const model = cloneSkeleton(source.scene);

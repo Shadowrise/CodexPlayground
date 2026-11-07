@@ -15,6 +15,7 @@ import {MetaKnightArenaTravel} from '/src/meta-knight-arena-travel';
 import {startKnightBattle,setKnightPhase,advanceKnightBattle,knightPosition} from '/src/meta-knight-battle';
 import {startHelperAbility} from '/src/meta-knight-helper';
 import {beginKnightDuet} from '/src/meta-knight-duet';
+import {knightCelebration} from '/src/meta-knight-celebration';
 import {gamepadCameraZoom,stickSteering} from '/src/gamepad';
 import {touchMotion} from '/src/touch-input';
 import {TURN_RATE} from '/src/movement-input';
@@ -28,7 +29,7 @@ const travel=new MetaKnightArenaTravel(renderer,new T.Scene(),follow,()=>{},make
 await travel.enter(c);
 const idle={forward:false,left:false,right:false};
 function tick(count=1,horizontal=0,vertical=0,input=idle){for(let i=0;i<count;i++){if(!frozen)clock+=1000/60;travel.update(1/60,clock/1000,c,input,horizontal,vertical,false,false);}travel.render();}
-function snapshot(){const target=c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.9*c.actor.scale.x,0)),direction=travel.camera.getWorldDirection(new T.Vector3());return {stage:battle.stage,spectating:travel.spectating,helperMode:travel.helperMode,jointCamera:travel.jointCamera,position:travel.camera.position.toArray(),target:target.toArray(),distance:travel.camera.position.distanceTo(target),heading:Math.atan2(-direction.x,-direction.z),pitch:Math.asin(-direction.y),zoom:follow.distance,azimuth:follow.azimuth,elevation:follow.elevation,actor:c.actor.position.toArray(),state:c.state,hp:battle.players[localId].hp,events:[...events],drift:(travel as any).cosmicFrame.position.length()};}
+function snapshot(){const target=c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,.9*c.actor.scale.x,0)),direction=travel.camera.getWorldDirection(new T.Vector3());return {stage:battle.stage,celebrationPhase:knightCelebration(battle,localId,clock)?.phase,spectating:travel.spectating,helperMode:travel.helperMode,jointCamera:travel.jointCamera,position:travel.camera.position.toArray(),target:target.toArray(),distance:travel.camera.position.distanceTo(target),heading:Math.atan2(-direction.x,-direction.z),pitch:Math.asin(-direction.y),zoom:follow.distance,azimuth:follow.azimuth,elevation:follow.elevation,actor:c.actor.position.toArray(),state:c.state,hp:battle.players[localId].hp,events:[...events],drift:(travel as any).cosmicFrame.position.length()};}
 function setup(phase:number,planet=false,hp=0,role='helper'){clock+=100000;localId=role;frozen=false;events.length=0;actors=[{id:'hero',p:[0,0,-2],yaw:0,available:true},{id:'helper',p:[30,0,9],yaw:.7,available:true,metaKnight:true,side:'boss'},{id:'ally',p:[-20,0,10],yaw:0,available:true,metaKnight:true,side:'boss'}];battle=startKnightBattle(actors,'hero',clock)!;for(const id of Object.keys(battle.opponents??{}))delete battle.players[id];delete battle.opponents;delete battle.sharedOpponents;delete battle.teamHp;battle.players.helper.hp=hp;actors[0].p=[-25,0,15];
 setKnightPhase(battle,phase,actors,clock,phase===4?planet?3:1:undefined);if(phase!==4){battle.stage=phase===3?'shield':'rest';battle.until=clock+1e9;if(phase===3)battle.activeCrystal=0;}else for(const a of actors)a.p[1]=180;
 const actor=actors.find(a=>a.id===localId)!;c.actor.position.set(2000+actor.p[0],actor.p[1],actor.p[2]);c.yaw=actor.yaw;c.actor.rotation.y=c.yaw;follow.reset(c.yaw);tick(20);return snapshot();}
@@ -43,6 +44,11 @@ function scene(kind:string,role='helper'){
  if(kind==='celebration'){battle.stage='lost';battle.celebration={at:clock,facing:.7,boss:[0,0,-9],helpers:{helper:[30,0,9],ally:[-20,0,10]}};}
  frozen=true;if(kind!=='won')clock=battle.since+Math.min(1000,(battle.until-battle.since)/2);tick(30);return snapshot();
 }
+function victory(phase=1,elapsed=0,hp=5){
+ setup(phase,false,hp);const height=phase===4?180:0;
+ battle.stage='lost';battle.celebration={at:clock,facing:.7,boss:[0,height,-9],helpers:{helper:[30,height,9],ally:[-20,height,10]},...(phase===4?{landAt:clock+3000}:{})};
+ clock=(battle.celebration.landAt??battle.celebration.at)+elapsed;frozen=true;tick(30);return snapshot();
+}
 function steering(scheme:'touch'|'gamepad',x:number,y:number,fps:number,role:string){
  setup(4,false,5,role);frozen=true;const normal=make(),normalCamera=new FollowCamera(),start=c.yaw,dt=1/fps;normal.yaw=start;normalCamera.reset(start);follow.reset(start);
  let difference=0,fastest=0;const motion=(camera:FollowCamera,yaw:number)=>scheme==='touch'?touchMotion(x,y,camera.azimuth,yaw,dt):{forward:y<-.05,backward:y>.05,steer:stickSteering(x,y)};
@@ -53,7 +59,7 @@ function steering(scheme:'touch'|'gamepad',x:number,y:number,fps:number,role:str
  }
  travel.render();const result={scheme,x,y,fps,role,ordinary:(normal.yaw-start)*180/Math.PI,cosmic:(c.yaw-start)*180/Math.PI,difference,fastest,maximum:TURN_RATE};normal.disposeEffects();return result;
 }
-(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,steering,orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode,travel.jointCamera)*10);tick();}},run(){tick(120,1,.2,{...idle,forward:true});return snapshot();},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
+(window as any).qa={travel,c,setup,scene,advance,beginAscent,snapshot,tick,steering,victory,dance(){frozen=false;tick(240);frozen=true;return snapshot();},resize(){renderer.setSize(innerWidth,innerHeight);tick();},orbit(dx:number,dy:number){follow.orbit(dx,dy);tick(180);},zoom(delta:number){follow.zoom(delta);tick(180);},padZoom(button:number){for(let i=0;i<60;i++){follow.zoom(gamepadCameraZoom(new Set([button]),travel.helperMode,travel.jointCamera)*10);tick();}},run(){tick(120,1,.2,{...idle,forward:true});return snapshot();},tryMove(){tick(60,0,0,{...idle,forward:true,jump:true,attack:true});return snapshot();}};
 document.body.dataset.ready='true';
 `);
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE??'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),errors=[],report=[];
@@ -98,7 +104,29 @@ try{
   if(kind==='duet-ground'||kind==='cosmic-rise')await page.screenshot({path:output+role+'-'+kind+'.png'});
   report.push({role,kind,initial,turned,near,far});console.log('PASS: '+role+' camera orbit, pitch, zoom and controller during '+kind);
  }
- for(const role of ['helper','hero'])for(const kind of role==='helper'?['ground1','ground2','shield','individual-shot','individual-dash','individual-orbs','other-duet','fall','celebration']:['ground1','ground2','shield','duet-ground','duet-cosmic','planet']){
+ for(const viewport of [{width:1280,height:800},{width:390,height:844},{width:844,height:390}]){
+  await page.setViewportSize(viewport);await page.evaluate(()=>qa.resize());
+  for(const [phase,elapsed,hp,expected] of [[1,500,5,'run'],[1,5000,0,'hug'],[1,9000,5,'circle'],[4,-1500,5,'descent'],[4,9000,0,'circle']]){
+   const initial=await page.evaluate(({phase,elapsed,hp})=>qa.victory(phase,elapsed,hp),{phase,elapsed,hp});
+   assert(initial.jointCamera&&initial.celebrationPhase===expected,'victory camera is available during '+expected);
+   await page.evaluate(()=>qa.orbit(-160,60));const turned=await page.evaluate(()=>qa.snapshot());
+   assert(Math.abs(Math.atan2(Math.sin(turned.heading-initial.heading),Math.cos(turned.heading-initial.heading)))>.5,'victory scene responds to orbit');
+   assert(turned.pitch>initial.pitch+.15,'victory scene responds to pitch');
+   await page.evaluate(()=>qa.zoom(-600));const near=await page.evaluate(()=>qa.snapshot());assert(near.distance<turned.distance*.8,'victory zoom in');
+   await page.evaluate(()=>qa.padZoom(13));const far=await page.evaluate(()=>qa.snapshot());assert(far.distance>near.distance*1.5,'post-fight D-pad zoom out');
+   await page.evaluate(()=>qa.tick(60,1,-.2));const stick=await page.evaluate(()=>qa.snapshot());assert(Math.abs(Math.atan2(Math.sin(stick.heading-far.heading),Math.cos(stick.heading-far.heading)))>.5,'victory right stick / arrows orbit');
+   if(expected==='circle'){
+    await page.evaluate(()=>qa.tick(180));const chosen=await page.evaluate(()=>qa.snapshot());
+    const held=await page.evaluate(()=>qa.dance());assert(Math.abs(Math.atan2(Math.sin(held.azimuth-chosen.azimuth),Math.cos(held.azimuth-chosen.azimuth)))<.001,'the dance must not turn the chosen camera');
+    assert(Math.abs(held.zoom-chosen.zoom)<.001);assert.notDeepEqual(held.actor,chosen.actor,'the celebration keeps playing');
+   }
+   report.push({viewport,phase,elapsed,hp,initial,turned,near,far});
+   console.log('PASS: victory '+expected+' orbit, pitch, zoom at '+viewport.width+'x'+viewport.height+', hp '+hp);
+  }
+  await page.screenshot({path:output+'victory-camera-'+viewport.width+'.png'});
+ }
+ await page.setViewportSize({width:1280,height:800});await page.evaluate(()=>qa.resize());
+ for(const role of ['helper','hero'])for(const kind of role==='helper'?['ground1','ground2','shield','individual-shot','individual-dash','individual-orbs','other-duet','fall']:['ground1','ground2','shield','duet-ground','duet-cosmic','planet']){
   const initial=await page.evaluate(({kind,role})=>{qa.scene(kind,role);qa.tick(240);return qa.snapshot();},{kind,role});assert(!initial.jointCamera,role+' '+kind+': no shared action camera');
   await page.evaluate(()=>{qa.orbit(-160,60);qa.zoom(-600);qa.padZoom(6);qa.tick(60,1,-.2);});const after=await page.evaluate(()=>qa.snapshot());
   assert(Math.hypot(...after.position.map((value,i)=>value-initial.position[i]))<.01,role+' '+kind+': original camera position is unchanged by manual inputs');

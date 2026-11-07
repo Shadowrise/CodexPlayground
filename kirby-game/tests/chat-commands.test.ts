@@ -74,19 +74,19 @@ test('suggestions complete command names, filter tele prefixes and localize with
  setLocale('ru');
 });
 
-test('portal accepts only English 0/1 commands and localizes complete suggestions',()=>{
+test('portal accepts only English 0/1/2 commands and localizes complete suggestions',()=>{
  assert.deepEqual(parseChatCommand('/portal 1',true,places),{command:{kind:'portal',open:true}});
  assert.deepEqual(parseChatCommand(' /PORTAL   0 ',true,places),{command:{kind:'portal',open:false}});
- for(const argument of ['','open','close','2','-1','01','1.0','true','0 extra'])assert(parseChatCommand('/portal '+argument,true,places)?.error,argument);
+ for(const argument of ['','open','close','3','-1','01','1.0','true','0 extra'])assert(parseChatCommand('/portal '+argument,true,places)?.error,argument);
  assert(parseChatCommand('/портал 1',true,places)?.error);
  try{
   for(const locale of ['ru','en','bg'] as const){
    setLocale(locale);
    assert.deepEqual(commandSuggestions('/por',true,places).map(s=>s.value),['/portal ']);
-   assert.deepEqual(commandSuggestions('/portal ',true,places).map(s=>s.value),['/portal 1','/portal 0']);
+   assert.deepEqual(commandSuggestions('/portal ',true,places).map(s=>s.value),['/portal 1','/portal 2','/portal 0']);
    const [option]=commandSuggestions('/portal 0',true,places);assert.equal(option.value,'/portal 0');assert(option.complete);
    if(locale!=='ru')assert.notEqual(option.description,'Закрыть портал');
-   assert.match(t(parseChatCommand('/portal 2',true,places)!.error!),/\/portal 1/);
+   assert.match(t(parseChatCommand('/portal 3',true,places)!.error!),/\/portal 1/);
   }
  }finally{setLocale('ru');}
 });
@@ -136,7 +136,7 @@ test('Pidgie unlock requires its complete Latin name; partial names remain sugge
   const result=parseChatCommand(text,true,places);assert(result?.error,text);
   assert.match(result.error,/\/unlock bandana/);assert.match(result.error,/\/unlock pidgie/);
  }
- assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball','/unlock cinder','/unlock ginger','/unlock coo-king']);
+ assert.deepEqual(commandSuggestions('/unlock ',true,places).map(s=>s.value),['/unlock bandana','/unlock pidgie','/unlock meta-knight','/unlock snowball','/unlock cinder','/unlock ginger','/unlock coo-king','/unlock metapidgie']);
  for(const locale of ['ru','en','bg'] as const){
   setLocale(locale);
   for(const prefix of ['p','PI','pidg','pidgie']){
@@ -158,7 +158,7 @@ test('Meta Knight unlock requires its complete alias and offers localized menu s
  try{
   for(const locale of ['ru','en','bg'] as const){
    setLocale(locale);
-   for(const prefix of ['m','META','meta-','meta-knight'])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{
+   for(const prefix of ['meta-','meta-knight'])assert.deepEqual(commandSuggestions('/unlock '+prefix,true,places),[{
     value:'/unlock meta-knight',label:'meta-knight',description:locale==='ru'?'Метакнайт':'Meta Knight',complete:true,
    }]);
    const error=parseChatCommand('/unlock',true,places)!.error!;

@@ -48,6 +48,17 @@ test('the default formation composition is preserved and orbit, pitch and zoom w
  }
 });
 
+test('victorious knights can control the camera throughout the approach, hug and dance, including helpers with no hearts',()=>{
+ const {s}=fixture();s.stage='lost';s.celebration={at:100000,boss:[0,0,-9],helpers:{helper:[30,0,9],other:[-20,0,10]}};
+ for(const hp of [5,0])for(const now of [100000,101000,105000,109000,114000,140000]){
+  s.players.helper.hp=hp;
+  assert(knightJointCamera(s,'helper',now),'the victory scene must remain manually controllable');
+  assert(knightJointCamera(s,'other',now));assert(!knightJointCamera(s,'hero',now));
+ }
+ s.players.helper.withdrawn=true;assert(!knightJointCamera(s,'helper',110000));delete s.players.helper.withdrawn;
+ delete s.celebration;assert(!knightJointCamera(s,'helper',110000),'a result without the celebration does not open the shared camera');
+});
+
 test('ground and sky cameras stay above their local floor at every orbit and zoom limit',()=>{
  for(const floor of [0,180])for(const azimuth of [-Math.PI,-1,0,1,Math.PI])for(const elevation of [0,.25,1.25])for(const distance of [5,10,24]){
   const pose=orbitKnightCamera({position:[5,floor+10,32],focus:[5,floor+9.5,-7]},{azimuth,elevation,distance},floor);

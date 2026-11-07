@@ -510,7 +510,7 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 resize();
 
-new GLTFLoader().load('/models/pigeon-animated.glb?v=19', gltf => {
+new GLTFLoader().load('/models/pigeon-animated.glb?v=24', gltf => {
   model = gltf.scene;
   model.animations = gltf.animations;
   let triangles = 0;

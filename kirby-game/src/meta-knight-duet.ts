@@ -10,6 +10,7 @@ export const duetActive=(s:KnightBattle|undefined)=>!!s?.duet&&s.duet.stage!=='q
 export const knightDuetOpening=(s:KnightBattle|undefined)=>s?.stage==='duet-recover'&&s.duet?.stage==='recover'&&!s.openHit&&s.hp>0;
 export const duetBossDazed=(s:KnightBattle|undefined,now:number)=>s?.stage==='duet-recover'&&s.duet?.bossHit!==undefined&&now>=s.duet.bossHit&&now-s.duet.bossHit<HELPER.stunMs;
 export function requestKnightDuet(s:KnightBattle,actor:KnightActor,now:number){
+ if(s.boss==='metapidgie')return false;
  const p=s.players[actor.id],h=p?.helper;if(!p||!h||p.side!=='boss'||p.hp<=0||p.withdrawn||!actor.available||!actor.metaKnight||s.duet||now<(h.cooldowns[3]??0)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage))return false;
  s.duet={owner:actor.id,requestedAt:now,stage:'queued',round:0,spots:[],contacts:{}};h.cooldowns[3]=now+DUET.cooldownMs;s.revision++;return true;
 }
@@ -17,7 +18,9 @@ export function duetOwnerAvailable(s:KnightBattle,actors:KnightActor[]){const id
 export function beginKnightDuet(s:KnightBattle,actors:KnightActor[],now:number,boss:KnightPoint){
  const d=s.duet;if(!d||d.stage!=='queued'||!duetOwnerAvailable(s,actors))return false;
  const h=s.players[d.owner].helper!;if(helperLocked(h,now))return false;
- const actor=actors.find(a=>a.id===d.owner)!,floor=boss[1],yaw=knightAudienceYaw(s,actors),bossTo=knightFormationSide(-3.3,yaw,floor),helperTo=knightFormationSide(3.3,yaw,floor),helperFrom=helperPosition(h,now)??actor.p;
+ const actor=actors.find(a=>a.id===d.owner)!,floor=s.phase===4?boss[1]:0,yaw=knightAudienceYaw(s,actors),bossTo=knightFormationSide(-3.3,yaw,floor),helperTo=knightFormationSide(3.3,yaw,floor),helperFrom:KnightPoint=[...(helperPosition(h,now)??actor.p)];
+ // Ground duets take over from jumping or flying players with a path along the platform.
+ if(s.phase!==4)helperFrom[1]=floor;
  const duration=Math.max(DUET.gatherMs,Math.hypot(boss[0]-bossTo[0],boss[2]-bossTo[2])/DUET.speed*1000,Math.hypot(helperFrom[0]-helperTo[0],helperFrom[2]-helperTo[2])/DUET.speed*1000);
  d.yaw=yaw;d.stage='gather';d.at=now;d.gatherUntil=now+duration;d.bossFrom=[...boss];d.helperFrom=[...helperFrom];d.floor=floor;h.cooldowns[3]=now+DUET.cooldownMs;
  if(s.phase===4)d.resume=s.stage==='cosmic-flight'||s.cosmicPart===3?'cosmic-spin-warn':s.cosmicPart===2?'cosmic-star-draw':'cosmic-meteor-draw';

@@ -1,9 +1,11 @@
 import * as T from 'three';
+import {buildPigeonBeak} from './pigeon-beak';
+import {addPigeonWingVolume} from './pigeon-wing-volume';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createPigeonAnimations,PIGEON_PECK_CORRECTION_PHASES} from './pigeon-animation';
 
 /** Original pigeon sculpt based on the approved character sketch. +Z is forward. */
-export function createPigeon(featherPaint?:{width:number;height:number;pixels:Uint8Array}){
+export function createPigeon(featherPaint?:{width:number;height:number;pixels:Uint8Array},appearance:{cere?:boolean}={}){
   const root=new T.Group();root.name='GoofyPigeon';
   root.userData={character:'pigeon',forward:'+Z',units:'metres',author:'Original character based on the approved pigeon sketch',animation:'In-place native pigeon movements, interactions and emotions',walkSpeed:.40};
   const satin=new T.MeshStandardMaterial({vertexColors:true,roughness:.93});satin.name='Soft painted plumage';
@@ -15,6 +17,9 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
   }
   satin.map=eyeMaterial.map=featherTexture??null;
   const wingMaterial=new T.MeshStandardMaterial({map:featherTexture??null,color:featherTexture?'#ffffff':'#949dab',roughness:.93});wingMaterial.name='Sketch feather paint';
+  const beakMaterial=new T.MeshStandardMaterial({map:featherTexture??null,vertexColors:true,roughness:.74});beakMaterial.name='Fine keratin beak';
+  const cereMaterial=new T.MeshStandardMaterial({map:featherTexture??null,vertexColors:true,roughness:.95});cereMaterial.name='Powdered pigeon cere';
+  const mouthMaterial=new T.MeshStandardMaterial({map:featherTexture??null,vertexColors:true,roughness:.86,side:T.DoubleSide});mouthMaterial.name='Pigeon oral cavity';
   // Sixteen texels of duplicated paint protect every tile from mipmap bleed.
   const atlasUV=(x:number,y:number,w:number,h:number,u:number,v:number)=>[(x+16.5+T.MathUtils.clamp(u,0,1)*(w-33))/2048,(y+16.5+T.MathUtils.clamp(v,0,1)*(h-33))/2048];
   const batches=new Map<T.Object3D,Map<T.Material,T.BufferGeometry[]>>();
@@ -85,13 +90,31 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
     const bottom=sections[0][0],top=sections.at(-1)![0],y=bottom+(top-bottom)*(1-Math.cos(Math.PI*j/rows))/2,[rx,rz,z]=profile(y);
     for(let i=0;i<=cols;i++){
       const angle=i/cols*Math.PI*2;positions.push(rx*Math.cos(angle),y,z+rz*Math.sin(angle));
-      bodyUV.push(...atlasUV(0,0,1536,1536,i/cols,(top-y)/(top-bottom)));
+      // Mirror the continuous opposite flank instead of joining the atlas's
+      // independently painted left/right borders at the visible side seam.
+      const u=i/cols,paintU=u<.25?.5-u:u>.75?1.5-u:u;
+      bodyUV.push(...atlasUV(0,0,1536,1536,paintU,(top-y)/(top-bottom)));
       const neckWeight=smooth(y,1.55,2.20),headWeight=smooth(y,2.18,2.62)*neckWeight;
       boneIndices.push(0,1,2,0);weights.push(1-neckWeight,neckWeight-headWeight,headWeight,0);
       if(j<rows&&i<cols){const a=j*(cols+1)+i,b=a+cols+1;if(j)indices.push(a,b,a+1);if(j<rows-1)indices.push(a+1,b,b+1);}
     }
   }
-  const bodyGeometry=new T.BufferGeometry();bodyGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));bodyGeometry.setIndex(indices);bodyGeometry.computeVertexNormals();
+  // UV duplicates are one physical surface. Accumulate normals with welded
+  // side/polar indices, then restore the authored topology and copy the result
+  // to its duplicate vertices. Use this for every deformed body shape as well.
+  const bodyNormalVertices=Array.from({length:positions.length/3},(_,vertex)=>{
+    const row=Math.floor(vertex/(cols+1)),column=vertex%(cols+1);
+    return row===0?0:row===rows?row*(cols+1):column===cols?vertex-cols:vertex;
+  });
+  const bodyNormalIndex=new T.Uint16BufferAttribute(indices.map(vertex=>bodyNormalVertices[vertex]),1);
+  function computeBodyNormals(geometry:T.BufferGeometry){
+    const index=geometry.index;geometry.setIndex(bodyNormalIndex);geometry.computeVertexNormals();geometry.setIndex(index);
+    const normal=geometry.getAttribute('normal');
+    bodyNormalVertices.forEach((source,vertex)=>{
+      if(source!==vertex)normal.setXYZ(vertex,normal.getX(source),normal.getY(source),normal.getZ(source));
+    });
+  }
+  const bodyGeometry=new T.BufferGeometry();bodyGeometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));bodyGeometry.setIndex(indices);computeBodyNormals(bodyGeometry);
   paint(bodyGeometry,featherPaint?'#ffffff':'#89919e');bodyGeometry.setAttribute('uv',new T.Float32BufferAttribute(bodyUV,2));
   bodyGeometry.setAttribute('skinIndex',new T.Uint16BufferAttribute(boneIndices,4));bodyGeometry.setAttribute('skinWeight',new T.Float32BufferAttribute(weights,4));
   // Pull the belly inward while keeping the approved compact peck pose.
@@ -106,7 +129,7 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
     const dx=-x*.18*amount,dy=.28*amount,dz=-.38*amount;
     bellyDelta.setXYZ(vertex,dx,dy,dz);tuckedPositions.setXYZ(vertex,x+dx,y+dy,z+dz);
   }
-  tuckedShape.computeVertexNormals();
+  computeBodyNormals(tuckedShape);
   const normals=bodyGeometry.getAttribute('normal'),tuckedNormals=tuckedShape.getAttribute('normal');
   const bellyNormals=new T.Float32BufferAttribute(new Float32Array(positions.length),3);
   for(let vertex=0;vertex<normals.count;vertex++)bellyNormals.setXYZ(vertex,tuckedNormals.getX(vertex)-normals.getX(vertex),tuckedNormals.getY(vertex)-normals.getY(vertex),tuckedNormals.getZ(vertex)-normals.getZ(vertex));
@@ -140,7 +163,7 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
       const original=new T.Vector3().fromArray(tucked,vertex*3),delta=surface[vertex].clone().applyMatrix4(transforms[vertex].clone().invert()).sub(original);
       correction.setXYZ(vertex,delta.x,delta.y,delta.z);corrected.setXYZ(vertex,original.x+delta.x,original.y+delta.y,original.z+delta.z);
     }
-    correctedShape.computeVertexNormals();const correctedNormals=correctedShape.getAttribute('normal'),normalCorrection=new T.Float32BufferAttribute(new Float32Array(positions.length),3);
+    computeBodyNormals(correctedShape);const correctedNormals=correctedShape.getAttribute('normal'),normalCorrection=new T.Float32BufferAttribute(new Float32Array(positions.length),3);
     for(let vertex=0;vertex<normals.count;vertex++)normalCorrection.setXYZ(vertex,correctedNormals.getX(vertex)-normals.getX(vertex)-bellyNormals.getX(vertex),correctedNormals.getY(vertex)-normals.getY(vertex)-bellyNormals.getY(vertex),correctedNormals.getZ(vertex)-normals.getZ(vertex)-bellyNormals.getZ(vertex));
     bodyGeometry.morphAttributes.position.push(correction);bodyGeometry.morphAttributes.normal.push(normalCorrection);correctedShape.dispose();
   }
@@ -183,15 +206,9 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
     if(capNormal*side<0){for(let i=0;i<ix.length;i+=3)[ix[i+1],ix[i+2]]=[ix[i+2],ix[i+1]];g.setIndex(ix);g.computeVertexNormals();}
     return g;
   }
-  const beakOrigin=new T.Vector3(0,2.48,.49),beak=pivot(head,'Beak');
-  const upper=sideShell([[1390,573],[1394,561],[1403,557],[1412,562],[1421,568],[1426,577],[1415,574],[1403,574],[1394,576]],[1404,568],beakOrigin,()=>0,.091);
-  const lower=sideShell([[1392,580],[1402,579],[1412,583],[1414,588],[1404,588],[1395,584],[1390,584]],[1402,583],beakOrigin,()=>0,.064);
-  const jaw=pivot(beak,'Lower_beak',[0,-.07,.282]);
-  part(beak,upper,'#767c84',[0,0,0]);part(jaw,lower,'#646c78',[0,.07,-.282]);upper.dispose();lower.dispose();
-  const mouthPoint=ref(1400,579);ell(beak,'#353541',[0,mouthPoint.y-2.48,mouthPoint.z-.49],[.060,.022,.066]);
-  ell(beak,'#d9a0a5',[0,mouthPoint.y-2.493,mouthPoint.z-.47],[.045,.012,.036],[0,0,0],true);
-  const cere=ref(1396,562);for(const s of [-1,1])ell(beak,'#b9b8ac',[s*.040,cere.y-2.48,cere.z-.49],[.047,.043,.043],[0,0,s*.12],true);
-  const wings:T.Group[]=[],wingVanes:T.Group[]=[];
+  const beak=pivot(head,'Beak'),jaw=pivot(beak,'Lower_beak',[0,-.07,.282]);
+  buildPigeonBeak(beak,jaw,beakMaterial,cereMaterial,mouthMaterial,appearance.cere!==false);
+  const wings:T.Group[]=[],wingVanes:T.Group[]=[],volumeWings:T.Mesh[]=[];
   for(const side of [-1,1]){
     const center=ref(1220,750),origin=new T.Vector3(side*.66,center.y,center.z),shoulder=new T.Vector3(side*.62,1.075,.29);
     const wing=pivot(body,`${side<0?'Left':'Right'}_wing`,shoulder.toArray()),vaneRig=pivot(wing,`${wing.name}_vane`);wings.push(wing);wingVanes.push(vaneRig);
@@ -258,6 +275,7 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
       for(let i=0;i<p.count;i++){const px=(p.getZ(i)+tailCenter.z)/pixelScale+originPixel,py=groundPixel-(p.getY(i)+tailCenter.y)/pixelScale;const a=atlasUV(1536,512,512,512,(px-1030)/120,(py-718)/86);uv[i*2]=a[0];uv[i*2+1]=a[1];}
       geometry.setAttribute('uv',new T.BufferAttribute(uv,2));
     }
+    if(isWing)addPigeonWingVolume(geometry,parent.name.startsWith('Left')?-1:1);
     let mesh:T.Mesh;
     if(legs.some(leg=>leg.hip===parent)){
       // The belly sways independently of the planted-foot IK. Skin the top
@@ -274,10 +292,10 @@ export function createPigeon(featherPaint?:{width:number;height:number;pixels:Ui
       const skin=new T.SkinnedMesh(geometry,material);parent.add(skin);root.updateMatrixWorld(true);
       skin.bind(new T.Skeleton([body,thigh]));mesh=skin;
     }else mesh=new T.Mesh(geometry,isWing?wingMaterial:material);
-    mesh.name=`${parent.name}_sculpt_${material===eyeMaterial?'eyes':'paint'}`;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);geometries.forEach(g=>g.dispose());
+    mesh.name=`${parent.name}_sculpt_${material===eyeMaterial?'eyes':'paint'}`;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);if(isWing)volumeWings.push(mesh);geometries.forEach(g=>g.dispose());
   }
   sphere.dispose();smallSphere.dispose();root.updateMatrixWorld(true);
-  const clips=createPigeonAnimations({root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,tail,tuft,eyelids,pupils,jaw,legs,legPose});
+  const clips=createPigeonAnimations({root,rigs,motion,body,neck,head,sculpt,wings,wingVanes,volumeWings,tail,tuft,eyelids,pupils,jaw,legs,legPose});
   root.animations=clips;root.updateMatrixWorld(true);
-  return {root,clips,paintMaterials:[satin,eyeMaterial,wingMaterial]};
+  return {root,clips,paintMaterials:[satin,eyeMaterial,wingMaterial,beakMaterial,cereMaterial,mouthMaterial]};
 }

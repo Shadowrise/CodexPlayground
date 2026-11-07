@@ -7,6 +7,7 @@ const scene=new T.Scene();scene.background=new T.Color('#a5c3dc');scene.add(new 
 const light=new T.DirectionalLight(0xffffff,3);light.position.set(20,40,20);scene.add(light);
 const camera=new T.PerspectiveCamera(45,1.6,.1,1000);camera.position.set(27,30,41);camera.lookAt(0,1,0);
 const loader=new GLTFLoader(),templates=await Promise.all(['pigeon','snowball'].map(name=>loader.loadAsync('/models/'+name+'-animated.glb')));
+const nativeParts=templates.map(template=>{let count=0;template.scene.traverse(n=>{if(n instanceof T.Mesh)count++;});return count;});
 templates.forEach(pigeonPalette);
 let group=new T.Group();scene.add(group);
 (window as any).benchReady=true;
@@ -39,5 +40,5 @@ let group=new T.Group();scene.add(group);
    buffersStable&&=renderer.info.memory.geometries===before.geometries&&renderer.info.memory.textures===before.textures;
   }
  }
- return {mode,birds:20,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,cpuMs:stats(cpu),gpuMs:stats(gpu),frameMs:stats(frames),buffersStable,gpu:renderer.getContext().getParameter(gl.RENDERER)};
+ return {mode,birds:20,nativeParts,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,cpuMs:stats(cpu),gpuMs:stats(gpu),frameMs:stats(frames),buffersStable,gpu:renderer.getContext().getParameter(gl.RENDERER)};
 };

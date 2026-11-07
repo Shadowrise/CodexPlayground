@@ -16,11 +16,12 @@ export class MetaKnightCrescentLaunch{
   }`});
  private mesh=new T.Mesh(new T.PlaneGeometry(1,1),this.material);
  constructor(){this.group.name='Crescent launch connecting sword flash';this.group.visible=false;this.mesh.rotation.x=-Math.PI/2;this.mesh.renderOrder=9;this.group.add(this.mesh);}
- update(s:KnightBattle|undefined,now:number,bladeTip?:T.Vector3){
+ update(s:KnightBattle|undefined,now:number,bladeTip?:T.Vector3,threeDimensional=false){
   const elapsed=s?now-s.since-KNIGHT.shotReleaseMs:-1;this.group.visible=s?.stage==='shot'&&elapsed>=0&&elapsed<KNIGHT.shotLaunchMs;if(!this.group.visible||!s)return;
   const origin=bladeTip??new T.Vector3().fromArray(knightShotOrigin(s)),shot=knightProjectile(s,now)!;
-  const dx=shot[0]-origin.x,dz=shot[2]-origin.z,span=Math.hypot(dx,dz);
-  this.group.position.copy(origin);this.group.rotation.y=span>.001?Math.atan2(dx,dz):s.yaw;this.mesh.position.z=span/2;
+  const dx=shot[0]-origin.x,dz=shot[2]-origin.z,span=Math.hypot(dx,dz,threeDimensional?shot[1]-origin.y:0);
+  this.group.position.copy(origin);
+  if(threeDimensional&&span>.001)this.group.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(dx,shot[1]-origin.y,dz).normalize());else this.group.rotation.set(0,span>.001?Math.atan2(dx,dz):s.yaw,0);this.mesh.position.z=span/2;
   this.mesh.scale.set(KNIGHT.projectileRadius,span+KNIGHT.projectileRadius*2,1);this.material.uniforms.span.value=span;this.material.uniforms.progress.value=elapsed/KNIGHT.shotLaunchMs;
  }
 }

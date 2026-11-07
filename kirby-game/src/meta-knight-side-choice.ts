@@ -13,7 +13,7 @@ export function advanceKnightSideChoices(room:KnightSideChoices,actors:readonly 
  const ready=captured.map(a=>({...a,side:room.knightSides?.[a.id]})),owner=ready.find(a=>a.id===c.owner)??ready.find(a=>a.side!=='boss')??ready[0];
  // Starting was already authorized at the boss. A different surviving fighter need not walk back to restart it.
  const occupied=actors.filter(a=>!ready.some(p=>p.id===a.id)).map(a=>({...a,available:false}));
- const origin=c.actors.find(a=>a.id===c.owner)!.p,battle=owner&&startKnightBattle([...ready.map(a=>a.id===owner.id?{...a,p:origin}:a),...occupied],owner.id,now);
+ const origin=c.actors.find(a=>a.id===c.owner)!.p,battle=owner&&startKnightBattle([...ready.map(a=>a.id===owner.id?{...a,p:origin}:a),...occupied],owner.id,now,s.boss);
  if(battle){battle.revision=s.revision+1;for(const [id,p] of Object.entries(s.players))if(!battle.players[id])battle.players[id]={...p,withdrawn:true};room.knightBattle=battle;return true;}
  s.stage='cancelled';s.since=s.checked=now;s.until=now+1e12;delete s.choice;s.revision++;return true;
 }

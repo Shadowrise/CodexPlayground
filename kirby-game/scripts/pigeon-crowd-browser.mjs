@@ -16,6 +16,7 @@ try{
   const report=await page.evaluate(mode=>window.runBench(mode),mode);results.push(report);
   await page.screenshot({path:new URL(mode+'.png',output).pathname.slice(1)});
  }
- assert.deepEqual(errors,[]);assert(results[1].calls<=42);assert(results[1].triangles<results[0].triangles*.5);assert(results[1].buffersStable,'growing a flock must replace GPU buffers without leaking geometries or textures');
+ const drawBudget=results[1].nativeParts.reduce((sum,count)=>sum+count,0);
+ assert.deepEqual(errors,[]);assert(results[1].calls<=drawBudget,'draw calls depend on model parts, not flock size');assert(results[1].triangles<results[0].triangles*.5);assert(results[1].buffersStable,'growing a flock must replace GPU buffers without leaking geometries or textures');
  await writeFile(new URL('gpu-performance.json',output),JSON.stringify(results,null,2));console.log(JSON.stringify(results,null,2));
 }finally{await browser.close();await server.close();}
