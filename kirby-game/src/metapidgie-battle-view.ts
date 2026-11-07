@@ -47,15 +47,16 @@ export class MetapidgieBattleView extends MetaKnightBattleView{
   if(key!==this.key){this.key=key;for(const a of this.actions.values())if(a.isScheduled())a.fadeOut(.10);if(action){action.reset();action.paused=true;action.enabled=true;action.setEffectiveWeight(1).fadeIn(stage==='cosmic-spin'?.045:.10).play();}}
   if(action)action.time=time;
   if(stage==='cosmic-spin'&&action){for(const a of this.actions.values())if(a!==action)a.stop();action.stopFading().setEffectiveWeight(1);}
-  this.pigeon.mixer.update(Math.max(0,dt));
+  this.pigeon.clearDuelDazedPose();this.pigeon.mixer.update(Math.max(0,dt));
   const p=s?knightPosition(s,now):[0,0,-9],lift=s?pidgeyAirHeight(stage,knightProgress(s,now),s.step)*KNIGHT.modelScale:0;
   this.pigeon.actor.position.set(SITE.x+p[0],p[1]-lift,p[2]);this.visualYaw=this.pigeon.yaw;this.visualYaw+=Math.atan2(Math.sin(this.reference.yaw-this.visualYaw),Math.cos(this.reference.yaw-this.visualYaw))*(1-Math.exp(-Math.max(0,dt)*12));if(stage==='cosmic-spin'||stage==='ricochet'||stage==='star-fall')this.visualYaw=this.reference.yaw;this.pigeon.actor.rotation.set(0,this.visualYaw,0);this.pigeon.yaw=this.visualYaw;
   this.pigeon.actor.scale.setScalar(KNIGHT.modelScale);this.pigeon.actor.updateMatrixWorld(true);
   if(this.pidgeyBattleId!==(s?.id??0)){this.pidgeyBattleId=s?.id??0;this.trailBirth.fill(-Infinity);}
   meleeTrailTimes(name,time).forEach((age,i)=>{if(age>=0)this.trailBirth[i]=now-age*1000;});
-  if(camera)this.fx.update(name,time,duration,camera,this.trailBirth.map(at=>(now-at)/1000),s?.phase===4?.20:1);
+  if(camera)this.fx.update(name,time,duration,camera,this.trailBirth.map(at=>(now-at)/1000),s?.phase===4?.20:1,s?.phase===4?1/3:1);
   super.updateActorEffects(s,now,camera);
   this.pigeon.actor.getObjectByName('Metapidgie_beak_tip')!.getWorldPosition(this.point);this.point.x-=SITE.x;this.beakLaunch.update(s,now,this.point,true);
+  this.pigeon.updateDuelDazedPose(now,['stunned','won','crystal-break','cosmic-hit','cosmic-star-stun','cosmic-descent'].includes(stage)||stage==='duet-recover'&&s?.duet?.bossHit!==undefined,false);
   this.pigeon.actor.getObjectByName('Tail')!.getWorldPosition(this.point);this.group.worldToLocal(this.point);if(camera)this.flightTrail.update(s,now,this.point,camera);
   const head=this.pigeon.actor.getObjectByName('Head');head?.getWorldPosition(this.point);this.point.x-=SITE.x;this.point.y-=5.8;
   this.stars.update([this.point.x,this.point.y,this.point.z],now,['stunned','won','crystal-break','cosmic-hit','cosmic-star-stun'].includes(stage));

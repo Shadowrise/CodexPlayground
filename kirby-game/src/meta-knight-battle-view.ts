@@ -100,8 +100,8 @@ export class MetaKnightBattleView{
   this.lane.name='Meta Knight dash countdown lane';
   this.group.name='Meta Knight duel telegraphs and effects';this.group.position.x=SITE.x;scene.add(this.group);
   this.effectBird=!!effectActor.getObjectByName('Metapidgie_beak_tip');this.effectWeapon=effectActor.getObjectByName(this.effectBird?'Metapidgie_beak_tip':'Galaxia')!;this.cosmic=new MetaKnightCosmicView(effectActor,scene);this.group.add(this.cosmic.group,this.cosmicOrbs.group);
-  this.meteor=new MetaKnightCosmicMeteorView(this.effectWeapon);this.group.add(this.meteor.group);
-  this.refuge=new MetaKnightCosmicRefugeView(scene,this.effectWeapon);this.group.add(this.refuge.group,this.finale.group);
+  this.meteor=new MetaKnightCosmicMeteorView(this.effectWeapon,this.effectBird?1/3:1);this.group.add(this.meteor.group);
+  this.refuge=new MetaKnightCosmicRefugeView(scene,this.effectWeapon,this.effectBird?1/3:1);this.group.add(this.refuge.group,this.finale.group);
   // Visibility of a light changes NUM_POINT_LIGHTS for every lit material.
   // Keep the slots present from loading onward; inactive effects use zero intensity.
   this.effectLights=[this.cosmic.light,this.meteor.light,this.refuge.burst.light,this.finale.light];this.lighting.name='Persistent duel effect lighting';this.lighting.position.copy(this.group.position);this.lighting.add(...this.effectLights);scene.add(this.lighting);

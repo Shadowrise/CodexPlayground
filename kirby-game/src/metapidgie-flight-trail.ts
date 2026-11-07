@@ -41,8 +41,8 @@ export class MetapidgieFlightTrail{
  get sampleCount(){return this.history.length;}
  get samples(){return this.history.map(s=>({at:s.at,p:s.p.toArray(),strength:s.strength}));}
  update(s:KnightBattle|undefined,now:number,tail:T.Vector3,camera:T.Camera){
-  const active=!!s&&['dash-warn','dash','dive-warn','dive','shot-warn','shot','return','star-rise','ricochet-warn','ricochet','star-warn','star-fall','cosmic-rise','cosmic-flight'].includes(s.stage);
-  this.advance(s?.id??0,!!active,s?.stage==='dash'||s?.stage==='dive',now,tail,camera,1);
+  const active=s?.stage==='dash';
+  this.advance(s?.id??0,active,active,now,tail,camera,1);
  }
  /** The player's burst shares the boss's shaders, sampling and fading. */
  updateDash(active:boolean,now:number,tail:T.Vector3,camera:T.Camera,scale=1){this.advance(0,active,active,now,tail,camera,Math.max(.001,scale));}

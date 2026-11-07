@@ -27,7 +27,7 @@ export class MetaKnightCosmicRefugeView{
  get gravityPlanet(){return this.planet?.visible?{node:this.planet,radius:this.planetRadius}:undefined;}
  private foreheadFlash=makeFruitMist(0);
  get chunks(){return this.burst.group;}
- constructor(scene:T.Scene,private blade:T.Object3D){
+ constructor(scene:T.Scene,private blade:T.Object3D,private emitterGain=1){
   this.group.name='Moving refuge star, shared golden dome and rolling planet';
   this.starSource=scene.getObjectByName('Background refuge star')!.parent!;this.star=copyAsset(this.starSource);this.star.name='Interactive moving refuge star';
   this.sources=COSMIC_WORLDS.map(w=>scene.getObjectByName(w.name) as T.Mesh);this.target.group.name='Moving star available hit target';this.target.group.scale.setScalar(1.55);
@@ -82,7 +82,7 @@ export class MetaKnightCosmicRefugeView{
   }
   if(impact!==undefined){this.destroyed.add(r.world);this.burst.update(age,new T.Vector3().fromArray(refugePlanet(s,impact)),new T.Vector3().fromArray(refugeStar(s,impact)),r.world,camera,this.planet!.quaternion);}else this.burst.group.visible=false;
   this.trail.begin(clock);if(impact!==undefined&&age>0){for(let i=0;i<12;i++){const b=now-i*16,a=Math.max(impact,b-16);if(b<impact)break;this.p.fromArray(starAt(a));this.q.fromArray(starAt(b));this.trail.add(this.p,this.q,.65*(1-i/15),.75*(1-i/12),i);}}this.trail.end();
-  this.gravity.begin(1,clock);this.charge.update(s,now,this.blade,this.group,this.gravity);
+  this.gravity.begin(this.emitterGain,clock);this.charge.update(s,now,this.blade,this.group,this.gravity,this.emitterGain);
   if(stage==='cosmic-star-draw')for(let i=0;i<6;i++){this.p.copy(this.star.position).add(new T.Vector3(Math.sin(clock*4+i)*.5,Math.cos(clock*5+i)*.5,Math.cos(clock*4+i)*.5));this.charge.originToward(this.p,this.tip);this.gravity.arc(this.tip,this.p,821+i,.045,clock,24,2,[0,2,0]);}
   if(stage==='cosmic-planet-draw'||stage==='cosmic-planet-sweep'){
    const radius=COSMIC_WORLDS[r.world].radius*this.planet!.scale.x;

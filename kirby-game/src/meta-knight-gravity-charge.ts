@@ -9,7 +9,7 @@ const hash=(n:number)=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math
 /** A shared-clock charge at the upper blade; the pulling bolts emerge from its surface. */
 export class MetaKnightGravityCharge{
  readonly group=new T.Group();
- private clock={value:0};private beak=false;
+ private clock={value:0};private glowGain={value:1};private beak=false;
  private core=new T.Mesh(new T.SphereGeometry(1,48,32),new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,
   uniforms:{clock:this.clock},vertexShader:`varying vec3 p;varying vec3 n;varying vec3 v;
    void main(){p=position;n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
@@ -29,13 +29,15 @@ export class MetaKnightGravityCharge{
   fragmentShader:`varying vec2 p;uniform float clock;void main(){float r=length(p),mist=exp(-r*r*5.)*(1.-smoothstep(.65,1.,r));gl_FragColor=vec4(.015,.20,1.,mist*(.15+.018*sin(clock*17.)));\n#include <colorspace_fragment>\n}`}));
  private a=new T.Vector3();private b=new T.Vector3();private direction=new T.Vector3();
  constructor(){
+  for(const m of [this.core.material,this.halo.material]){m.uniforms.glowGain=this.glowGain;m.fragmentShader='uniform float glowGain;\n'+m.fragmentShader.replace('#include <colorspace_fragment>','gl_FragColor.a*=glowGain;\n#include <colorspace_fragment>');}
   this.group.name='Growing blue electrical charge around Galaxia';this.group.visible=false;
   this.core.name='Blue gravity charge sphere';this.halo.name='Blue gravity charge corona';
   this.core.renderOrder=5;this.halo.renderOrder=4;this.halo.scale.setScalar(2.5);this.group.add(this.core,this.halo);
  }
  get radius(){return this.group.scale.x;}
  clear(){this.group.visible=false;}
- update(s:KnightBattle,now:number,blade:T.Object3D,root:T.Object3D,arcs:CosmicLightning){
+ update(s:KnightBattle,now:number,blade:T.Object3D,root:T.Object3D,arcs:CosmicLightning,emissionGain=1){
+  this.glowGain.value=emissionGain;
   this.beak=blade.name==='Metapidgie_beak_tip';const radius=gravityChargeRadius(s,now)*(this.beak?.45:1),active=radius>0;
   this.group.visible=active;if(!active)return;
   const clock=Math.max(0,now-s.cosmicRefuge!.at)/1000;

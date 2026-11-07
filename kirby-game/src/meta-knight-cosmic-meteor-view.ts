@@ -22,7 +22,7 @@ export class MetaKnightCosmicMeteorView{
  private embers=new T.InstancedMesh(new T.IcosahedronGeometry(1,0),new T.MeshBasicMaterial({color:0xff9c29,toneMapped:false}),72);
  private fireShell=new T.Mesh(new T.SphereGeometry(1,48,32),new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,uniforms:{clock:this.clock},vertexShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){p=position;float billow=mf(position*5.+vec3(0,clock*6.,clock));vec3 hot=position*(1.+.14*billow);hot.y-=max(0.,-position.y)*(.20+.28*billow);n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(hot,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,fragmentShader:`uniform float clock;varying vec3 p;varying vec3 n;varying vec3 v;${noise}void main(){float detail=mf(p*6.+vec3(0,clock*8.,clock*.8)),rim=pow(1.-abs(dot(normalize(n),normalize(v))),.65),tongues=smoothstep(.24,.65,detail);vec3 colour=mix(vec3(1.,.065,.002),vec3(1.,.55,.035),detail);colour=mix(colour,vec3(1.,.87,.38),smoothstep(.66,.85,detail));gl_FragColor=vec4(colour*2.2,tongues*(.24+.66*rim));}`}));
  readonly light=new T.PointLight(0xff982d,0,32,1.5);
- constructor(private blade:T.Object3D){
+ constructor(private blade:T.Object3D,private emitterGain=1){
   this.group.name='Meta Knight curved meteor, fire and rock';
   const geometry=new T.IcosahedronGeometry(1,4),positions=geometry.getAttribute('position'),colours:number[]=[],point=new T.Vector3(),craters=Array.from({length:9},(_,i)=>new T.Vector3(hash(i+1)-.5,hash(i+21)-.5,hash(i+91)-.5).normalize());
   for(let i=0;i<positions.count;i++){
@@ -73,7 +73,7 @@ export class MetaKnightCosmicMeteorView{
    this.scale.set(.045,.10+.24*age,.045).multiplyScalar(1-age*.75);this.matrix.compose(this.old,this.rotation,this.scale);this.embers.setMatrixAt(i,this.matrix);
   }
   this.flame.instanceMatrix.needsUpdate=this.smoke.instanceMatrix.needsUpdate=this.embers.instanceMatrix.needsUpdate=true;
-  this.lightning.begin(1,clock);
+  this.lightning.begin(this.emitterGain,clock);
   if(stage==='cosmic-meteor-draw'||stage==='cosmic-meteor-cast'&&now<m.at){
    knightWeaponPoint(this.blade,this.tip);this.group.worldToLocal(this.tip);
    for(let k=0;k<5;k++){this.old.copy(this.p).add(new T.Vector3(Math.sin(clock*6+k)*M.radius,Math.cos(clock*8+k)*M.radius,Math.cos(clock*6+k)*M.radius));this.lightning.arc(this.tip,this.old,421+k,.035,clock,22,1.6,[0,2,0]);}

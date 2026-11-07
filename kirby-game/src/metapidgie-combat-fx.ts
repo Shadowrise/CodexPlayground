@@ -117,15 +117,15 @@ export function createMetapidgieCombatFx(model:T.Group,clips:T.AnimationClip[]){
   if(!['Boss_slash-warn','Boss_slash','Boss_slash-warn-backhand','Boss_slash-backhand','Boss_open','Boss_open-melee'].includes(name))return new T.Box3();
   const width=PIDGEY_MELEE_FX.radius*Math.sin(PIDGEY_MELEE_FX.halfAngle);
   return new T.Box3(new T.Vector3(-width-.12,1.9,0),new T.Vector3(width+.12,2.95,PIDGEY_MELEE_FX.radius+.12));
- },update(name:string,time:number,duration:number,camera:T.Camera,retainedTimes?:readonly number[],glowGain=1){
+ },update(name:string,time:number,duration:number,camera:T.Camera,retainedTimes?:readonly number[],glowGain=1,emissionGain=1){
   const elapsed=meleeTrailTimes(name,time);
   elapsed.forEach((value,i)=>{if(value<0&&retainedTimes)elapsed[i]=retainedTimes[i];});
   trails.forEach((trail,i)=>{trail.elapsed=elapsed[i];trail.uniforms.uElapsed.value=elapsed[i];trail.root.visible=elapsed[i]>=0&&elapsed[i]<PIDGEY_MELEE_FX.sweep+PIDGEY_MELEE_FX.fade;});
   power=Math.max(meleeBeakGlow(name,time,duration),...elapsed.map(t=>t>=PIDGEY_MELEE_FX.strike?.62*(1-ease((t-PIDGEY_MELEE_FX.strike)/.30)):0));
-  for(const [material,base] of goldMaterials){material.emissive.setHex(0xffbc18);material.emissiveIntensity=base*(.45+.55*glowGain)+power*glowGain*2.0;}
-  for(const [material,base] of auraMaterials)material.opacity=Math.min(.75,base*(.45+.55*glowGain)*(1+power*glowGain*4));
+  for(const [material,base] of goldMaterials){material.emissive.setHex(0xffbc18);material.emissiveIntensity=(base*(.45+.55*glowGain)+power*glowGain*2.0)*emissionGain;}
+  for(const [material,base] of auraMaterials)material.opacity=Math.min(.75,base*(.45+.55*glowGain)*(1+power*glowGain*4))*emissionGain;
   tip.getWorldPosition(point);model.worldToLocal(point);halo.position.copy(point);light.position.copy(point);light.position.z+=.055;
   model.getWorldQuaternion(rotation).invert();halo.quaternion.copy(rotation).multiply(camera.getWorldQuaternion(new T.Quaternion()));
-  halo.material.uniforms.uPower.value=power*glowGain;halo.visible=power>.001;light.intensity=power*glowGain*2.8;
+  halo.material.uniforms.uPower.value=power*glowGain*emissionGain;halo.visible=power>.001;light.intensity=power*glowGain*2.8*emissionGain;
  }};
 }

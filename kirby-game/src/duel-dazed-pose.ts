@@ -7,7 +7,8 @@ export class DuelDazedPose{
  private groups:T.Group[]=[];private hidden:{node:T.Object3D;visible:boolean}[]=[];private poses:Pose[]=[];private posed=false;private seated=false;
  private geometries=new Set<T.BufferGeometry>();private materials:T.Material[]=[];
  constructor(private actor:T.Object3D,private rig:Rig){
-  const ink=new T.MeshBasicMaterial({color:rig==='meta-knight'?'#ffe66b':'#29324d',toneMapped:false}),ivory=new T.MeshBasicMaterial({color:'#fff7de',toneMapped:false});this.materials.push(ink,ivory);
+  const metapidgie=rig==='pigeon'&&!!actor.getObjectByName('Metapidgie_beak_tip');
+  const ink=new T.MeshBasicMaterial({color:rig==='meta-knight'||metapidgie?'#ffe66b':'#29324d',toneMapped:false}),ivory=new T.MeshBasicMaterial({color:'#fff7de',toneMapped:false});this.materials.push(ink,ivory);
   const remember=(name:string)=>{const node=actor.getObjectByName(name);if(node)this.poses.push({node,p:node.position.clone(),q:node.quaternion.clone(),s:node.scale.clone()});};
   for(const name of [rig==='pigeon'?'Body':'Body_motion','Head','Left_shoulder','Right_shoulder','Left_foot_pivot','Right_foot_pivot'])remember(name);
   const hide=(node:T.Object3D|undefined)=>{if(node)this.hidden.push({node,visible:node.visible});};
@@ -15,9 +16,11 @@ export class DuelDazedPose{
   const add=(parent:T.Object3D,geometry:T.BufferGeometry,material:T.Material,name:string)=>{this.geometries.add(geometry);const mesh=new T.Mesh(geometry,material);mesh.name=name;parent.add(mesh);return mesh;};
   const spiral=(parent:T.Object3D,label:string,cx:number,cy:number,rx:number,ry:number,z:(x:number,y:number)=>number,thickness:number)=>{
    const points:T.Vector3[]=[];for(let i=0;i<=96;i++){const u=i/96,r=.06+.92*u,angle=u*Math.PI*4.8,x=cx+Math.cos(angle)*rx*r,y=cy+Math.sin(angle)*ry*r;points.push(new T.Vector3(x,y,z(x,y)));}
-   add(parent,new T.TubeGeometry(new T.CatmullRomCurve3(points),96,thickness,6,false),ink,label+' dazed spiral eye');
+   return add(parent,new T.TubeGeometry(new T.CatmullRomCurve3(points),96,thickness,6,false),ink,label+' dazed spiral eye');
   };
-  if(rig==='pigeon'){
+  if(metapidgie){
+   for(const side of ['Left','Right']){const frame=actor.getObjectByName(side+'_eye_halo_0');if(!frame?.parent)continue;hide(actor.getObjectByName(side+'_eye'));hide(actor.getObjectByName(side+'_glowing_eye'));for(let i=0;i<4;i++)hide(actor.getObjectByName(side+'_eye_halo_'+i));const group=root(frame.parent);group.position.copy(frame.position);group.quaternion.copy(frame.quaternion);const eye=spiral(group,side,0,0,.105,.13,()=>.016,.009),pupil=actor.getObjectByName(side+'_glowing_eye') as T.Mesh<T.BufferGeometry>|undefined;if(pupil){pupil.geometry.computeBoundingBox();eye.geometry.computeBoundingBox();pupil.updateMatrix();group.updateMatrix();const native=pupil.geometry.boundingBox!.clone().applyMatrix4(pupil.matrix),dazed=eye.geometry.boundingBox!.clone().applyMatrix4(group.matrix);eye.scale.setScalar((native.max.y-native.min.y)/(dazed.max.y-dazed.min.y));}}
+  }else if(rig==='pigeon'){
    for(const side of ['Left','Right']){const eye=actor.getObjectByName(side+'_eye');if(!eye)continue;hide(actor.getObjectByName(side+'_pupil'));hide(actor.getObjectByName(side+'_eyelid'));spiral(root(eye),side,0,.015,.13,.13,(x,y)=>.015+.063*Math.sqrt(Math.max(.05,1-(x/.16)**2-(y/.165)**2))+.008,.009);}
   }else{
    const parent=actor.getObjectByName(rig==='meta-knight'?'Mask_shell':'Body_motion');if(!parent)return;const group=root(parent);

@@ -51,7 +51,7 @@ export class MetaKnightDuetView{
    if(!gather&&rig){rig.tinted=true;for(const m of rig.materials.keys()){m.emissive.setHex(0xffb82d);m.emissiveIntensity=.15+.25*power;}}
    if(gather)return;
    if(bird)c.actor.getObjectByName('Metapidgie_beak_tip')!.getWorldPosition(this.tip);else c.actor.getObjectByName('Galaxia')!.localToWorld(this.tip.set(-.315,2.05,0));this.group.worldToLocal(this.tip);
-   if(rise>.3)for(let k=0;k<3;k++)this.bolts.arc(this.tip,this.merge,791+index*97+k,.065+.045*power,clock,22,.6+.8*power,[Math.sin(clock+k)*.6,1.2,Math.cos(clock+k)*.6]);
+   if(rise>.3)for(let k=0;k<3;k++)this.bolts.arc(this.tip,this.merge,791+index*97+k,.065+.045*power,clock,22,.6+.8*power,[Math.sin(clock+k)*.6,1.2,Math.cos(clock+k)*.6],bird&&index===0&&s.phase===4?1/3:1);
    const p=c.actor.position,scale=c.actor.scale.x;for(let band=0;band<3;band++){
     let previous:T.Vector3|undefined;for(let i=0;i<=20;i++){const t=i/20,a=t*Math.PI*4+clock*(2+band*.3)+band*2.1,r=scale*(.85+.12*Math.sin(a*3));this.a.set(p.x-SITE.x+Math.sin(a)*r,p.y+t*scale*2.8,p.z+Math.cos(a)*r);if(previous)this.bolts.segment(previous.x,previous.y,previous.z,this.a.x,this.a.y,this.a.z,.025+.02*power,.5+.5*power);previous??=new T.Vector3();previous.copy(this.a);}
    }
