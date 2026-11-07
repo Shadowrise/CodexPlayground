@@ -8,7 +8,18 @@ export const russianLabels:Readonly<Record<string,string>>=Object.assign(Object.
 });
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Победа команды Мета Пиджи!':["Meta Pidgie's team wins!",'Победа за отбора на Мета Пиджи!'],
+ 'Помоги Мета Пиджи · используй способности':['Help Meta Pidgie · use your abilities','Помогни на Мета Пиджи · използвай уменията'],
+ "Победа Мета Пиджи и Метакнайта!":["Meta Pidgie and Meta Knight win!","Победа за Мета Пиджи и Мета Найт!"],
+ "Помоги Мета Пиджи · ←, ↑, →, ↓":["Help Meta Pidgie · ←, ↑, →, ↓","Помогни на Мета Пиджи · ←, ↑, →, ↓"],
+ "Помоги Мета Пиджи · способности 1, 2, 3, 4":["Help Meta Pidgie · abilities 1, 2, 3, 4","Помогни на Мета Пиджи · умения 1, 2, 3, 4"],
+ "Мета Пиджи и Метакнайт объединяют силы":["Meta Pidgie and Meta Knight join forces","Мета Пиджи и Мета Найт обединяват силите си"],
+ "Клюв и меч зовут грозу…":["Beak and sword summon the storm…","Клюнът и мечът призовават бурята…"],
+ "Гроза стихла — оба противника открыты для удара":["The storm has passed — both opponents are vulnerable","Бурята отмина — и двамата противници са уязвими"],
+ "{0} победил Мета Пиджи!":["{0} defeated Meta Pidgie!","{0} победи Мета Пиджи!"],
+ "Победа! Мета Пиджи побеждён":["Victory! Meta Pidgie is defeated","Победа! Мета Пиджи е победен"],
  'За Мета Пиджи':['For Meta Pidgie','За Мета Пиджи'],
+ 'Жизни помощника Мета Пиджи':['Meta Pidgie helper lives','Животи на помощника на Мета Пиджи'],
  "Портал: 1 — Метакнайт, 2 — Мета Пиджи, 0 — закрыть":["Portal: 1 — Meta Knight, 2 — Meta Pidgie, 0 — close","Портал: 1 — Мета Найт, 2 — Мета Пиджи, 0 — затвори"],
  "Введи /portal 1 — Метакнайт, /portal 2 — Мета Пиджи, /portal 0 — закрыть.":["Enter /portal 1 — Meta Knight, /portal 2 — Meta Pidgie, /portal 0 — close.","Въведи /portal 1 — Мета Найт, /portal 2 — Мета Пиджи, /portal 0 — затвори."],
  "Арена Мета Пиджи":["Meta Pidgie arena","Арена на Мета Пиджи"],

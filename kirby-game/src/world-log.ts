@@ -17,7 +17,7 @@ export function metaKnightSealLogs(playerName:string,count:number):LogEntry[]{
  return texts.map(text=>({id:crypto.randomUUID(),name:'',variant:-1,text,chat:false}));
 }
 export const META_KNIGHT_VICTORY_MESSAGE='Метакнайт с уважением смотрит на {0}.';
-export function metaKnightVictoryLog(playerName:string,boss?:import('./knight-boss').KnightBoss):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:(boss==='metapidgie'?'{0} прошёл первую фазу Мета Пиджи!':META_KNIGHT_VICTORY_MESSAGE).replace('{0}',()=>playerName),chat:false};}
+export function metaKnightVictoryLog(playerName:string,boss?:import('./knight-boss').KnightBoss):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:(boss==='metapidgie'?'{0} победил Мета Пиджи!':META_KNIGHT_VICTORY_MESSAGE).replace('{0}',()=>playerName),chat:false};}
 export const PIDGIE_SCARE_MESSAGE='Дикий Пиджи окинул {0} голодным взглядом. Хлебушка не заметил, испугался и улетел на другую полянку.';
 export const PIDGIE_INTEREST_MESSAGE='Дикий Пиджи внимательно смотрит на {0}. Что-то его очень заинтересовало.';
 export function pidgieScareLog(playerName:string,bird:WildPigeonId='pidgie'):LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:PIDGIE_SCARE_MESSAGE.replace('Пиджи',wildPigeonName(bird)).replace('{0}',()=>playerName),chat:false};}

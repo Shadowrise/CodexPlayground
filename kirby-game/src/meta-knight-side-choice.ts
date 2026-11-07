@@ -1,3 +1,4 @@
+import {knightHelperEligible} from './knight-boss';
 import {KNIGHT,startKnightBattle,type KnightActor,type KnightBattle} from './meta-knight-battle';
 import {helperChoiceAvailable,type KnightSide} from './meta-knight-helper';
 
@@ -6,9 +7,9 @@ export type KnightSideChoices={knightBattle?:KnightBattle;knightSides?:Record<st
 /** Persisted deadlines also resolve on the room alarm while both clients are idle. */
 export function advanceKnightSideChoices(room:KnightSideChoices,actors:readonly KnightActor[],now:number){
  const s=room.knightBattle,c=s?.choice;if(s?.stage!=='side-choice'||!c)return false;
- const present=new Set(actors.filter(a=>a.available&&!s.players[a.id]?.withdrawn).map(a=>a.id)),captured=c.actors.filter(a=>present.has(a.id)),knights=captured.filter(a=>a.metaKnight);
+ const present=new Set(actors.filter(a=>a.available&&!s.players[a.id]?.withdrawn).map(a=>a.id)),captured=c.actors.filter(a=>present.has(a.id)),knights=captured.filter(a=>knightHelperEligible(a,s.boss));
  let changed=false;
- if(now>=c.until||!helperChoiceAvailable(captured))for(const {id} of knights)if(!room.knightSides?.[id]){(room.knightSides??={})[id]='players';changed=true;}
+ if(now>=c.until||!helperChoiceAvailable(captured,s.boss))for(const {id} of knights)if(!room.knightSides?.[id]){(room.knightSides??={})[id]='players';changed=true;}
  if(knights.some(a=>!room.knightSides?.[a.id]))return changed;
  const ready=captured.map(a=>({...a,side:room.knightSides?.[a.id]})),owner=ready.find(a=>a.id===c.owner)??ready.find(a=>a.side!=='boss')??ready[0];
  // Starting was already authorized at the boss. A different surviving fighter need not walk back to restart it.

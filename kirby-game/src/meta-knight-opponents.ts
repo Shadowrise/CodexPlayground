@@ -62,7 +62,7 @@ function objective(s:KnightBattle,a:KnightOpponent,actors:KnightActor[],now:numb
   const c=h.cast!,decision=random(a.seed^(c.at|0)^0x51e7),delay=420+random(a.seed+(c.at|0))*500;
   const p=helperPosition(h,now)??enemy.p;if(decision<OPPONENTS.punishChance&&now>=c.end+delay&&distance(a.p,p)<18)return {p,attack:true};
  }}
- if(now>=(a.shoveReady??0))for(const enemy of actors)if(enemy.metaKnight&&s.players[enemy.id]?.side==='boss'&&knightPlayerPushable(s,enemy.id,now)&&distance(a.p,enemy.p)<7.5)return {p:enemy.p,attack:false};
+ if(now>=(a.shoveReady??0))for(const enemy of actors)if(s.players[enemy.id]?.side==='boss'&&knightPlayerPushable(s,enemy.id,now)&&distance(a.p,enemy.p)<7.5)return {p:enemy.p,attack:false};
  if(s.stage==='shield'&&s.activeCrystal!==undefined)return {p:crystalPoint(s.activeCrystal,undefined,0),attack:true};
  if(s.pattern==='star')return {p:[...a.p],attack:false};
  if(cosmicRefugeStage(s))return {p:refugeStar(s,now),attack:s.stage==='cosmic-star-open'};
@@ -99,13 +99,13 @@ export function advanceKnightOpponents(s:KnightBattle,humans:KnightActor[],now:n
   if(shove&&now<shove.at+KNIGHT_CONTACT.shoveMs){
    a.yaw=shove.yaw;
    if(!shove.resolved&&now>=shove.release){
-    shove.resolved=true;const enemy=humans.find(h=>h.id===shove.target&&h.available&&h.metaKnight&&s.players[h.id]?.side==='boss');
+    shove.resolved=true;const enemy=humans.find(h=>h.id===shove.target&&h.available&&s.players[h.id]?.side==='boss');
     if(enemy&&pushTarget(a.p,shove.yaw,1,[{id:enemy.id,p:enemy.p,s:1,state:'Idle'}]))startKnightBump(s,enemy.id,Math.sin(shove.yaw),Math.cos(shove.yaw),now);
    }
    continue;
   }
   if(now>=(a.shoveReady??0)&&knightPlayerPushable(s,a.id,now)){
-   const enemies=humans.filter(h=>h.available&&h.metaKnight&&s.players[h.id]?.side==='boss'&&knightPlayerPushable(s,h.id,now)&&(!s.players[h.id].bump||now-s.players[h.id].bump!.at>=KNIGHT_CONTACT.victimCooldownMs));
+   const enemies=humans.filter(h=>h.available&&s.players[h.id]?.side==='boss'&&knightPlayerPushable(s,h.id,now)&&(!s.players[h.id].bump||now-s.players[h.id].bump!.at>=KNIGHT_CONTACT.victimCooldownMs));
    const enemy=enemies.sort((b,c)=>distance(a.p,b.p)-distance(a.p,c.p))[0];
    if(enemy&&distance(a.p,enemy.p)<4&&Math.cos(facing(a.p,enemy.p)-a.yaw)>.985&&random(a.seed+Math.floor(now/2000))<.5){
     const yaw=a.yaw;a.shove={at:now,release:now+KNIGHT_CONTACT.shoveWindupMs,target:enemy.id,yaw};a.shoveReady=now+KNIGHT_CONTACT.aiCooldownMs+Math.floor(random(a.seed+now)*1600);a.yaw=yaw;continue;

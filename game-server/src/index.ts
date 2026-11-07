@@ -2,6 +2,7 @@ import {knightFighterFinale} from '../../kirby-game/src/meta-knight-fighters-fin
 import {pushKnightOpponent,knightOpponentPushCandidates,constrainKnightOpponentBodies} from '../../kirby-game/src/meta-knight-opponents-contact';
 import {knightDefeatPose} from '../../kirby-game/src/meta-knight-defeat';
 import {knightPlayerPushable} from '../../kirby-game/src/meta-knight-push';
+import {knightHelperEligible} from '../../kirby-game/src/knight-boss';
 import {advanceKnightSideChoices,knightSideChoiceDeadline} from '../../kirby-game/src/meta-knight-side-choice';
 import {knightCosmicAlly} from '../../kirby-game/src/meta-knight-cosmic-ally';
 import {startHelperAbility,helperChoiceAvailable,helperIsBoss,helperPosition,helperLocked} from '../../kirby-game/src/meta-knight-helper';
@@ -427,9 +428,9 @@ export class GameRoom extends DurableObject<Env>{
    }
    else if(e.type==='knight'&&a.actor?.location==='meta-knight-arena'){
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
-    if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&me.metaKnight&&helperChoiceAvailable(actors)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
+    if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&knightHelperEligible(me,r.knightBattle.boss)&&helperChoiceAvailable(actors,r.knightBattle.boss)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
     else if(e.action==='ability'){if(startHelperAbility(r.knightBattle,me,e.ability,now))changed=true;}
-    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now,r.portalBoss);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(actor.metaKnight&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
+    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now,r.portalBoss);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(knightHelperEligible(actor,battle.boss)&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
     else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }

@@ -254,10 +254,11 @@ export class MetaKnightBattleView{
   Object.assign(hints,{'duet-gather':'Метакнайты объединяют силы — приготовься','duet-charge':'Два клинка зовут грозу…','duet-warn':'Выйди из больших жёлтых кругов','duet-strike':'Молния! Не входи в красные круги','duet-gap':'Следующая волна — новые круги','duet-recover':'Гроза стихла — оба Метакнайта открыты для удара'});
   this.hint.textContent=player?.side==='boss'&&participating&&stage!=='cancelled'?t(stage==='lost'?'Победа Метакнайтов!':stage==='won'?'Игроки победили':hp===0?'Сердца закончились. Наблюдай за друзьями':s?.duet?.owner===id&&s.duet.stage==='queued'?'Ждём завершения подфазы босса':attackKey==='X'?'Помоги Метакнайту · ←, ↑, →, ↓':'Помоги Метакнайту · способности 1, 2, 3, 4'):stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(3-(s?.hp??3)));
  }
- usePidgeyPresentation(stage?:string){
+ usePidgeyPresentation(stage?:string,helper=false,_attackKey='Q'){
   this.slash.visible=false;this.dazedStars.group.visible=false;this.crescentLaunch.group.visible=false;
   this.hud.setAttribute('aria-label',t('Бой с Мета Пиджи'));this.hud.querySelector('strong')!.textContent=t('Мета Пиджи');
-  const hints:Record<string,string>={approach:'Следи за клювом и держись рядом',return:'Отбито! Полумесяц летит в Мета Пиджи',stunned:'Попадание! Мета Пиджи оглушён', 'get-up':'Мета Пиджи поднимается — приготовься',won:'Победа! Первая фаза Мета Пиджи пройдена'};
+  if(helper&&stage!=='cancelled'){this.hint.textContent=t(stage==='won'?'Игроки победили':stage==='lost'?'Победа команды Мета Пиджи!':'Помоги Мета Пиджи · используй способности');return;}
+  const hints:Record<string,string>={'duet-gather':'Мета Пиджи и Метакнайт объединяют силы','duet-charge':'Клюв и меч зовут грозу…','duet-recover':'Гроза стихла — оба противника открыты для удара',approach:'Следи за клювом и держись рядом',return:'Отбито! Полумесяц летит в Мета Пиджи',stunned:'Попадание! Мета Пиджи оглушён', 'get-up':'Мета Пиджи поднимается — приготовься',won:'Победа! Мета Пиджи побеждён'};
   if(stage&&hints[stage])this.hint.textContent=t(hints[stage]);
   else if(!stage)this.hint.textContent=t('Подойди к Мета Пиджи, чтобы начать дуэль');
  }

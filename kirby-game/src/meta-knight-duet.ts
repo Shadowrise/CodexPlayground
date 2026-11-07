@@ -10,7 +10,6 @@ export const duetActive=(s:KnightBattle|undefined)=>!!s?.duet&&s.duet.stage!=='q
 export const knightDuetOpening=(s:KnightBattle|undefined)=>s?.stage==='duet-recover'&&s.duet?.stage==='recover'&&!s.openHit&&s.hp>0;
 export const duetBossDazed=(s:KnightBattle|undefined,now:number)=>s?.stage==='duet-recover'&&s.duet?.bossHit!==undefined&&now>=s.duet.bossHit&&now-s.duet.bossHit<HELPER.stunMs;
 export function requestKnightDuet(s:KnightBattle,actor:KnightActor,now:number){
- if(s.boss==='metapidgie')return false;
  const p=s.players[actor.id],h=p?.helper;if(!p||!h||p.side!=='boss'||p.hp<=0||p.withdrawn||!actor.available||!actor.metaKnight||s.duet||now<(h.cooldowns[3]??0)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage))return false;
  s.duet={owner:actor.id,requestedAt:now,stage:'queued',round:0,spots:[],contacts:{}};h.cooldowns[3]=now+DUET.cooldownMs;s.revision++;return true;
 }

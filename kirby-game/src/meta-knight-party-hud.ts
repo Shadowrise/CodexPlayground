@@ -66,7 +66,7 @@ export class MetaKnightPartyHud{
   for(const [id,bank] of this.helperBanks)if(!helpers.some(([key])=>key===id)){bank.element.remove();this.helperBanks.delete(id);}
   for(const [id,player] of helpers){
    let bank=this.helperBanks.get(id);if(!bank){const element=document.createElement('div'),title=document.createElement('strong'),hearts=document.createElement('div');element.className='knight-party-health knight-helper-health';element.dataset.playerId=id;title.className='knight-party-title';hearts.className='knight-party-hearts knight-helper-hearts';hearts.setAttribute('role','img');element.append(title,hearts);bank={element,title,hearts,key:''};this.helperBanks.set(id,bank);this.helperHealth.append(element);}
-   const label=t('Жизни помощника Метакнайта'),key=JSON.stringify([label,player.hp]);if(bank.key===key)continue;bank.key=key;bank.title.textContent=label;bank.title.title=label;bank.element.dataset.defeated=String(player.hp===0);updateHeartCounter(bank.hearts,player.hp,label);
+   const label=t(s?.boss==='metapidgie'?'Жизни помощника Мета Пиджи':'Жизни помощника Метакнайта'),key=JSON.stringify([label,player.hp]);if(bank.key===key)continue;bank.key=key;bank.title.textContent=label;bank.title.title=label;bank.element.dataset.defeated=String(player.hp===0);updateHeartCounter(bank.hearts,player.hp,label);
   }
   const rosterTitle=t('На арене'),count=String(ids.length),rosterKey=`${rosterTitle}:${count}`;
   if(this.rosterKey!==rosterKey){this.rosterKey=rosterKey;this.rosterTitle.textContent=rosterTitle;this.rosterCount.textContent=count;}

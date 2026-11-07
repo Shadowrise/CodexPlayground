@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {AnimationClip,Texture} from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {createMetapidgiePhaseTwoClips} from './metapidgie-phase2-authoring';
+const bytes=await readFile(new URL('../public/models/metapidgie-animated.glb',import.meta.url)),loader=new GLTFLoader();
+loader.register(()=>({name:'AuthoringTextureMetadata',loadTexture:()=>Promise.resolve(new Texture())}));
+const model=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+const first=JSON.parse(await readFile(new URL('../public/models/metapidgie-boss-phase1.json',import.meta.url),'utf8'));
+assert.equal((model.asset as any).extras.workshopSha256,first.sourceSha256,'Boss clips must match the approved bird rig');
+const clips=createMetapidgiePhaseTwoClips(model.scene,model.animations,first.clips.map((clip:any)=>AnimationClip.parse(clip)));
+const result={version:1,phase:2,sourceSha256:first.sourceSha256,clips:clips.map(clip=>AnimationClip.toJSON(clip))};
+await writeFile(new URL('../public/models/metapidgie-boss-phase2.json',import.meta.url),JSON.stringify(result));
+console.log(JSON.stringify({clips:clips.map(c=>[c.name,c.duration]),bytes:JSON.stringify(result).length}));

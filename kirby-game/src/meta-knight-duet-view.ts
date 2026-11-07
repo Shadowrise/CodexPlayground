@@ -43,14 +43,14 @@ export class MetaKnightDuetView{
   this.merge.set(0,d.floor!+19,0);this.bolts.begin(.65+.35*power,clock);this.bolts.setFloor(d.floor!+.04);
   const rigActors=[boss,helper];
   rigActors.forEach((c,index)=>{
-   if(!c?.isMetaKnight)return;const rig=this.rig(c),point=index===0?duetBossPosition(s,now):s.players[d.owner]?.helper?helperPosition(s.players[d.owner].helper!,now):undefined;
+   if(!c)return;const bird=index===0&&s.boss==='metapidgie'&&c.isPigeon;if(!c.isMetaKnight&&!bird)return;const rig=bird?undefined:this.rig(c),point=index===0?duetBossPosition(s,now):s.players[d.owner]?.helper?helperPosition(s.players[d.owner].helper!,now):undefined;
    if(Array.isArray(point))c.actor.position.set(SITE.x+point[0],point[1],point[2]);
    const from=(index?d.helperFrom!:d.bossFrom!),to=knightFormationSide(index?3.3:-3.3,d.yaw??0,d.floor!);c.yaw=gather?knightGatherYaw(from,to,d.yaw??0,f):d.yaw??0;c.actor.rotation.y=c.yaw;
-   const clip=gather?s.phase===4?'Fly':'Run':s.phase===4?'Fly':'Idle';if(c.state!==clip)c.setActivity(clip);c.updateActivity(0);
-   if(!gather)rig.motion.applyRaisedSword(rise,clock,s.phase===4);c.updateKnightBladeGlow(now,!gather);
-   if(!gather){rig.tinted=true;for(const m of rig.materials.keys()){m.emissive.setHex(0xffb82d);m.emissiveIntensity=.15+.25*power;}}
+   if(!bird){const clip=gather?s.phase===4?'Fly':'Run':s.phase===4?'Fly':'Idle';if(c.state!==clip)c.setActivity(clip);c.updateActivity(0);}
+   if(!gather&&rig)rig.motion.applyRaisedSword(rise,clock,s.phase===4);c.updateKnightBladeGlow(now,!gather);
+   if(!gather&&rig){rig.tinted=true;for(const m of rig.materials.keys()){m.emissive.setHex(0xffb82d);m.emissiveIntensity=.15+.25*power;}}
    if(gather)return;
-   const blade=c.actor.getObjectByName('Galaxia')!;blade.localToWorld(this.tip.set(-.315,2.05,0));this.group.worldToLocal(this.tip);
+   if(bird)c.actor.getObjectByName('Metapidgie_beak_tip')!.getWorldPosition(this.tip);else c.actor.getObjectByName('Galaxia')!.localToWorld(this.tip.set(-.315,2.05,0));this.group.worldToLocal(this.tip);
    if(rise>.3)for(let k=0;k<3;k++)this.bolts.arc(this.tip,this.merge,791+index*97+k,.065+.045*power,clock,22,.6+.8*power,[Math.sin(clock+k)*.6,1.2,Math.cos(clock+k)*.6]);
    const p=c.actor.position,scale=c.actor.scale.x;for(let band=0;band<3;band++){
     let previous:T.Vector3|undefined;for(let i=0;i<=20;i++){const t=i/20,a=t*Math.PI*4+clock*(2+band*.3)+band*2.1,r=scale*(.85+.12*Math.sin(a*3));this.a.set(p.x-SITE.x+Math.sin(a)*r,p.y+t*scale*2.8,p.z+Math.cos(a)*r);if(previous)this.bolts.segment(previous.x,previous.y,previous.z,this.a.x,this.a.y,this.a.z,.025+.02*power,.5+.5*power);previous??=new T.Vector3();previous.copy(this.a);}

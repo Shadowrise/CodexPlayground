@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {PIGEON_CLIPS} from '../src/pigeon-clips';
+import {applyMetapidgiePlumage} from './metapidgie-plumage';
 
-/** Import the workshop GLB without changing its mesh, rig, paint or animation values.
+/** Import the workshop GLB, preserving its mesh, rig and animation values.
+ * Feather paint follows Cinder; the gold beak and authored armor stay native.
  * Only player clips are shipped; the workshop retains all of its boss clips.
  * Usage: node --import tsx scripts/import-metapidgie.ts path/to/workshop.glb
  */
@@ -14,7 +16,7 @@ function unpack(bytes:Buffer){
 }
 const source=process.argv[2];assert(source,'Pass the workshop GLB path');
 const bytes=await readFile(source),{json:j,bin}=unpack(bytes);
-let binary=bin;
+let binary=applyMetapidgiePlumage(j,bin,await readFile(new URL('../design/ugolyok/ugolyok-paint-atlas.png',import.meta.url)));
 const playerNames=new Set(PIGEON_CLIPS.map(c=>c.name));
 j.animations=j.animations.filter((a:any)=>playerNames.has(a.name));
 

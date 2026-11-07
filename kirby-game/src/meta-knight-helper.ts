@@ -1,3 +1,4 @@
+import {knightHelperEligible,type KnightBoss} from './knight-boss';
 import {knightBumpActive} from './meta-knight-opponents-contact';
 import {requestKnightDuet} from './meta-knight-duet';
 import {knightCosmicAlly} from './meta-knight-cosmic-ally';
@@ -19,7 +20,7 @@ export function cancelHelperCast(h:KnightHelper,now:number){const c=h.cast;if(c&
 export const helperIsBoss=(s:KnightBattle|undefined,id:string)=>s?.players[id]?.side==='boss';
 export function helperDefeated(s:KnightBattle|undefined,id:string,now:number){const p=s?.players[id];return p?.side==='boss'&&!p.withdrawn&&(p.hp<=0||s?.stage==='won'||!!cosmicDescent(s,now)?.landed);}
 export function helperRoster(actors:readonly KnightActor[]){return actors.filter(a=>a.available&&insideKnightFightingArea(a.p));}
-export function helperChoiceAvailable(actors:readonly KnightActor[]){return helperRoster(actors).some(a=>a.metaKnight);}
+export function helperChoiceAvailable(actors:readonly KnightActor[],boss:KnightBoss='meta-knight'){return helperRoster(actors).some(a=>knightHelperEligible(a,boss));}
 /** The outgoing crescent ceases to pin its sender at the physical arena edge. */
 export function helperShotExitAt(c:HelperCast){
  if(c.ability!==1||c.meteor)return Infinity;
@@ -42,7 +43,7 @@ export function startHelperAbility(s:KnightBattle|undefined,actor:KnightActor,ab
  if(knightBumpActive(s,actor.id,now))return false;
  const ritual=knightCosmicAlly(s,actor.id,now);if(ritual&&!(ritual.kind==='planet'&&ability===4))return false;
  if(ability===4)return !!s&&requestKnightDuet(s,actor,now);
- if(!s||!p||p.side!=='boss'||!h||!actor.available||!actor.metaKnight||p.withdrawn||p.hp<=0||![1,2,3].includes(ability)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage)||helperLocked(h,now)||s.duet?.owner===actor.id||now<(h.cooldowns[ability-1]??0))return false;
+ if(!s||!p||p.side!=='boss'||!h||!actor.available||!knightHelperEligible(actor,s.boss)||p.withdrawn||p.hp<=0||![1,2,3].includes(ability)||['intro','transition','won','lost','cancelled','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-descent'].includes(s.stage)||helperLocked(h,now)||s.duet?.owner===actor.id||now<(h.cooldowns[ability-1]??0))return false;
  const meteor=ability===1&&s.phase===4,warn=ability===1?(meteor?HELPER.meteorWarnMs:HELPER.shotWarnMs):ability===2?HELPER.dashWarnMs:HELPER.spinWarnMs;
  const from:KnightPoint=[...actor.p],dx=Math.sin(actor.yaw),dz=Math.cos(actor.yaw),b=from[0]*dx+from[2]*dz,radius=META_KNIGHT_ARENA.walkRadius-1;
  const distance=Math.min(HELPER.dashDistance,Math.max(0,-b+Math.sqrt(Math.max(0,b*b+radius*radius-from[0]**2-from[2]**2)))),to:KnightPoint=[from[0]+dx*distance,from[1],from[2]+dz*distance];

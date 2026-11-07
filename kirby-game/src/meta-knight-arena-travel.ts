@@ -10,6 +10,7 @@ import {knightOpponentProfiles} from './meta-knight-opponents';
 import {MetaKnightOpponentsView} from './meta-knight-opponents-view';
 import {knightCosmicAlly} from './meta-knight-cosmic-ally';
 import {MetaKnightDuetView} from './meta-knight-duet-view';
+import {knightHelperEligible} from './knight-boss';
 import {HELPER_SLOTS,startHelperAbility,helperIsBoss,helperDefeated,helperLocked,helperChoiceAvailable,type HelperAbility,type KnightSide} from './meta-knight-helper';
 import {MetaKnightHelperView} from './meta-knight-helper-view';
 import {MetaKnightHelperHud} from './meta-knight-helper-hud';
@@ -158,7 +159,7 @@ export class MetaKnightArenaTravel{
    c.yaw=arrival?.yaw??Math.PI+META_KNIGHT_ANNEX.angle;c.actor.rotation.set(0,c.yaw,0);this.follow.reset(c.yaw);this.follow.zoom(550);this.follow.orbit(0,20);
    this.placeCamera(c,1);
    // Keep the helper's light slot and both model families present during the same warm-up.
-   const helper=c.isMetaKnight?this.helperView(c):undefined;helper?.update(undefined,'prepare',this.soloNow,0,this.camera);
+   const helper=knightHelperEligible(this.localActor(c),boss)?this.helperView(c):undefined;helper?.update(undefined,'prepare',this.soloNow,0,this.camera);
    const eyes=helper?.prepareEyes();if(eyes)helper!.group.add(eyes);
    const probes=[0,17].flatMap(variant=>{const actor=this.battleOptions?.makeOpponent?.(variant);if(!actor)return [];const restore=arenaMaterials(actor.actor),glow=new MetaKnightRefugeGlow(actor.actor);actor.actor.position.copy(c.actor.position);stage!.scene.add(actor.actor);return [{actor,restore,glow}];});
    try{await Promise.all([this.battleView?this.battleView.prepare(this.renderer,stage.scene,this.camera,[c.actor,...(boss==='metapidgie'&&this.knight?[this.knight.actor]:[]),...(helper?[helper.group]:[]),...(this.duetView?[this.duetView.group]:[]),...probes.map(p=>p.actor.actor)]):this.renderer.compileAsync(stage.scene,this.camera),audio]);}
@@ -265,7 +266,7 @@ export class MetaKnightArenaTravel{
   if(c.flight.active)c.actor.position.y+=floor-c.surfaceY;else c.actor.position.y=floor;c.surfaceY=floor;
   // Defeated allies still belong to the travelling formation seen by their camera.
   this.syncCosmicFrame(c,this.displayedBattle,now,participating);
-  if(helper&&c.isMetaKnight)this.helperView(c).update(battle,id,now,paused?0:dt,this.camera);else this.helperViews.get(c)?.update(undefined,id,now,0);
+  if(helper)this.helperView(c).update(battle,id,now,paused?0:dt,this.camera);else this.helperViews.get(c)?.update(undefined,id,now,0);
   this.applyDefeat(c,id,now);
   if(this.playerStars)this.playerStars.update([c.actor.position.x,c.actor.position.y,c.actor.position.z],now,dazed);
   this.celebrate(c,id,now,paused?0:dt);this.fighterFinale(c,id,now,paused?0:dt);
@@ -388,7 +389,7 @@ export class MetaKnightArenaTravel{
    c.updateDuelDazedPose(now,dazed);
    let stars=this.remoteStars.get(c);if(dazed&&!stars){stars=new MetaKnightDazedStars('Remote player golden dizziness stars');this.current!.scene.add(stars.group);this.remoteStars.set(c,stars);}
    if(inside&&battle?.duet?.owner===id)this.duetOwner=c;
-   if(inside&&c.isMetaKnight&&battle?.players[id]?.helper)this.helperView(c).update(battle,id,now,0,this.camera);else this.helperViews.get(c)?.update(undefined,id,now,0);
+   if(inside&&battle?.players[id]?.helper)this.helperView(c).update(battle,id,now,0,this.camera);else this.helperViews.get(c)?.update(undefined,id,now,0);
    if(inside){this.applyDefeat(c,id,now);this.helperViews.get(c)?.updatePlanetLightning(battle,id,now,this.battleView?.gravityPlanet);this.celebrate(c,id,now,0);this.fighterFinale(c,id,now,0);}
    if(stars){stars.group.scale.setScalar(c.actor.scale.x*.38);stars.update([c.actor.position.x,c.actor.position.y,c.actor.position.z],now,dazed);}
   }

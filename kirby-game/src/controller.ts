@@ -18,6 +18,8 @@ import {MetaKnightBladeGlow} from './meta-knight-blade-glow';
 import {DuelDazedPose} from './duel-dazed-pose';
 import {PigeonFlightWings} from './pigeon-flight-wings';
 import {PigeonDashMotion,pigeonDashTravel} from './pigeon-dash-motion';
+import {MetapidgiePlayerDashFx} from './metapidgie-player-dash-fx';
+import type {Camera} from 'three';
 import {KirbyDashMotion} from './kirby-dash-motion';
 import {FruitEatingPose} from './fruit-eating';
 import {TURN_RATE} from './movement-input';
@@ -56,6 +58,14 @@ export class CharacterController {
   /** Compatibility alias for the sword dash callers; every rig shares the press rules. */
   readonly knightDash = this.playerDash;
   private pigeonDashMotion?:PigeonDashMotion;
+  private metapidgieDashFx?:MetapidgiePlayerDashFx;
+  private metapidgieAbilityDash=false;
+  setMetapidgieAbilityDash(active:boolean){this.metapidgieAbilityDash=active;}
+  updateMetapidgieDashFx(dt:number,camera:Camera){
+    const active=this.state==='Dash'||this.metapidgieAbilityDash;
+    if(active&&this.isPigeon&&this.actor.getObjectByName('Metapidgie_beak_tip'))this.metapidgieDashFx??=new MetapidgiePlayerDashFx(this.actor);
+    this.metapidgieDashFx?.update(active,dt,camera);
+  }
   private kirbyDashMotion?:KirbyDashMotion;
   clearKirbyDashPose(){this.kirbyDashMotion?.clear();}
   updateKirbyDashVisual(){
@@ -97,7 +107,7 @@ export class CharacterController {
     }
     this.dashSparks?.update(this.mixer.time*1000,active);
   }
-  disposeEffects(){this.clearKirbyDashPose();this.kirbyDashMotion=undefined;this.fruitEating.dispose();this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;this.pigeonDashMotion?.dispose();this.pigeonDashMotion=undefined;}
+  disposeEffects(){this.metapidgieDashFx?.dispose();this.metapidgieDashFx=undefined;this.clearKirbyDashPose();this.kirbyDashMotion=undefined;this.fruitEating.dispose();this.clearKnightDashPose();this.dashSparks?.dispose();this.dashSparks=undefined;this.bladeGlow?.dispose();this.bladeGlow=undefined;this.duelDazedPose?.dispose();this.duelDazedPose=undefined;this.pigeonFlightWings?.dispose();this.pigeonFlightWings=undefined;this.pigeonDashMotion?.dispose();this.pigeonDashMotion=undefined;}
   readonly roll=new PushRoll();
   takePush(dx:number,dz:number){if(this.roll.active)return false;this.setActivity('Roll');this.roll.start(dx,dz,this.surfaceY);return true;}
   readonly cloud = flightCloud();
@@ -264,6 +274,7 @@ export class CharacterController {
   }
 
   setActivity(name:string,useAuthoredClip=false) {
+    this.metapidgieAbilityDash=false;
     this.clearKirbyDashPose();
     this.clearPigeonDashPose();
     this.fruitEating.clear();

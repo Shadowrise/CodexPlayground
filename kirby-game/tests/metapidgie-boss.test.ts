@@ -20,30 +20,30 @@ test('portal 2 is solo-only and selects Pidgie without changing the original com
  assert(parseChatCommand('/portal 2',false,[])?.error);
  assert.equal(commandSuggestions('/portal 2',true,[])[0].value,'/portal 2');
 });
-test('both melee hits and returned crescents end the encounter after four hits',()=>{
+test('both melee hits and returned crescents advance into phase two and finish after eight hits',()=>{
  for(const reflected of [false,true]){
   const s=make();let now=2000;
-  for(let hit=1;hit<=4;hit++){
+  for(let hit=1;hit<=8;hit++){
    const a={...actor,p:[0,0,2] as KnightActor['p']};
    Object.assign(s,{stage:reflected?'return':'open',pattern:'sword',since:now,until:now+(reflected?450:2750),checked:now,from:[0,0,0],to:[0,0,0],openHit:false,returnFrom:[0,1.2,10]});
    if(reflected)advanceKnightBattle(s,[a],s.until);
    else {assert(knightAttack(s,a,now+20));advanceKnightBattle(s,[a],now+170);}
    assert.equal(s.hp,12-hit);assert.equal(s.stage,'stunned');
    advanceKnightBattle(s,[a],s.until);
-   if(hit<4){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.phase,1);}
-   else {assert.equal(s.stage,'won');assert.equal(s.phase,1);assert.deepEqual(knightHealthPhases(s).map(p=>p.remaining),[0]);}
+   if(hit<8){assert.equal(s.stage,'get-up');advanceKnightBattle(s,[a],s.until);assert.equal(s.phase,hit<4?1:2);}
+   else {assert.equal(s.stage,'won');assert.equal(s.phase,2);assert.deepEqual(knightHealthPhases(s).map(p=>p.remaining),[0,0]);}
    now+=5000;
   }
-  const snapshot=structuredClone(s);advanceKnightBattle(s,[actor],now+60000);assert.equal(s.stage,snapshot.stage);assert.equal(s.hp,8);
+  const snapshot=structuredClone(s);advanceKnightBattle(s,[actor],now+60000);assert.equal(s.stage,snapshot.stage);assert.equal(s.hp,4);
  }
 });
-test('Pidgie stays in phase one across debug commands and delayed side choice',()=>{
- const s=make();for(const phase of [2,3,4] as const)assert.equal(setKnightPhase(s,phase,[actor],2000),false);
- assert.equal(requestKnightDuet(s,actor,2000),false);
+test('Pidgie supports two phases, rejects unfinished phases and preserves identity after side choice',()=>{
+ const s=make();for(const phase of [3,4] as const)assert.equal(setKnightPhase(s,phase,[actor],2000),false);
+ assert.equal(requestKnightDuet(s,actor,2000),false);assert(setKnightPhase(s,2,[actor],2000));assert.equal(s.phase,2);
  const heroes=[{...actor,metaKnight:true},{...actor,id:'b'}];
  const room={knightBattle:startKnightBattle(heroes,'a',1000,'metapidgie')!,knightSides:{a:'players' as const}};
  assert.equal(room.knightBattle.stage,'side-choice');advanceKnightSideChoices(room,heroes,2000);assert.equal(room.knightBattle.boss,'metapidgie');
- assert.deepEqual(knightHealthPhases(s).map(p=>[p.phase,p.maximum]),[[1,4]]);
+ assert.deepEqual(knightHealthPhases(s).map(p=>[p.phase,p.maximum]),[[1,4],[2,4]]);
 });
 test('double-height authored leap and authoritative impact share one 1200ms clock',()=>{
  const s=make(),a={...actor,p:[25,0,0] as KnightActor['p']};s.players.a.invulnerable=1e12;

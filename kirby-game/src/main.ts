@@ -1185,7 +1185,7 @@ renderer.setAnimationLoop((time: number) => {
     updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.entries()??[]);
     const knightBattle=network?.room.knightBattle,knightPlayer=knightBattle?.players[network?.id??''];
     if(knightBattle?.stage==='won'&&knightPlayer&&knightPlayer.side!=='boss'&&!knightPlayer.withdrawn&&knightPlayer.hp>0&&knightPlayer.hits+knightPlayer.reflects>0)completeKnightVictory();
-    checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();cosmicArena.render();
+    checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();updatePlayerDashEffects(settingsOpen?0:dt,cosmicArena.camera);cosmicArena.render();
     return;
   }
   if(character&&playing&&!settingsOpen&&metaKnightPortalReady()&&insideMetaKnightPortal(character.actor.position)&&sealActor(character).available){void cosmicArena.enter(character);return;}
@@ -1403,10 +1403,15 @@ renderer.setAnimationLoop((time: number) => {
   sceneryVisibility.update(camera,viewDistance);
   fireflies?.syncInstances(camera);
   preparedShadows.update(lightTime,camera.position);
+  updatePlayerDashEffects(settingsOpen?0:dt,camera);
   renderer.render(scene, camera);
   if(firstSceneFrame){performance.measure('kirby-first-frame',{start:firstRenderStart,end:performance.now()});firstSceneFrame=false;}
   sceneProfiler?.frame(profileRender-profileStart,performance.now()-profileRender);
 });
+function updatePlayerDashEffects(dt:number,viewCamera:THREE.Camera){
+  character?.updateMetapidgieDashFx(dt,viewCamera);
+  for(const remote of remotePlayers?.players.values()??[])remote.updateMetapidgieDashFx(dt,viewCamera);
+}
 window.addEventListener('resize', () => {
   camera.fov=cameraFov();
   camera.aspect = innerWidth / innerHeight;

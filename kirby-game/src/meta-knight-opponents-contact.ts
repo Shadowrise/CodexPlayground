@@ -1,3 +1,4 @@
+import {knightHelperEligible} from './knight-boss';
 import {knightBattleActive,type KnightActor,type KnightBattle,type KnightPoint} from './meta-knight-battle';
 import {knightPlayerPushable} from './meta-knight-push';
 import {pushTarget,type PushCandidate} from './push-target';
@@ -18,7 +19,7 @@ export function knightOpponentPushCandidates(s:KnightBattle|undefined,now:number
 }
 /** An ordinary Q press chooses a real target in front and never consumes health. */
 export function pushKnightOpponent(s:KnightBattle|undefined,actor:KnightActor,now:number,targetId?:string){
- if(!s||!actor.available||!actor.metaKnight||!knightPlayerPushable(s,actor.id,now))return;
+ if(!s||!actor.available||!knightHelperEligible(actor,s.boss)||!knightPlayerPushable(s,actor.id,now))return;
  const target=pushTarget(actor.p,actor.yaw,1,knightOpponentPushCandidates(s,now).filter(a=>!targetId||a.id===targetId));
  if(target&&startKnightBump(s,target.id,Math.sin(actor.yaw),Math.cos(actor.yaw),now))return target.id;
 }
