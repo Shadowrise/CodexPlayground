@@ -1,3 +1,4 @@
+import {PIDGEY_SPIN_EXIT} from './metapidgie-cosmic-emitter';
 import {COSMIC,COSMIC_DESCENT,easeCosmic} from './meta-knight-cosmic';
 
 /** World-space metres, seconds for ballistics; encounter timestamps remain ms. */
@@ -5,7 +6,7 @@ export const COSMIC_SPIN={warnMs:2800,spinMs:12000,openMs:12000,hitMs:1000,recov
  startTurns:.20,endTurns:.85,stepAngle:15.4*Math.PI/180,speed:13.5,orbRadius:.72,orbHeight:1.5,
  hiltZ:1.10,emitRadius:(1.10+Math.hypot(.315,2.05))*3.3,outerRadius:48,capacity:160} as const;
 export type CosmicSpin={at:number;yaw:number};
-type State={phase:number;stage:string;since:number;until:number;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3};
+type State={boss?:'meta-knight'|'metapidgie';phase:number;stage:string;since:number;until:number;cosmicSpin?:CosmicSpin;cosmicPart?:1|2|3};
 type Point=[number,number,number];
 export type CosmicOrb={id:number;at:number;angle:number;p:Point;from:Point;distance:number};
 export const cosmicSpinDuration=COSMIC_SPIN.spinMs/1000;
@@ -20,7 +21,8 @@ export function cosmicOrbBirth(index:number){
  return 2*turns/(COSMIC_SPIN.startTurns+Math.sqrt(COSMIC_SPIN.startTurns**2+4*b*turns));
 }
 export const cosmicOrbCount=Math.floor(cosmicSpinAngle(cosmicSpinDuration)/COSMIC_SPIN.stepAngle)+1;
-export const cosmicOrbLife=(COSMIC_SPIN.outerRadius-COSMIC_SPIN.emitRadius)/COSMIC_SPIN.speed;
+export const cosmicOrbLife=(COSMIC_SPIN.outerRadius-Math.min(COSMIC_SPIN.emitRadius,PIDGEY_SPIN_EXIT.radius))/COSMIC_SPIN.speed;
+export const cosmicEmitRadius=(s:State)=>s.boss==='metapidgie'?PIDGEY_SPIN_EXIT.radius:COSMIC_SPIN.emitRadius;
 /** The visible crouch and the solid torso use the same exhaustion envelope. */
 export function cosmicSpinFatigue(s:State,now:number){
  if(s.phase!==4||s.stage==='cosmic-spin'||s.stage==='cosmic-spin-warn'||s.stage.startsWith('cosmic-meteor-')||s.stage.startsWith('cosmic-star-')||s.stage.startsWith('cosmic-planet-'))return 0;
@@ -30,14 +32,14 @@ export function cosmicSpinFatigue(s:State,now:number){
 /** A snapshot reproduces every outgoing ball, including the last ones during rest. */
 export function cosmicOrbs(s:State|undefined,now:number,previous=now):CosmicOrb[]{
  if(s?.phase!==4||!s.cosmicSpin||!['cosmic-spin','cosmic-open'].includes(s.stage))return [];
- const spin=s.cosmicSpin,time=(now-spin.at)/1000,before=(previous-spin.at)/1000;
+ const radius=cosmicEmitRadius(s),spin=s.cosmicSpin,time=(now-spin.at)/1000,before=(previous-spin.at)/1000;
  if(time<0||before>cosmicSpinDuration+cosmicOrbLife)return [];
  const first=Math.max(0,Math.ceil(cosmicSpinAngle(Math.max(0,before-cosmicOrbLife))/COSMIC_SPIN.stepAngle)-1),last=Math.min(cosmicOrbCount-1,Math.floor(cosmicSpinAngle(Math.min(time,cosmicSpinDuration))/COSMIC_SPIN.stepAngle+1e-9));
  const shots:CosmicOrb[]=[];
  for(let id=first;id<=last;id++){
   const birth=cosmicOrbBirth(id);if(birth>time+1e-9||before-birth>cosmicOrbLife)continue;
-  const angle=spin.yaw+id*COSMIC_SPIN.stepAngle,d=COSMIC_SPIN.emitRadius+Math.max(0,time-birth)*COSMIC_SPIN.speed;
-  const old=COSMIC_SPIN.emitRadius+Math.max(0,before-birth)*COSMIC_SPIN.speed,x=Math.sin(angle),z=Math.cos(angle),y=COSMIC.height+COSMIC_SPIN.orbHeight;
+  const angle=spin.yaw+id*COSMIC_SPIN.stepAngle,d=radius+Math.max(0,time-birth)*COSMIC_SPIN.speed;
+  const old=radius+Math.max(0,before-birth)*COSMIC_SPIN.speed,x=Math.sin(angle),z=Math.cos(angle),y=COSMIC.height+(s.boss==='metapidgie'?PIDGEY_SPIN_EXIT.height:COSMIC_SPIN.orbHeight);
   shots.push({id,at:spin.at+birth*1000,angle,p:[x*d,y,z*d],from:[x*old,y,z*old],distance:d});
  }return shots;
 }
@@ -51,7 +53,7 @@ export function cosmicSpinDanger(s:State,p:readonly number[],now:number,previous
  }
  // The visibly electrified blade sweeps the inner blind spot of the emitters.
  if(s.stage==='cosmic-spin'){
-  const r=Math.hypot(p[0],p[2]),inner=2.9-bodyRadius,outer=COSMIC_SPIN.emitRadius+bodyRadius;
+  const r=Math.hypot(p[0],p[2]),inner=2.9-bodyRadius,outer=cosmicEmitRadius(s)+bodyRadius;
   if(r<inner||r>outer)return false;
   const angle=Math.atan2(p[0],p[2]),a=s.cosmicSpin.yaw+cosmicSpinAngle((Math.max(s.since,previous)-s.cosmicSpin.at)/1000),b=s.cosmicSpin.yaw+cosmicSpinAngle((now-s.cosmicSpin.at)/1000),half=Math.asin(Math.min(1,(.22+bodyRadius)/r));
   const wrapped=angle+Math.ceil((a-half-angle)/(2*Math.PI))*2*Math.PI;

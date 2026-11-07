@@ -1,7 +1,7 @@
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import {COSMIC} from './meta-knight-cosmic';
-import {COSMIC_SPIN,cosmicOrbs,cosmicSpinAngle,type CosmicOrb} from './meta-knight-cosmic-spin';
+import {COSMIC_SPIN,cosmicEmitRadius,cosmicOrbs,cosmicSpinAngle,type CosmicOrb} from './meta-knight-cosmic-spin';
 import {CosmicLightning} from './meta-knight-cosmic-view';
 
 const hash=(n:number)=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.floor(x);};
@@ -67,7 +67,7 @@ export class MetaKnightCosmicOrbs{
   const visible=external?external.length>0:s?.phase===4&&['cosmic-spin-warn','cosmic-spin','cosmic-open'].includes(s.stage);this.group.visible=visible;
   if(!visible){this.cores.count=this.halos.count=0;this.electricity.begin(0);this.electricity.end();return;}
   const time=now/1000;this.clock.value=time;this.electricity.begin(.94,time);
-  this.warning.visible=!external&&s?.stage!=='cosmic-open';if(s){this.warningMaterial.uniforms.progress.value=Math.min(1,(now-s.since)/Math.max(1,s.until-s.since));this.warningMaterial.uniforms.charged.value=s.stage==='cosmic-spin'?1:0;}
+  this.warning.visible=!external&&s?.stage!=='cosmic-open';this.warning.scale.setScalar(s?cosmicEmitRadius(s)/COSMIC_SPIN.emitRadius:1);if(s){this.warningMaterial.uniforms.progress.value=Math.min(1,(now-s.since)/Math.max(1,s.until-s.since));this.warningMaterial.uniforms.charged.value=s.stage==='cosmic-spin'?1:0;}
   const shots=external??cosmicOrbs(s!,now);let count=0;
   for(const shot of shots){
    if(count>=COSMIC_SPIN.capacity||shot.distance>COSMIC_SPIN.outerRadius)continue;
@@ -94,7 +94,7 @@ export class MetaKnightCosmicOrbs{
   if(!external&&s?.stage==='cosmic-spin'&&s.cosmicSpin){
    const elapsed=(now-s.cosmicSpin.at)/1000;
    for(let line=0;line<3;line++){
-    const r=COSMIC_SPIN.emitRadius-line*.25;
+    const r=cosmicEmitRadius(s)-line*.25;
     for(let i=0;i<=22;i++){
      const a=s.cosmicSpin.yaw+cosmicSpinAngle(Math.max(0,elapsed-i*.008));
      this.b.set(Math.sin(a)*r,COSMIC.height+COSMIC_SPIN.orbHeight+line*.08,Math.cos(a)*r);

@@ -1,3 +1,4 @@
+import {knightWeaponPoint} from './knight-weapon-point';
 import {knightDefeatPose} from './meta-knight-defeat';
 import {knightDuetOpening,duetBossDazed} from './meta-knight-duet';
 import {knightCelebration} from './meta-knight-celebration';
@@ -89,18 +90,18 @@ export class MetaKnightBattleView{
  setLifeFirefly(gltf:GLTF){this.lifeFirefly?.dispose();this.lifeFirefly=new MetaKnightLifeFireflyView(gltf,kind=>this.cue(kind));this.group.add(this.lifeFirefly.group);}
  fireflyBuzz(listener:T.Vector3){return this.lifeFirefly?.buzzLevel(listener)??0;}
  private finale=new MetaKnightCosmicFinale();private fallKey='';
- private effectLights:T.PointLight[];
+ private effectLights:T.PointLight[];private effectWeapon:T.Object3D;private effectBird=false;
  private lighting=new T.Group();
- constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound,playbackRate?:number)=>void,private clearCosmicAudio=()=>{},private chargeAudio:(level:number)=>void=()=>{}){
+ constructor(private knight:CharacterController,scene:T.Scene,private onCancel:()=>void,private cue:(kind:KnightSound,playbackRate?:number)=>void,private clearCosmicAudio=()=>{},private chargeAudio:(level:number)=>void=()=>{},effectActor:T.Object3D=knight.actor){
   this.assault.bindCrystals(scene);
   this.swordSwing=new MetaKnightSwordSwing(knight.actor);
   this.motion=new MetaKnightBattleMotion(knight.actor);this.impactCountdown.name='Meta Knight impact countdown';
   this.dashSparks=new MetaKnightDashSparks(knight.actor.getObjectByName('Galaxia')!);
   this.lane.name='Meta Knight dash countdown lane';
   this.group.name='Meta Knight duel telegraphs and effects';this.group.position.x=SITE.x;scene.add(this.group);
-  this.cosmic=new MetaKnightCosmicView(knight.actor,scene);this.group.add(this.cosmic.group,this.cosmicOrbs.group);
-  this.meteor=new MetaKnightCosmicMeteorView(knight.actor.getObjectByName('Galaxia')!);this.group.add(this.meteor.group);
-  this.refuge=new MetaKnightCosmicRefugeView(scene,knight.actor.getObjectByName('Galaxia')!);this.group.add(this.refuge.group,this.finale.group);
+  this.effectBird=!!effectActor.getObjectByName('Metapidgie_beak_tip');this.effectWeapon=effectActor.getObjectByName(this.effectBird?'Metapidgie_beak_tip':'Galaxia')!;this.cosmic=new MetaKnightCosmicView(effectActor,scene);this.group.add(this.cosmic.group,this.cosmicOrbs.group);
+  this.meteor=new MetaKnightCosmicMeteorView(this.effectWeapon);this.group.add(this.meteor.group);
+  this.refuge=new MetaKnightCosmicRefugeView(scene,this.effectWeapon);this.group.add(this.refuge.group,this.finale.group);
   // Visibility of a light changes NUM_POINT_LIGHTS for every lit material.
   // Keep the slots present from loading onward; inactive effects use zero intensity.
   this.effectLights=[this.cosmic.light,this.meteor.light,this.refuge.burst.light,this.finale.light];this.lighting.name='Persistent duel effect lighting';this.lighting.position.copy(this.group.position);this.lighting.add(...this.effectLights);scene.add(this.lighting);
@@ -199,8 +200,7 @@ export class MetaKnightBattleView{
     this.motion.clear();this.motion.apply(s,f);
    }
   }
-  blade.localToWorld(this.position.set(-.315,2.05,0));this.position.x-=SITE.x;this.assault.update(s,now,this.position);this.lightning.update(s,now,this.impactPoint);this.crescentLaunch.update(s,now,this.position);
-  this.cosmic.update(s,now);this.cosmicOrbs.update(s,now);this.meteor.update(s,now);this.refuge.update(s,now,camera);if(this.finale.update(s,now))this.cue('cosmic-landing');
+  this.updateActorEffects(s,now,camera);
   if(s?.stage==='cosmic-spin'&&cosmicOrbs(s,now).length){const key=`${s.id}:${s.since}:${Math.floor((now-s.since)/220)}`;if(key!==this.lastOrbSound){this.lastOrbSound=key;this.cue('cosmic-orb');}}
   this.shadow.visible=s?.phase!==4;this.shadow.position.set(p[0],.075,p[2]);this.shadow.scale.setScalar(1+Math.max(0,p[1])*.1);
   for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane])m.uniforms.clock.value=now/1000;
@@ -254,11 +254,15 @@ export class MetaKnightBattleView{
   Object.assign(hints,{'duet-gather':'Метакнайты объединяют силы — приготовься','duet-charge':'Два клинка зовут грозу…','duet-warn':'Выйди из больших жёлтых кругов','duet-strike':'Молния! Не входи в красные круги','duet-gap':'Следующая волна — новые круги','duet-recover':'Гроза стихла — оба Метакнайта открыты для удара'});
   this.hint.textContent=player?.side==='boss'&&participating&&stage!=='cancelled'?t(stage==='lost'?'Победа Метакнайтов!':stage==='won'?'Игроки победили':hp===0?'Сердца закончились. Наблюдай за друзьями':s?.duet?.owner===id&&s.duet.stage==='queued'?'Ждём завершения подфазы босса':attackKey==='X'?'Помоги Метакнайту · ←, ↑, →, ↓':'Помоги Метакнайту · способности 1, 2, 3, 4'):stage==='cancelled'?t('Дуэль прервана. Ты остаёшься на арене.'):!s?t(near?'Начни дуэль: движение, прыжок и обычная атака':'Подойди к Метакнайту, чтобы начать дуэль'):!participating?t('Идёт дуэль. Дождись следующей попытки'):hp===0&&!finished?t('Сердца закончились. Наблюдай за друзьями'):t(hints[stage]??'Следи за мечом и держись рядом').replace('{0}',attackKey).replace('{1}',String(3-(s?.hp??3)));
  }
+ protected updateActorEffects(s:KnightBattle|undefined,now:number,camera?:T.Camera){
+  knightWeaponPoint(this.effectWeapon,this.position);this.position.x-=SITE.x;this.assault.update(s,now,this.position);this.lightning.update(s,now,this.effectBird?this.position:this.impactPoint);if(!this.effectBird)this.crescentLaunch.update(s,now,this.position);
+  this.cosmic.update(s,now);this.cosmicOrbs.update(s,now);this.meteor.update(s,now);this.refuge.update(s,now,camera);if(this.finale.update(s,now))this.cue('cosmic-landing');
+ }
  usePidgeyPresentation(stage?:string,helper=false,_attackKey='Q'){
   this.slash.visible=false;this.dazedStars.group.visible=false;this.crescentLaunch.group.visible=false;
   this.hud.setAttribute('aria-label',t('Бой с Мета Пиджи'));this.hud.querySelector('strong')!.textContent=t('Мета Пиджи');
   if(helper&&stage!=='cancelled'){this.hint.textContent=t(stage==='won'?'Игроки победили':stage==='lost'?'Победа команды Мета Пиджи!':'Помоги Мета Пиджи · используй способности');return;}
-  const hints:Record<string,string>={'duet-gather':'Мета Пиджи и Метакнайт объединяют силы','duet-charge':'Клюв и меч зовут грозу…','duet-recover':'Гроза стихла — оба противника открыты для удара',approach:'Следи за клювом и держись рядом',return:'Отбито! Полумесяц летит в Мета Пиджи',stunned:'Попадание! Мета Пиджи оглушён', 'get-up':'Мета Пиджи поднимается — приготовься',won:'Победа! Мета Пиджи побеждён'};
+  const hints:Record<string,string>={'duet-gather':'Мета Пиджи и Метакнайт объединяют силы','duet-charge':'Клюв и меч зовут грозу…','duet-recover':'Гроза стихла — оба противника открыты для удара',approach:'Следи за клювом и держись рядом',return:'Отбито! Полумесяц летит в Мета Пиджи',stunned:'Попадание! Мета Пиджи оглушён', 'get-up':'Мета Пиджи поднимается — приготовься',won:'Победа! Мета Пиджи побеждён','cosmic-charge':'Сила собирается в клюве…','cosmic-lift':'Клюв тянет всех к звёздам','cosmic-spin-warn':'Клюв заряжается! Приготовься уворачиваться от шаров','cosmic-open':'Мета Пиджи устал! Подлети к зелёной метке и атакуй','cosmic-hit':'Попадание! Мета Пиджи приходит в себя','cosmic-star-stun':'Попадание в лоб! Мета Пиджи оглушён','cosmic-meteor-return':'Отбито! Метеорит летит в Мета Пиджи','cosmic-star-strike':'Звёздочка летит в Мета Пиджи','cosmic-recover':'Мета Пиджи восстанавливает силы'};
   if(stage&&hints[stage])this.hint.textContent=t(hints[stage]);
   else if(!stage)this.hint.textContent=t('Подойди к Мета Пиджи, чтобы начать дуэль');
  }

@@ -1,3 +1,4 @@
+import {knightWeaponPoint} from './knight-weapon-point';
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import type {CosmicLightning} from './meta-knight-cosmic-view';
@@ -8,7 +9,7 @@ const hash=(n:number)=>{const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math
 /** A shared-clock charge at the upper blade; the pulling bolts emerge from its surface. */
 export class MetaKnightGravityCharge{
  readonly group=new T.Group();
- private clock={value:0};
+ private clock={value:0};private beak=false;
  private core=new T.Mesh(new T.SphereGeometry(1,48,32),new T.ShaderMaterial({transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,
   uniforms:{clock:this.clock},vertexShader:`varying vec3 p;varying vec3 n;varying vec3 v;
    void main(){p=position;n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);v=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
@@ -35,11 +36,11 @@ export class MetaKnightGravityCharge{
  get radius(){return this.group.scale.x;}
  clear(){this.group.visible=false;}
  update(s:KnightBattle,now:number,blade:T.Object3D,root:T.Object3D,arcs:CosmicLightning){
-  const radius=gravityChargeRadius(s,now),active=radius>0;
+  this.beak=blade.name==='Metapidgie_beak_tip';const radius=gravityChargeRadius(s,now),active=radius>0;
   this.group.visible=active;if(!active)return;
   const clock=Math.max(0,now-s.cosmicRefuge!.at)/1000;
   this.clock.value=clock;this.group.scale.setScalar(radius);
-  blade.localToWorld(this.group.position.set(-.315,1.75,0));root.worldToLocal(this.group.position);
+  knightWeaponPoint(blade,this.group.position,-.315,1.75,0);root.worldToLocal(this.group.position);
   const tick=Math.floor(clock*18);
   for(let strand=0;strand<4;strand++){
    const spin=clock*(.7+strand*.17)+strand*1.9;
@@ -50,6 +51,6 @@ export class MetaKnightGravityCharge{
    }
   }
  }
- originToward(target:T.Vector3,out:T.Vector3){return out.subVectors(target,this.group.position).normalize().multiplyScalar(this.radius*.96).add(this.group.position);}
+ originToward(target:T.Vector3,out:T.Vector3){if(this.beak)return out.copy(this.group.position);return out.subVectors(target,this.group.position).normalize().multiplyScalar(this.radius*.96).add(this.group.position);}
  dispose(){this.group.removeFromParent();this.core.geometry.dispose();this.core.material.dispose();this.halo.geometry.dispose();this.halo.material.dispose();}
 }

@@ -204,7 +204,6 @@ function nextPattern(s:KnightBattle,now:number,actors:KnightActor[]){
 }
 /** Both melee and returned crescents use the same phase and victory boundaries. */
 function finishKnightDamage(s:KnightBattle,now:number,actors:KnightActor[]){
- if(s.boss==='metapidgie'&&s.hp<=4){enter(s,'won',1e12,now,actors);return true;}
  if(s.phase===3&&s.hp<=0){setKnightPhase(s,4,actors,now);return true;}
  if(s.hp<=0){enter(s,'won',1e12,now,actors);return true;}
  if(s.phase===4)return false;
@@ -220,7 +219,7 @@ function damageKnight(s:KnightBattle,now:number,actors:KnightActor[],reaction?:'
 }
 /** Local duel command: replace the phase without carrying an old attack across. */
 export function setKnightPhase(s:KnightBattle,phase:1|2|3|4,actors:KnightActor[],now:number,subphase?:1|2|3){
- if(s.boss==='metapidgie'&&phase>2||!knightBattleActive(s)||![1,2,3,4].includes(phase)||!living(s,actors).length)return false;
+ if(!knightBattleActive(s)||![1,2,3,4].includes(phase)||!living(s,actors).length)return false;
  const wasCosmic=s.phase===4;
  enter(s,'transition',1500,now,actors);s.phase=phase;s.hp=KNIGHT_PHASE_HEALTH[phase];
  if(phase===4){s.from[1]=0;s.to=[0,0,0];s.yaw=Math.atan2(-s.from[0],-s.from[2]);prepareKnightCosmicAllies(s,actors,now);}else if(wasCosmic){s.from=s.to=[0,0,-9];}
@@ -257,7 +256,7 @@ function nextStep(s:KnightBattle,now:number,actors:KnightActor[],protectedPlayer
  }
  const old=s.stage,oldFrom=[...s.from] as KnightPoint,oldTo=[...s.to] as KnightPoint,oldHeight=s.height;
  const starFrom=s.pattern==='star'?knightPosition(s,now):undefined;
- if(old==='stunned'||old==='crystal-break'){if(s.hp<=0||s.boss==='metapidgie'&&s.hp<=4){finishKnightDamage(s,now,actors);return;}enter(s,'get-up',KNIGHT.getUpMs,now,actors);return;}
+ if(old==='stunned'||old==='crystal-break'){if(s.hp<=0){finishKnightDamage(s,now,actors);return;}enter(s,'get-up',KNIGHT.getUpMs,now,actors);return;}
  if(old==='get-up'){if(finishKnightDamage(s,now,actors))return;delete s.activeCrystal;nextPattern(s,now,actors);return;}
  if(old==='intro'||old==='rest'||old==='open'){delete s.activeCrystal;nextPattern(s,now,actors);return;}
  if(old==='transition'){s.cycle=0;nextPattern(s,now,actors);return;}

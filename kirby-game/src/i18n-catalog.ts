@@ -681,4 +681,13 @@ export const translations: Record<string, readonly [string, string]> = {
  'E — Бросить хлебушек':['E — Drop the bread','E — Пусни хлебчето'],
  'E — Угостить дикого Пиджи':['E — Give bread to wild Pidgie','E — Почерпи дивия Пиджи'],
  '{0} угостил дикого Пиджи хлебушком, теперь Пиджи его лучший друг.':['{0} gave wild Pidgie some bread. Pidgie is now their best friend.','{0} почерпи дивия Пиджи с хлебче. Сега Пиджи е най-добрият му приятел.'],
+ "Сила собирается в клюве…":["Power gathers in the beak…","Силата се събира в клюна…"],
+ "Клюв тянет всех к звёздам":["The beak draws everyone toward the stars","Клюнът тегли всички към звездите"],
+ "Клюв заряжается! Приготовься уворачиваться от шаров":["The beak is charging! Get ready to dodge the orbs","Клюнът се зарежда! Приготви се да избягваш кълбата"],
+ "Мета Пиджи устал! Подлети к зелёной метке и атакуй":["Meta Pidgie is tired! Fly to the green marker and attack","Мета Пиджи е уморен! Полети до зелената отметка и атакувай"],
+ "Попадание! Мета Пиджи приходит в себя":["Hit! Meta Pidgie is recovering","Попадение! Мета Пиджи се съвзема"],
+ "Попадание в лоб! Мета Пиджи оглушён":["Forehead hit! Meta Pidgie is stunned","Удар в челото! Мета Пиджи е зашеметен"],
+ "Отбито! Метеорит летит в Мета Пиджи":["Reflected! The meteor is heading toward Meta Pidgie","Отбито! Метеоритът лети към Мета Пиджи"],
+ "Звёздочка летит в Мета Пиджи":["The star is flying toward Meta Pidgie","Звездичката лети към Мета Пиджи"],
+ "Мета Пиджи восстанавливает силы":["Meta Pidgie is regaining strength","Мета Пиджи възстановява силите си"],
 };

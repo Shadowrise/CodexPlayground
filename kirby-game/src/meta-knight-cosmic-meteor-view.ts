@@ -1,3 +1,4 @@
+import {knightWeaponPoint} from './knight-weapon-point';
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import {COSMIC_METEOR as M,meteorPoint} from './meta-knight-cosmic-meteor';
@@ -74,7 +75,7 @@ export class MetaKnightCosmicMeteorView{
   this.flame.instanceMatrix.needsUpdate=this.smoke.instanceMatrix.needsUpdate=this.embers.instanceMatrix.needsUpdate=true;
   this.lightning.begin(1,clock);
   if(stage==='cosmic-meteor-draw'||stage==='cosmic-meteor-cast'&&now<m.at){
-   this.blade.localToWorld(this.tip.set(-.315,2.05,0));this.group.worldToLocal(this.tip);
+   knightWeaponPoint(this.blade,this.tip);this.group.worldToLocal(this.tip);
    for(let k=0;k<5;k++){this.old.copy(this.p).add(new T.Vector3(Math.sin(clock*6+k)*M.radius,Math.cos(clock*8+k)*M.radius,Math.cos(clock*6+k)*M.radius));this.lightning.arc(this.tip,this.old,421+k,.035,clock,22,1.6,[0,2,0]);}
   }
   this.lightning.end();

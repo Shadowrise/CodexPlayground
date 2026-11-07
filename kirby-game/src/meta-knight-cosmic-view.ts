@@ -1,3 +1,4 @@
+import {knightWeaponPoint} from './knight-weapon-point';
 import * as T from 'three';
 import type {KnightBattle} from './meta-knight-battle';
 import {COSMIC,cosmicStage,cosmicCombat,cosmicElapsed,cosmicHeight,easeCosmic} from './meta-knight-cosmic';
@@ -81,7 +82,7 @@ export class CosmicLightning{
 /** Presentation follows the shared encounter clock; it never changes combat. */
 export class MetaKnightCosmicView{
  readonly group=new T.Group();readonly lightning=new CosmicLightning();readonly plasma=new CosmicPlasma();
- private eyes:T.Object3D;private blade:T.Object3D;
+ private eyes:T.Object3D;private blade:T.Object3D;private bird=false;private eyeTints:{mesh:T.Mesh;original:T.MeshBasicMaterial;material:T.MeshBasicMaterial;color:T.Color}[]=[];
  private eyeHalos:T.Sprite[][]=[];private eyeTexture:T.DataTexture;
  private eyeMaterials:{mesh:T.Mesh;original:T.Material|T.Material[];clones:T.MeshStandardMaterial[];gravity:T.MeshBasicMaterial[]}[]=[];
  readonly light=new T.PointLight(GALAXIA_GLOW_COLOR,0,100,1.4);
@@ -93,14 +94,15 @@ export class MetaKnightCosmicView{
  constructor(private actor:T.Object3D,private scene:T.Object3D,private ally=false){
   this.group.name=ally?'Small Meta Knight ascent lightning':'Meta Knight fourth phase lightning';this.group.visible=false;this.group.add(this.lightning.group,this.plasma.group);if(!ally)this.group.add(this.light);
   this.lightning.setFloor(.06);this.plasma.setFloor(.06);
-  this.blade=actor.getObjectByName('Galaxia')!;this.eyes=actor.getObjectByName('Eyes_glow')!;
+  this.bird=!!actor.getObjectByName('Metapidgie_beak_tip');this.blade=actor.getObjectByName(this.bird?'Metapidgie_beak_tip':'Galaxia')!;this.eyes=actor.getObjectByName(this.bird?'Head':'Eyes_glow')!;
   const pixels=new Uint8Array(32*32*4);for(let y=0;y<32;y++)for(let x=0;x<32;x++){const d=((x-15.5)**2+(y-15.5)**2)/240,index=(y*32+x)*4;pixels[index]=pixels[index+1]=pixels[index+2]=255;pixels[index+3]=Math.round(255*Math.exp(-d*6)*Math.max(0,1-d));}
   this.eyeTexture=new T.DataTexture(pixels,32,32,T.RGBAFormat);this.eyeTexture.needsUpdate=true;this.eyeTexture.magFilter=this.eyeTexture.minFilter=T.LinearFilter;
   for(let side=0;side<2;side++){
    const halo=new T.Sprite(new T.SpriteMaterial({map:this.eyeTexture,color:0xffd16b,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false})),flare=new T.Sprite(new T.SpriteMaterial({map:this.eyeTexture,color:0xffe6a6,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false}));
    halo.scale.set(2.1,1.3,1);flare.scale.set(3.8,.20,1);halo.renderOrder=flare.renderOrder=7;halo.name='Golden visor glow '+side;flare.name='Visor light streak '+side;this.eyeHalos.push([halo,flare]);this.group.add(halo,flare);
   }
-  this.eyes.traverse(o=>{if(!(o instanceof T.Mesh))return;const original=o.material,clones=(Array.isArray(original)?original:[original]).map(m=>m.clone() as T.MeshStandardMaterial),gravity=clones.map(m=>new T.MeshBasicMaterial({color:'#53adff',side:m.side,toneMapped:false,fog:false}));o.material=Array.isArray(original)?clones:clones[0];this.eyeMaterials.push({mesh:o,original,clones,gravity});});
+  this.eyes.traverse(o=>{if(!(o instanceof T.Mesh)||this.bird&&!o.name.endsWith('_glowing_eye'))return;const original=o.material,clones=(Array.isArray(original)?original:[original]).map(m=>m.clone() as T.MeshStandardMaterial),gravity=clones.map(m=>new T.MeshBasicMaterial({color:'#53adff',side:m.side,toneMapped:false,fog:false}));o.material=Array.isArray(original)?clones:clones[0];this.eyeMaterials.push({mesh:o,original,clones,gravity});});
+  if(this.bird)this.eyes.traverse(o=>{if(o instanceof T.Mesh&&/_eye_halo_/.test(o.name)){const old=o.material as T.MeshBasicMaterial,material=old.clone();o.material=material;this.eyeTints.push({mesh:o,original:old,material,color:material.color.clone()});}});
   const p:number[]=[],seeds:number[]=[];
   for(let i=0;i<180;i++){p.push((hash(i+8)-.5)*85,hash(i+77)*70,(hash(i+192)-.5)*85);seeds.push(hash(i+87));}
   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(p,3));g.setAttribute('seed',new T.Float32BufferAttribute(seeds,1));
@@ -116,7 +118,7 @@ export class MetaKnightCosmicView{
    this.lightning.setBlue(false);this.plasma.setBlue(false);
    this.setEyes(0);for(const halo of this.eyeHalos.flat())halo.material.opacity=0;this.light.intensity=0;this.dust.visible=false;
    const fade=1-easeCosmic((now-s.since)/180);this.lightning.begin(fade,clock);this.plasma.begin(clock);
-   if(fade>0){this.actor.updateWorldMatrix(true,true);this.group.updateWorldMatrix(true,false);this.blade.localToWorld(this.a.set(-.06,.1,0));this.blade.localToWorld(this.b.set(-.315,2.05,0));this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);this.lightning.arc(this.a,this.b,99,.035,clock,16);this.plasma.add(this.a,this.b,.6,fade*.5,13);}
+   if(fade>0){this.actor.updateWorldMatrix(true,true);this.group.updateWorldMatrix(true,false);knightWeaponPoint(this.blade,this.a,-.06,.1,0);knightWeaponPoint(this.blade,this.b,-.315,2.05,0);this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);this.lightning.arc(this.a,this.b,99,.035,clock,16);this.plasma.add(this.a,this.b,.6,fade*.5,13);}
    this.lightning.end();this.plasma.end();return;
   }
   const tired=['cosmic-open','cosmic-hit','cosmic-star-stun','cosmic-recover'].includes(stage),blue=['cosmic-charge','cosmic-strike','cosmic-surge','cosmic-lift','cosmic-rise','cosmic-star-draw','cosmic-star-open','cosmic-planet-draw','cosmic-planet-sweep','cosmic-meteor-draw'].includes(stage)||stage==='cosmic-meteor-cast'&&now<(s.cosmicMeteor?.at??-Infinity),stunned=stage==='cosmic-star-stun';
@@ -127,27 +129,27 @@ export class MetaKnightCosmicView{
   this.actor.updateWorldMatrix(true,true);this.group.updateWorldMatrix(true,false);
   // Short, irregular branches spring OUT from the visor, with real world depth.
   for(const side of [-1,1]){
-   this.eyes.localToWorld(this.eye.set(side*.30,-.015,.81));this.group.worldToLocal(this.eye);
+   if(this.bird){const eye=this.actor.getObjectByName(side===-1?'Left_glowing_eye':'Right_glowing_eye') as T.Mesh;eye.geometry.computeBoundingSphere();eye.localToWorld(this.eye.copy(eye.geometry.boundingSphere!.center));}else this.eyes.localToWorld(this.eye.set(side*.30,-.015,.81));this.group.worldToLocal(this.eye);
    for(const halo of this.eyeHalos[side===-1?0:1]){halo.position.copy(this.eye);halo.material.color.copy(blue?GRAVITY_BLUE:ELECTRIC_GOLD);halo.material.opacity=stunned?0:(.3+.6*charge)*pulse;}
    for(let k=0;k<5;k++){
     this.b.copy(this.eye).add(this.a.set(side*(.8+k*.24)*charge,.22*Math.sin(clock*8+k)+.15*k,.14+.12*k));
-    if(!stunned)this.lightning.arc(this.eye,this.b,61+k+side*7,.025+charge*.018,clock,5);
+    if(!stunned&&!this.bird)this.lightning.arc(this.eye,this.b,61+k+side*7,.025+charge*.018,clock,5);
    }
   }
   // The same soft plasma and irregular filaments wrap the sword and flight wakes.
-  this.blade.localToWorld(this.a.set(-.06,.02,0));this.blade.localToWorld(this.b.set(-.315,2.15,0));this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);this.plasma.add(this.a,this.b,1.1,.65+.25*charge,13);
+  knightWeaponPoint(this.blade,this.a,-.06,.02,0);knightWeaponPoint(this.blade,this.b,-.315,2.15,0);this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);this.plasma.add(this.a,this.b,1.1,.65+.25*charge,13);
   for(let k=0;k<6;k++){
    const spin=clock*(1.6+hash(k)) +k*1.047,r=.12+hash(k+11)*.2;
-   this.blade.localToWorld(this.a.set(-.05+Math.cos(spin)*r,.13+hash(k+7)*.35,Math.sin(spin)*r));
-   this.blade.localToWorld(this.b.set(-.315+Math.cos(spin+1.8)*r,1.5+hash(k+23)*.65,Math.sin(spin+1.8)*r));this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);
-   this.lightning.arc(this.a,this.b,30+k,.045+charge*.022,clock,18,1.6,[Math.sin(spin)*.35,.12,Math.cos(spin)*.35]);
+   knightWeaponPoint(this.blade,this.a,-.05+Math.cos(spin)*r,.13+hash(k+7)*.35,Math.sin(spin)*r);
+   knightWeaponPoint(this.blade,this.b,-.315+Math.cos(spin+1.8)*r,1.5+hash(k+23)*.65,Math.sin(spin+1.8)*r);this.group.worldToLocal(this.a);this.group.worldToLocal(this.b);
+   if(this.bird)this.b.add(this.eye.set(Math.cos(spin)*.35,.25+hash(k)*.5,Math.sin(spin)*.35));this.lightning.arc(this.a,this.b,30+k,.045+charge*.022,clock,18,1.6,[Math.sin(spin)*.35,.12,Math.cos(spin)*.35]);
   }
   const grounded=stage==='cosmic-surge'||stage==='cosmic-lift',fade=stage==='cosmic-lift'?1-f*.95:1;
-  if(grounded&&this.ally){
+  if(grounded&&(this.ally||this.bird)){
    const elapsed=now-s.since+(stage==='cosmic-lift'?COSMIC.surgeMs:0);
    for(let i=0;i<12;i++){
     const grow=easeCosmic((elapsed-i*24)/650);if(grow<=0)continue;
-    this.blade.localToWorld(this.a.set(-.315,2.05,0));this.group.worldToLocal(this.a);this.a.y=Math.max(.08,this.a.y);
+    knightWeaponPoint(this.blade,this.a,-.315,2.05,0);this.group.worldToLocal(this.a);this.a.y=Math.max(.08,this.a.y);
     const angle=i*2.399+.7,r=(24+hash(i+73)*19)*grow;this.b.set(Math.sin(angle)*r,.10,Math.cos(angle)*r);
     this.lightning.arc(this.a,this.b,931+i,.035*fade,clock,18,1.4,[0,.25,0]);
    }
@@ -171,14 +173,14 @@ export class MetaKnightCosmicView{
    // Unequal overhead arches, with varied origins along the live blade.
    for(let i=0;i<24;i++){
     const intensity=easeCosmic((density-i/24)*6);if(intensity<=0)continue;
-    this.blade.localToWorld(this.a.set(-.16,.45+hash(i+17)*1.45,0));this.group.worldToLocal(this.a);
+    knightWeaponPoint(this.blade,this.a,-.16,.45+hash(i+17)*1.45,0);this.group.worldToLocal(this.a);
     const angle=i*2.399+Math.sin(clock*.6+i)*.18,r=4+charge*(3+hash(i)*5);this.b.set(Math.sin(angle)*r,2.4+hash(i+31)*5.6,Math.cos(angle)*r);
     this.lightning.arc(this.a,this.b,i+19,(.035+hash(i+87)*.025)*charge*intensity,clock,24,1.8,[Math.cos(angle)*2,2+hash(i+41)*5,Math.sin(angle)*2]);
    }
    for(let i=0;i<12;i++){
     const intensity=easeCosmic((density-i/12)*6);if(intensity<=0)continue;
     const angle=i*2.399+clock*.12,r=4+hash(i+11)*4,turn=angle+.9+hash(i+25)*1.4;
-    this.a.set(Math.sin(angle)*r,2.5+hash(i+18)*5,Math.cos(angle)*r);this.b.set(Math.sin(turn)*(r+1),3+hash(i+51)*5,Math.cos(turn)*(r+1));
+    this.a.set(Math.sin(angle)*r,2.5+hash(i+18)*5,Math.cos(angle)*r);if(this.bird){knightWeaponPoint(this.blade,this.a);this.group.worldToLocal(this.a);}this.b.set(Math.sin(turn)*(r+1),3+hash(i+51)*5,Math.cos(turn)*(r+1));
     this.lightning.arc(this.a,this.b,91+i,.04*intensity,clock,24,1.6,[hash(i+73)*3-1.5,3+hash(i+97)*4,hash(i+101)*3-1.5]);
    }
   }
@@ -191,7 +193,7 @@ export class MetaKnightCosmicView{
     const p=actors[j].position,tail=24+strength*30;this.a.set(p.x-SITE.x,height-1,p.z);this.b.set(p.x-SITE.x-dx*tail,height-tail,p.z-dz*tail);this.plasma.add(this.a,this.b,j===0?4:2.2,strength*.8,71+j);
     for(let i=0;i<12;i++){
     const p=actors[j].position,angle=i*2.399+clock*.35+hash(i+j*13)*.5,r=(j===0?1.25:.65)+hash(i+7)*.8,length=16+strength*(20+hash(i+j*23)*36),bend=strength*(2+hash(i+21)*7);
-    this.a.set(p.x-SITE.x+Math.sin(angle)*r,height+.1,p.z+Math.cos(angle)*r);this.b.set(this.a.x+Math.sin(angle)*(2+strength*2)-dx*length,height-length,this.a.z+Math.cos(angle)*(2+strength*2)-dz*length);
+    this.a.set(p.x-SITE.x+Math.sin(angle)*r,height+.1,p.z+Math.cos(angle)*r);if(this.bird&&j===0){knightWeaponPoint(this.blade,this.a);this.group.worldToLocal(this.a);}this.b.set(this.a.x+Math.sin(angle)*(2+strength*2)-dx*length,height-length,this.a.z+Math.cos(angle)*(2+strength*2)-dz*length);
     this.lightning.arc(this.a,this.b,j*37+i,(i%4===0?.10:.035)*strength,clock,24,3.5,[Math.sin(angle)*bend,0,Math.cos(angle)*bend]);
     if(i%2===0){this.a.lerp(this.b,.55);this.b.add(new T.Vector3(Math.sin(angle+.7)*5,-5,Math.cos(angle+.7)*5));this.lightning.arc(this.a,this.b,211+j*17+i,.025*strength,clock,5);}
    }}
@@ -201,14 +203,15 @@ export class MetaKnightCosmicView{
  }
  addPlanetLightning(planet:T.Object3D,radius:number,clock:number){
   if(!this.ally||!this.active)return;
-  this.blade.localToWorld(this.a.set(-.315,2.05,0));this.group.worldToLocal(this.a);planet.getWorldPosition(this.b);this.group.worldToLocal(this.b);
+  knightWeaponPoint(this.blade,this.a,-.315,2.05,0);this.group.worldToLocal(this.a);planet.getWorldPosition(this.b);this.group.worldToLocal(this.b);
   this.lightning.setBlue(true);for(const path of refugeGravityPaths(this.a,this.b,radius,clock,this.planetPaths))for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];this.lightning.segment(a.x,a.y,a.z,b.x,b.y,b.z,.045+.012*Math.sin(clock*21+i)**2);}
   this.lightning.end();
  }
  private setEyes(strength:number,power=3.5,blue=false){
-  for(const {mesh,original,clones,gravity} of this.eyeMaterials){mesh.material=Array.isArray(original)?blue?gravity:clones:blue?gravity[0]:clones[0];clones.forEach((m,i)=>{const source=(Array.isArray(original)?original[i]:original) as T.MeshStandardMaterial;m.color.copy(source.color).lerp(blue?GRAVITY_CORE:ELECTRIC_CORE,strength);m.emissive.copy(source.emissive).lerp(blue?GRAVITY_BLUE:ELECTRIC_GOLD,strength);m.emissiveIntensity=T.MathUtils.lerp(source.emissiveIntensity,power,strength);});}
+  for(const t of this.eyeTints)t.material.color.copy(t.color).lerp(blue?GRAVITY_BLUE:ELECTRIC_GOLD,strength);
+  for(const {mesh,original,clones,gravity} of this.eyeMaterials){mesh.material=Array.isArray(original)?blue?gravity:clones:blue?gravity[0]:clones[0];clones.forEach((m,i)=>{const source=(Array.isArray(original)?original[i]:original) as T.MeshStandardMaterial;m.color.copy(source.color).lerp(blue?GRAVITY_CORE:ELECTRIC_CORE,strength);if(m.emissive&&source.emissive){m.emissive.copy(source.emissive).lerp(blue?GRAVITY_BLUE:ELECTRIC_GOLD,strength);m.emissiveIntensity=T.MathUtils.lerp(source.emissiveIntensity,power,strength);}});}
  }
  /** Both visor materials must be compiled before their first switch in flight. */
  prepareEyes(){const group=new T.Group();for(const {mesh,gravity} of this.eyeMaterials)for(const material of gravity)group.add(new T.Mesh(mesh.geometry,material));return group;}
- dispose(){this.group.removeFromParent();this.lightning.dispose();this.plasma.dispose();this.eyeTexture.dispose();this.eyeHalos.flat().forEach(halo=>halo.material.dispose());this.dust.geometry.dispose();this.dust.material.dispose();for(const {mesh,original,clones,gravity} of this.eyeMaterials){mesh.material=original;clones.forEach(m=>m.dispose());gravity.forEach(m=>m.dispose());}}
+ dispose(){this.group.removeFromParent();this.lightning.dispose();this.plasma.dispose();this.eyeTexture.dispose();this.eyeTints.forEach(t=>{t.mesh.material=t.original;t.material.dispose();});this.eyeHalos.flat().forEach(halo=>halo.material.dispose());this.dust.geometry.dispose();this.dust.material.dispose();for(const {mesh,original,clones,gravity} of this.eyeMaterials){mesh.material=original;clones.forEach(m=>m.dispose());gravity.forEach(m=>m.dispose());}}
 }
