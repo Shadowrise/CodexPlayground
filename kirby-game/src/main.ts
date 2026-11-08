@@ -29,6 +29,9 @@ import {MetaKnightSeal} from './meta-knight-seal';
 import {MetaKnightSealHud} from './meta-knight-seal-hud';
 import {MetaKnightSealLocations} from './meta-knight-seal-locations';
 import {MetaKnightArenaTravel} from './meta-knight-arena-travel';
+import {newPigeonFeeding,allPigeonsFed,recordPigeonFeeding,type PigeonFeedingProgress} from './metapidgie-feeding';
+import {MetapidgieFeatherHud} from './metapidgie-feather-hud';
+import {metapidgieFeedingPortalLog} from './world-log';
 import {createMetaKnightPortal} from './meta-knight-portal';
 import {META_KNIGHT_ARENA,META_KNIGHT_PORTAL,nearMetaKnightPortal,insideMetaKnightPortal} from './meta-knight-arena-site';
 import {META_KNIGHT_SEAL_SITES} from './meta-knight-seal-sites';
@@ -302,7 +305,7 @@ saveButton.addEventListener('click',()=>{
   if(!character||network)return;
   try {
     if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
-    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride,boss:soloPortalBoss},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState(),kurlyk:wildBirds.get('kurlyk')?.npc.networkState()})));
+    localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride,boss:soloPortalBoss},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState(),kurlyk:wildBirds.get('kurlyk')?.npc.networkState()},pigeonFeeding)));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
 });
@@ -533,10 +536,12 @@ const seals=META_KNIGHT_SEAL_SITES.map((site,index)=>{
 });
 let sealProgress:SealProgress=newSealProgress(),lastSealRequest=0;
 const sealHud=new MetaKnightSealHud();
+let pigeonFeeding:PigeonFeedingProgress=newPigeonFeeding();
+const featherHud=new MetapidgieFeatherHud();
 let soloPortalOverride:boolean|undefined;
 let soloPortalBoss:import('./knight-boss').KnightBoss='meta-knight';
 const selectedPortalBoss=()=>network?network.room.portalBoss??'meta-knight':soloPortalBoss;
-function metaKnightPortalReady(){return playing&&(network?network.room.metaKnightPortalOpen===true||allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??allSealsCollected(sealProgress));}
+function metaKnightPortalReady(){return playing&&(network?network.room.metaKnightPortalOpen===true||allSealsCollected(network.room.sealProgress??sealProgress):soloPortalOverride??(allSealsCollected(sealProgress)||allPigeonsFed(pigeonFeeding)));}
 const initialCarts=coaster.networkState();
 const boats=new RiverBoats();scene.add(boats.group);
 await startupTask();
@@ -937,7 +942,8 @@ async function enterGame(){
   const savedBirds=Object.fromEntries(WILD_PIGEONS.map(id=>[id,pendingSave?.[id]]));
   const savedArena=pendingSave?.player.location==='meta-knight-arena'?{x:pendingSave.player.x,z:pendingSave.player.z,yaw:pendingSave.player.yaw}:undefined;
   sealProgress=structuredClone(network?.room.sealProgress??pendingSave?.seals??newSealProgress());
-  soloPortalOverride=pendingSave?.portal?.override;soloPortalBoss=pendingSave?.portal?.boss??'meta-knight';
+  pigeonFeeding=structuredClone(network?.room.pigeonFeeding??pendingSave?.pigeonFeeding??newPigeonFeeding());featherHud.reset(pigeonFeeding);
+  soloPortalOverride=pendingSave?.portal?.override;soloPortalBoss=pendingSave?.portal?.boss??(allPigeonsFed(pigeonFeeding)?'metapidgie':'meta-knight');
   lastSealRequest=0;sealHud.reset(sealProgress,network?network.room.metaKnightPortalOpen===true||allSealsCollected(sealProgress):soloPortalOverride??allSealsCollected(sealProgress));
   bread.reset(pendingSave?.bread);lastBreadRequest=0;watermill.setQuest(pendingSave?.millQuest?restoreMillQuest(pendingSave.millQuest,Date.parse(pendingSave.savedAt),Date.now()):newMillQuest(),Date.now());
   if(pendingSave){restoreGame(pendingSave,character,npcs,fruits);dayStartPhase=pendingSave.dayPhase??(pendingSave.night?.75:.25);pendingSave=undefined;}
@@ -1039,7 +1045,7 @@ function returnToMenu(){
   coaster.networkBlocked.clear();coaster.networkApply(initialCarts);boats.networkBlocked.clear();
   fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());bread.reset();lastBreadRequest=0;balloonSeed=6173;
   sealProgress=newSealProgress();lastSealRequest=0;sealHud.reset(sealProgress);
-  soloPortalOverride=undefined;soloPortalBoss='meta-knight';
+  soloPortalOverride=undefined;soloPortalBoss='meta-knight';pigeonFeeding=newPigeonFeeding();featherHud.reset(pigeonFeeding);
   soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
   interactionOutline.update(undefined);rideHint.textContent='';placeInteractionHint();touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
@@ -1163,8 +1169,10 @@ renderer.setAnimationLoop((time: number) => {
   const mouseSteer=usingTouch?motion.steer:mouseTurning?THREE.MathUtils.clamp(mouseTurn/Math.max(.0001,steeringTurnRate*dt),-1,1):undefined;
   if(mouseTurning&&mouseSteer!==undefined)mouseTurn-=mouseSteer*steeringTurnRate*dt;
   if(network?.room.sealProgress)sealProgress=network.room.sealProgress;
-  if(sealHud.update(sealProgress,metaKnightPortalReady(),time,playing&&!settingsOpen&&!cosmicArena.loading&&!cosmicArena.engaged&&!roundFinished()))sounds.playTaskComplete();
-  meadowPortal.setWorking(metaKnightPortalReady());meadowPortal.update(time*.001);
+  if(network?.room.pigeonFeeding)pigeonFeeding=network.room.pigeonFeeding;
+  if(featherHud.update(pigeonFeeding,time,playing&&!settingsOpen&&!cosmicArena.loading&&!cosmicArena.active&&!roundFinished()))sounds.playTaskComplete();
+  if(sealHud.update(sealProgress,selectedPortalBoss()==='meta-knight'&&metaKnightPortalReady(),time,playing&&!settingsOpen&&!cosmicArena.loading&&!cosmicArena.engaged&&!roundFinished()))sounds.playTaskComplete();
+  meadowPortal.setBoss(selectedPortalBoss());meadowPortal.setWorking(metaKnightPortalReady());meadowPortal.update(time*.001);
   if(character&&(cosmicArena.active||cosmicArena.loading)){
     syncNetworkWorld(dt);tickMeadowWhileAway(dt);
     if(roundFinished()){cosmicArena.leave();return;}
@@ -1254,7 +1262,7 @@ renderer.setAnimationLoop((time: number) => {
      else{
       const next=collectSeal(sealProgress,nearbySeal.id,sealCollector,breadNow);
       if(next!==sealProgress){
-       sealProgress=next;localLog.push(...metaKnightSealLogs(nameInput.value,Object.keys(next.collected).length));
+       sealProgress=next;localLog.push(...metaKnightSealLogs(nameInput.value,Object.keys(next.collected).length,selectedPortalBoss()!=='metapidgie'));
        if(localLog.length>10)localLog.splice(0,localLog.length-10);
       }
      }
@@ -1445,7 +1453,10 @@ function sendBread(action:BreadAction){
  const old=bread.state;bread.state=applyBread(old,action,breadActor(character),Date.now(),mountainLedges.networkState(),birds);
  if(action.kind==='feed'&&bread.state!==old&&bread.state.offering){
   npc?.acceptBread(bread.state.offering);character.achievements.add(pigeonFriendAchievement(id));
-  localLog.push(pidgieFriendLog(nameInput.value,id));if(localLog.length>10)localLog.shift();
+  localLog.push(pidgieFriendLog(nameInput.value,id));
+  const wasComplete=allPigeonsFed(pigeonFeeding);pigeonFeeding=recordPigeonFeeding(pigeonFeeding,id,'solo',Date.now());
+  if(!wasComplete&&allPigeonsFed(pigeonFeeding)){soloPortalOverride=true;soloPortalBoss='metapidgie';localLog.push(metapidgieFeedingPortalLog());}
+  if(localLog.length>10)localLog.splice(0,localLog.length-10);
  }
 }
 

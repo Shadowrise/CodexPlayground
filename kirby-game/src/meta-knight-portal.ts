@@ -1,6 +1,7 @@
 import * as T from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {PORTAL_STEPS} from './meta-knight-arena-site';
+import type {KnightBoss} from './knight-boss';
 
 /** A small self-lit gateway; no lights, external assets or arena imports. */
 export function createMetaKnightPortal(){
@@ -58,23 +59,34 @@ export function createMetaKnightPortal(){
  }
  // A portal is an opaque window into its own scene. Write depth so ground
  // shadow overlays behind it cannot blend over the veil during transparent draws.
- const material=new T.ShaderMaterial({uniforms:{time:{value:0}},side:T.DoubleSide,depthWrite:true,
+ const material=new T.ShaderMaterial({uniforms:{time:{value:0},pidgey:{value:0}},side:T.DoubleSide,depthWrite:true,
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
-  fragmentShader:`varying vec2 vUv;uniform float time;
+  fragmentShader:`varying vec2 vUv;uniform float time;uniform float pidgey;
    void main(){vec2 p=vUv*2.-1.;float r=length(p),a=atan(p.y,p.x);float swirl=sin(23.*r-4.*a-time*1.4)*.5+.5;
-   vec3 c=mix(vec3(.12,.10,.42),vec3(.53,.25,.95),swirl*.55+.3);c+=vec3(.20,.55,.74)*pow(r,8.);
+   vec3 dark=mix(vec3(.12,.10,.42),vec3(.38,.17,.025),pidgey),light=mix(vec3(.53,.25,.95),vec3(1.,.78,.14),pidgey);
+   vec3 c=mix(dark,light,swirl*.55+.3);c+=mix(vec3(.20,.55,.74),vec3(.95,.70,.18),pidgey)*pow(r,8.);
    float spark=pow(max(0.,sin(a*13.+r*35.-time)),32.)*.22;c+=spark;
    gl_FragColor=vec4(c,1.);#include <tonemapping_fragment>
    #include <colorspace_fragment>}`.replace(';#include',';\n#include')});
  const veil=add(new T.CircleGeometry(2.93,64),material,0,3.3,.015);veil.name='Portal swirling surface';
  const dormant=add(new T.CircleGeometry(2.93,64),new T.MeshBasicMaterial({color:'#242238',side:T.DoubleSide,transparent:true,opacity:.48}),0,3.3,0);dormant.name='Dormant portal surface';
- let working=true;
- const setWorking=(value:boolean)=>{if(value===working)return;working=value;root.userData.working=value;veil.visible=value;dormant.visible=!value;glow.color.set(value?'#a88bff':'#484055');gemMaterial.color.set(value?'#bfa3ed':'#625570');gemMaterial.emissiveIntensity=value?.8:0;};
+ const feather=new T.Group();feather.name='Meta Pidgie portal feather';feather.position.set(0,3.3+lift,.31);root.add(feather);feather.visible=false;
+ const featherShape=new T.Shape();featherShape.moveTo(-.36,-.75);featherShape.bezierCurveTo(-.9,.05,-.12,1.05,.65,1.15);featherShape.bezierCurveTo(.9,.3,.35,-.65,-.36,-.75);
+ const featherParts:T.BufferGeometry[]=[];
+ const painted=(source:T.BufferGeometry,color:string)=>{const g=source.index?source.toNonIndexed():source.clone(),c=new T.Color(color),colors=new Float32Array(g.getAttribute('position').count*3);for(let i=0;i<colors.length;i+=3)c.toArray(colors,i);g.setAttribute('color',new T.BufferAttribute(colors,3));featherParts.push(g);source.dispose();};
+ painted(new T.ShapeGeometry(featherShape),'#fff0ac');
+ const stroke=(points:number[][])=>{const curve=new T.CatmullRomCurve3(points.map(p=>new T.Vector3(p[0],p[1],.025)));painted(new T.TubeGeometry(curve,12,.025,4,false),'#a86b20');};
+ stroke([[-.5,-1],[-.06,-.2],[.45,.85]]);for(const y of [-.3,.05,.4]){const x=.5*y;stroke([[x,y],[x-.35,y+.16]]);stroke([[x,y],[x+.4,y+.02]]);}
+ feather.add(new T.Mesh(mergeGeometries(featherParts)!,new T.MeshBasicMaterial({vertexColors:true,side:T.DoubleSide})));featherParts.forEach(g=>g.dispose());
+ let working=true,boss:KnightBoss='meta-knight';
+ const palette=()=>{const pidgey=boss==='metapidgie';material.uniforms.pidgey.value=pidgey?1:0;glow.color.set(working?pidgey?'#ffe06b':'#a88bff':'#484055');gemMaterial.color.set(working?pidgey?'#ffe294':'#bfa3ed':'#625570');gemMaterial.emissive.set(pidgey?'#d9a223':'#8953df');gemMaterial.emissiveIntensity=working?.8:0;feather.visible=working&&pidgey;};
+ const setWorking=(value:boolean)=>{if(value===working)return;working=value;root.userData.working=value;veil.visible=value;dormant.visible=!value;palette();};
+ const setBoss=(value:KnightBoss)=>{if(value===boss)return;boss=value;root.userData.boss=value;palette();};
  root.userData.working=true;dormant.visible=false;
  const batches=new Map<T.Material,T.Mesh[]>();root.updateMatrixWorld(true);
  for(const o of [...root.children])if(o instanceof T.Mesh&&o!==veil&&o!==dormant){const m=o.material as T.Material,list=batches.get(m)??[];list.push(o);batches.set(m,list);}
  for(const [m,parts] of batches){const gs=parts.map(p=>{p.updateMatrix();const g=p.geometry.index?p.geometry.toNonIndexed():p.geometry.clone();g.applyMatrix4(p.matrix);return g;});const geometry=mergeGeometries(gs);if(!geometry)throw Error('Cannot batch portal');const merged=new T.Mesh(geometry,m);merged.name='Portal silverwork and crystals';root.add(merged);for(const p of parts){p.removeFromParent();p.geometry.dispose();}gs.forEach(g=>g.dispose());}
- return {group:root,get working(){return working;},setWorking,update:(seconds:number)=>{if(working)material.uniforms.time.value=seconds;},dispose:()=>{
+ return {group:root,get working(){return working;},get boss(){return boss;},setWorking,setBoss,update:(seconds:number)=>{if(working)material.uniforms.time.value=seconds;},dispose:()=>{
   const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();root.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});
   geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());root.removeFromParent();
  }};

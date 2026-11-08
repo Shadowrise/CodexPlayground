@@ -8,6 +8,7 @@ import {validNumberDigit} from './number-garden-site';
 import {numberDeadline} from './number-garden-game';
 import {knightBattleActive} from './meta-knight-battle';
 import {flowerDeadline} from './musical-flower-game';
+import {newPigeonFeeding,validPigeonFeeding} from './metapidgie-feeding';
 import {newSealProgress,normalizeSealProgress} from './meta-knight-seal-state';
 import type {PlayerEmote} from './emotes';
 import type {LogEntry} from './world-log';
@@ -45,7 +46,7 @@ export class NetworkSession{
   this.requestedFestivalEnd=f.endsAt;
  }
  get host(){return this.room?.host===this.id;}
- private readRoom(room:RoomState){return {...room,sealProgress:normalizeSealProgress(room.sealProgress)??newSealProgress()};}
+ private readRoom(room:RoomState){return {...room,pigeonFeeding:validPigeonFeeding(room.pigeonFeeding)?room.pigeonFeeding:newPigeonFeeding(),sealProgress:normalizeSealProgress(room.sealProgress)??newSealProgress()};}
  private receivePigeons(checkpoints?:PigeonCheckpoint[]){
   if(!checkpoints)return;
   const flock=new Map(this.room.pigeonFlock?.map(b=>[b.id,b]));

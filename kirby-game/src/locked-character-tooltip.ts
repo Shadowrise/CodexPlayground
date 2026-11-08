@@ -6,7 +6,7 @@ export const SNOWBALL_LOCK_HINT='Угости Дикого Снежка хлеб
 export const UGOLYOK_LOCK_HINT='Уголёк важно вышагивает по полянке, но его животик тихонько урчит. Особенно когда рядом пахнет свежей корочкой.';
 export const RYZHIK_LOCK_HINT='Рыжик мечтательно поглядывает на мельницу и всё ищет что-то в траве. Кажется, путь к его сердцу усыпан крошками.';
 export const KURLYK_LOCK_HINT='Курлык носит все цвета радуги и корону, но в его королевстве не хватает одного сокровища — тёплого подношения с хрустящей корочкой. Говорят, щедрых гостей он принимает в свою стаю.';
-export const METAPIDGIE_LOCK_HINT='Говорят, под серебряным шлемом скрывается знакомый взгляд. Но не каждое крыло раскрывает свою тайну…';
+export const METAPIDGIE_LOCK_HINT='Говорят, Мета Пиджи прилетает на арену, когда все его друзья на поляне сыты…';
 export function lockedCharacterHint(name:string){
  if(name==='Мета Пиджи')return METAPIDGIE_LOCK_HINT;
  if(name==='Уголёк')return UGOLYOK_LOCK_HINT;

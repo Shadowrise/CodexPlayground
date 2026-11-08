@@ -15,6 +15,8 @@ import {metaKnightVictoryLog,metaKnightSealLogs} from '../../kirby-game/src/worl
 import {startCentipede,advanceCentipede,pushCentipede,bumpCentipede,completedCentipede,CENTIPEDE_EMPTY_MS,type CentipedeActor,type CentipedeEvent} from '../../kirby-game/src/centipede-event';
 import {advanceChasers,pushChaser,bumpChaser,chaseSnapshot,hasChasers,CHASERS} from '../../kirby-game/src/centipede-chasers';
 import {newMillQuest,advanceMill,applyMill,millPushTarget,millWorking,millCarrying,type MillAction,type MillActor} from '../../kirby-game/src/mill-quest';
+import {newPigeonFeeding,validPigeonFeeding,recordPigeonFeeding,allPigeonsFed,openFedPigeonPortal} from '../../kirby-game/src/metapidgie-feeding';
+import {metapidgieFeedingPortalLog} from '../../kirby-game/src/world-log';
 import {newBread,applyBread,advanceBread,grantBread,holdsBread,breadOffering,normalizeBread,type BreadAction} from '../../kirby-game/src/bread-state';
 import {newSealProgress,normalizeSealProgress,collectSeal,allSealsCollected,type SealActor} from '../../kirby-game/src/meta-knight-seal-state';
 import {KIRBY_VARIANTS} from '../../kirby-game/src/variant-palette';
@@ -68,7 +70,7 @@ export class GameRoom extends DurableObject<Env>{
   }
   this.ctx.waitUntil(Promise.all(writes).finally(()=>{this.pigeonWriting=false;const again=this.pigeonFlushAgain;this.pigeonFlushAgain=false;if(again)this.flushPigeons(true);}));
  }
- private room?:RoomState;private knightSaved=0;private bossSaved='';private flowerSaved='null';private numberSaved='null';private chaseSentAt=0;private chatRoom?:string;
+ private room?:RoomState;private knightSaved=0;private feedingRestored=false;private bossSaved='';private flowerSaved='null';private numberSaved='null';private chaseSentAt=0;private chatRoom?:string;
  constructor(ctx:DurableObjectState,env:Env){
   super(ctx,env);ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping','pong'));
   // Read legacy host checkpoints once; new sockets only retain player data.
@@ -80,16 +82,24 @@ export class GameRoom extends DurableObject<Env>{
    this.restoreSeals();
    if(this.room&&ctx.storage.list){const birds=await ctx.storage.list<SummonedPigeon>({prefix:`pigeon:${this.room.id}:`});if(birds.size)this.room.pigeonFlock=Array.from(birds.values()).sort((a,b)=>a.order-b.order);}
    if(this.room&&battle){this.room.knightBattle=battle;this.knightSaved=battle.revision;}
+   if(this.room&&this.feedingRestored&&openFedPigeonPortal(this.room)){this.knightSaved=0;await ctx.storage.delete('knight-battle');this.logEntry(metapidgieFeedingPortalLog());}
+   this.feedingRestored=false;
    if(this.room&&event){this.room.centipede=event;this.bossSaved=JSON.stringify({...event,chasers:undefined});}
    if(this.room&&validFlowerGame(flowers)){this.room.flowerGame=flowers;this.flowerSaved=JSON.stringify(flowers);}
    if(this.room&&validNumberGame(numbers)){this.room.numberGame=numbers;this.numberSaved=JSON.stringify(numbers);}
    if(this.room)this.persist();
   });
  }
- private restoreSeals(){if(this.room){this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};}}
+ private restoreSeals(){if(this.room){
+  // Migrate persisted pre-feather rooms once; live host frames never award feathers.
+  const legacyFeeding=this.room.pigeonFeeding===undefined;
+  this.room.pigeonFeeding=validPigeonFeeding(this.room.pigeonFeeding)?this.room.pigeonFeeding:newPigeonFeeding();
+  if(legacyFeeding){this.feedingRestored=true;for(const id of WILD_PIGEONS){const friend=this.room.world?.[id]?.friend??breadOffering(this.room.bread,id);if(friend)this.room.pigeonFeeding=recordPigeonFeeding(this.room.pigeonFeeding,id,friend.by,friend.at);}}
+  this.room.sealProgress=normalizeSealProgress(this.room.sealProgress)??newSealProgress();this.room.bread=normalizeBread(this.room.bread);if(this.room.millQuest&&this.room.millQuest.kneadStep===undefined)this.room.millQuest=this.room.millQuest.stage==='running'?newMillQuest():{...newMillQuest(),...this.room.millQuest};
+ }}
  private players(){return this.ctx.getWebSockets().filter(s=>s.readyState===WebSocket.OPEN&&!(s.deserializeAttachment() as Attachment)?.left);}
  info(){const players=this.players().length;return {room:ROOM_NAME,players,capacity:MAX_PLAYERS,full:players>=MAX_PLAYERS,occupiedVariants:this.players().map(s=>(s.deserializeAttachment() as Attachment).variant),protocolVersion:PROTOCOL};}
- private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:INITIAL_DAY_PHASE,fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),locks:{}};}
+ private newRoom(host=''):RoomState{return {id:crypto.randomUUID(),host,epoch:Date.now(),dayPhase:INITIAL_DAY_PHASE,fruits:Array(70).fill(null),starAt:0,mill:false,millQuest:newMillQuest(),bread:newBread(),sealProgress:newSealProgress(),pigeonFeeding:newPigeonFeeding(),locks:{}};}
  private chatStorage(){
   if(this.room&&this.chatRoom!==this.room.id){initRoomChat(this.ctx.storage.sql,this.room.log);this.chatRoom=this.room.id;}
   return this.ctx.storage.sql;
@@ -219,6 +229,12 @@ export class GameRoom extends DurableObject<Env>{
    if(!a.actor.achievements.includes(achievement))a.actor.achievements.push(achievement);
    if(r.world?.[bird])r.world[bird]=beginPidgieFeeding(r.world[bird]!,next.offering);
    this.logEntry(pidgieFriendLog(a.actor.name,bird));
+   const wasComplete=allPigeonsFed(r.pigeonFeeding??newPigeonFeeding());
+   r.pigeonFeeding=recordPigeonFeeding(r.pigeonFeeding??newPigeonFeeding(),bird,a.id,now);
+   if(!wasComplete&&allPigeonsFed(r.pigeonFeeding)){
+    if(openFedPigeonPortal(r)){this.knightSaved=0;this.ctx.waitUntil(this.ctx.storage.delete('knight-battle'));}
+    this.logEntry(metapidgieFeedingPortalLog());
+   }
   }
   return true;
  }
@@ -423,7 +439,7 @@ export class GameRoom extends DurableObject<Env>{
     const actor=this.sealActor(a,e.id),old=r.sealProgress??newSealProgress();
     if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){
      r.sealProgress=next;changed=true;
-     for(const entry of metaKnightSealLogs(a.name??a.actor!.name,Object.keys(next.collected).length))this.logEntry(entry);
+     for(const entry of metaKnightSealLogs(a.name??a.actor!.name,Object.keys(next.collected).length,r.portalBoss!=='metapidgie'))this.logEntry(entry);
     }}
    }
    else if(e.type==='knight'&&a.actor?.location==='meta-knight-arena'){

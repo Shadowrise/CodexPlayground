@@ -8,6 +8,13 @@ export const russianLabels:Readonly<Record<string,string>>=Object.assign(Object.
 });
 /** Russian source strings stay stable: saves and network messages use their original IDs. */
 export const translations: Record<string, readonly [string, string]> = {
+ 'Перышки Мета Пиджи':["Meta Pidgie's feathers",'Перата на Мета Пиджи'],
+ 'Угостите хлебом всех голубей на поляне':['Feed bread to every pigeon in the meadow','Нахранете с хляб всички гълъби на поляната'],
+ 'Все друзья сыты! Портал Мета Пиджи открыт!':['All friends are fed! Meta Pidgie’s portal is open!','Всички приятели са сити! Порталът на Мета Пиджи е отворен!'],
+ 'Сыт':['Fed','Сит'],
+ 'Ждёт хлебушка':['Waiting for bread','Чака хлебче'],
+ 'Все голуби на поляне накормлены! Жёлтый портал с перышком открыт — Мета Пиджи прилетел на арену!':['Every meadow pigeon has been fed! The yellow feather portal is open — Meta Pidgie has arrived in the arena!','Всички гълъби на поляната са нахранени! Жълтият портал с перо е отворен — Мета Пиджи долетя на арената!'],
+ 'Говорят, Мета Пиджи прилетает на арену, когда все его друзья на поляне сыты…':['They say Meta Pidgie flies into the arena when all his meadow friends are well fed…','Говори се, че Мета Пиджи долита на арената, когато всичките му приятели на поляната са сити…'],
  'Победа команды Мета Пиджи!':["Meta Pidgie's team wins!",'Победа за отбора на Мета Пиджи!'],
  'Помоги Мета Пиджи · используй способности':['Help Meta Pidgie · use your abilities','Помогни на Мета Пиджи · използвай уменията'],
  "Победа Мета Пиджи и Метакнайта!":["Meta Pidgie and Meta Knight win!","Победа за Мета Пиджи и Мета Найт!"],

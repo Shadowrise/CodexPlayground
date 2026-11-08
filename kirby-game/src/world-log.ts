@@ -8,12 +8,14 @@ export const EMOTE_MESSAGES={
  Peck:'наклоняется и деловито клюёт землю.'
 } as const;
 export type LogEntry={id:string;name:string;variant:number;text:string;chat:boolean};
+export const METAPIDGIE_FEEDING_PORTAL_MESSAGE='Все голуби на поляне накормлены! Жёлтый портал с перышком открыт — Мета Пиджи прилетел на арену!';
+export function metapidgieFeedingPortalLog():LogEntry{return {id:crypto.randomUUID(),name:'',variant:-1,text:METAPIDGIE_FEEDING_PORTAL_MESSAGE,chat:false};}
 export const META_KNIGHT_SEAL_MESSAGE='{0} подобрал значок Метакнайта. Собрано {1} из 3.';
 export const META_KNIGHT_PORTAL_MESSAGE='Все 3 значка Метакнайта собраны. Портал на космическую арену открыт!';
 /** Shared by solo and the authoritative room; one announcement per accepted claim. */
-export function metaKnightSealLogs(playerName:string,count:number):LogEntry[]{
+export function metaKnightSealLogs(playerName:string,count:number,announcePortal=true):LogEntry[]{
  const texts=[META_KNIGHT_SEAL_MESSAGE.replace(/\{([01])\}/g,(_,index)=>index==='0'?playerName:String(count))];
- if(count===3)texts.push(META_KNIGHT_PORTAL_MESSAGE);
+ if(count===3&&announcePortal)texts.push(META_KNIGHT_PORTAL_MESSAGE);
  return texts.map(text=>({id:crypto.randomUUID(),name:'',variant:-1,text,chat:false}));
 }
 export const META_KNIGHT_VICTORY_MESSAGE='Метакнайт с уважением смотрит на {0}.';

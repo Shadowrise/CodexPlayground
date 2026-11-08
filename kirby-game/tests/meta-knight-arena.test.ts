@@ -41,7 +41,7 @@ test('working and dormant portals have distinct visuals and no dynamic lights',(
  p.setWorking(false);assert(!p.working);assert(!veil.visible);assert(dormant.visible);p.update(10);assert.equal(p.group.userData.working,false);
  p.setWorking(true);assert(veil.visible);assert(!dormant.visible);p.update(11);
  let meshes=0,lights=0,triangles=0;p.group.traverse(o=>{if(o instanceof T.Mesh){meshes++;triangles+=(o.geometry.index?.count??o.geometry.getAttribute('position').count)/3;}if(o instanceof T.Light)lights++;});
- assert(meshes<=9);assert(triangles<16000);assert.equal(lights,0);p.dispose();
+ assert(meshes<=10,'the optional feather adds at most one batched draw');assert(triangles<16000);assert.equal(lights,0);p.dispose();
 });
 test('each physical step supports feet and flight at the same height as its model',()=>{
  const ponds=new Ponds(),c={actor:new T.Group(),surfaceY:0,swimming:false,flight:{active:false},roll:{active:false}};
