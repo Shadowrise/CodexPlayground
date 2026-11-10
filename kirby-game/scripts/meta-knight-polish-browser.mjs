@@ -21,7 +21,7 @@ try{
    const duration={intro:3000,approach:900,slash:250,jump:850,slam:180,open:4000,shot:1800,'shot-warn':1100,'dive-warn':1920,dive:450,dash:700}[stage]??1600;
    const impact=['jump-warn','jump','slam'].includes(stage)||stage==='open'&&step===2,crescent=stage.startsWith('shot'),dash=stage.startsWith('dash');
    const s={id:7000,revision:step+1,stage,step,since:10000,until:10000+duration,checked:10000,phase,hp:12,players:{solo:{hp:5,hits:0,reflects:0}},target:'solo',from:stage==='slam'||stage==='open'&&step===2?[0,0,4]:[0,stage==='shot'||dash?q.KNIGHT.hoverHeight:0,-9],to:impact?[0,0,4]:crescent?[0,0,15]:dash?[0,0,20]:[0,0,-9],yaw:0,height:crescent||dash?q.KNIGHT.hoverHeight:0,cycle:1,pattern:crescent?'crescent':impact?'leap':dash?'flight':'sword',openHit:false};
-   q.travel.battleView.update(s,'solo',s.since+duration*f,0,false,'Q',true);q.travel.battleView.update(s,'solo',s.since+duration*f,0,false,'Q',true);q.travel.render();const T=q.THREE;
+   q.travel.battleView.update(s,'solo',s.since+duration*f,0,false,'V',true);q.travel.battleView.update(s,'solo',s.since+duration*f,0,false,'V',true);q.travel.render();const T=q.THREE;
    const blade=q.travel.knight.actor.getObjectByName('Galaxia'),tip=blade.localToWorld(new T.Vector3(-.315,2.05,0));
    const hilt=blade.getWorldPosition(new T.Vector3()),contact=hilt.clone().lerp(tip,-hilt.y/(tip.y-hilt.y));
    const support=blade.localToWorld(new T.Vector3(0,-.23,.025)),hand=q.travel.knight.actor.getObjectByName('Left_gauntlet').getWorldPosition(new T.Vector3());

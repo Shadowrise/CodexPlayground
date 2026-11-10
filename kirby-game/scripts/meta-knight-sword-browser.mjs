@@ -25,7 +25,7 @@ try{
  ]){
   const metrics=await page.evaluate(({stage,step,f})=>{
    const q=swordQA,s={id:123,revision:step+1,stage,step,since:1000,until:stage==='slash'?1250:2600,checked:1000,phase:1,hp:12,players:{solo:{hp:5,hits:0,reflects:0}},target:'solo',from:[0,0,-9],to:[0,0,-9],yaw:0,height:0,cycle:1,pattern:'sword',openHit:false};
-   const now=s.since+(s.until-s.since)*f;q.travel.battleView.update(s,'solo',now,0,false,'Q',true);q.travel.render();
+   const now=s.since+(s.until-s.since)*f;q.travel.battleView.update(s,'solo',now,0,false,'V',true);q.travel.render();
    const blade=q.travel.knight.actor.getObjectByName('Galaxia'),tip=blade.localToWorld(new q.THREE.Vector3(-.315,2.05,0)),bounds=new q.THREE.Box3().setFromObject(blade);
    return {tip:tip.toArray(),floor:bounds.min.y};
   },{stage,step,f});

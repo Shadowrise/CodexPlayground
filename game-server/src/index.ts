@@ -33,6 +33,7 @@ import {SCORE_ACTIONS,achievementPoints} from '../../kirby-game/src/score';
 import {isPrankKind,makePrank,PRANKS} from '../../kirby-game/src/pranks';
 import {PIGEON_FLOCK_BATCH,ROOM_FRAME_LIMIT,validPigeonCheckpoint,type PigeonCheckpoint,type SummonedPigeon} from '../../kirby-game/src/pigeon-flock-state';
 import {historyRoutes} from './admin';
+import {newVisitProgress,recordVisitBattle,type VisitProgress} from '../../kirby-game/src/visit-stats';
 import {initRoomChat,writeRoomChat,roomChatPage,type ChatCursor} from './room-chat';
 import {initHistory,writeVisits,historyPage,type Visit,type HistoryFilter} from './history-store';
 import {allTasks,createStarfall,collectStar,finishStarfall,COLLECT_MS,RESULTS_MS} from '../../kirby-game/src/starfall';
@@ -44,7 +45,7 @@ import {stepBodySize} from '../../kirby-game/src/body-size';
 import {FruitSpeedBoost} from '../../kirby-game/src/fruit-speed';
 import {INITIAL_DAY_PHASE} from '../../kirby-game/src/day-cycle';
 const MAX_PLAYERS=14,ROOM_NAME='main';
-type OnlineVisit={id:string;startedAt:number;activeMs:number;tick:number;lastWrite:number;startScore:number;seq:number;device:DeviceInfo;finished?:boolean};
+type OnlineVisit={progress?:VisitProgress;id:string;startedAt:number;activeMs:number;tick:number;lastWrite:number;startScore:number;seq:number;device:DeviceInfo;finished?:boolean};
 type Attachment={id:string;session?:string;name?:string;seen:number;visible:boolean;variant:number;actor?:ActorState;room?:RoomState;adminSize?:number;lastHit?:number;announced?:boolean;lastChat?:number;lastEmote?:number;lastFlower?:number;lastNumber?:number;left?:boolean;lastFrame?:number;window?:number;count?:number;history?:OnlineVisit};
 type DepartedPlayer={id:string;actor:ActorState;savedAt:number};
 /** Permanent archive: deliberately separate from the disposable game room. */
@@ -230,7 +231,8 @@ export class GameRoom extends DurableObject<Env>{
    if(r.world?.[bird])r.world[bird]=beginPidgieFeeding(r.world[bird]!,next.offering);
    this.logEntry(pidgieFriendLog(a.actor.name,bird));
    const wasComplete=allPigeonsFed(r.pigeonFeeding??newPigeonFeeding());
-   r.pigeonFeeding=recordPigeonFeeding(r.pigeonFeeding??newPigeonFeeding(),bird,a.id,now);
+   const previousFeeding=r.pigeonFeeding??newPigeonFeeding();r.pigeonFeeding=recordPigeonFeeding(previousFeeding,bird,a.id,now);
+   if(r.pigeonFeeding!==previousFeeding&&a.history&&!a.history.finished)(a.history.progress??=newVisitProgress()).stats.feathers++;
    if(!wasComplete&&allPigeonsFed(r.pigeonFeeding)){
     if(openFedPigeonPortal(r)){this.knightSaved=0;this.ctx.waitUntil(this.ctx.storage.delete('knight-battle'));}
     this.logEntry(metapidgieFeedingPortalLog());
@@ -285,12 +287,19 @@ export class GameRoom extends DurableObject<Env>{
  private choiceAlarm=Infinity;
  private advanceKnightChoices(now:number,current?:Attachment){
   if(!this.room)return false;const changed=advanceKnightSideChoices(this.room,this.knightActors(current),now);
+  if(changed)this.recordKnightHistory(current);
   const until=knightSideChoiceDeadline(this.room),r=this.room;
   if(Number.isFinite(until)&&until!==this.choiceAlarm)this.ctx.waitUntil(this.ctx.storage.setAlarm(Math.min(until,this.numberEmptyDeadline(),now+30000,r.festival?(now<r.festival.endsAt?r.festival.endsAt:r.festival.endsAt+RESULTS_MS):Infinity,r.centipede?.emptySince===undefined?Infinity:r.centipede.emptySince+CENTIPEDE_EMPTY_MS,r.flowerGame?.emptySince===undefined?Infinity:r.flowerGame.emptySince+FLOWER_EMPTY_MS)));
   this.choiceAlarm=until;return changed;
  }
+ private recordKnightHistory(current?:Attachment){
+  for(const {socket,a} of this.flowerPlayers(current)){
+   const h=a.history;if(!h||h.finished)continue;
+   if(recordVisitBattle(h.progress??=newVisitProgress(),this.room?.knightBattle,a.id))socket.serializeAttachment(a);
+  }
+ }
  private advanceKnight(now:number,current?:Attachment){
-  const s=this.room?.knightBattle;if(!s)return false;const previousLaunch=s.cosmicLaunch,changed=advanceKnightBattle(s,this.knightActors(current),now);
+  const s=this.room?.knightBattle;if(!s)return false;this.recordKnightHistory(current);const previousLaunch=s.cosmicLaunch,changed=advanceKnightBattle(s,this.knightActors(current),now);this.recordKnightHistory(current);
   // The persisted launch owns all participants, including those sending no
   // movement packets while the electrical front crosses the arena.
   if(s.phase===4)for(const socket of this.players()){
@@ -335,7 +344,7 @@ export class GameRoom extends DurableObject<Env>{
   const result=this.room?.festival?.results?.find(p=>p.id===a.id),completed=status==='finished';
   const score=result?.points??(a.actor?.fruits??0)+achievementPoints(a.actor?.achievements??[])+(a.actor?.eventPoints??0)+(this.room?.festival?.players[a.id]?.bonus??0);
   if(completed)h.finished=true;
-  return {id:h.id,mode:'online',roomId:a.session??this.room?.id??null,playerId:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,startedAt:h.startedAt,lastSeen:now,endedAt:status==='playing'?null:now,activeMs:h.activeMs,startScore:h.startScore,score,tasksDone:SCORE_ACTIONS.filter(t=>a.actor?.achievements.includes(t)).length,tasksTotal:SCORE_ACTIONS.length,status,completed,place:completed&&result?1+this.room!.festival!.results!.filter(p=>p.points>result.points).length:null,device:h.device,seq:h.seq++};
+  return {id:h.id,mode:'online',roomId:a.session??this.room?.id??null,playerId:a.id,name:a.name??a.actor?.name??'Кирби',variant:a.variant,startedAt:h.startedAt,lastSeen:now,endedAt:status==='playing'?null:now,activeMs:h.activeMs,startScore:h.startScore,score,tasksDone:SCORE_ACTIONS.filter(t=>a.actor?.achievements.includes(t)).length,tasksTotal:SCORE_ACTIONS.length,status,completed,place:completed&&result?1+this.room!.festival!.results!.filter(p=>p.points>result.points).length:null,device:h.device,seq:h.seq++,stats:h.progress?.stats};
  }
  private archive(visits:(Visit|undefined)[]){
   const rows=visits.filter((v):v is Visit=>!!v);if(!rows.length||!this.env.HISTORY)return;
@@ -385,7 +394,7 @@ export class GameRoom extends DurableObject<Env>{
   const resume=saved?{...saved.actor,name,variant,star:Math.max(0,saved.actor.star-(Date.now()-saved.savedAt)/1000)}:undefined;
   if(resume){const boost=new FruitSpeedBoost();boost.restore(resume.fruitBoost);boost.update(Math.max(0,(Date.now()-saved!.savedAt)/1000));resume.fruitBoost=boost.snapshot();}
   let device=deviceInfo(request.headers.get('User-Agent')??'');try{const raw=url.searchParams.get('device');if(raw&&raw.length<1024)device=sanitizeDevice(JSON.parse(raw));}catch{}
-  const now=Date.now(),history:OnlineVisit={id:'online:'+crypto.randomUUID(),startedAt:now,activeMs:0,tick:now,lastWrite:now,startScore:(resume?.fruits??0)+achievementPoints(resume?.achievements??[])+(resume?.eventPoints??0)+(this.room?.festival?.players[id]?.bonus??0),seq:0,device};
+  const now=Date.now(),history:OnlineVisit={progress:newVisitProgress(),id:'online:'+crypto.randomUUID(),startedAt:now,activeMs:0,tick:now,lastWrite:now,startScore:(resume?.fruits??0)+achievementPoints(resume?.achievements??[])+(resume?.eventPoints??0)+(this.room?.festival?.players[id]?.bonus??0),seq:0,device};
   const [client,server]=Object.values(new WebSocketPair());this.ctx.acceptWebSocket(server);const attachment:Attachment={id,session:this.room!.id,name,seen:now,visible:true,variant,actor:resume,history};this.archive([this.historySnapshot(attachment)]);server.serializeAttachment(attachment);
   this.persist();this.send(server,{type:'welcome',serverNow:Date.now(),protocolVersion:PROTOCOL,playerId:id,resume,room:this.room,players:this.players().map(s=>{const a=s.deserializeAttachment() as Attachment;return {id:a.id,actor:a.actor};})});
   this.broadcast({type:'presence',count:this.players().length});
@@ -438,7 +447,7 @@ export class GameRoom extends DurableObject<Env>{
    if(e.type==='seal'){
     const actor=this.sealActor(a,e.id),old=r.sealProgress??newSealProgress();
     if(actor){const next=collectSeal(old,e.id,actor,now);if(next!==old){
-     r.sealProgress=next;changed=true;
+     r.sealProgress=next;changed=true;if(a.history&&!a.history.finished)(a.history.progress??=newVisitProgress()).stats.seals++;
      for(const entry of metaKnightSealLogs(a.name??a.actor!.name,Object.keys(next.collected).length,r.portalBoss!=='metapidgie'))this.logEntry(entry);
     }}
    }
@@ -446,7 +455,7 @@ export class GameRoom extends DurableObject<Env>{
     const actors=this.knightActors(a),me=actors.find(p=>p.id===a.id);if(!me)continue;
     if(e.action==='side'&&r.knightBattle?.stage==='side-choice'&&knightHelperEligible(me,r.knightBattle.boss)&&helperChoiceAvailable(actors,r.knightBattle.boss)&&(e.side==='players'||e.side==='boss')){(r.knightSides??={})[a.id]=e.side;changed=true;}
     else if(e.action==='ability'){if(startHelperAbility(r.knightBattle,me,e.ability,now))changed=true;}
-    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now,r.portalBoss);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(knightHelperEligible(actor,battle.boss)&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;changed=true;}}
+    else if(e.action==='start'&&(!r.knightBattle||['won','lost','cancelled'].includes(r.knightBattle.stage))){if(r.knightBattle?.players[a.id]&&a.actor){me.p=[0,0,-2];me.yaw=Math.PI;a.actor.p=[META_KNIGHT_ARENA.x,0,-2];a.actor.q=[0,1,0,0];a.actor.state='Idle';}const battle=startKnightBattle(actors.map(actor=>({...actor,side:undefined})),a.id,now,r.portalBoss);if(battle){if(battle.stage==='side-choice')for(const actor of battle.choice!.actors)if(knightHelperEligible(actor,battle.boss)&&r.knightSides)delete r.knightSides[actor.id];r.knightBattle=battle;this.recordKnightHistory(a);changed=true;}}
     else if(e.action==='attack')knightAttack(r.knightBattle,me,now);
     else if(e.action==='cancel'&&cancelKnightBattle(r.knightBattle,a.id,now))changed=true;
    }

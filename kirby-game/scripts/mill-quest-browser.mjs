@@ -9,7 +9,7 @@ try{
  await page.waitForFunction(()=>window.millTest?.character);
  const move=async(x,z,yaw=Math.PI)=>{await page.evaluate(({x,z,yaw})=>{const c=window.millTest.character;c.actor.position.set(x,0,z);c.yaw=yaw;c.actor.rotation.set(0,yaw,0);window.millTest.followCamera.reset(yaw);}, {x,z,yaw});await page.waitForTimeout(120);};
  await move(49,42);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.stage==='clear');
- for(let i=0;i<3;i++){await move(42.8,32.5+i*3,0);await page.keyboard.press('q');await page.waitForFunction(i=>window.millTest.watermill.quest.branches[i]>0,i);await page.waitForTimeout(250);}
+ for(let i=0;i<3;i++){await move(42.8,32.5+i*3,0);await page.keyboard.press('v');await page.waitForFunction(i=>window.millTest.watermill.quest.branches[i]>0,i);await page.waitForTimeout(250);}
  await move(49,42);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.gate===2);await page.waitForTimeout(200);await page.keyboard.press('e');await page.waitForFunction(()=>window.millTest.watermill.quest.stage==='bags');
  await page.waitForSelector('#mill-quest-hud:not([hidden])');assert.equal(await page.locator('.mill-bag-order span').count(),3);
  await page.screenshot({path:process.env.TEMP+'/kirby-mill-quest-game.png'});

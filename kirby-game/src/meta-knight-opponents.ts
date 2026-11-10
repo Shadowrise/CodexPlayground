@@ -4,7 +4,7 @@ import {KIRBY_VARIANTS} from './variant-palette';
 import {KNIGHT,knightPosition,knightDanger,knightAttack,knightProjectile,knightShotPath,type KnightActor,type KnightBattle,type KnightPoint,type KnightStage} from './meta-knight-battle';
 import {HELPER,helperPosition,helperProjectile,helperOrbs,helperSegmentDistance,helperVulnerable} from './meta-knight-helper';
 import {constrainKnightBody} from './meta-knight-body';
-import {constrainKnightShield,crystalPoint} from './meta-knight-shield';
+import {SHIELD,constrainKnightShield,crystalPoint} from './meta-knight-shield';
 import {cosmicControlsLocked,cosmicHeight,cosmicPlayerPush} from './meta-knight-cosmic';
 import {meteorPoint} from './meta-knight-cosmic-meteor';
 import {refugeStar,cosmicRefugeStage} from './meta-knight-cosmic-refuge';
@@ -78,6 +78,14 @@ function constrain(s:KnightBattle,p:KnightPoint,previous:KnightPoint,now:number,
  constrainKnightBody(s,p,now,previous);constrainKnightShield(s,p,previous);
 }
 
+/** A crystal on the far side needs a route around the dome, not a projected step into it. */
+function shieldWaypoint(s:KnightBattle,a:KnightOpponent,target:KnightPoint):KnightPoint{
+ const probe:KnightPoint=[...target];if(!constrainKnightShield(s,probe,a.p))return target;
+ const angle=Math.atan2(a.p[0],a.p[2]),delta=Math.atan2(Math.sin(Math.atan2(target[0],target[2])-angle),Math.cos(Math.atan2(target[0],target[2])-angle));
+ const radius=Math.max(Math.hypot(a.p[0],a.p[2]),SHIELD.radius+KNIGHT.bodyRadius+2),turn=Math.max(-Math.PI/6,Math.min(Math.PI/6,delta));
+ return [Math.sin(angle+turn)*radius,a.p[1],Math.cos(angle+turn)*radius];
+}
+
 /** Server-owned, serializable decisions; capped time prevents teleporting after a suspended tab. */
 export function advanceKnightOpponents(s:KnightBattle,humans:KnightActor[],now:number):KnightActor[]{
  const bots=Object.values(s.opponents??{}),actors=[...humans,...bots],dt=Math.max(0,Math.min(150,now-s.checked))/1000;
@@ -86,6 +94,8 @@ export function advanceKnightOpponents(s:KnightBattle,humans:KnightActor[],now:n
  for(const a of bots){
   const player=s.players[a.id];a.moving=false;delete a.turning;if(!player||player.hp<=0||player.withdrawn)continue;
   a.p[1]=cosmicHeight(s,now);
+  // The dome can appear over a fighter, including in an older saved snapshot.
+  if(constrainKnightShield(s,a.p,a.p)){a.goal=[...a.p];a.thinkAt=now;}
   if(cosmicControlsLocked(s)){const push=cosmicPlayerPush(s,a.id,now);if(push)a.p=[push.point[0],a.p[1],push.point[2]];continue;}
   if(['intro','transition','side-choice'].includes(s.stage))continue;
   const bump=player.bump;
@@ -121,17 +131,20 @@ export function advanceKnightOpponents(s:KnightBattle,humans:KnightActor[],now:n
     let nearest=Infinity,safe:KnightPoint|undefined;
     for(let ring=1;ring<=4;ring++)for(let i=0;i<24;i++){
      const angle=i*Math.PI/12,p:KnightPoint=[a.p[0]+Math.sin(angle)*ring*4,a.p[1],a.p[2]+Math.cos(angle)*ring*4];
-     if(Math.hypot(p[0],p[2])>43||danger(s,p,now,parryBoss))continue;
+     if(Math.hypot(p[0],p[2])>43||constrainKnightShield(s,[...p])||danger(s,p,now,parryBoss))continue;
      const d=distance(a.p,p)+OPPONENTS.speed*Math.abs(Math.atan2(Math.sin(angle-a.yaw),Math.cos(angle-a.yaw)))/TURN_RATE;if(d<nearest){safe=p;nearest=d;}
     }
     if(safe){target={p:safe,attack:false};a.evade={since:s.since,p:safe};if(s.stage==='ricochet-warn'&&now>=(a.dashReady??0)){a.dashUntil=now+550;a.dashReady=now+4000;}}
    }
    a.thinkAt=now+OPPONENTS.thinkMs;let best:KnightPoint=[...a.p],score=Infinity;
-   const direct=facing(a.p,target.p),stride=Math.min(distance(a.p,target.p),OPPONENTS.speed*(s.phase===4?2:1)*1.1);
+   const destination=s.stage==='shield'?shieldWaypoint(s,a,target.p):target.p;
+   const direct=facing(a.p,destination),stride=Math.min(distance(a.p,destination),OPPONENTS.speed*(s.phase===4?2:1)*1.1);
    for(let i=-1;i<16;i++){
     const yaw=direct+i*Math.PI/8,p:KnightPoint=i<0?[...a.p]:[a.p[0]+Math.sin(yaw)*stride,a.p[1],a.p[2]+Math.cos(yaw)*stride];constrain(s,p,a.p,now,actors,a.id);
+    // Walking rejects lateral collision corrections, so do not plan those same blocked steps.
+    if(s.stage==='shield'&&i>=0&&Math.abs((p[0]-a.p[0])*Math.cos(yaw)-(p[2]-a.p[2])*Math.sin(yaw))>.001)continue;
     const separation=bots.reduce((n,b)=>n+(b!==a?Math.max(0,2.4-distance(p,b.p)):0),0);
-    const value=distance(p,target.p)+(reacted&&danger(s,p,now,parryBoss)?80:0)+separation*3.5+(i<0?.3:0)+Math.abs(Math.atan2(Math.sin(yaw-a.yaw),Math.cos(yaw-a.yaw)))*.9;
+    const value=distance(p,destination)+(reacted&&danger(s,p,now,parryBoss)?80:0)+separation*3.5+(i<0?.3:0)+Math.abs(Math.atan2(Math.sin(yaw-a.yaw),Math.cos(yaw-a.yaw)))*.9;
     if(value<score){score=value;best=p;}
    }
    a.goal=best;

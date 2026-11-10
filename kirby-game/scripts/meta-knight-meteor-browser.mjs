@@ -65,10 +65,10 @@ try{
  await page.evaluate(()=>{spinQA.restart();spinQA.travel.setGodMode(false);});
  const parryAt=await page.evaluate(()=>{const q=spinQA;q.advanceTo(1510);const m=q.travel.battle.cosmicMeteor;return m.at+q.met.meteorPath(m).hitMs-q.base.since-130;});
  await page.evaluate(at=>spinQA.advanceTo(at),parryAt);
- await page.locator('canvas').first().focus();await page.keyboard.down('KeyQ');await page.evaluate(()=>{const q=spinQA;q.mainTime=performance.now();q.mainFrame(q.mainTime+=1000/60);});await page.keyboard.up('KeyQ');
+ await page.locator('canvas').first().focus();await page.keyboard.down('KeyV');await page.evaluate(()=>{const q=spinQA;q.mainTime=performance.now();q.mainFrame(q.mainTime+=1000/60);});await page.keyboard.up('KeyV');
  const reflected=await page.evaluate(()=>{const q=spinQA;for(let i=0;i<12;i++)q.mainFrame(q.mainTime+=1000/60);return {...q.metrics(),reflects:q.travel.battle.players.solo.reflects,index:q.travel.battle.cosmicMeteor.index};});
  assert.equal(reflected.stage,'cosmic-meteor-return');assert.equal(reflected.hp,6);assert.equal(reflected.reflects,1);assert.equal(reflected.life,5);await page.screenshot({path:output+'screenshots/07-reflected.png'});
- frames.push({...reflected,path:output+'screenshots/07-reflected.png',label:'Удар Q · метеорит отражён'});
+ frames.push({...reflected,path:output+'screenshots/07-reflected.png',label:'Удар V · метеорит отражён'});
  const impact=await page.evaluate(()=>{const q=spinQA;q.advanceTo(q.travel.battle.until-q.base.since+80);return q.metrics();});assert.equal(impact.hp,5);assert.equal(impact.stage,'cosmic-hit');await page.screenshot({path:output+'screenshots/08-impact.png'});
  frames.push({...impact,path:output+'screenshots/08-impact.png',label:'Попадание в Метакнайта · здоровье 6 → 5'});
  // The real chat shortcuts switch in space; the plain command still starts on the floor.

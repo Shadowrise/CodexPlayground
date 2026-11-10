@@ -48,9 +48,11 @@ test('animated meshes, transparent surfaces and different lighting/shadow proper
 test('batched firefly retains all animated pivots, blinking, poses and independently coloured glow with shared geometry',async()=>{
  const bytes=await readFile(new URL('../public/models/firefly-animated.glb',import.meta.url));const gltf=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const template=gltf.scene.clone(true),before=triangles(template);batchRigidTree(template,gltf.animations);
- assert(meshCount(template)<=40);assert.equal(triangles(template),before);
+ // Eight independently animated links per antenna and six articulated knees
+ // replace the old rigid shafts/legs; their meshes must survive batching.
+ assert(meshCount(template)<=64);assert(meshCount(template)<=meshCount(gltf.scene));assert.equal(triangles(template),before);
  const original=new Firefly({...gltf,scene:gltf.scene.clone(true)}),batched=new Firefly({...gltf,scene:template.clone(true)}),other=new Firefly({...gltf,scene:template.clone(true)});
- for(const mode of ['Sit','Fly','Sit'] as const){
+ for(const mode of ['Sit','Fly','LookAround','Groom','WingStretch','Sit'] as const){
   original.setMode(mode);batched.setMode(mode);
   for(const dt of [.3,.04,1.34,.32]){
    original.update(dt);batched.update(dt);original.object.updateMatrixWorld(true);batched.object.updateMatrixWorld(true);
@@ -61,5 +63,6 @@ test('batched firefly retains all animated pivots, blinking, poses and independe
  batched.setGlowColor('#ff3388');other.setGlowColor('#22ccff');
  const glow=(f:Firefly)=>(f.object.getObjectByName('Glow_Abdomen') as T.Mesh).material as T.MeshStandardMaterial;
  assert.equal(glow(batched).emissive.getHexString(),'ff3388');assert.equal(glow(other).emissive.getHexString(),'22ccff');
- const a=batched.object.getObjectByName('Batched rigid details') as T.Mesh,b=other.object.getObjectByName('Batched rigid details') as T.Mesh;assert.equal(a.geometry,b.geometry);
+ // Authored rigid details may already be merged by the model generator.
+ const a=batched.object.getObjectByName('Face') as T.Mesh,b=other.object.getObjectByName('Face') as T.Mesh;assert.equal(a.geometry,b.geometry);
 });

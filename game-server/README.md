@@ -94,6 +94,16 @@ visits also retain room/player IDs, completion and final rank. Reconnecting
 creates a separate visit in the same room, retaining the initial score baseline.
 An online visit is completed when the player is still connected as results begin.
 
+Each visit also records personally collected Meta Knight badges and pigeon
+feathers, plus **started / won** encounters separately for Meta Knight and Meta
+Pigeon. Loaded rewards, spectators, side selection and duplicate claims do not
+increase these counters. An accepted fight still counts if later cancelled; a
+win requires remaining in the fight with lives when the player's selected side
+wins. Trackers survive socket hibernation. Existing archive rows and reports from
+older clients show `—` for unavailable counters; the nullable SQLite column is
+added automatically without replacing visits. These reports remain compatible
+with the current gameplay BUILD/protocol.
+
 History lives in the separate SQLite Durable Object `HistoryStore` (`archive`),
 created by migration `v2`; deleting a `GameRoom` never deletes the archive.
 Online snapshots are batched once per minute using the room's existing alarm,
@@ -308,7 +318,7 @@ quest state is stored only on changes, separately from the 16KiB socket attachme
 completion, the minute cooldown, replay without points, authoritative ball bump
 deduplication, rejoin progress and the existing world snapshot. Use a local server on
 8788, and run the client network test first to create its real-world fixture.
-`node ../kirby-game/scripts/centipede-event-browser.mjs` checks actual E/Q/Space
+`node ../kirby-game/scripts/centipede-event-browser.mjs` checks actual E/V/Space
 controls across all three phases, final music/fireworks, cooldown/replay and the
 mobile HUD against the local game on5174. The client centipede-server test also
 exercises the actual Worker class with two sockets and a controlled clock,

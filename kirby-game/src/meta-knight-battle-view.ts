@@ -258,7 +258,7 @@ export class MetaKnightBattleView{
   knightWeaponPoint(this.effectWeapon,this.position);this.position.x-=SITE.x;this.assault.update(s,now,this.position);this.lightning.update(s,now,this.effectBird?this.position:this.impactPoint);if(!this.effectBird)this.crescentLaunch.update(s,now,this.position);
   this.cosmic.update(s,now);this.cosmicOrbs.update(s,now);this.meteor.update(s,now);this.refuge.update(s,now,camera);if(this.finale.update(s,now))this.cue('cosmic-landing');
  }
- usePidgeyPresentation(stage?:string,helper=false,_attackKey='Q'){
+ usePidgeyPresentation(stage?:string,helper=false,_attackKey='V'){
   this.slash.visible=false;this.dazedStars.group.visible=false;this.crescentLaunch.group.visible=false;
   this.hud.setAttribute('aria-label',t('Бой с Мета Пиджи'));this.hud.querySelector('strong')!.textContent=t('Мета Пиджи');
   if(helper&&stage!=='cancelled'){this.hint.textContent=t(stage==='won'?'Игроки победили':stage==='lost'?'Победа команды Мета Пиджи!':'Помоги Мета Пиджи · используй способности');return;}

@@ -16,8 +16,8 @@ try{
  const chase=await page.evaluate(()=>{const t=window.chaserTest;return {balls:t.event.chasers.balls.length,draws:t.view.group.getObjectByName('Разноцветные полосатые шарики').count,hint:document.querySelector('#centipede-event-hud').textContent};});
  assert.equal(chase.draws,3);assert(chase.hint.includes('мячики'));
  await page.evaluate(()=>{const t=window.chaserTest,c=t.character,b=t.event.chasers.balls[0];b.x=c.actor.position.x;b.z=c.actor.position.z+3.2;b.vx=b.vz=0;b.contactAfter=Date.now()+1000;});
- await page.keyboard.press('q');await page.waitForFunction(()=>window.chaserTest.event.chasers.balls[0].serial===1);
- assert(await page.evaluate(()=>!window.chaserTest.character.roll.active),'proactive real Q pushes only the ball');
+ await page.keyboard.press('v');await page.waitForFunction(()=>window.chaserTest.event.chasers.balls[0].serial===1);
+ assert(await page.evaluate(()=>!window.chaserTest.character.roll.active),'proactive real V pushes only the ball');
  await page.waitForTimeout(650);
  await page.evaluate(()=>{const t=window.chaserTest,c=t.character,b=t.event.chasers.balls[0];b.x=c.actor.position.x+.3;b.z=c.actor.position.z+.3;b.vx=b.vz=0;b.kickUntil=b.contactAfter=0;});
  await page.waitForFunction(()=>window.chaserTest.character.roll.active);
@@ -40,5 +40,5 @@ try{
  assert(pair.minimum>=pair.diameter-.002);assert(pair.leftVelocity<0&&pair.rightVelocity>0,'real scene balls bounce apart');
  await page.evaluate(()=>{const t=window.chaserTest;t.event.stage='back';t.event.stageAt=Date.now();});
  await page.waitForFunction(()=>!window.chaserTest.view.group.getObjectByName('Топотушка — прыгучие шарики').visible);
- assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS real E/Q, pursuing balls, mutual recoil, ball-to-ball collisions, transition cleanup, no extra points',chase,pair,errors,screenshot:process.env.TEMP+'/kirby-topotushka-chasers.png'}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS real E/V, pursuing balls, mutual recoil, ball-to-ball collisions, transition cleanup, no extra points',chase,pair,errors,screenshot:process.env.TEMP+'/kirby-topotushka-chasers.png'}));
 }finally{await browser.close();}

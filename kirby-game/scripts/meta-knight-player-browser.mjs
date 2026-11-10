@@ -106,7 +106,7 @@ try{
  await page.keyboard.down('s');await page.waitForFunction(()=>metaKnightCheck.c.state==='WalkBackward');await page.waitForTimeout(180);await page.keyboard.up('s');await page.waitForFunction(()=>metaKnightCheck.c.state==='Idle');
  await page.keyboard.down('Space');await page.waitForFunction(()=>metaKnightCheck.c.actor.position.y>.3);await page.waitForTimeout(450);
  assert.equal(await page.evaluate(()=>metaKnightCheck.c.cloud.visible),false);await page.keyboard.up('Space');await page.waitForFunction(()=>!metaKnightCheck.c.flight.active&&metaKnightCheck.c.state==='Idle',null,{timeout:15000});
- await page.keyboard.down('q');await page.waitForFunction(()=>metaKnightCheck.c.state==='Push');await page.keyboard.up('q');await page.waitForFunction(()=>metaKnightCheck.c.state==='Idle');
+ await page.keyboard.down('v');await page.waitForFunction(()=>metaKnightCheck.c.state==='Push');await page.keyboard.up('v');await page.waitForFunction(()=>metaKnightCheck.c.state==='Idle');
  const emotions=[];
  for(const [index,name] of ['Hello','Joy','Fear','Anger','Sad'].entries()){
   await page.keyboard.press(String(index+1));await page.waitForFunction(name=>metaKnightCheck.c.state===name,name);

@@ -93,7 +93,7 @@ try{
  // Freeze the duel state: English and Bulgarian use the same boss name, so
  // locale itself must invalidate its HUD rather than only the translated name.
  await page.evaluate(async()=>{const q=window.i18nTest;await q.travel.enter(q.character);q.renderer.setAnimationLoop(null);});
- const duelText=()=>page.evaluate(()=>{const q=window.i18nTest,view=q.travel.battleView;view.update(undefined,'solo',1000,0,true,'Q',true);q.chat.render(q.localLog,false);return {hint:view.hud.querySelector('.knight-hint').textContent,label:view.hud.getAttribute('aria-label')};});
+ const duelText=()=>page.evaluate(()=>{const q=window.i18nTest,view=q.travel.battleView;view.update(undefined,'solo',1000,0,true,'V',true);q.chat.render(q.localLog,false);return {hint:view.hud.querySelector('.knight-hint').textContent,label:view.hud.getAttribute('aria-label')};});
  await page.locator('#settings-toggle').click();
  for(const [language,hint,label] of [
   ['en','Start a duel: move, jump and attack','Meta Knight duel'],

@@ -10,6 +10,7 @@ import { KirbyHome } from '../src/kirby-home';
 import { NightFireflies } from '../src/night-fireflies';
 import { createSky } from '../src/sky';
 import { sceneryClearance } from '../src/landmarks';
+import {worldLimit} from '../src/world-bounds';
 async function model(name:string){const bytes=await readFile(new URL(`../public/models/${name}-animated.glb`,import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}
 test('bed rests indefinitely without changing map mode; action wakes and first rest earns three points',async()=>{
  const gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),home=new KirbyHome();c.actor.position.copy(home.entrance);c.actor.scale.setScalar(2);
@@ -49,16 +50,16 @@ test('sky replaces sun with moon and stars at night',()=>{
  update(.1,camera,false);assert(!scene.getObjectByName('Night stars')!.visible);
 });
 
-test('Kirby rides a nearby firefly at double speed, lands on stopping and keeps flight buzz',async()=>{
+test('Kirby accelerates to double speed on a nearby firefly, coasts before landing and keeps flight buzz',async()=>{
  const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),bug=world.bugs[0];
  c.actor.position.copy(bug.home);assert(!world.board(c),'No mounts before initial positioning');
  world.update(.01,true,c.actor.position);c.actor.position.copy(bug.carrier.position).setY(0);
  assert(world.prompt(c));assert(world.board(c));assert(!world.board(c));assert(world.riding);
  const start=c.actor.position.clone(),speed=c.speed;
  for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false});world.syncRider(1/60);world.update(1/60,true,c.actor.position);}
- assert(Math.abs(c.actor.position.z-start.z-speed*2)<1e-6);assert(!bug.land);assert(bug.carrier.position.y>2);assert(world.buzzLevel(c.actor.position)>=.7);assert(bug.firefly.object.visible);assert.equal(c.state,'FireflyRide');
+ assert(Math.abs(c.actor.position.z-start.z-speed*2*.65)<1e-6);assert(!bug.land);assert(bug.carrier.position.y>2);assert(world.buzzLevel(c.actor.position)>=.7);assert(bug.firefly.object.visible);assert.equal(c.state,'FireflyRide');
  const stop=c.actor.position.clone();for(let i=0;i<150;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);world.update(.02,true,c.actor.position);}
- assert.equal(c.actor.position.z,stop.z);assert(bug.land);assert.equal(bug.carrier.position.y,0);assert(world.savePosition(c));
+ assert(c.actor.position.z>stop.z+speed*.5,'momentum carries the mount forward before landing');assert(bug.land);assert.equal(bug.carrier.position.y,0);assert(world.savePosition(c));
  world.disembark();assert(!world.riding);assert.equal(c.state,'Idle');assert.equal(c.actor.position.y,0);assert.equal(world.savePosition(c),undefined);
  c.update(.1,{forward:true,left:false,right:false});assert(c.actor.position.z>stop.z);
 });
@@ -68,6 +69,21 @@ test('mounted turning, growth and day transition preserve valid state',async()=>
  for(let i=0;i<60;i++){world.moveRider(1/60,{forward:true,left:false,right:false,steer:.6});world.syncRider(1/60);world.update(1/60,true,c.actor.position);}
  assert(c.yaw>.9);assert(Math.abs(c.actor.scale.x-1.1)<1e-6);assert(!c.flight.active);assert(!c.swimming);
  world.update(.01,false,c.actor.position);assert(world.riding);assert(c.actor.position.y>0);assert(world.buzzLevel(c.actor.position)>=.7);world.disembark();assert(!world.riding);
+});
+
+test('mounting again clears flight momentum and coasting stays inside the meadow',async()=>{
+ const world=new NightFireflies(await model('firefly')),gltf=await model('kirby'),c=new CharacterController(gltf.scene,gltf.animations),bug=world.bugs[0],idle={forward:false,left:false,right:false};
+ world.update(0,false,bug.home);c.actor.position.copy(bug.carrier.position).setY(0);assert(world.board(c));
+ for(let i=0;i<90;i++){world.moveRider(1/60,{...idle,forward:true,left:true});world.syncRider(1/60);}
+ world.disembark();c.actor.position.copy(bug.home);c.yaw=Math.PI;assert(world.board(c));const mounted=c.actor.position.clone();
+ for(let i=0;i<60;i++){world.moveRider(1/60,idle);world.syncRider(1/60);}
+ assert.equal(c.actor.position.x,mounted.x);assert.equal(c.actor.position.z,mounted.z);assert(bug.land);
+ c.yaw=0;c.actor.position.set(0,c.actor.position.y,worldLimit(c.actor.scale.x*2)-.1);
+ for(let i=0;i<60;i++)world.moveRider(1/60,{...idle,forward:true});
+ assert.equal(c.actor.position.z,worldLimit(c.actor.scale.x*2));
+ for(let i=0;i<60;i++)world.moveRider(1/60,idle);
+ assert.equal(c.actor.position.z,worldLimit(c.actor.scale.x*2));
+ world.reset();assert(!world.riding);
 });
 
 test('daytime fireflies can be mounted and alternate flight with rest',async()=>{
@@ -85,8 +101,9 @@ test('landing a mounted firefly collects fruit under the mount, but flying does 
   fruit.object.position.set(c.actor.position.x,0,c.actor.position.z);
   const collect=()=>fruits.update(.02,c,[],world.riding&&!world.fruitPickupPosition,world.fruitPickupPosition);
   assert.equal(world.fruitPickupPosition,undefined);assert.equal(collect(),undefined);assert(!fruit.eaten);
-  world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);assert.equal(collect(),undefined,'Do not collect while descending');
+  world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);assert(!world.bugs[0].land,'coasting keeps the mount airborne');assert.equal(collect(),undefined,'Do not collect while coasting or descending');
   for(let i=0;i<180;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);}
+  fruit.object.position.copy(world.fruitPickupPosition!);
   assert(world.fruitPickupPosition);assert.equal(collect(),fruit);assert.equal(c.fruitsEaten,1);assert.equal(fruits.onMap,0);assert(!fruit.object.visible);assert.equal(c.actor.scale.x,size,'Fruit pickup must preserve body size');
   for(let i=0;i<30;i++){world.moveRider(.02,{forward:false,left:false,right:false});world.syncRider(.02);collect();}
   assert.equal(c.actor.scale.x,size);assert.equal(c.fruitBoost.multiplier,1.2);assert.equal(c.fruitsEaten,1);assert(world.riding);

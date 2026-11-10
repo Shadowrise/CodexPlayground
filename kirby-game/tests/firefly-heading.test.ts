@@ -15,7 +15,7 @@ async function load(name:string){const b=await readFile(new URL(`../public/model
 const assets=Promise.all([load('kirby'),load('firefly')]);
 const forward=(object:{quaternion:Quaternion})=>new Vector3(0,0,1).applyQuaternion(object.quaternion);
 
-test('a former remote mount turns with its next local rider through full circles',async()=>{
+test('a former remote mount turns with its next local rider through full circles while travel drifts behind its nose',async()=>{
  const [kirby,firefly]=await assets,world=new NightFireflies(firefly),remote=new CharacterController(clone(kirby.scene),kirby.animations),local=new CharacterController(clone(kirby.scene),kirby.animations),bug=world.bugs[0];
  world.update(0,false,bug.home);remote.yaw=Math.PI;remote.actor.rotation.set(0,Math.PI,0);remote.setActivity('FireflyRide');
  const state=actorState(remote,'Remote',0);state.ride={key:'bug:0',data:world.networkState()[0]};world.networkBlocked.add(0);world.syncRemoteRider(0,remote,state,.1);
@@ -23,7 +23,9 @@ test('a former remote mount turns with its next local rider through full circles
  for(let frame=0;frame<480;frame++){
   const previous=local.actor.position.clone();world.moveRider(1/60,{forward:true,left:true,right:false});world.syncRider(1/60);world.update(1/60,false,local.actor.position);world.syncInstances();
   assert(forward(bug.carrier).dot(forward(local.actor))>.99999,'the mount and rider share the same heading');
-  assert(local.actor.position.clone().sub(previous).setY(0).normalize().dot(forward(bug.carrier))>.99999,'forward travel follows the firefly nose');
+  const alignment=local.actor.position.clone().sub(previous).setY(0).normalize().dot(forward(bug.carrier));
+  assert(alignment>Math.cos(Math.PI/7),'drift stays controlled through complete turns');
+  if(frame>60)assert(alignment<.99,'at speed the trajectory lags behind the nose');
   assert.equal(bug.carrier.rotation.x,0);assert.equal(bug.carrier.rotation.z,0);
  }
 });

@@ -35,7 +35,7 @@ hudQA.render();
  for(const mode of ['ready','push','jump','flight-2','flight-1','dash','plane']){
   await page.evaluate(mode=>hudQA.render(mode),mode);
   const values=await page.locator('.player-action-badge').evaluateAll(elements=>elements.map(el=>({id:el.id,key:el.querySelector('kbd').textContent,icon:el.dataset.icon,state:el.dataset.state,count:el.querySelector('strong').textContent,counterHidden:el.querySelector('strong').hidden})));
-  assert.deepEqual(values.map(v=>v.key),['Q','Shift','Пробел']);
+  assert.deepEqual(values.map(v=>v.key),['V','Shift','Пробел']);
   assert.equal(values[0].count,'');assert(values[0].counterHidden);
   if(mode==='push')assert.equal(values[0].state,'cooldown');
   if(mode==='jump'){assert.equal(values[2].icon,'fly');assert(values[2].counterHidden);}
@@ -57,7 +57,7 @@ hudQA.render();
   for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j];assert(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y,`${a.selector} overlaps ${b.selector}`);}
   assert.doesNotMatch(await page.locator('.touch-actions').innerText(),/Толчок|Рывок|Полёт|Прыжок/);
   assert.equal(await page.locator('.touch-actions .player-action-key:visible').count(),0);
-  assert.doesNotMatch(await page.locator('.touch-actions').innerText(),/Q|Shift|Пробел/);
+  assert.doesNotMatch(await page.locator('.touch-actions').innerText(),/V|Shift|Пробел/);
   await page.screenshot({path:output+`mobile-${viewport.width}.png`});report.layouts.push({viewport,boxes});
  }
  assert.deepEqual(report.errors,[]);await writeFile(output+'report.json',JSON.stringify(report,null,2));console.log(JSON.stringify({states:report.states.length,layouts:report.layouts.length,errors:report.errors}));

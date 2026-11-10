@@ -17,7 +17,7 @@ export function startKnightBump(s:KnightBattle,id:string,dx:number,dz:number,now
 export function knightOpponentPushCandidates(s:KnightBattle|undefined,now:number):PushCandidate[]{
  return Object.values(s?.opponents??{}).filter(a=>knightPlayerPushable(s,a.id,now)).map(a=>({id:a.id,p:a.p,s:1,state:'Idle'}));
 }
-/** An ordinary Q press chooses a real target in front and never consumes health. */
+/** An ordinary V press chooses a real target in front and never consumes health. */
 export function pushKnightOpponent(s:KnightBattle|undefined,actor:KnightActor,now:number,targetId?:string){
  if(!s||!actor.available||!knightHelperEligible(actor,s.boss)||!knightPlayerPushable(s,actor.id,now))return;
  const target=pushTarget(actor.p,actor.yaw,1,knightOpponentPushCandidates(s,now).filter(a=>!targetId||a.id===targetId));

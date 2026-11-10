@@ -28,7 +28,7 @@ try{
  await page.evaluate(async()=>{const {CENTIPEDE_TIMES}=await import('/src/centipede-event.ts');window.bossFix.q.stageAt=Date.now()-CENTIPEDE_TIMES.balls+150;});
  await page.waitForFunction(()=>window.bossFix.q.stage==='exhausted',{},{timeout:1500});
  await page.evaluate(async()=>{const t=window.bossFix,{centipedeTarget}=await import('/src/centipede-event.ts'),p=centipedeTarget(t.q);t.c.setActivity('Idle');t.c.actor.position.set(p[0],0,p[2]+2);t.c.yaw=Math.PI;});
- await page.keyboard.press('q');await page.waitForFunction(()=>window.bossFix.q.stage==='tickle');
+ await page.keyboard.press('v');await page.waitForFunction(()=>window.bossFix.q.stage==='tickle');
  // Use the real animated back surfaces and the game's ordinary ground pass.
  await page.evaluate(()=>{const t=window.bossFix;t.q.phase=2;t.q.hits=3;t.q.stage='back';t.q.stageAt=Date.now();t.c.setActivity('Idle');t.c.actor.position.set(140,5,-45);});
  await page.waitForTimeout(220);
@@ -66,9 +66,9 @@ try{
   if(stage==='gather'&&elapsed===6000||stage==='coil'||stage==='rise')await page.screenshot({path:process.env.TEMP+`/kirby-topotushka-natural-${stage}.png`});
  }
  // Rounded ends of both types are checked in the actual world shaders.
- await page.evaluate(()=>{const t=window.bossFix,q=window.transitionSample;q.phase=1;q.stage='warning';q.stageAt=130000;q.route=[[122,-60],[126,-73],[144,-67],[158,-49],[148,-24]];q.from=q.route[0];q.control=q.route[1];q.to=q.route.at(-1);t.view.update(q,'test',130000,t.c.actor.position.clone().set(140,0,-45),true,'Q',t.camera);t.renderer.render(t.scene,t.camera);});
+ await page.evaluate(()=>{const t=window.bossFix,q=window.transitionSample;q.phase=1;q.stage='warning';q.stageAt=130000;q.route=[[122,-60],[126,-73],[144,-67],[158,-49],[148,-24]];q.from=q.route[0];q.control=q.route[1];q.to=q.route.at(-1);t.view.update(q,'test',130000,t.c.actor.position.clone().set(140,0,-45),true,'V',t.camera);t.renderer.render(t.scene,t.camera);});
  await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-rounded-run.png'});
- await page.evaluate(()=>{const t=window.bossFix,q=window.transitionSample;q.stage='balls';q.stageAt=131000;t.model.update(131,t.camera.position,q,131000);t.view.update(q,'test',131300,t.c.actor.position.clone().set(140,0,-45),true,'Q',t.camera);t.renderer.render(t.scene,t.camera);});
+ await page.evaluate(()=>{const t=window.bossFix,q=window.transitionSample;q.stage='balls';q.stageAt=131000;t.model.update(131,t.camera.position,q,131000);t.view.update(q,'test',131300,t.c.actor.position.clone().set(140,0,-45),true,'V',t.camera);t.renderer.render(t.scene,t.camera);});
  await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-rounded-balls.png'});
  const restingFeet=await page.evaluate(async()=>{
   const t=window.bossFix,{Box3,Vector3}=await import('/node_modules/.vite/deps/three.js');t.view.group.visible=false;

@@ -73,7 +73,7 @@ test('sword lunge emits exactly one hit at forward extension on the ground and i
   for(let frame=1;frame<23;frame++){c.update(.01,input);if(frame<22)assert(!c.attackHit,'windup must not push a target');}
   assert(c.attackHit,`strike at${PUSH_HIT}s, airborne=${airborne}`);assert(Math.abs(c.actions.get('Push')!.time-PUSH_HIT)<1e-6);
   let extraHits=0;for(let frame=0;frame<60;frame++){c.update(.01,input);extraHits+=Number(c.attackHit);}
-  assert.equal(extraHits,0,'holding Q cannot apply a second hit');
+  assert.equal(extraHits,0,'holding V cannot apply a second hit');
  }
 });
 

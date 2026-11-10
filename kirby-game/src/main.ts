@@ -699,7 +699,7 @@ let pendingEmote:PlayerEmote|undefined;
 const emoteWheel=new EmoteWheel();
 let pendingBoard = false;
 let hitMessageRemaining = 0;
-const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
+const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyV', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
   if(!playing||roundFinished()||tutorial.active)return;
   if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
@@ -724,7 +724,7 @@ window.addEventListener('keydown', event => {
     if (!event.repeat && event.code === 'Space') pendingJump = true;
     if (!event.repeat && (event.code === 'ShiftLeft' || event.code === 'ShiftRight')) pendingDash = true;
     if (!event.repeat && event.code === 'KeyE') pendingBoard = true;
-    if (!event.repeat && event.code === 'KeyQ') pendingAttack = true;
+    if (!event.repeat && event.code === 'KeyV') pendingAttack = true;
   }
 });
 window.addEventListener('keyup', event => { keys.delete(event.code); });
@@ -762,7 +762,7 @@ const cosmicArena:MetaKnightArenaTravel=new MetaKnightArenaTravel(renderer,scene
  if(!loadedModel||!loadedMetaKnight)return;
  const model=createPlayerModel(loadedModel,KIRBY_VARIANTS.find(v=>v[0]===(boss==='metapidgie'?'Мета Пиджи':'Meta Knight'))!,loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);
  return new CharacterController(model.model,model.clips);
-},{boss:selectedPortalBoss,online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],sides:()=>network?.room.knightSides,chooseSide:side=>network?.event({type:'knight',action:'side',side}),ability:ability=>network?.event({type:'knight',action:'ability',ability}),pushCue:()=>sounds.playBoing(.7),makeOpponent:variant=>{if(!loadedModel)return;const model=createPlayerModel(loadedModel,KIRBY_VARIANTS[variant],loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);return new CharacterController(model.model,model.clips);},profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),location:cosmicArena.active?'meta-knight-arena':undefined,p:character?[character.actor.position.x-META_KNIGHT_ARENA.x,character.actor.position.y,character.actor.position.z]:undefined},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location,p:[a.p[0]-META_KNIGHT_ARENA.x,a.p[1],a.p[2]]}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),bread:()=>loadedBread,firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
+},{boss:selectedPortalBoss,online:()=>!!network,state:()=>network?.room.knightBattle,id:()=>network?.id??'solo',now:()=>network?.serverNow??Date.now(),actors:()=>[],sides:()=>network?.room.knightSides,chooseSide:side=>network?.event({type:'knight',action:'side',side}),ability:ability=>network?.event({type:'knight',action:'ability',ability}),pushCue:()=>sounds.playBoing(.7),makeOpponent:variant=>{if(!loadedModel)return;const model=createPlayerModel(loadedModel,KIRBY_VARIANTS[variant],loadedPigeon,false,loadedMetaKnight,loadedSnowball,loadedPlumages);return new CharacterController(model.model,model.clips);},profiles:()=>[{id:network?.id??'solo',name:nameInput.value,variant:KIRBY_VARIANTS.indexOf(selected),location:cosmicArena.active?'meta-knight-arena':undefined,p:character?[character.actor.position.x-META_KNIGHT_ARENA.x,character.actor.position.y,character.actor.position.z]:undefined},...Array.from(network?.actors??[],([id,a])=>({id,name:a.name,variant:a.variant,location:a.location,p:[a.p[0]-META_KNIGHT_ARENA.x,a.p[1],a.p[2]]}))],send:action=>network?.event({type:'knight',action}),win:()=>completeKnightVictory(true),battleStats:battle=>soloHistory?.battle(battle),cue:(kind,rate)=>sounds.playKnight(kind,rate),stopCosmic:()=>sounds.stopKnightCosmic(),chargeAudio:level=>sounds.updateKnightGravityCharge(level),prepareCosmic:()=>sounds.prepareKnightCosmic(),bread:()=>loadedBread,firefly:()=>loadedFirefly,music:active=>music.setEvent(active)});
 function completeKnightVictory(local=false){
  if(!character)return;
  const boss=cosmicArena.battle?.boss??'meta-knight';
@@ -1046,7 +1046,7 @@ function returnToMenu(){
   fruits.claim=undefined;fruits.restore(fruits.fruits.map(()=>false),0);watermill.setQuest(newMillQuest(),Date.now());bread.reset();lastBreadRequest=0;balloonSeed=6173;
   sealProgress=newSealProgress();lastSealRequest=0;sealHud.reset(sealProgress);
   soloPortalOverride=undefined;soloPortalBoss='meta-knight';pigeonFeeding=newPigeonFeeding();featherHud.reset(pigeonFeeding);
-  soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'Q');festivalView.reset();
+  soloCentipede=undefined;centipedeContactKey='';centipedeView.update(undefined,'solo',Date.now(),camera.position,false,'V');festivalView.reset();
   localLog.length=0;chat.render([],false);wayfinder.syncPlayers([]);wayfinder.selectDestination('');wayfinder.update(camera.position,1,camera);
   interactionOutline.update(undefined);rideHint.textContent='';placeInteractionHint();touch?.setInteraction();hitMessageRemaining=0;combatMessage.hidden=true;greetingCooldown=0;
   settingsToggle.setAttribute('aria-expanded','false');audioPanel.hidden=controlsPanel.hidden=true;onlineRoster.hidden=true;onlineRoster.textContent='';
@@ -1156,7 +1156,7 @@ renderer.setAnimationLoop((time: number) => {
     else if(pad.pressed.has(14))wayfinder.cycle(-1);
     else if(pad.pressed.has(15))wayfinder.cycle(1);
     if(pad.y<-.05)padKeys.add('KeyW');if(pad.y>.05)padKeys.add('KeyS');
-    if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyQ');
+    if(pad.pressed.has(0))padKeys.add('Space');if(pad.pressed.has(2))padKeys.add('KeyV');
     if(pad.pressed.has(3))pendingBoard=true;if(pad.held.has(3))padKeys.add('KeyE');
     if(!cosmicArena.choosingSide)followCamera.zoom(gamepadCameraZoom(pad.held,cosmicArena.helperMode,cosmicArena.jointCamera)*dt*600);
   }
@@ -1181,14 +1181,15 @@ renderer.setAnimationLoop((time: number) => {
       if(pendingEmote&&!settingsOpen)character.startEmote(pendingEmote);
       const cancelDuel=!settingsOpen&&!wheelUsed&&!touchBlocked&&!document.hidden&&document.hasFocus()?(usingTouch?touch?.interactionHeld?'touch':undefined:held('KeyE')?usingPad?'gamepad':'keyboard':undefined):undefined;
       const moveStick=settingsOpen||wheelUsed||touchBlocked?{x:0,y:0}:usingPad?{x:pad.x,y:pad.y}:usingTouch?Math.hypot(touch!.x,touch!.y)<.18?{x:0,y:0}:{x:touch!.x,y:touch!.y}:undefined;
-      cosmicArena.update(dt,time*.001,character,{scheme:usingPad?'gamepad':usingTouch?'touch':'keyboard',cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyQ')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
+      cosmicArena.update(dt,time*.001,character,{scheme:usingPad?'gamepad':usingTouch?'touch':'keyboard',cancelDuel,moveStick,dashPressed,steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer,attack:held('KeyV')||(!settingsOpen&&pendingAttack),attackPressed:!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)),forward:held('KeyW'),backward:held('KeyS'),jump:held('Space')||(!settingsOpen&&pendingJump),jumpPressed:!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)),left:held('KeyA')||pendingTurn==='KeyA',right:held('KeyD')||pendingTurn==='KeyD'},usingPad&&!settingsOpen&&!wheelUsed?pad.cameraX:Number(held('ArrowRight'))-Number(held('ArrowLeft')),usingPad&&!settingsOpen&&!wheelUsed?pad.cameraY:Number(held('ArrowUp'))-Number(held('ArrowDown')),(dragPointer!==undefined&&dragMode==='camera')||(usingTouch&&!touchBlocked&&!!touch?.looking),settingsOpen);
       if(character.attackHit){if(network)network.event({type:'hit'});else cosmicArena.pushOpponents();character.attackHit=false;}
-      const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'Q');
+      const hint=cosmicArena.controlsHint(usingPad?'Y':usingTouch?t('Действие'):'E',usingPad?'X':usingTouch?t('Толчок'):'V');
       setText(rideHint,hint);rideHint.dataset.hold=String(cosmicArena.engaged);rideHint.style.setProperty('--interaction-progress',`${cosmicArena.cancelProgress*100}%`);
       placeInteractionHint(!usingTouch&&cosmicArena.engaged?document.getElementById('knight-battle-hud')??navigationHud:navigationHud);
       touch?.setInteraction(cosmicArena.primaryActionLabel,cosmicArena.engaged,cosmicArena.cancelProgress);touch?.setAttackHint(cosmicArena.secondaryActionLabel);
       sounds.update(dt,character,[],followCamera.azimuth);
     }
+    sounds.updateFireflyBuzz(cosmicArena.active?cosmicArena.fireflyBuzz(character.actor.getWorldPosition(new THREE.Vector3())):0);
     pendingBoard=pendingAttack=pendingJump=false;pendingTurn=undefined;pendingEmote=undefined;
     updateNetwork(dt);cosmicArena.routeRemotes(remotePlayers?.players.entries()??[]);
     const knightBattle=network?.room.knightBattle,knightPlayer=knightBattle?.players[network?.id??''];
@@ -1230,7 +1231,7 @@ renderer.setAnimationLoop((time: number) => {
     balloons.update(dt,!network||network.host?npcs:[],character,constrainNpc);
     const benchWasActive=benches.active;benches.update(dt);
     if(!benchWasActive)treehouse.update(dt,{steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer,forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD')},pendingJump || (usingPad && !wheelUsed && pad.pressed.has(0)));
-    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { dashPressed:dashPressed&&!maze.contains(character.actor.position,2),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, attack: !carryingBread && (held('KeyQ') || pendingAttack), attackPressed: !carryingBread&&!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), jumpPressed: !maze.contains(character.actor.position,2)&&!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
+    if(!fireflies?.riding && !homeWasActive && !coaster.riding && !boats.riding && !treehouseWasActive && !benchWasActive && !balloonWasActive && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active)character.update(dt, { dashPressed:dashPressed&&!maze.contains(character.actor.position,2),steer:usingPad ? (!settingsOpen && !wheelUsed?stickSteering(pad.x,pad.y):0) : mouseSteer, attack: !carryingBread && (held('KeyV') || pendingAttack), attackPressed: !carryingBread&&!settingsOpen&&(pendingAttack||usingPad&&pad.pressed.has(2)), forward: held('KeyW'), backward: held('KeyS'), jump: !maze.contains(character.actor.position,2) && (held('Space') || pendingJump), jumpPressed: !maze.contains(character.actor.position,2)&&!settingsOpen&&(pendingJump||usingPad&&pad.pressed.has(0)), left: held('KeyA') || pendingTurn === 'KeyA', right: held('KeyD') || pendingTurn === 'KeyD' });
     if(fireflies?.riding)fireflies.moveRider(dt,{forward:held('KeyW'),backward:held('KeyS'),left:held('KeyA'),right:held('KeyD'),steer:usingPad?(!settingsOpen&&!wheelUsed?stickSteering(pad.x,pad.y):0):mouseSteer});
     coaster.update(dt,camera.position);
     if(!homeWasActive && !coaster.riding && !boats.riding && !treehouse.active && !balloons.riding && !trampolineWasActive && !skyWasActive && !skyTrail.active&&!mountainLedges.active){watermill.constrain(character.actor.position,character.actor.scale.x);treehouse.constrain(character.actor.position,character.actor.scale.x);home.constrain(character.actor.position,character.actor.scale.x);constrainArena(character.actor.position,character.actor.scale.x);flowerGameView.button.constrain(character.actor.position,character.actor.scale.x);numberGarden.constrain(character.actor.position,character.actor.scale.x);}
@@ -1262,7 +1263,7 @@ renderer.setAnimationLoop((time: number) => {
      else{
       const next=collectSeal(sealProgress,nearbySeal.id,sealCollector,breadNow);
       if(next!==sealProgress){
-       sealProgress=next;localLog.push(...metaKnightSealLogs(nameInput.value,Object.keys(next.collected).length,selectedPortalBoss()!=='metapidgie'));
+       soloHistory?.collect('seals');sealProgress=next;localLog.push(...metaKnightSealLogs(nameInput.value,Object.keys(next.collected).length,selectedPortalBoss()!=='metapidgie'));
        if(localLog.length>10)localLog.splice(0,localLog.length-10);
       }
      }
@@ -1367,7 +1368,7 @@ renderer.setAnimationLoop((time: number) => {
   if(time-lastDialUpdate>=100){lastDialUpdate=time;timeNeedle.setAttribute('transform',`rotate(${lightTime.phase*360} 32 32)`);const label=t(lightTime.label);if(timeDial.title!==label){timeDial.title=label;timeDial.setAttribute('aria-label',t(`Время суток: ${lightTime.label}`));}}
   updateSky(dt,camera,lightTime);fireflies?.update(dt,night,camera.position);
   if(playing&&(!network||network.host))fireflies?.syncNpcRiders(npcs,true,dt);
-  sounds.updateFireflyBuzz(character ? cosmicArena.active?cosmicArena.fireflyBuzz(character.actor.getWorldPosition(new THREE.Vector3())):fireflies?.buzzLevel(character.actor.position)??0 : 0);
+  sounds.updateFireflyBuzz(character?fireflies?.buzzLevel(character.actor.position)??0:0);
   arenaCentipede?.update(boatTime(),camera.position,currentCentipede(),network?.serverNow??Date.now());
   ponds.update(dt);
   fountain.update(dt,lightTime.day,camera);
@@ -1384,7 +1385,7 @@ renderer.setAnimationLoop((time: number) => {
   checkCharacterUnlock();
   festivalTick();
   const boss=currentCentipede();const bossNow=network?.serverNow??Date.now();
-  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'Q',camera,network?100:0,arenaCentipede?.interactionTarget(boss));
+  centipedeView.update(boss,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden,usingPad?'X':usingTouch?'Толчок':'V',camera,network?100:0,arenaCentipede?.interactionTarget(boss));
   if(!centipedeView.hud.hidden)combatMessage.hidden=true;
   const hearingBoss=playing&&!roundFinished()&&boss?.stage!=='rest'&&!!boss?.players[network?.id??'solo']&&!!character&&Math.hypot(character.actor.position.x-BOSS_ARENA.x,character.actor.position.z-BOSS_ARENA.z)<BOSS_ARENA.radius+8;
   music.setEvent(hearingBoss?(boss!.stage==='celebrate'?'celebrate':true):false);
@@ -1392,7 +1393,7 @@ renderer.setAnimationLoop((time: number) => {
   const hearingFlowers=playing&&!roundFinished()&&!!flowerGame&&!!character&&Math.hypot(character.actor.position.x-MUSICAL_FLOWER_SITE.x,character.actor.position.z-MUSICAL_FLOWER_SITE.z)<MUSICAL_FLOWER_SITE.radius+10;
   music.updateFlowerDucking(hearingFlowers,dt);
   const numberGame=advanceNumberGame(currentNumberGame(),bossNow);
-  millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'Q',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
+  millHud.update(watermill.quest,network?.id??'solo',network?.serverNow??Date.now(),usingPad?'X':usingTouch?'«Толчок»':'V',usingPad?'Y':usingTouch?'«Действие»':'E',playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden);
   flowerGameView.update(flowerGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden,playing&&!roundFinished());
   if(!flowerGameView.hud.hidden){millHud.element.hidden=true;combatMessage.hidden=true;}
   numberGameView.update(numberGame,network?.id??'solo',bossNow,character?.actor.position??camera.position,playing&&!settingsOpen&&festivalView.hud.hidden&&centipedeView.hud.hidden&&flowerGameView.hud.hidden,playing&&!roundFinished());
@@ -1454,7 +1455,8 @@ function sendBread(action:BreadAction){
  if(action.kind==='feed'&&bread.state!==old&&bread.state.offering){
   npc?.acceptBread(bread.state.offering);character.achievements.add(pigeonFriendAchievement(id));
   localLog.push(pidgieFriendLog(nameInput.value,id));
-  const wasComplete=allPigeonsFed(pigeonFeeding);pigeonFeeding=recordPigeonFeeding(pigeonFeeding,id,'solo',Date.now());
+  const wasComplete=allPigeonsFed(pigeonFeeding),previousFeeding=pigeonFeeding;pigeonFeeding=recordPigeonFeeding(pigeonFeeding,id,'solo',Date.now());
+  if(pigeonFeeding!==previousFeeding)soloHistory?.collect('feathers');
   if(!wasComplete&&allPigeonsFed(pigeonFeeding)){soloPortalOverride=true;soloPortalBoss='metapidgie';localLog.push(metapidgieFeedingPortalLog());}
   if(localLog.length>10)localLog.splice(0,localLog.length-10);
  }

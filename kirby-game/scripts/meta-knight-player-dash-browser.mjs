@@ -66,12 +66,12 @@ try{
  const bossEffects=await page.evaluate(async()=>{
   const q=dashQA,{startKnightBattle}=await import('/src/meta-knight-battle.ts');q.renderer.setAnimationLoop(null);q.c.setActivity('Idle');q.c.actor.position.set(2000,0,28);
   const s=startKnightBattle([{id:'solo',p:[0,0,-2],yaw:0,available:true}],'solo',1000);Object.assign(s,{phase:2,hp:8,pattern:'flight',stage:'dash',step:1,since:1000,until:1700,from:[-18,1.2,0],to:[18,1.2,0],height:1.2,yaw:Math.PI/2});q.bossThrust=s;q.cues=[];
-  const view=q.travel.battleView;for(let i=0;i<32;i++)view.update(s,'solo',1000+i*1000/60,1/60,false,'Q',true,false);
+  const view=q.travel.battleView;for(let i=0;i<32;i++)view.update(s,'solo',1000+i*1000/60,1/60,false,'V',true,false);
   q.travel.camera.position.set(2019,18,25);q.travel.camera.lookAt(2003,4,0);q.travel.camera.updateMatrixWorld();q.travel.render();
   const actor=q.travel.knight.actor,sparks=actor.getObjectByName('Meta Knight flying sword sparks'),mist=sparks.getObjectByName('Galaxia soft flying mist');
   return {sparks:sparks.visible,mistPuffs:mist.children.length,noWake:!actor.getObjectByName('Meta Knight golden violet dash wake'),sounds:q.cues.filter(k=>k==='thrust').length};
  });assert(bossEffects.sparks&&bossEffects.noWake&&bossEffects.mistPuffs===8);assert.equal(bossEffects.sounds,1);await page.screenshot({path:resolve(output,'boss-thrust.png')});
- assert(await page.evaluate(()=>{const q=dashQA,s=q.bossThrust;Object.assign(s,{stage:'open',since:1700,until:3500,from:[18,0,0],to:[18,0,0],height:0});for(let i=0;i<40;i++)q.travel.battleView.update(s,'solo',1700+i*1000/60,1/60,false,'Q',true,false);return !q.travel.knight.actor.getObjectByName('Meta Knight flying sword sparks').visible;}));report.bossEffects=bossEffects;console.log('PASS NPC soft blade mist, no body wake and one epic sound');await page.close();
+ assert(await page.evaluate(()=>{const q=dashQA,s=q.bossThrust;Object.assign(s,{stage:'open',since:1700,until:3500,from:[18,0,0],to:[18,0,0],height:0});for(let i=0;i<40;i++)q.travel.battleView.update(s,'solo',1700+i*1000/60,1/60,false,'V',true,false);return !q.travel.knight.actor.getObjectByName('Meta Knight flying sword sparks').visible;}));report.bossEffects=bossEffects;console.log('PASS NPC soft blade mist, no body wake and one epic sound');await page.close();
  }
  for(const viewport of [{width:390,height:844},{width:844,height:390}]){
   const context=await browser.newContext({viewport,isMobile:true,hasTouch:true}),phone=await context.newPage();await prepare(phone);

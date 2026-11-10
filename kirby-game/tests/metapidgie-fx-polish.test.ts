@@ -8,6 +8,18 @@ test('ascent has no boss body plasma, and blue charge uses one third of its prev
  const m=await model(),scene=new T.Scene();scene.add(m.scene);const v=new MetaKnightCosmicView(m.scene,scene),a={id:'a',p:[0,0,-2] as [number,number,number],yaw:0,available:true},s=startKnightBattle([a],'a',1000,'metapidgie')!;scene.add(v.group);Object.assign(s,{phase:4,stage:'cosmic-rise',since:1000,until:6600});m.scene.position.y=90;v.update(s,3800);assert.equal(v.plasma.group.visible,false);
  const charge=new MetaKnightGravityCharge();scene.add(charge.group);Object.assign(s,{stage:'cosmic-star-draw',cosmicRefuge:{at:1000,angle:0,world:0,contacts:{}}});charge.update(s,2000,m.scene.getObjectByName('Metapidgie_beak_tip')!,scene,v.lightning,1/3);let count=0;charge.group.traverse(n=>{if(n instanceof T.Mesh&&n.material instanceof T.ShaderMaterial){assert.equal(n.material.uniforms.glowGain.value,1/3);count++;}});assert.equal(count,2);charge.dispose();v.dispose();
 });
+test('arena impact lightning keeps its original energy independently of the dimmed boss beak',async()=>{
+ const m=await model(),scene=new T.Scene();scene.add(m.scene);const v=new MetaKnightCosmicView(m.scene,scene);scene.add(v.group);
+ const s=startKnightBattle([{id:'a',p:[0,0,-2],yaw:0,available:true}],'a',1000,'metapidgie')!;
+ const arc=v.lightning.arc,ground:number[]=[],beak:number[]=[];
+ v.lightning.arc=function(...args:Parameters<typeof arc>){const seed=args[2],energy=args[8]??1;if(seed>=931&&seed<943)ground.push(energy);if(seed>=30&&seed<36)beak.push(energy);return arc.apply(this,args);};
+ for(const stage of ['cosmic-surge','cosmic-lift'] as const){
+  ground.length=beak.length=0;Object.assign(s,{phase:4,stage,since:1000,until:stage==='cosmic-surge'?2900:2050});v.update(s,1800);
+  assert.equal(ground.length,12);assert(ground.every(e=>e===1),'the arena discharge must not inherit the beak brightness reduction');
+  assert.equal(beak.length,6);assert(beak.every(e=>e===1/3),'the local beak filaments retain their reduced brightness');
+ }
+ v.dispose();
+});
 test('defeated Pidgie has two yellow spirals on the real helmet lenses and restores the eyes without undoing a boss pose',async()=>{
  const gltf=await model(),p=createPlayerModel({scene:new T.Group(),animations:[]} as any,KIRBY_VARIANTS[23],undefined,false,undefined,undefined,{metapidgie:gltf}),c=new CharacterController(p.model,p.clips),body=c.actor.getObjectByName('Body')!;
  for(const seat of [false,true]){c.updateDuelDazedPose(1000,true,seat);for(const side of ['Left','Right']){assert(!c.actor.getObjectByName(side+'_glowing_eye')!.visible);const eye=c.actor.getObjectByName(side+' dazed spiral eye') as T.Mesh<T.TubeGeometry,T.MeshBasicMaterial>;assert(eye);assert.equal(eye.material.color.getHexString(),'ffe66b');assert.equal(eye.parent!.parent!.name,side+'_amber_lens');assert(eye.parent!.visible);const pupil=c.actor.getObjectByName(side+'_glowing_eye') as T.Mesh;pupil.geometry.computeBoundingBox();eye.geometry.computeBoundingBox();pupil.updateMatrix();eye.updateMatrix();eye.parent!.updateMatrix();const native=pupil.geometry.boundingBox!.clone().applyMatrix4(pupil.matrix),dazed=eye.geometry.boundingBox!.clone().applyMatrix4(new T.Matrix4().multiplyMatrices(eye.parent!.matrix,eye.matrix));assert(Math.abs((native.max.y-native.min.y)-(dazed.max.y-dazed.min.y))<1e-6,'spiral matches the native yellow pupil height');}if(!seat)body.position.y=.73;c.clearDuelDazedPose();for(const side of ['Left','Right'])assert(c.actor.getObjectByName(side+'_glowing_eye')!.visible);if(!seat)assert.equal(body.position.y,.73);}

@@ -7,8 +7,10 @@ import {MetaKnightDazedStars} from './meta-knight-dazed-stars';
 import {KNIGHT,knightPosition,knightProgress,type KnightBattle} from './meta-knight-battle';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
 import {pidgeyAirHeight} from './knight-boss';
+import {cosmicAirborne,cosmicDescent} from './meta-knight-cosmic';
+import {duetBossDazed} from './meta-knight-duet';
 import {createMetapidgieCombatFx} from './metapidgie-combat-fx';
-import {MetapidgieFlightTrail} from './metapidgie-flight-trail';
+import {MetapidgieFlightTrail,metapidgieTrailOrigin} from './metapidgie-flight-trail';
 import {meleeTrailTimes} from './metapidgie-melee';
 import {disposeActor} from './actor-lifecycle';
 import type {KnightSound} from './meta-knight-sounds';
@@ -36,7 +38,7 @@ export class MetapidgieBattleView extends MetaKnightBattleView{
  override update(...args:Parameters<MetaKnightBattleView['update']>){
   super.update(...args);const [s,id,now,dt,,,,,,camera]=args;
   this.usePidgeyPresentation(s?.stage,!!s?.players[id]&&s.players[id].side==='boss'&&s.players[id].hp>0,args[5]);const stage=s?.stage??'idle',elapsed=s?Math.max(0,(now-s.since)/1000):now/1000;
-  const name=stage==='idle'||stage==='cancelled'||stage==='side-choice'?'Idle':stage==='slash-warn'&&s!.step===2?'Boss_slash-warn-backhand':stage==='slash'&&s!.step===3?'Boss_slash-backhand':stage==='transition'&&s!.phase>=2?`Boss_transition-phase${s!.phase}`:stage==='dash-warn'&&s!.step===2?'Boss_dash-warn-recharge':stage==='open'?s!.pattern==='leap'||s!.pattern==='dive'?'Boss_open-land':s!.pattern==='flight'?'Boss_open-flight':'Boss_open-melee':stage==='shot-warn'&&s!.step>0?'Boss_shot-recharge':`Boss_${stage}`;
+  const name=stage==='idle'||stage==='cancelled'||stage==='side-choice'?'Idle':stage==='duet-gather'&&cosmicAirborne(s)?'Boss_cosmic-flight':stage==='slash-warn'&&s!.step===2?'Boss_slash-warn-backhand':stage==='slash'&&s!.step===3?'Boss_slash-backhand':stage==='transition'&&s!.phase>=2?`Boss_transition-phase${s!.phase}`:stage==='dash-warn'&&s!.step===2?'Boss_dash-warn-recharge':stage==='open'?s!.pattern==='leap'||s!.pattern==='dive'?'Boss_open-land':s!.pattern==='flight'?'Boss_open-flight':'Boss_open-melee':stage==='shot-warn'&&s!.step>0?'Boss_shot-recharge':`Boss_${stage}`;
   // The authoritative stage may last longer than the clip. Keep release at 220 ms.
   const action=this.actions.get(name),duration=action?.getClip().duration??1;
   let time=s?knightProgress(s,now)*duration:elapsed%duration;
@@ -56,10 +58,11 @@ export class MetapidgieBattleView extends MetaKnightBattleView{
   if(camera)this.fx.update(name,time,duration,camera,this.trailBirth.map(at=>(now-at)/1000),s?.phase===4?.20:1,s?.phase===4?1/3:1);
   super.updateActorEffects(s,now,camera);
   this.pigeon.actor.getObjectByName('Metapidgie_beak_tip')!.getWorldPosition(this.point);this.point.x-=SITE.x;this.beakLaunch.update(s,now,this.point,true);
-  this.pigeon.updateDuelDazedPose(now,['stunned','won','crystal-break','cosmic-hit','cosmic-star-stun','cosmic-descent'].includes(stage)||stage==='duet-recover'&&s?.duet?.bossHit!==undefined,false);
-  this.pigeon.actor.getObjectByName('Tail')!.getWorldPosition(this.point);this.group.worldToLocal(this.point);if(camera)this.flightTrail.update(s,now,this.point,camera);
-  const head=this.pigeon.actor.getObjectByName('Head');head?.getWorldPosition(this.point);this.point.x-=SITE.x;this.point.y-=5.8;
-  this.stars.update([this.point.x,this.point.y,this.point.z],now,['stunned','won','crystal-break','cosmic-hit','cosmic-star-stun'].includes(stage));
+  const dazed=['stunned','won','crystal-break','cosmic-hit','cosmic-star-stun'].includes(stage)||!!cosmicDescent(s,now)?.landed||duetBossDazed(s,now);
+  this.pigeon.updateDuelDazedPose(now,dazed||stage==='cosmic-descent',false);
+  metapidgieTrailOrigin(this.pigeon.actor.getObjectByName('Tail')!,this.point);this.group.worldToLocal(this.point);if(camera)this.flightTrail.update(s,now,this.point,camera);
+  const head=this.pigeon.actor.getObjectByName('Head')!;head.getWorldPosition(this.point);this.group.worldToLocal(this.point);this.point.y-=5.8;
+  this.stars.update([this.point.x,this.point.y,this.point.z],now,dazed);
  }
  // Shared effects must see this frame's authored bill, not last frame's pose.
  protected override updateActorEffects(){}

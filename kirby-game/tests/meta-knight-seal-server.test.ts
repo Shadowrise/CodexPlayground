@@ -104,6 +104,8 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
       assert.equal(portal.length,1);assert(socket.messages.indexOf(sealLogs(socket).at(-1))<socket.messages.indexOf(portal[0]),'portal announcement follows the third pickup');
     }
     assert(validSealProgress(complete));assert.equal(Object.keys(complete.collected).length,3);
+    assert.equal(a.data.history.progress.stats.seals,3,'only the collector earns personal visit badges');
+    assert.equal(b.data.history.progress.stats.seals,0);assert.equal(late.data.history.progress.stats.seals,0);
     for(const id of SEAL_IDS)assert.equal(complete.collected[id]!.by,aid);
     assert.equal(a.data.actor.variant,0);assert.equal(a.data.actor.achievements.length,0,'collecting does not unlock a character or award an unrelated task');
     const count=a.messages.filter(m=>m.type==='room').length;send(a,actor('treehouse'));assert.equal(a.messages.filter(m=>m.type==='room').length,count,'movement adds no seal packets');
@@ -119,6 +121,7 @@ test('actual room owns raced seal claims, refuses forged or unavailable pickups,
     assert.equal(welcome.playerId,aid);assert.equal(welcome.room.id,roomId);assert.deepEqual(welcome.room.sealProgress,complete);
     assert.equal(welcome.room.log.filter((entry:any)=>entry.text===META_KNIGHT_PORTAL_MESSAGE).length,1,'late joins recover the portal announcement from room history');
     send(returned,actor('maze'),[{type:'seal',id:'maze'}]);assert.deepEqual(room.room.sealProgress,complete,'rejoining cannot recollect a seal');
+    assert.equal(returned.data.history.progress.stats.seals,0,'restored room badges do not count as new rewards');
     assert.equal(sealLogs(returned).length,0,'rejected duplicate claims do not replay chat events');
     await room.webSocketClose(b);await room.webSocketClose(late);await room.webSocketClose(returned);
     const fresh=await join('Новая игра',0);assert.notEqual(fresh.messages.find(m=>m.type==='welcome').room.id,roomId);

@@ -68,3 +68,26 @@ test('owned wake geometries and materials are disposed when the character is rem
  let disposedGeometry=0,disposedMaterials=0;geometry.forEach(g=>g.addEventListener('dispose',()=>disposedGeometry++));materials.forEach(m=>m.addEventListener('dispose',()=>disposedMaterials++));
  disposeActor(c);assert.equal(disposedGeometry,geometry.size);assert.equal(disposedMaterials,materials.size);assert.equal(group.parent,null);
 });
+
+test('the posed wake starts outside the rear feather tips at every bird size and scene orientation',()=>{
+ const {c,scene}=create(),frame=new T.Group();frame.position.set(2000,180,-40);frame.rotation.y=.8;scene.add(frame);frame.attach(c.actor);
+ const fx=new MetapidgiePlayerDashFx(c.actor),tail=c.actor.getObjectByName('Tail')!,feather=tail.getObjectByProperty('type','Mesh') as T.Mesh;
+ feather.geometry.computeBoundingBox();const rear=feather.geometry.boundingBox!.min.z;
+ for(const size of [.4,1,3.3])for(const yaw of [0,1.7,-2.5]){
+  c.setActivity('Fly');c.updateActivity(.13);c.actor.scale.setScalar(size);c.actor.rotation.y=yaw;fx.trail.clear();fx.update(true,.02,camera);
+  const sample=fx.trail.samples[0],emitter=tail.worldToLocal(frame.localToWorld(new T.Vector3().fromArray(sample.p)));
+  assert(emitter.z<rear-.5,'the emitter clears the actual feather geometry, including a visible gap');
+ }
+ fx.dispose();disposeActor(c);
+});
+
+test('the taller plume and animated iridescence remain stable at epoch timestamps and on pause',()=>{
+ const trail=new MetapidgieFlightTrail(),now=1_794_300_000_000;
+ for(let i=0;i<20;i++)trail.updateDash(true,now+i*20,new T.Vector3(i*.6,6,0),camera);
+ const puffs=trail.group.children[1] as T.InstancedMesh,matrix=new T.Matrix4();puffs.getMatrixAt(10,matrix);
+ const size=new T.Vector3().setFromMatrixScale(matrix);assert(size.y>size.x*1.4,'the vapour has a taller silhouette');
+ const materials=trail.group.children.map(n=>(n as T.Mesh).material as T.ShaderMaterial),before=materials.map(m=>m.uniforms.uTime.value);
+ trail.updateDash(false,now+400,new T.Vector3(12,6,0),camera);
+ materials.forEach((m,i)=>assert(Math.abs(m.uniforms.uTime.value-before[i]-.02)<1e-6,'colour animation advances at millisecond precision'));
+ trail.updateDash(false,now+400,new T.Vector3(12,6,0),camera);materials.forEach(m=>assert.equal(m.uniforms.uTime.value,.4));trail.dispose();
+});

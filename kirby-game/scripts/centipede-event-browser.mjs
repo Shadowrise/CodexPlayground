@@ -24,7 +24,7 @@ try{
    await page.evaluate(async()=>{const {centipedeTarget,centipedeWheel}=await import('/src/centipede-event.ts');const t=window.centipedeTest,p=centipedeTarget(t.event),c=t.character;c.setActivity('Idle');c.actor.position.set(p[0],0,p[2]+(t.event.stage==='dizzy'?0:1));const target=t.event.stage==='dizzy'?centipedeWheel(t.event,Date.now()):{x:p[0],z:p[2]};c.yaw=Math.atan2(target.x-c.actor.position.x,target.z-c.actor.position.z);c.actor.rotation.set(0,c.yaw,0);t.followCamera.reset(c.yaw);});await page.waitForTimeout(150);
    if(stage==='back'){await page.keyboard.press('Space');await page.waitForTimeout(200);await page.keyboard.press('Space');await page.waitForFunction(()=>window.centipedeTest.character.actor.position.y>2.6);}
    if(hit===6)await page.screenshot({path:process.env.TEMP+'/kirby-topotushka-rainbow-ball.png'});
-   await page.keyboard.press('q');await page.waitForFunction(hit=>window.centipedeTest.event.hits===hit+1,hit,{timeout:5000});
+   await page.keyboard.press('v');await page.waitForFunction(hit=>window.centipedeTest.event.hits===hit+1,hit,{timeout:5000});
    if(!replay)assert(await page.evaluate(()=>!window.centipedeTest.character.achievements.has('centipede')),'friendship waits for completed finale');
    await expire();
   }
@@ -46,5 +46,5 @@ try{
  // Replaying is allowed after the full minute. Check score through every hit.
  await finish(true);
  assert.equal(await page.evaluate(async()=>{const {scoreOf}=await import('/src/score.ts');return scoreOf(window.centipedeTest.character);}),first.points);
- assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS real E/Q/Space, nine hits across three phases, no early friendship/salute, minute cooldown, unchanged replay score, mobile HUD',first,salute,errors}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS real E/V/Space, nine hits across three phases, no early friendship/salute, minute cooldown, unchanged replay score, mobile HUD',first,salute,errors}));
 }finally{await browser.close();}

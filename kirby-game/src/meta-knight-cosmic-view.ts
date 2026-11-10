@@ -151,7 +151,8 @@ export class MetaKnightCosmicView{
     const grow=easeCosmic((elapsed-i*24)/650);if(grow<=0)continue;
     knightWeaponPoint(this.blade,this.a,-.315,2.05,0);this.group.worldToLocal(this.a);this.a.y=Math.max(.08,this.a.y);
     const angle=i*2.399+.7,r=(24+hash(i+73)*19)*grow;this.b.set(Math.sin(angle)*r,.10,Math.cos(angle)*r);
-    this.lightning.arc(this.a,this.b,931+i,.035*fade,clock,18,1.4,[0,.25,0],this.bird&&!this.ally?1/3:1);
+    // The arena discharge has its own brightness; only the beak's local aura is dimmed.
+    this.lightning.arc(this.a,this.b,931+i,.035*fade,clock,18,1.4,[0,.25,0]);
    }
   }else if(grounded){
    if(this.surfaceId!==s.id){Object.assign(this.surface,buildCosmicSurface(s.id));this.surfaceId=s.id;}

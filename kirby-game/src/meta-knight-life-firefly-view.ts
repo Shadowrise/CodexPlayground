@@ -21,7 +21,7 @@ export class MetaKnightLifeFireflyView{
  readonly halo=softMist(softMistMaterial('#baff55',.5));
  private motion:T.Object3D;
  private restoreMaterials:()=>void;
- private legs:{joint:T.Object3D;rotation:T.Quaternion}[]=[];
+ private legs:{joint:T.Object3D;rotation:T.Quaternion;knee?:T.Object3D}[]=[];
  private key='';private hitKey='';private point=new T.Vector3();private flying=false;
  constructor(gltf:GLTF,private cue:(kind:KnightSound)=>void){
   this.group.name='Meta Knight life firefly';this.carrier.name='Life firefly carrier';
@@ -40,12 +40,17 @@ export class MetaKnightLifeFireflyView{
   // Tiny length adjustments keep every foot in contact with the curved shell.
   for(const side of [-1,1])for(let i=0;i<3;i++){
    const joint=object.getObjectByName(`${side<0?'Left':'Right'}_Leg_${i}`)!;
+   const knee=object.getObjectByName(`${side<0?'Left':'Right'}_Knee_joint_${i}`);
+   // The detailed rig bends its knees in flight; a carrier keeps a steady grip.
+   joint.quaternion.identity();knee?.quaternion.identity();joint.updateWorldMatrix(true,true);
+   const foot=object.getObjectByName(`${side<0?'Left':'Right'}_Foot_${i}`)!;
+   const rest=joint.worldToLocal(foot.getWorldPosition(new T.Vector3()));
    const origin=this.motion.localToWorld(new T.Vector3(side*2,-.02,HEART_Z+.2-i*.2)),direction=new T.Vector3(-side,0,0).transformDirection(this.motion.matrixWorld);
    const contact=new T.Raycaster(origin,direction).intersectObject(this.heart.model,true)[0];
    if(!contact)throw Error('Life firefly foot cannot reach the heart surface');
-   const target=this.motion.worldToLocal(contact.point.clone()).sub(joint.position),rest=new T.Vector3(side*.4,-.6,.25);
+   const target=this.motion.worldToLocal(contact.point.clone()).sub(joint.position);
    joint.scale.multiplyScalar(target.length()/rest.length());
-   this.legs.push({joint,rotation:new T.Quaternion().setFromUnitVectors(rest.normalize(),target.normalize())});
+   this.legs.push({joint,knee,rotation:new T.Quaternion().setFromUnitVectors(rest.normalize(),target.normalize())});
   }
   this.carrier.scale.setScalar(BUG_SCALE);this.carrier.add(object);this.group.add(this.carrier);this.group.visible=false;
  }
@@ -66,7 +71,7 @@ export class MetaKnightLifeFireflyView{
    this.carrier.position.fromArray(point);this.carrier.rotation.set(0,Math.atan2(next[0]-point[0],next[2]-point[2]),0);this.carrier.scale.setScalar(BUG_SCALE);
    if(this.heart.group.parent!==this.motion)this.motion.add(this.heart.group);
    this.heart.group.position.set(0,HEART_Y,HEART_Z);this.heart.group.rotation.set(0,0,0);this.heart.group.scale.setScalar(HEART_SCALE);this.heart.floating=false;
-   for(const leg of this.legs)leg.joint.quaternion.copy(leg.rotation);
+   for(const leg of this.legs){leg.knee?.quaternion.identity();leg.joint.quaternion.copy(leg.rotation);}
   }else if(hit){
    if(this.hitKey!==key){this.hitKey=key;if(age<350)this.cue('life-firefly-hit');}
    const t=age/LIFE_FIREFLY.dropMs;

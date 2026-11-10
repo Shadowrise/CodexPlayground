@@ -30,7 +30,7 @@ try{
   const page=await context.newPage();await prepare(page);
   const jumpBox=mobile?await page.locator('#touch-jump').boundingBox():undefined,attackBox=mobile?await page.locator('#touch-attack').boundingBox():undefined;
   const tap=box=>page.touchscreen.tap(box.x+box.width/2,box.y+box.height/2);
-  const jump=()=>mobile?tap(jumpBox):page.keyboard.press('Space'),push=()=>mobile?tap(attackBox):page.keyboard.press('q');
+  const jump=()=>mobile?tap(jumpBox):page.keyboard.press('Space'),push=()=>mobile?tap(attackBox):page.keyboard.press('v');
   await jump();await page.waitForFunction(()=>peckQA.c.flight.height>.35&&peckQA.c.flight.networkState()[6]>0);await jump();
   await page.waitForFunction(()=>peckQA.c.flight.levitating&&peckQA.c.flight.atTop);
   await page.evaluate(()=>{peckQA.history=[];peckQA.elapsed=0;});

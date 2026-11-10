@@ -29,7 +29,7 @@ try{
    const q=snapshot?JSON.parse(JSON.stringify(t.states[stage])):t.states[stage],now=q.stageAt+elapsed;
    t.camera.position.set(A.x+20,61,A.z+64);t.camera.lookAt(A.x,0,A.z);t.camera.updateMatrixWorld();
    t.model.update(now/1000,t.camera.position,q,now);t.model.update(now/1000,t.camera.position,q,now+700);
-   t.view.update(q,'solo',now,t.c.actor.position,true,'Q',t.camera);t.renderer.render(t.scene,t.camera);
+   t.view.update(q,'solo',now,t.c.actor.position,true,'V',t.camera);t.renderer.render(t.scene,t.camera);
    const lane=t.view.group.getObjectByName('Topotushka run and wheel countdown lane'),balls=t.view.group.getObjectByName('Дорожки перед волной шариков');
    const uniforms=m=>Object.fromEntries(['progress','attack','width','span'].map(k=>[k,m.material.uniforms[k].value]));
    const matrix=new T.Matrix4();if(balls.count)balls.getMatrixAt(0,matrix);
@@ -52,7 +52,7 @@ try{
    t.camera.position.copy(target).add(new T.Vector3(8,6,15));t.camera.lookAt(target);t.camera.updateMatrixWorld();
    t.model.update(now/1000,t.camera.position,q,now);t.model.update(now/1000,t.camera.position,q,now+700);
    target.copy(t.model.interactionTarget(q)??target);t.camera.position.copy(target).add(new T.Vector3(8,6,15));t.camera.lookAt(target);t.camera.updateMatrixWorld();
-   t.view.update(q,'solo',now,t.c.actor.position,true,'Q',t.camera,0,target);
+   t.view.update(q,'solo',now,t.c.actor.position,true,'V',t.camera,0,target);
    const cue=t.view.targetCue.group;
    const size=t.renderer.getDrawingBufferSize(new T.Vector2()),renderTarget=new T.WebGLRenderTarget(size.x,size.y),old=t.renderer.getRenderTarget(),materials=[];
    cue.traverse(o=>{if(o.isMesh)materials.push(o.material);});const depthTests=materials.map(m=>m.depthTest);
@@ -82,7 +82,7 @@ try{
  }
  const resources=await page.evaluate(()=>{
   const t=warningQA,lane=t.view.group.getObjectByName('Topotushka run and wheel countdown lane');t.pose('wheelWarning',100);const geometry=lane.geometry;t.pose('wheelWarning',1700);const stable=lane.geometry===geometry;
-  t.view.update(undefined,'solo',0,t.c.actor.position,true,'Q',t.camera);return {stable,hidden:!t.view.group.visible};
+  t.view.update(undefined,'solo',0,t.c.actor.position,true,'V',t.camera);return {stable,hidden:!t.view.group.visible};
  });assert(resources.stable&&resources.hidden);
  await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{document.body.classList.add('touch-ui');warningQA.camera.aspect=390/844;warningQA.camera.updateProjectionMatrix();warningQA.pose('wheelWarning',1200);});await page.screenshot({path:output+'wheel-mobile.png'});
  assert.deepEqual(errors,[]);await writeFile(output+'checks.json',JSON.stringify({frames,late,targetDepth,resources,errors},null,2));console.log(JSON.stringify({result:'PASS',frames:frames.length,late,targetDepth,resources,errors,output}));

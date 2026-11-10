@@ -52,7 +52,7 @@ export class PlayerActionHud{
    if(buttons)buttons[i].hidden=!shown;
   });
   if(!shown||!c)return;
-  const keys=scheme==='gamepad'?['X','B','A']:['Q','Shift',t('Пробел')];
+  const keys=scheme==='gamepad'?['X','B','A']:['V','Shift',t('Пробел')];
   state(this.push,keys[0],c.pushAvailable);
   state(this.dash,keys[1],c.dashAvailable,c.playerDash.cooldown);
   state(this.jump,keys[2],c.jumpAvailable,c.state==='Dash'?0:c.flight.hoverRemaining);

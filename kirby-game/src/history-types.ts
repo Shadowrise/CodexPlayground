@@ -1,6 +1,7 @@
 import {KIRBY_VARIANTS} from './variant-palette';
+import {validVisitStats,type VisitStats} from './visit-stats';
 export type DeviceInfo={type:'phone'|'tablet'|'computer'|'unknown';os:string;browser:string;width:number;height:number;orientation:'portrait'|'landscape';input:'touch'|'keyboard'|'gamepad'};
-export type SoloReport={id:string;seq:number;name:string;variant:number;startedAt:number;activeMs:number;startScore:number;score:number;tasksDone:number;tasksTotal:number;end:boolean;device:DeviceInfo};
+export type SoloReport={id:string;seq:number;name:string;variant:number;startedAt:number;activeMs:number;startScore:number;score:number;tasksDone:number;tasksTotal:number;end:boolean;device:DeviceInfo;stats?:VisitStats};
 export const HISTORY_INTERVAL=60000;
 export function deviceInfo(ua:string,touchPoints=0,width=0,height=0,input:DeviceInfo['input']='keyboard'):DeviceInfo{
  const ios=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&touchPoints>1),android=/Android/.test(ua);
@@ -18,5 +19,6 @@ export function sanitizeDevice(v:unknown):DeviceInfo{
 export function validSoloReport(v:unknown,now=Date.now()):v is SoloReport{
  const a=v as SoloReport;
  const score=(x:number)=>Number.isInteger(x)&&x>=0&&x<=10000;
+ if(a?.stats!==undefined&&!validVisitStats(a.stats))return false;
  return !!a&&typeof a.id==='string'&&/^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(a.id)&&Number.isInteger(a.seq)&&a.seq>=0&&a.seq<1e7&&typeof a.name==='string'&&a.name.trim().length>0&&a.name.length<=24&&Number.isInteger(a.variant)&&a.variant>=0&&a.variant<KIRBY_VARIANTS.length&&Number.isFinite(a.startedAt)&&a.startedAt>0&&a.startedAt<=now+60000&&now-a.startedAt<30*86400000&&Number.isFinite(a.activeMs)&&a.activeMs>=0&&a.activeMs<=Math.max(0,now-a.startedAt)+60000&&score(a.startScore)&&score(a.score)&&Number.isInteger(a.tasksDone)&&Number.isInteger(a.tasksTotal)&&a.tasksDone>=0&&a.tasksDone<=a.tasksTotal&&a.tasksTotal>0&&a.tasksTotal<=100&&typeof a.end==='boolean';
 }

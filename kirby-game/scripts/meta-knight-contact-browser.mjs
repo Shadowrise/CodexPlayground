@@ -43,7 +43,7 @@ try{
  await page.waitForTimeout(500);let s=await state(),bots=Object.values(s.opponents);for(let i=0;i<3;i++)for(let j=i+1;j<3;j++)assert(Math.hypot(bots[i].p[0]-bots[j].p[0],bots[i].p[2]-bots[j].p[2])>=2.55);
  await page.screenshot({path:output+'/01-separated.png'});
  await configure((s,now)=>{Object.values(s.opponents).forEach((b,i)=>{b.p=i===0?[-9,0,0]:[10+i*7,0,-20];b.goal=[...b.p];b.thinkAt=now+1e6;b.shoveReady=now+1e6;});});await page.waitForTimeout(200);
- await page.locator('#game canvas').focus();await page.keyboard.press('KeyQ',{delay:80});await page.waitForFunction(()=>!!contactQA.travel.battle.players['knight-ai:0'].bump);await page.waitForTimeout(350);
+ await page.locator('#game canvas').focus();await page.keyboard.press('KeyV',{delay:80});await page.waitForFunction(()=>!!contactQA.travel.battle.players['knight-ai:0'].bump);await page.waitForTimeout(350);
  s=await state();assert(s.opponents['knight-ai:0'].p[0]>-8);assert.equal(s.players['knight-ai:0'].hp,48);assert.equal(Object.values(s.opponents).filter(b=>s.players[b.id].bump).length,1);assert.equal(await page.evaluate(()=>contactQA.travel.opponentsView.characters.get('knight-ai:0').state),'Roll');
  await page.screenshot({path:output+'/02-q-roll.png'});await page.waitForTimeout(1000);
  const player=await page.evaluate(()=>{const q=contactQA;return {id:q.network?.id??'solo',p:[q.c.actor.position.x-2000,0,q.c.actor.position.z]};});

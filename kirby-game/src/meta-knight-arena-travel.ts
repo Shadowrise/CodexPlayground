@@ -129,7 +129,7 @@ export class MetaKnightArenaTravel{
  loading=false;
  get active(){return !!this.current&&!this.loading;}
  get scene(){return this.current?.scene;}
- constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:(boss?:KnightBoss)=>CharacterController|undefined,private battleOptions?:{boss?:()=>KnightBoss;online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];makeOpponent?:(variant:number)=>CharacterController|undefined;pushCue?:()=>void;send:(action:'start'|'attack'|'cancel')=>void;sides?:()=>Record<string,KnightSide>|undefined;chooseSide?:(side:KnightSide)=>void;ability?:(slot:HelperAbility)=>void;win:()=>void;cue:(kind:KnightSound,playbackRate?:number)=>void;stopCosmic?:()=>void;chargeAudio?:(level:number)=>void;prepareCosmic?:()=>Promise<void>|void;bread?:()=>T.Object3D|undefined;firefly?:()=>GLTF|undefined;music?:(active:false|'knight'|'celebrate')=>void}){
+ constructor(private renderer:T.WebGLRenderer,private meadow:T.Scene,private follow:FollowCamera,private clearInput:()=>void,private makeKnight?:(boss?:KnightBoss)=>CharacterController|undefined,private battleOptions?:{boss?:()=>KnightBoss;online:()=>boolean;state:()=>KnightBattle|undefined;id:()=>string;now:()=>number;actors:()=>KnightActor[];profiles?:()=>KnightProfile[];makeOpponent?:(variant:number)=>CharacterController|undefined;pushCue?:()=>void;send:(action:'start'|'attack'|'cancel')=>void;sides?:()=>Record<string,KnightSide>|undefined;chooseSide?:(side:KnightSide)=>void;ability?:(slot:HelperAbility)=>void;win:()=>void;battleStats?:(battle:KnightBattle)=>void;cue:(kind:KnightSound,playbackRate?:number)=>void;stopCosmic?:()=>void;chargeAudio?:(level:number)=>void;prepareCosmic?:()=>Promise<void>|void;bread?:()=>T.Object3D|undefined;firefly?:()=>GLTF|undefined;music?:(active:false|'knight'|'celebrate')=>void}){
   this.overlay.id='arena-loader';this.overlay.hidden=true;this.overlay.setAttribute('role','status');this.overlay.setAttribute('aria-live','polite');
   this.spinner.className='arena-loading-orbit';this.back.type=this.retry.type='button';
   this.retry.addEventListener('click',()=>{const c=this.owner,arrival=this.arrival;this.leave();if(c)void this.enter(c,arrival);});
@@ -208,7 +208,7 @@ export class MetaKnightArenaTravel{
   for(const v of this.fighterFinales.values())v.clear();c.setActivity('Idle');c.beginDuel();c.actor.visible=true;this.life=5;
   if(finished){c.actor.position.set(SITE.x,0,-2);c.yaw=Math.PI;c.actor.rotation.y=Math.PI;}
   this.clearInput();this.attackHeld=false;this.withdrawnBattle=0;
-  if(this.battleOptions?.online())this.battleOptions.send('start');else{this.soloBattle=startKnightBattle([this.localActor(c)],this.localActor(c).id,this.soloNow,this.arenaBoss);}
+  if(this.battleOptions?.online())this.battleOptions.send('start');else{this.soloBattle=startKnightBattle([this.localActor(c)],this.localActor(c).id,this.soloNow,this.arenaBoss);if(this.soloBattle)this.battleOptions?.battleStats?.(this.soloBattle);}
   this.battleOptions?.music?.('knight');
  }
  cancelBattle(){
@@ -216,7 +216,7 @@ export class MetaKnightArenaTravel{
   for(const v of this.fighterFinales.values())v.clear();this.withdrawnBattle=s.id;
   this.battleOptions?.stopCosmic?.();c.flight.reset();this.cosmicFlying=false;c.surfaceY=arenaPortalFloor(c.actor.position.x-SITE.x,c.actor.position.z);c.actor.position.y=c.surfaceY;
   this.setGodMode(false);
-  if(this.battleOptions?.online())this.battleOptions.send('cancel');else cancelKnightBattle(s,id,this.soloNow);
+  if(this.battleOptions?.online())this.battleOptions.send('cancel');else{this.battleOptions?.battleStats?.(s);cancelKnightBattle(s,id,this.soloNow);}
   if(this.current){this.current.scene.add(c.actor);if(!knightBattleActive(s))this.clearCosmicFrame();}this.follow.reset(c.yaw);
   c.setActivity('Idle');c.endDuel();c.actor.visible=true;this.life=5;this.attackHeld=false;this.battleOptions?.music?.(false);this.clearInput();this.renderer.domElement.focus();
  }
@@ -250,6 +250,7 @@ export class MetaKnightArenaTravel{
   if(!paused)this.attackHeld=!!input.attack;
   if(!paused&&battle&&!this.battleOptions?.online())advanceKnightBattle(battle,[this.localActor(c)],now,this.soloGodMode?id:undefined);
   battle=this.battle;
+  if(battle&&!this.battleOptions?.online())this.battleOptions?.battleStats?.(battle);
   const bump=battle?.players[id]?.bump,bumpKey=bump?String(battle!.id)+':'+bump.at:'';
   if(!paused&&bump&&bumpKey!==this.lastBumpKey&&knightBumpActive(battle,id,now)){this.lastBumpKey=bumpKey;if(c.takePush(bump.dx,bump.dz))this.battleOptions?.pushCue?.();}
   this.battleOptions?.music?.(this.musicEvent);
@@ -278,7 +279,7 @@ export class MetaKnightArenaTravel{
   this.current!.updateOcclusion(this.camera,battle?.phase===4&&participating?c.actor.getWorldPosition(new T.Vector3()).add(new T.Vector3(0,1.1*c.actor.scale.x,0)):undefined,dt);
   this.current!.annex.setClosed(knightBattleActive(battle));this.current!.update(seconds,battle,now);
   this.opponentsView?.update(this.displayedBattle,this.current!.scene,this.cosmicFrame,now,paused?0:dt);
-  this.battleView?.update(this.displayedBattle,id,now,paused?0:dt,this.nearKnight(c),input.scheme==='gamepad'?'X':input.scheme==='touch'?t('Толчок'):'Q',!paused,withdrawn,input.cancelDuel,this.camera);
+  this.battleView?.update(this.displayedBattle,id,now,paused?0:dt,this.nearKnight(c),input.scheme==='gamepad'?'X':input.scheme==='touch'?t('Толчок'):'V',!paused,withdrawn,input.cancelDuel,this.camera);
   this.helperViews.get(c)?.updatePlanetLightning(battle,id,now,this.battleView?.gravityPlanet);
   const planet=this.battleView?.gravityPlanet;if(planet){const centre=planet.node.getWorldPosition(new T.Vector3());if(constrainKnightPlanetCamera(this.camera.position,centre,planet.radius)){this.camera.lookAt(this.cosmicFocus);this.camera.updateMatrixWorld();}}
 

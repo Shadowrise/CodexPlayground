@@ -1,6 +1,7 @@
 import {normalizePlayerName,playerNameKey} from '../../kirby-game/src/player-name';
 import {sanitizeDevice,type DeviceInfo,type SoloReport} from '../../kirby-game/src/history-types';
-export type Visit={id:string;mode:'solo'|'online';roomId:string|null;playerId:string|null;name:string;variant:number;startedAt:number;lastSeen:number;endedAt:number|null;activeMs:number;startScore:number;score:number;tasksDone:number;tasksTotal:number;status:'playing'|'left'|'lost'|'finished';completed:boolean;place:number|null;device:DeviceInfo;seq:number};
+import type {VisitStats} from '../../kirby-game/src/visit-stats';
+export type Visit={id:string;mode:'solo'|'online';roomId:string|null;playerId:string|null;name:string;variant:number;startedAt:number;lastSeen:number;endedAt:number|null;activeMs:number;startScore:number;score:number;tasksDone:number;tasksTotal:number;status:'playing'|'left'|'lost'|'finished';completed:boolean;place:number|null;device:DeviceInfo;seq:number;stats?:VisitStats};
 export type HistoryFilter={name?:string;mode?:string;from?:number;to?:number;cursor?:{time:number;id:string}};
 type HistorySql={exec(query:string,...bindings:(string|number|null)[]):{toArray():Record<string,unknown>[]}};
 type HistoryRow=Record<string,unknown>&{device:DeviceInfo;status:string};
@@ -13,6 +14,8 @@ export function initHistory(sql:HistorySql){
  tasks_done INTEGER NOT NULL,tasks_total INTEGER NOT NULL,status TEXT NOT NULL,
  completed INTEGER NOT NULL,place INTEGER,device TEXT NOT NULL,seq INTEGER NOT NULL
  )`);
+ // Keep existing visits intact; NULL means this visit predates these counters.
+ if(!sql.exec('PRAGMA table_info(visits)').toArray().some(column=>column.name==='stats'))sql.exec('ALTER TABLE visits ADD COLUMN stats TEXT');
  sql.exec('CREATE INDEX IF NOT EXISTS visits_time ON visits(started_at DESC,id DESC)');
  sql.exec('CREATE INDEX IF NOT EXISTS visits_name_time ON visits(name_key,started_at DESC,id DESC)');
  sql.exec('CREATE INDEX IF NOT EXISTS visits_mode_time ON visits(mode,started_at DESC,id DESC)');
@@ -21,12 +24,12 @@ export function soloVisit(a:SoloReport,now=Date.now()):Visit{
  return {...a,id:'solo:'+a.id,mode:'solo',roomId:null,playerId:null,name:normalizePlayerName(a.name),lastSeen:now,endedAt:a.end?now:null,status:a.end?'left':'playing',completed:false,place:null,device:sanitizeDevice(a.device)};
 }
 export function writeVisits(sql:HistorySql,visits:Visit[]){
- for(const v of visits.slice(0,20))sql.exec(`INSERT INTO visits VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+ for(const v of visits.slice(0,20))sql.exec(`INSERT INTO visits (id,mode,room_id,player_id,name,name_key,variant,started_at,last_seen,ended_at,active_ms,start_score,score,tasks_done,tasks_total,status,completed,place,device,seq,stats) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
  ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen,ended_at=excluded.ended_at,
  active_ms=MAX(visits.active_ms,excluded.active_ms),score=excluded.score,tasks_done=excluded.tasks_done,tasks_total=excluded.tasks_total,
- status=excluded.status,completed=excluded.completed,place=excluded.place,device=excluded.device,seq=excluded.seq
+ status=excluded.status,completed=excluded.completed,place=excluded.place,device=excluded.device,seq=excluded.seq,stats=COALESCE(excluded.stats,visits.stats)
  WHERE excluded.seq>visits.seq AND visits.ended_at IS NULL`,
- v.id,v.mode,v.roomId,v.playerId,v.name,playerNameKey(v.name),v.variant,v.startedAt,v.lastSeen,v.endedAt,Math.round(v.activeMs),v.startScore,v.score,v.tasksDone,v.tasksTotal,v.status,Number(v.completed),v.place,JSON.stringify(v.device),v.seq);
+ v.id,v.mode,v.roomId,v.playerId,v.name,playerNameKey(v.name),v.variant,v.startedAt,v.lastSeen,v.endedAt,Math.round(v.activeMs),v.startScore,v.score,v.tasksDone,v.tasksTotal,v.status,Number(v.completed),v.place,JSON.stringify(v.device),v.seq,v.stats?JSON.stringify(v.stats):null);
 }
 export function historyPage(sql:HistorySql,f:HistoryFilter){
  const where:string[]=[],args:(number|string)[]=[];
@@ -37,5 +40,5 @@ export function historyPage(sql:HistorySql,f:HistoryFilter){
  if(f.cursor){where.push('(started_at,id) < (?,?)');args.push(f.cursor.time,f.cursor.id);}
  const rows=sql.exec(`SELECT * FROM visits ${where.length?'WHERE '+where.join(' AND '):''} ORDER BY started_at DESC,id DESC LIMIT 51`,...args).toArray();
  const more=rows.length>50;rows.length=Math.min(50,rows.length);
- return {rows:rows.map((r):HistoryRow=>({...r,device:JSON.parse(String(r.device)),status:r.status==='playing'&&Date.now()-Number(r.last_seen)>150000?'lost':String(r.status)})),next:more?{time:rows.at(-1)!.started_at,id:rows.at(-1)!.id}:null};
+ return {rows:rows.map((r):HistoryRow=>({...r,stats:r.stats?JSON.parse(String(r.stats)):null,device:JSON.parse(String(r.device)),status:r.status==='playing'&&Date.now()-Number(r.last_seen)>150000?'lost':String(r.status)})),next:more?{time:rows.at(-1)!.started_at,id:rows.at(-1)!.id}:null};
 }

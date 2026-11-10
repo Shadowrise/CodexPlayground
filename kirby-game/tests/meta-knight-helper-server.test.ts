@@ -54,7 +54,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   const cooldowns=structuredClone(s.players[id].helper.cooldowns);send(helper,actor(2038,0));assert.equal(helper.data.actor.p[0],2012,'the server rejects movement during wind-up');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));assert.equal(room.room.knightSides[id],'boss');assert.equal(room.room.knightBattle.duet.stage,'queued');assert.deepEqual(room.room.knightBattle.players[id].helper.cooldowns,cooldowns);assert.equal(room.room.knightBattle.players[id].hp,6,'the collected bonus heart survives Worker hibernation');
   const resumed=room.room.knightBattle;resumed.stage='open';resumed.until=now+1e9;resumed.from=resumed.to=[12,0,0];const hp=resumed.hp;
-  send(helper,actor(2012,0),[{type:'knight',action:'attack'}]);now+=1000;send(hero,actor());assert.equal(resumed.hp,hp,'ordinary Q never damages the allied boss');
+  send(helper,actor(2012,0),[{type:'knight',action:'attack'}]);now+=1000;send(hero,actor());assert.equal(resumed.hp,hp,'ordinary V never damages the allied boss');
   now=Math.max(now,resumed.players[id].helper.cast.recoverUntil)+100;resumed.until=now+200;send(hero,actor(1980,0));assert.equal(resumed.stage,'duet-gather');
   let guard=0;while(resumed.stage!=='duet-recover'&&guard++<20){now=resumed.until-200;send(hero,actor(1980,0));}assert(guard<20);const until=resumed.until,bossHp=resumed.hp;
   const facing=resumed.duet.yaw??0,bp=knightFormationSide(-3.3,facing),helperPoint=resumed.players[id].helper.cast.from,aimed=(p:number[],back:number)=>({...actor(2000+p[0]-Math.sin(facing)*back,p[2]-Math.cos(facing)*back),q:[0,Math.sin(facing/2),0,Math.cos(facing/2)]});
@@ -78,7 +78,7 @@ test('actual Worker owns side selection, cast locks, persistence, independent he
   const contact=room.room.knightBattle;Object.assign(contact,{stage:'rest',since:now,until:now+1000000,from:[25,0,20],to:[25,0,20]});
   const bots=Object.values(contact.opponents) as any[];bots.forEach((b,i)=>{b.p=i===0?[-9,0,0]:[10+i*7,0,-20];b.goal=[...b.p];b.thinkAt=now+100000;b.shoveReady=now+100000;});
   const facingRight={...actor(1988,0),q:[0,Math.SQRT1_2,0,Math.SQRT1_2]},health=Object.values(contact.players).map((p:any)=>p.hp);
-  send(helper,facingRight,[{type:'hit'},{type:'hit'}]);assert.equal(contact.players[bots[0].id].bump.dx,1);assert.equal(bots.filter(b=>contact.players[b.id].bump).length,1,'Q chooses exactly one AI target');
+  send(helper,facingRight,[{type:'hit'},{type:'hit'}]);assert.equal(contact.players[bots[0].id].bump.dx,1);assert.equal(bots.filter(b=>contact.players[b.id].bump).length,1,'V chooses exactly one AI target');
   assert.deepEqual(Object.values(contact.players).map((p:any)=>p.hp),health,'an ordinary shove never changes hearts');
   now+=500;send(helper,facingRight);assert(bots[0].p[0]>-9,'the authoritative Worker advances the NPC roll');
   await Promise.all(waits);room=new GameRoom(ctx,{});await new Promise(resolve=>setTimeout(resolve,0));const restored=room.room.knightBattle;assert.deepEqual(restored.players[bots[0].id].bump,contact.players[bots[0].id].bump,'the roll survives a Worker wakeup');

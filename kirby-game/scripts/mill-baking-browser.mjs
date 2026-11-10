@@ -19,7 +19,7 @@ try{
  const action=async()=>{if(mobile)await page.locator('#touch-interact').tap();else await page.keyboard.press('e');};
  assert.equal(await page.evaluate(()=>bakingQA.bread.loaf.visible),false,'there is no mountain pickup');
  await move(anchors.lever);await action();
- for(let i=0;i<3;i++){await move([anchors.branches[i][0],0,anchors.branches[i][2]-2],0);if(mobile)await page.locator('#touch-attack').tap();else await page.keyboard.press('q');await page.waitForFunction(i=>bakingQA.watermill.quest.branches[i]>0,i);await page.waitForTimeout(220);}
+ for(let i=0;i<3;i++){await move([anchors.branches[i][0],0,anchors.branches[i][2]-2],0);if(mobile)await page.locator('#touch-attack').tap();else await page.keyboard.press('v');await page.waitForFunction(i=>bakingQA.watermill.quest.branches[i]>0,i);await page.waitForTimeout(220);}
  await move(anchors.lever);await action();await page.waitForTimeout(180);await action();await page.waitForFunction(()=>bakingQA.watermill.quest.stage==='bags');
  const order=await page.evaluate(()=>bakingQA.watermill.quest.order);
  for(let i=0;i<3;i++){await move(anchors.bags[order[i]]);await page.waitForFunction(index=>bakingQA.watermill.quest.carried===index,order[i]);await move(anchors.hopper);await action();await page.waitForFunction(i=>bakingQA.watermill.quest.delivered===i+1,i);}

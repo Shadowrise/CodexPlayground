@@ -25,7 +25,7 @@ try{
   q.pose=(stage,step=0)=>{
    const s=q.rules.startKnightBattle([{id:'solo',p:[0,0,-2],yaw:0,available:true}],'solo',1000);
    Object.assign(s,{stage,step,pattern:stage.startsWith('dash')?'flight':'sword',phase:stage.startsWith('dash')?2:1,since:100000,until:101600,from:[0,0,0],to:stage.startsWith('dash')?[0,0,27]:[0,0,0],yaw:0,height:0});
-   q.travel.soloBattle=s;q.travel.soloNow=100700;q.camera();q.travel.battleView.update(s,'solo',100700,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.render();return s;
+   q.travel.soloBattle=s;q.travel.soloNow=100700;q.camera();q.travel.battleView.update(s,'solo',100700,0,false,'V',true,false,undefined,q.travel.camera);q.travel.render();return s;
   };
   q.arrowPixels=()=>{
    const scene=q.travel.scene,camera=q.travel.camera,renderer=q.renderer,arrows=q.travel.battleView.arrows.filter(a=>a.visible);
@@ -68,7 +68,7 @@ try{
   const q=telegraphQA,s=q.pose('dash-warn'),a={id:'solo',p:[31,1.2,3],yaw:Math.PI,available:true};
   Object.assign(s,{pattern:'dive',stage:'dive',step:1,cycle:2,hp:8,from:[12,0,-12],to:[31,0,0],since:100000,until:100450,checked:100000});
   q.c.actor.position.set(2031,1.2,3);q.rules.advanceKnightBattle(s,[a],s.until);q.waveAt=s.since;q.waveUntil=q.rules.knightPressureWave(s,s.since).until;q.waveState=s;q.waveActor=a;
-  q.wavePose=(elapsed,close=false)=>{const now=q.waveAt+elapsed;q.rules.advanceKnightBattle(s,[a],now);q.camera(!close);if(close){q.travel.camera.position.set(2052,14,25);q.travel.camera.lookAt(2031,2,0);q.travel.camera.updateMatrixWorld();}q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.render();const body=q.travel.scene.getObjectByName('Meta Knight solid golden impact wave');return {stage:s.stage,hp:s.hp,radius:body.material.uniforms.radius.value,visible:body.parent.visible,origin:body.parent.position.toArray(),bodyY:q.travel.knight.actor.getObjectByName('Body_motion').position.y,target:q.travel.scene.getObjectByName('Meta Knight available hit target').visible};};
+  q.wavePose=(elapsed,close=false)=>{const now=q.waveAt+elapsed;q.rules.advanceKnightBattle(s,[a],now);q.camera(!close);if(close){q.travel.camera.position.set(2052,14,25);q.travel.camera.lookAt(2031,2,0);q.travel.camera.updateMatrixWorld();}q.travel.battleView.update(s,'solo',now,0,false,'V',true,false,undefined,q.travel.camera);q.travel.render();const body=q.travel.scene.getObjectByName('Meta Knight solid golden impact wave');return {stage:s.stage,hp:s.hp,radius:body.material.uniforms.radius.value,visible:body.parent.visible,origin:body.parent.position.toArray(),bodyY:q.travel.knight.actor.getObjectByName('Body_motion').position.y,target:q.travel.scene.getObjectByName('Meta Knight available hit target').visible};};
   return {duration:q.waveUntil-q.waveAt,...q.wavePose(0,true)};
  });
  assert.equal(wave.stage,'open');assert(wave.target&&wave.bodyY<.95&&wave.visible&&wave.duration>5500);checks.push(wave);
@@ -85,7 +85,7 @@ try{
   q.pose('slash-warn');const phase1={gold:v.amber.uniforms.tint.value.getHex(),arrow:v.arrows[0].material.color.getHex(),opacity:v.amber.uniforms.baseOpacity.value};
   q.pose('dash-warn');const phase2={gold:v.amberLane.uniforms.tint.value.getHex(),arrow:v.arrows[0].material.color.getHex(),opacity:v.amberLane.uniforms.baseOpacity.value};
   const s=q.pose('slash-warn');Object.assign(s,{phase:3,hp:4,pattern:'star',stage:'cross-warn',step:1,cycle:1,since:100000,until:103600,from:[0,0,-9],to:[0,0,-9],starCross:{pairs:[[0,4],[2,6]],side:0}});q.starState=s;q.c.actor.position.set(2028,0,-12);
-  q.thirdPose=(now=100900)=>{q.travel.soloNow=now;q.travel.battleView.update(s,'solo',now,0,false,'Q',true,false,undefined,q.travel.camera);q.travel.starCameraMix=1;q.travel.placeCamera(q.c,0);q.travel.render();};q.thirdPose();
+  q.thirdPose=(now=100900)=>{q.travel.soloNow=now;q.travel.battleView.update(s,'solo',now,0,false,'V',true,false,undefined,q.travel.camera);q.travel.starCameraMix=1;q.travel.placeCamera(q.c,0);q.travel.render();};q.thirdPose();
   const u=v.assault.cross.mesh.material.uniforms,phase3={gold:u.tint.value.getHex(),arrow:v.assault.cross.arrows.material.color.getHex(),opacity:u.baseOpacity.value};
   const bolts=q.travel.scene.getObjectByName('Golden crystal lightning cores'),blade=q.travel.knight.actor.getObjectByName('Galaxia'),tip=blade.localToWorld(new T.Vector3(-.315,2.05,0));tip.x-=2000;
   const m=new T.Matrix4(),endpoints=q.star.crossPairs(s).flat().map((index,i)=>{bolts.getMatrixAt(i*44,m);const start=new T.Vector3(0,-.5,0).applyMatrix4(m);bolts.getMatrixAt(i*44+31,m);const end=new T.Vector3(0,.5,0).applyMatrix4(m);return {fromError:start.distanceTo(tip),toError:end.distanceTo(new T.Vector3().fromArray(q.star.crystalPoint(index)))};});

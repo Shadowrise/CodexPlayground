@@ -46,7 +46,7 @@ try{
   const touchButton=mobile?await page.locator('#touch-jump').boundingBox():undefined;
   const tap=()=>mobile?page.touchscreen.tap(touchButton.x+touchButton.width/2,touchButton.y+touchButton.height/2):page.keyboard.press('Space');
   const attackButton=mobile?await page.locator('#touch-attack').boundingBox():undefined;
-  const push=()=>mobile?page.touchscreen.tap(attackButton.x+attackButton.width/2,attackButton.y+attackButton.height/2):page.keyboard.press('q');
+  const push=()=>mobile?page.touchscreen.tap(attackButton.x+attackButton.width/2,attackButton.y+attackButton.height/2):page.keyboard.press('v');
   await reset(page);await tap();const single=checkArc(await finish(page));
   await reset(page);
   if(mobile){await tap();}else{await page.keyboard.down('Space');}

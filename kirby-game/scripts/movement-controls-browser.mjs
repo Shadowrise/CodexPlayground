@@ -58,12 +58,12 @@ try{
  assert.equal(await page.evaluate(()=>controlsQA.c.actions.get('Run').getEffectiveTimeScale()),2);
  await page.keyboard.up('w');await page.waitForFunction(()=>controlsQA.c.state==='Idle');
  report.keyboard.defaultSpeed=6.8;
- assert.deepEqual(await page.locator('#player-actions-dock .player-action-key').allTextContents(),['Q','Shift','Пробел']);
+ assert.deepEqual(await page.locator('#player-actions-dock .player-action-key').allTextContents(),['V','Shift','Пробел']);
  const actionBounds=await Promise.all(['#player-push-hud','#knight-dash-hud','#player-jump-hud'].map(selector=>page.locator(selector).boundingBox()));
  assert(actionBounds[0].x+actionBounds[0].width<actionBounds[1].x&&actionBounds[1].x+actionBounds[1].width<actionBounds[2].x);
- await page.keyboard.press('q');await page.waitForFunction(()=>document.querySelector('#player-push-hud').dataset.state==='cooldown');
+ await page.keyboard.press('v');await page.waitForFunction(()=>document.querySelector('#player-push-hud').dataset.state==='cooldown');
  assert(await page.locator('#player-push-hud .player-action-countdown').isHidden());
- assert.equal(await page.locator('#player-push-hud').innerText(),'Q');
+ assert.equal(await page.locator('#player-push-hud').innerText(),'V');
  await page.waitForFunction(()=>controlsQA.c.pushAvailable);await frames(page);
  assert.equal(await page.locator('#player-push-hud').getAttribute('data-state'),'ready');
  await reset(page);await page.keyboard.press('Space');await page.waitForFunction(()=>controlsQA.c.flight.active);
@@ -138,7 +138,7 @@ try{
  assert.equal(await mobile.locator('#touch-jump #knight-dash-hud').count(),0);
  assert.equal(await mobile.locator('#touch-dash #knight-dash-hud').count(),1);
  assert.equal(await mobile.locator('.touch-actions .player-action-key:visible').count(),0);
- assert.doesNotMatch(await mobile.locator('.touch-actions').innerText(),/Q|Shift|Пробел/);
+ assert.doesNotMatch(await mobile.locator('.touch-actions').innerText(),/V|Shift|Пробел/);
  assert.doesNotMatch(await mobile.locator('.touch-actions').innerText(),/Толчок|Рывок|Полёт|Прыжок/);
  await mobile.waitForFunction(()=>!controlsQA.c.playerDash.active);await reset(mobile);
  await mobile.locator('#touch-jump').tap();await mobile.waitForFunction(()=>controlsQA.c.flight.active);

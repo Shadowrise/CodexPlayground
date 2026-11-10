@@ -58,7 +58,7 @@ test('coincident NPCs and crowds at the arena edge separate and stay apart durin
   for(let now=100050;now<103000;now+=50){advanceKnightBattle(s,[actor],now);spacing(bots);for(const b of bots)assert(Math.hypot(b.p[0],b.p[2])<=43.001);}
  }
 });
-test('Q pushes exactly one NPC in front, moves it with a roll, and never changes health',()=>{
+test('V pushes exactly one NPC in front, moves it with a roll, and never changes health',()=>{
  const {s,actor,bots}=fixture();actor.p=[-12,0,0];actor.yaw=Math.PI/2;bots[0].p=[-9,0,0];bots[1].p=[-15,0,0];bots[2].p=[0,0,20];
  const before=Object.fromEntries(Object.entries(s.players).map(([id,p])=>[id,p.hp]));assert.equal(pushKnightOpponent(s,actor,100050),bots[0].id);assert(knightBumpActive(s,bots[0].id,100100));assert.equal(pushKnightOpponent(s,actor,100100),undefined,'a rolling target cannot be repeatedly stunned');
  for(let now=100100;now<=101000;now+=50)advanceKnightBattle(s,[actor],now);

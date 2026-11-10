@@ -75,7 +75,7 @@ window.metaActionCheck={get c(){return character},get selected(){return selected
  await command(page,'/time 12');
  await page.evaluate(()=>{const q=metaActionCheck,c=q.c;c.setActivity('Idle');c.actor.position.set(0,0,0);c.actor.rotation.set(0,0,0);c.yaw=0;c.swimming=false;c.surfaceY=0;});
  const hiddenUi=await page.addStyleTag({content:'body > :not(#game):not(script):not(style){visibility:hidden!important}'});
- for(const [name,key,times] of [['Hello','1',[0,.5,.72,.95,1.18]],['Push','q',[0,.10,.23,.37,.62]]]){
+ for(const [name,key,times] of [['Hello','1',[0,.5,.72,.95,1.18]],['Push','v',[0,.10,.23,.37,.62]]]){
   await page.keyboard.press(key);await page.waitForFunction(name=>metaActionCheck.c.state===name&&metaActionCheck.c.actions.get(name).time>0,name);
   const native=await page.evaluate(name=>{const c=metaActionCheck.c;return {native:c.isMetaKnight,state:c.state,clip:c.actions.get(name).getClip().name,hasNative:c.hasNativeAnimations};},name);
   assert(native.native&&native.hasNative&&native.state===name&&native.clip===name);await page.evaluate(()=>metaActionCheck.pause());

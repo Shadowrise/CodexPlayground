@@ -1,7 +1,12 @@
 import {HISTORY_INTERVAL,type DeviceInfo,type SoloReport} from './history-types';
+import {newVisitProgress,recordVisitBattle} from './visit-stats';
+import type {KnightBattle} from './meta-knight-battle';
 type Snapshot={name:string;variant:number;score:number;tasksDone:number;tasksTotal:number};
 /** Best-effort telemetry. No request is awaited by the game or its render loop. */
 export class SoloHistory{
+ private progress=newVisitProgress();
+ collect(kind:'seals'|'feathers'){if(!this.stopped)this.progress.stats[kind]++;}
+ battle(battle:KnightBattle){if(!this.stopped)recordVisitBattle(this.progress,battle,'solo');}
  private id=crypto.randomUUID();private startedAt=Date.now();private startScore:number;
  private seq=0;private activeMs=0;private last=performance.now();private visible=!document.hidden;private stopped=false;
  private timer:ReturnType<typeof setInterval>;
@@ -15,7 +20,7 @@ export class SoloHistory{
  private report(end:boolean){
   try{
    this.account();const a=this.snapshot();
-   const report:SoloReport={...a,id:this.id,seq:this.seq++,startedAt:this.startedAt,activeMs:Math.round(this.activeMs),startScore:this.startScore,end,device:this.device()};
+   const report:SoloReport={...a,id:this.id,seq:this.seq++,startedAt:this.startedAt,activeMs:Math.round(this.activeMs),startScore:this.startScore,end,device:this.device(),stats:this.progress.stats};
    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5000);
    // text/plain avoids a CORS preflight and keepalive allows a final report during navigation.
    void fetch(this.base.replace(/\/$/,'')+'/history/solo',{method:'POST',body:JSON.stringify(report),headers:{'Content-Type':'text/plain'},keepalive:true,signal:controller.signal}).catch(()=>{}).finally(()=>clearTimeout(timeout));

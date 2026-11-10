@@ -28,7 +28,7 @@ try{
    for(const npc of t.npcs){npc.actor.position.set(-20,0,-20);npc.update=()=>{};}
    n.roll.reset();n.networkAnimate('Idle',0);n.actor.scale.setScalar(size);n.actor.position.set(0,0,8);
   },size);
-  await page.waitForTimeout(700);await page.keyboard.press('q');
+  await page.waitForTimeout(700);await page.keyboard.press('v');
   await page.waitForFunction(()=>window.pushSizeTest.npcs[0].state==='Roll');
   console.log('NPC pushed',size);
   assert.equal(await page.evaluate(()=>window.pushSizeTest.npcs[0].health),3);
@@ -59,12 +59,12 @@ try{
   console.log('Before drum push',JSON.stringify({size,y,...before}));
   if(y>0)assert(before.surface>2.5,'the character is supported by the actual back');
   await page.screenshot({path:`node_modules/.cache/push-size/drum-${size}-${y}-before.png`});
-  await page.keyboard.press('q');
+  await page.keyboard.press('v');
   if(hit)await page.waitForFunction(()=>window.pushSizeTest.q.stage==='bell',{},{timeout:3000});
   else {await page.waitForTimeout(200);assert.equal(await page.evaluate(()=>window.pushSizeTest.q.stage),'back');}
   reports.push({size,y,hit,...before});
   console.log('Drum checked',JSON.stringify(reports.at(-1)));
  }
  assert.deepEqual(errors,[]);
- console.log('PASS real Q pushes at 700% against 100%/30% NPCs, grounded/back drum and normal-size height guard',JSON.stringify(reports));
+ console.log('PASS real V pushes at 700% against 100%/30% NPCs, grounded/back drum and normal-size height guard',JSON.stringify(reports));
 }finally{await browser.close();}
