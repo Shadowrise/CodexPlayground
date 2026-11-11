@@ -8,7 +8,11 @@ import {createFoliageTexture} from '../src/foliage-texture';
 test('mountain spruces share the meadow needle texture and retain every established planting',()=>{
  const woodland=createMountainWoodland(),sites=woodland.userData.treePositions;
  assert.equal(sites.length,5676);
- assert.equal(createHash('sha256').update(JSON.stringify(sites)).digest('hex'),'63ce5da37215ca8c6e9417aaddadfefec5d6bb072afb05af4bf23ae394433724');
+ // The mountain profile uses fractional powers, whose last bit differs between
+ // JS engines and platforms (heights move by ~1e-14 m). A micrometre grid keeps
+ // the check on every planting while staying portable.
+ const planted=sites.map((site:{x:number;y:number;z:number;radius:number})=>[site.x,site.y,site.z,site.radius].map(value=>Math.round(value*1e6)/1e6));
+ assert.equal(createHash('sha256').update(JSON.stringify(planted)).digest('hex'),'2b11c6bbaf8071310c2a467ad554a20526c2fa149b896d87770c3afb1cb9c7a7');
  const crowns=woodland.getObjectByName('Mountain evergreen crowns')!;
  const reference=createFoliageTexture('spruce');
  const first=(crowns.children[0] as T.LOD).levels[0].object as T.InstancedMesh<T.BufferGeometry,T.MeshStandardMaterial>;

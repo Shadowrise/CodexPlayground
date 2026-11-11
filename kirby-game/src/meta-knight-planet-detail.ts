@@ -11,9 +11,19 @@ export function planetRelief(direction:T.Vector3,world=0){
  const d=direction.clone().normalize(),seed=world*7.13,wide=noise(d.x*5+seed,d.y*5,d.z*5),ridge=1-Math.abs(noise(d.x*36,d.y*36+seed,d.z*36)*2-1),grain=noise(d.x*95,d.y*95,d.z*95+seed);
  return .0012+.003*wide+.0035*ridge*ridge+.0011*grain;
 }
+// One relief sphere per world for the session; dispose() releases only its GPU buffers.
+const detailedPlanets=new Map<number,T.SphereGeometry>();
 export function detailedPlanetGeometry(world:number){
+ const work=detailedPlanetWork(world);while(!work.next().done);
+ return detailedPlanets.get(world)!;
+}
+/** The same relief sphere in resumable steps. */
+export function* detailedPlanetWork(world:number):Generator<void,void,void>{
+ if(detailedPlanets.has(world))return;
  const radius=COSMIC_WORLDS[world].radius,g=new T.SphereGeometry(radius,160,104),p=g.getAttribute('position'),d=new T.Vector3();
- for(let i=0;i<p.count;i++){d.fromBufferAttribute(p,i);d.multiplyScalar(1+planetRelief(d,world));p.setXYZ(i,d.x,d.y,d.z);}g.computeVertexNormals();return g;
+ for(let i=0;i<p.count;i++){d.fromBufferAttribute(p,i);d.multiplyScalar(1+planetRelief(d,world));p.setXYZ(i,d.x,d.y,d.z);if(i%1000===999)yield;}
+ yield;g.computeVertexNormals();
+ if(!detailedPlanets.has(world))detailedPlanets.set(world,g);else g.dispose();
 }
 /** Fine coasts, biomes, cloud filaments, mineral grain and relief are evaluated without bitmap magnification. */
 export function detailPlanetMaterial(material:T.ShaderMaterial){

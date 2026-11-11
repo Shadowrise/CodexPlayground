@@ -6,11 +6,36 @@ const noise=`float hash(vec3 p){p=fract(p*.3183099+vec3(.1,.2,.3));p*=17.;return
 float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);}
 float fbm(vec3 p){float n=0.,a=.5;for(int i=0;i<5;i++){n+=noise(p)*a;p=p*2.04+vec3(3.1,1.7,2.3);a*=.5;}return n;}`;
 
+// The worlds read their lattice values from one small repeating 3D texture.
+// Evaluating the hashes arithmetically made Direct3D compile every planet
+// program for 4-12 seconds; with lookups the same surfaces compile in well
+// under a second. The red channel is the value noise lattice, the others seed
+// the cell patterns below. The data is fixed, so every player sees one sky.
+const PLANET_NOISE_SIZE=64;
+let planetNoiseData:T.Data3DTexture|undefined;
+export function planetNoiseTexture(){
+ if(planetNoiseData)return planetNoiseData;
+ const data=new Uint8Array(PLANET_NOISE_SIZE**3*4);let seed=1783;
+ for(let i=0;i<data.length;i++){seed=Math.imul(seed,1664525)+1013904223|0;data[i]=seed>>>24;}
+ const texture=new T.Data3DTexture(data,PLANET_NOISE_SIZE,PLANET_NOISE_SIZE,PLANET_NOISE_SIZE);
+ texture.name='Planet noise lattice';texture.format=T.RGBAFormat;texture.type=T.UnsignedByteType;texture.minFilter=texture.magFilter=T.LinearFilter;
+ texture.wrapS=texture.wrapT=texture.wrapR=T.RepeatWrapping;texture.generateMipmaps=false;texture.unpackAlignment=1;texture.needsUpdate=true;
+ // Cloned planet materials copy their uniforms. A texture copy would need its
+ // own upload; every world reads this one lattice instead.
+ texture.clone=()=>texture;
+ return planetNoiseData=texture;
+}
+// Smoothing the fraction before a linear lookup reproduces smooth value noise.
+const planetNoise=`uniform highp sampler3D planetNoise;
+float hash(vec3 p){return textureLod(planetNoise,(floor(p)+.5)/${PLANET_NOISE_SIZE}.,0.).r;}
+float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return textureLod(planetNoise,(i+f+.5)/${PLANET_NOISE_SIZE}.,0.).r;}
+float fbm(vec3 p){float n=0.,a=.5;for(int i=0;i<5;i++){n+=noise(p)*a;p=p*2.04+vec3(3.1,1.7,2.3);a*=.5;}return n;}`;
+
 // Distance between the two nearest cells forms continuous faults around plates.
 const faults=`float plateEdge(vec3 p){vec3 cell=floor(p),f=fract(p);float first=20.,second=20.;
  for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++){
   vec3 g=vec3(float(x),float(y),float(z)),id=cell+g;
-  vec3 seed=vec3(hash(id),hash(id+17.3),hash(id+31.7));vec3 delta=g+.18+.64*seed-f;float v=dot(delta,delta);
+  vec3 seed=textureLod(planetNoise,(id+.5)/${PLANET_NOISE_SIZE}.,0.).gba;vec3 delta=g+.18+.64*seed-f;float v=dot(delta,delta);
   if(v<first){second=first;first=v;}else second=min(second,v);
  }return sqrt(second)-sqrt(first);}`;
 
@@ -19,7 +44,7 @@ const faults=`float plateEdge(vec3 p){vec3 cell=floor(p),f=fract(p);float first=
 const basins=`float basin(vec3 p){vec3 cell=floor(p),f=fract(p);float nearest=20.;
  for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++){
   vec3 g=vec3(float(x),float(y),float(z)),id=cell+g;
-  vec3 seed=vec3(hash(id+4.2),hash(id+23.1),hash(id+53.8));
+  vec3 seed=textureLod(planetNoise,(id+vec3(21.5,9.5,37.5))/${PLANET_NOISE_SIZE}.,0.).gba;
   nearest=min(nearest,length(g+.22+.56*seed-f));
  }return nearest;}`;
 
@@ -64,7 +89,7 @@ export class MetaKnightCosmicSky{
  }
  private planet(index:number){
   const world=COSMIC_WORLDS[index],kind=world.kind;
-  const material=new T.ShaderMaterial({uniforms:{clock:{value:0},kind:{value:kind},seed:{value:index*13.71},low:{value:new T.Color(world.low)},high:{value:new T.Color(world.high)}},vertexShader:'varying vec3 p;varying vec3 n;varying vec3 view;void main(){p=position;n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);view=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',fragmentShader:`varying vec3 p;varying vec3 n;varying vec3 view;uniform float clock;uniform float kind;uniform float seed;uniform vec3 low;uniform vec3 high;${noise}${faults}${basins}
+  const material=new T.ShaderMaterial({uniforms:{clock:{value:0},kind:{value:kind},seed:{value:index*13.71},low:{value:new T.Color(world.low)},high:{value:new T.Color(world.high)},planetNoise:{value:planetNoiseTexture()}},vertexShader:'varying vec3 p;varying vec3 n;varying vec3 view;void main(){p=position;n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);view=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',fragmentShader:`varying vec3 p;varying vec3 n;varying vec3 view;uniform float clock;uniform float kind;uniform float seed;uniform vec3 low;uniform vec3 high;${planetNoise}${faults}${basins}
    void main(){vec3 d=normalize(p),offset=vec3(seed,seed*.31,seed*.73);float cloud=fbm(d*9.+offset+vec3(0.,clock*.007,0.));float detail=fbm(d*36.+offset);vec3 color;vec3 emission=vec3(0.);
    if(kind<.5){float continent=smoothstep(.43,.58,fbm(d*4.6));color=mix(low,high,continent);float ice=smoothstep(.78,.96,abs(d.y));color=mix(color,vec3(.65,.83,.90),ice);color=mix(color,vec3(.76,.85,.94),smoothstep(.57,.75,cloud)*.7);}
    else if(kind<1.5||kind>10.5){float latitude=kind<1.5?d.y:d.y*.85+d.x*.16;float bands=.5+.35*sin(latitude*(kind<1.5?32.:51.)+cloud*6.)+.12*sin(latitude*110.+detail*4.);color=mix(low,high,smoothstep(.1,.9,bands));color+=pow(cloud,5.)*.6;}
@@ -111,4 +136,13 @@ export class MetaKnightCosmicSky{
   this.star.position.set(-150+Math.sin(time*.055)*38,165+Math.sin(time*.09)*12,-105);this.star.rotation.set(.08*Math.sin(time),time*.12,.12*Math.sin(time*.7));this.starHalo.material.opacity=.75+.12*Math.sin(time*2);
  }
  dispose(){const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());this.ringTextures.forEach(t=>t.dispose());this.starHalo.material.map?.dispose();this.starHalo.material.dispose();this.group.removeFromParent();}
+}
+
+/** The full planet surface takes Direct3D seconds to compile. This shares its
+ * colours, sun and rim light without the procedural relief. It serves the
+ * blurred environment capture and shows a world until its full program is
+ * linked. The uniforms are the source's own objects. */
+export function planetStandIn(source:T.ShaderMaterial){
+ return new T.ShaderMaterial({uniforms:{...source.uniforms},vertexShader:'varying vec3 n;varying vec3 view;void main(){n=normalize(normalMatrix*normal);vec4 mv=modelViewMatrix*vec4(position,1.);view=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',fragmentShader:`varying vec3 n;varying vec3 view;uniform vec3 low;uniform vec3 high;
+  void main(){vec3 color=mix(low,high,.5);float sun=dot(normalize(n),normalize(vec3(-.65,.70,.6)));float light=.075+.925*smoothstep(-.17,.75,sun);color*=light;float rim=pow(1.-max(0.,dot(normalize(n),normalize(view))),3.);color+=vec3(.12,.27,.47)*rim*max(.1,sun);gl_FragColor=vec4(color,1.);\n#include <colorspace_fragment>\n}`});
 }

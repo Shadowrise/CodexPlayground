@@ -1,13 +1,16 @@
 import {Object3D,Vector3} from 'three';
+import {updateCharacterDetail} from './character-detail';
 export const MIST_DISTANCE=84;
 export const ACTOR_DISTANCE=168;
 export const FRUIT_DISTANCE=336;
 const position=new Vector3();
 const mistCache=new WeakMap<Object3D,Object3D[]>();
 /** Render-only limits: simulation and network state continue outside the view radius. */
-export function updateVisibility(root:Object3D,camera:Vector3,exists=true,alwaysVisible=false,distance=ACTOR_DISTANCE){
+export function updateVisibility(root:Object3D,camera:Vector3,exists=true,alwaysVisible=false,distance=ACTOR_DISTANCE,character=false){
  root.getWorldPosition(position);
- root.visible=exists&&root.userData.coasterDistant!==true&&(alwaysVisible||position.distanceToSquared(camera)<=distance**2);
+ const distanceSquared=position.distanceToSquared(camera);
+ root.visible=exists&&root.userData.coasterDistant!==true&&(alwaysVisible||distanceSquared<=distance**2);
+ if(character&&root.visible)updateCharacterDetail(root,distanceSquared);
  let mists=mistCache.get(root);
  if(!mists){mists=[];root.traverse(o=>{if(o.name==='Fruit colored mist')mists!.push(o);});mistCache.set(root,mists);}
  for(const mist of mists){mist.getWorldPosition(position);mist.visible=position.distanceToSquared(camera)<=MIST_DISTANCE**2;}

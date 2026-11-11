@@ -34,6 +34,7 @@ import {cosmicSpinAngle,cosmicOrbs} from './meta-knight-cosmic-spin';
 import {MetaKnightCosmicMeteorView} from './meta-knight-cosmic-meteor-view';
 import {cosmicMeteorStage,meteorPoint} from './meta-knight-cosmic-meteor';
 import {MetaKnightCosmicRefugeView} from './meta-knight-cosmic-refuge-view';
+import {planetStandIn} from './meta-knight-cosmic-sky';
 import {COSMIC_REFUGE,cosmicRefugeStage,refugeSweepMs,refugeAngle} from './meta-knight-cosmic-refuge';
 import {gravityChargeVolume} from './meta-knight-gravity-charge-state';
 import {KNIGHT_WARNING_STYLE} from './meta-knight-warning-style';
@@ -119,8 +120,37 @@ export class MetaKnightBattleView{
   this.countdown.id='knight-battle-countdown';this.countdown.hidden=true;this.countdown.dataset.i18nIgnore='';this.countdown.setAttribute('role','status');this.countdown.setAttribute('aria-live','polite');this.countdown.setAttribute('aria-atomic','true');document.body.append(this.countdown);
  }
  private burst(now:number,p:T.Vector3){this.burstAt=now;this.burstPosition.copy(p);}
+ // The captured worlds and their fracture surfaces appear only in the fourth
+ // phase, minutes into a duel, yet Direct3D needs many seconds to compile them.
+ // They compile in parallel while the arena is already playable.
+ private late:{materials:Set<T.Material>;finish:()=>void;after?:()=>void;cancel?:()=>void}[]=[];
+ private exercise(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera,roots:readonly T.Object3D[]){
+  const states:{object:T.Object3D;visible:boolean;culled:boolean;count?:number}[]=[];
+  for(const root of roots)root.traverse(object=>{states.push({object,visible:object.visible,culled:object.frustumCulled,count:object instanceof T.InstancedMesh?object.count:undefined});object.visible=true;object.frustumCulled=false;if(object instanceof T.InstancedMesh)object.count=1;});
+  const viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest();
+  try{renderer.setViewport(0,0,64,64);renderer.setScissor(0,0,64,64);renderer.setScissorTest(true);renderer.render(scene,camera);}
+  finally{
+   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);
+   for(const {object,visible,culled,count} of states){object.visible=visible;object.frustumCulled=culled;if(object instanceof T.InstancedMesh)object.count=count!;}
+  }
+ }
+ /** Once the late programs are linked, upload and exercise them in one small
+  * draw before a normal frame, as prepare() does for everything else. */
+ warmLate(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera){
+  // Programs link in the order they were started: finish each set as it arrives.
+  while(this.late.length){
+   const next=this.late[0];
+   for(const material of next.materials){const program=(renderer.properties.get(material) as {currentProgram?:{isReady():boolean}}).currentProgram;if(program&&!program.isReady())return;}
+   // Only a finished set may be drawn: showing a pending one would block on its link.
+   this.late.shift();next.finish();if(next.after)try{this.exercise(renderer,scene,camera,[this.group]);}finally{next.after();}
+  }
+ }
  async prepare(renderer:T.WebGLRenderer,scene:T.Scene,camera:T.Camera,extra:readonly T.Object3D[]=[]){
-  const eyes=this.cosmic.prepareEyes(),surfaces=this.refuge.prepareSurfaces();this.group.add(eyes,surfaces);
+  const eyes=this.cosmic.prepareEyes(),surfaces=this.refuge.prepareSurfaces(),planets=this.refuge.lateObjects(),homes=planets.map(planet=>planet.parent);
+  planets.forEach(planet=>planet.removeFromParent());this.group.add(eyes);
+  // The vista shows its worlds at once with the light stand-in.
+  const vista=this.refuge.vistaPlanets(),detailed=vista.map(planet=>planet.material),standIns=detailed.map(planetStandIn);
+  vista.forEach((planet,i)=>planet.material=standIns[i]);
   const states:{object:T.Object3D;visible:boolean;culled:boolean;count?:number}[]=[];
   for(const root of [this.group,...extra])root.traverse(object=>{states.push({object,visible:object.visible,culled:object.frustumCulled,count:object instanceof T.InstancedMesh?object.count:undefined});object.visible=true;object.frustumCulled=false;if(object instanceof T.InstancedMesh)object.count=1;});
   const viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest();
@@ -130,9 +160,20 @@ export class MetaKnightBattleView{
    // Use the real framebuffer: render targets select a different color-space program.
    renderer.setViewport(0,0,64,64);renderer.setScissor(0,0,64,64);renderer.setScissorTest(true);renderer.render(scene,camera);
   }finally{
-   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);eyes.removeFromParent();surfaces.removeFromParent();
+   renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);eyes.removeFromParent();
    for(const {object,visible,culled,count} of states){object.visible=visible;object.frustumCulled=culled;if(object instanceof T.InstancedMesh)object.count=count!;}
+   planets.forEach((planet,i)=>homes[i]?.add(planet));
   }
+  // compile() only starts the parallel build and returns; warmLate() finishes it.
+  // The vista comes first: its worlds are in view from the first frame.
+  const start=(objects:readonly T.Object3D[])=>{const materials=new Set<T.Material>();for(const object of objects)for(const material of renderer.compile(object,camera,scene))materials.add(material);return materials;};
+  const probes=vista.map((planet,i)=>new T.Mesh(planet.geometry,detailed[i]));
+  const restoreVista=()=>{vista.forEach((planet,i)=>{if(planet.material===standIns[i])planet.material=detailed[i];});standIns.forEach(material=>material.dispose());};
+  this.late=[
+   // The visible worlds simply switch to their finished surface.
+   {materials:start(probes),finish:restoreVista,cancel:restoreVista},
+   {materials:start([...planets,surfaces]),finish:()=>{this.group.add(surfaces);},after:()=>{surfaces.removeFromParent();}},
+  ];
  }
  update(s:KnightBattle|undefined,id:string,now:number,dt:number,near:boolean,attackKey:string,visible:boolean,withdrawn=false,cancelSource?:string,camera?:T.Camera){
   this.chargeAudio(visible?gravityChargeVolume(s,now):0);
@@ -266,5 +307,5 @@ export class MetaKnightBattleView{
   if(stage&&hints[stage])this.hint.textContent=t(hints[stage]);
   else if(!stage)this.hint.textContent=t('Подойди к Мета Пиджи, чтобы начать дуэль');
  }
- dispose(){this.lifeFirefly?.dispose();this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.lighting.removeFromParent();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+ dispose(){for(const late of this.late)late.cancel?.();this.late=[];this.lifeFirefly?.dispose();this.clearCosmicAudio();this.cosmic.dispose();this.cosmicOrbs.dispose();this.meteor.dispose();this.refuge.dispose();this.finale.dispose();this.lighting.removeFromParent();this.events.abort();this.partyLayout.disconnect();this.party.dispose();this.healthBar.dispose();this.lightning.dispose();this.cancelHold.reset();this.motion.clear();this.swordSwing.reset();this.dashSparks.dispose();this.assault.dispose();this.wave.dispose();this.countdown.remove();this.hud.remove();this.dazedStars.dispose();this.crescent.dispose();this.group.removeFromParent();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();this.group.traverse(o=>{if(o instanceof T.Mesh){geometries.add(o.geometry);(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>materials.add(m));}});for(const m of [this.amber,this.redGlass,this.amberLane,this.redLane,this.coral])materials.add(m);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
 }

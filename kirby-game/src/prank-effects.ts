@@ -72,7 +72,7 @@ export class PrankEffects{
     this.restores.push({root,p:root.position.clone(),s:root.scale.clone()});root.position.y+=pulse*.12;root.scale.multiply(new T.Vector3(1+pulse*.07,1-pulse*.055,1+pulse*.07));
     e.group.position.copy(target.actor.position);e.group.quaternion.copy(target.actor.quaternion);e.group.scale.copy(target.actor.scale);
     // The pigeon mouth is at the tip of its animated beak, above Kirby's mouth height.
-    if(beak)beak.localToWorld(e.group.position.set(0,-.04,.52));
+    if(beak){beak.updateWorldMatrix(true,false);beak.localToWorld(e.group.position.set(0,-.04,.52));}
     for(let i=0;i<12;i++){const b=e.parts[i],age=phase-i*.065;b.visible=age>=0&&age<1.75;if(!b.visible)continue;const radius=(.1+(i%4)*.037)*Math.min(1,age*8)*smooth(Math.min(remaining,1.75-age)*4);b.scale.setScalar(radius);b.position.set(Math.sin(i*2.4+age)*((beak?0:.18)+age*.42),(beak?0:1.18)+age*(.75+(i%3)*.12),(beak?0:.92)+age*.45);b.rotation.z=age*.3+i;}
     const beat=Math.floor(t/2);if(beat>e.lastSound){e.lastSound=beat;if(phase<.2)this.sound('hiccup',gain*.55);}
    }else if(event.kind==='rainbow'){

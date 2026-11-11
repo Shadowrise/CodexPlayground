@@ -6,6 +6,7 @@ import {MeadowTutorial} from './tutorial';
 import {disposeActor} from './actor-lifecycle';
 import {configureSceneryBatching} from './scenery-batch';
 import {StaticWorldMatrices} from './static-world';
+import {shareIdenticalMaterials} from './shared-materials';
 import {skipShadowOnlyColourPass} from './scenery-shadows';
 import {updateTreeShadows} from './tree-shadows';
 import {WorldShadows} from './world-shadows';
@@ -63,7 +64,7 @@ import {sceneryClearance} from './landmarks';
 import {flatGround} from './pond-layout';
 import {MeadowChat} from './chat';
 import {emoteMessage,pidgieScareLog,pidgieInterestLog,pidgieFriendLog,metaKnightVictoryLog,metaKnightSealLogs,type LogEntry} from './world-log';
-import {updateVisibility,FRUIT_DISTANCE} from './visibility';
+import {updateVisibility,ACTOR_DISTANCE,FRUIT_DISTANCE} from './visibility';
 import { createHostBadge } from './host-badge';
 import { NetworkSession } from './network';
 import { actorState, applyActor, restoreNetworkPlayer, RemotePlayers } from './network-actors';
@@ -453,6 +454,9 @@ configureSceneryBatching(renderer.extensions.has('WEBGL_multi_draw'));
 renderer.setPixelRatio(renderScale);
 renderer.setSize(innerWidth, innerHeight);
 const surfaceAnisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+// Three reads every program's info log on first use: a blocking round trip per
+// program. Keep the diagnostics for development builds only.
+renderer.debug.checkShaderErrors=import.meta.env.DEV;
 renderer.shadowMap.enabled = true;
 // StableCSM adds hardware-filtered depth comparisons with a continuous tent.
 // Keep PCFSoft as the diagnostic fallback and the same two 1024px maps.
@@ -511,6 +515,7 @@ ground.receiveShadow = true;
 scene.add(ground);
 const environmentRoots=await restoreEnvironment(await unpackEnvironment(await preloadGameAssets(import.meta.env.BASE_URL).environment));
 scene.add(...environmentRoots);await startupTask();
+shareIdenticalMaterials(environmentRoots);
 performance.mark('kirby-environment-ready');
 const arenaEnvironment=createBossArena();environmentRoots.push(arenaEnvironment);scene.add(arenaEnvironment);await startupTask();
 const meadowWind=environmentRoots.find(root=>root.name==='Biome meadow details')!.userData.windTime as {value:number};
@@ -682,6 +687,8 @@ await preparedShadows.finishPreparation();
 await startupTask();
 const groundShadowPass=new GroundShadowPass(renderer,scene);
 const worldMatrices=new StaticWorldMatrices(scene);worldMatrices.add(ground);environmentRoots.forEach(root=>worldMatrices.add(root));worldMatrices.add(sealLocations.group);
+// Distant carts, boats, steps and eaten fruit keep hidden detail branches.
+for(const root of [coaster.group,boats.group,skyTrail.group,fruits.group])worldMatrices.skipHidden(root);
 const sceneryVisibility=new SceneryVisibility(environmentRoots,scene);
 const forestDetail=new ForestDetail(environmentRoots);
 languageSetting.after(createRenderScaleControl(scale=>{renderScale=scale;renderer.setPixelRatio(scale);},mobile));
@@ -890,7 +897,7 @@ async function loadCharacter() {
     home.dogHouse.placeDog(shibaModel.scene);
     await startupTask();
     loadedFirefly=bugModel;
-    fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);
+    fireflies=new NightFireflies(bugModel);fireflies.group.userData.characterShadow=true;scene.add(fireflies.group,...fireflies.lights);worldMatrices.skipHidden(fireflies.group);
     preparedShadows.deferPreparation();setupShadowMaterials();await preparedShadows.finishPreparation();
     loadedModel = gltf;
     loadedPigeon = pigeonModel;
@@ -1058,7 +1065,7 @@ function returnToMenu(){
 
 let soloCentipede:CentipedeEvent|undefined;let centipedeContactKey='';
 const centipedeView=new CentipedeEventView((stage,volume)=>sounds.playCentipede(stage,volume));scene.add(centipedeView.group);
-const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);
+const festivalView=new StarfallView(()=>sounds.playStarPickup(),()=>{sounds.playTaskComplete();sounds.playTreehouse('cheer');},()=>leaveOnline.click());scene.add(festivalView.group);worldMatrices.skipHidden(festivalView.group);
 function peerPoints(id:string,a:ActorState){return a.fruits+achievementPoints(a.achievements)+(a.eventPoints??0)+(network!.room.festival?.players[id]?.bonus??0);}
 function roundFinished(){return !!network?.room.festival&&network.serverNow>=network.room.festival.endsAt;}
 function festivalTick(){
@@ -1197,6 +1204,7 @@ renderer.setAnimationLoop((time: number) => {
     checkCharacterUnlock();chat.render(network?.log??localLog,!audioPanel.hidden);festivalTick();updatePlayerDashEffects(settingsOpen?0:dt,cosmicArena.camera);cosmicArena.render();
     return;
   }
+  if(character&&metaKnightPortalReady())cosmicArena.prewarm(time);
   if(character&&playing&&!settingsOpen&&metaKnightPortalReady()&&insideMetaKnightPortal(character.actor.position)&&sealActor(character).available){void cosmicArena.enter(character);return;}
   touch?.setAttackHint(undefined);
   if (character && !roundFinished()) {
@@ -1401,10 +1409,10 @@ renderer.setAnimationLoop((time: number) => {
   chat.render(network?.log??localLog,!audioPanel.hidden);
   fruits.fruits.forEach((fruit,i)=>updateVisibility(fruit.object,camera.position,fruits.isVisible(i),false,FRUIT_DISTANCE));
   fruits.syncInstances();
-  for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position);
-  for(const npc of npcs)updateVisibility(npc.actor,camera.position);
-  for(const bird of wildBirds.values())updateVisibility(bird.npc.actor,camera.position,bird.ready&&bird.npc.phase!=='hidden');
-  for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position);
+  for(const passenger of decorativeCharacters)updateVisibility(passenger,camera.position,true,false,ACTOR_DISTANCE,true);
+  for(const npc of npcs)updateVisibility(npc.actor,camera.position,true,false,ACTOR_DISTANCE,true);
+  for(const bird of wildBirds.values())updateVisibility(bird.npc.actor,camera.position,bird.ready&&bird.npc.phase!=='hidden',false,ACTOR_DISTANCE,true);
+  for(const remote of remotePlayers?.players.values()??[])updateVisibility(remote.actor,camera.position,true,false,ACTOR_DISTANCE,true);
   if(character)updateVisibility(character.actor,camera.position,true,true);
   prankEffects.update(playing&&!roundFinished()?network?.room.pranks??[]:[],network?.serverNow??Date.now(),id=>{const c=id===network?.id?character:remotePlayers?.players.get(id);return c?{actor:c.actor,root:c.animationRoot,grounded:['Idle','Run','Walk','WalkBackward','RotateLeft','RotateRight','Attack'].includes(c.state)}:undefined;},character?.actor.position??camera.position);
   const profileRender=sceneProfiler?performance.now():0;

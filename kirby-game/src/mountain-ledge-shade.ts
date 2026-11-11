@@ -13,7 +13,7 @@ export function createMountainLedgeShade(ledge:MountainLedge,thickness:number){
   if(row<rows&&column<columns){const a=row*(columns+1)+column,b=a+columns+1;indices.push(a,b,a+1,a+1,b,b+1);}
  }
  const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('color',new T.Float32BufferAttribute(colors,4));geometry.setIndex(indices);
- const material=new T.MeshBasicMaterial({color:'#18211f',vertexColors:true,transparent:true,opacity:.18,depthWrite:false,side:T.DoubleSide,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+ const material=new T.MeshBasicMaterial({color:'#18211f',vertexColors:true,transparent:true,opacity:.18,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
  const shade=new T.Mesh(geometry,material);shade.name='Soft mountain ledge contact shade';
  shade.castShadow=shade.receiveShadow=false;shade.raycast=()=>{};
  return shade;

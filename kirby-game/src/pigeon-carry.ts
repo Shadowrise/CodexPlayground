@@ -39,7 +39,8 @@ export function pigeonCarryGrip(wing:T.Object3D,point:T.Vector3){
       grip={feather,point:contact};grips.set(wing,grip);
     }
   }
-  if(grip){point.copy(grip.point);grip.feather.localToWorld(point);}
-  else{point.set(.2,-.4,.2);wing.localToWorld(point);}
+  // Carriers hidden by distance keep no current world pose of their own.
+  if(grip){point.copy(grip.point);grip.feather.updateWorldMatrix(true,false);grip.feather.localToWorld(point);}
+  else{point.set(.2,-.4,.2);wing.updateWorldMatrix(true,false);wing.localToWorld(point);}
   return point;
 }

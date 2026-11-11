@@ -253,7 +253,7 @@ export class MillBakery {
     const carryScale=Math.max(.65,owner.scale.x*.55);
     if(hand?.name==='Right_wing'){
      pigeonCarryGrip(hand,this.scratch);this.scratch.y+=(carry===this.flour?-.77:.18)*carryScale;
-    }else if(hand){this.scratch.set(.24,0,0);hand.localToWorld(this.scratch);}else this.scratch.set(1.1,.9,.25).multiplyScalar(owner.scale.x).applyQuaternion(owner.quaternion).add(owner.position);
+    }else if(hand){this.scratch.set(.24,0,0);hand.updateWorldMatrix(true,false);hand.localToWorld(this.scratch);}else this.scratch.set(1.1,.9,.25).multiplyScalar(owner.scale.x).applyQuaternion(owner.quaternion).add(owner.position);
     this.group.worldToLocal(this.scratch);carry.position.copy(this.scratch);carry.quaternion.copy(owner.quaternion);carry.scale.setScalar(carryScale);
    }
   }else{this.flour.scale.setScalar(1);this.flour.quaternion.identity();}

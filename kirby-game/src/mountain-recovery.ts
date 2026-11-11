@@ -2,6 +2,7 @@ import * as T from 'three';
 import type {CharacterController} from './controller';
 import {MOUNTAIN_SUMMIT,MOUNTAIN_PEAK,mountainWorld} from './mountain-ledges-layout';
 import {LeafPile} from './leaf-pile';
+import {batchRigidMeshes} from './rigid-batch';
 
 export type MountainSound='bounce'|'checkpoint'|'leaves';
 const rests=[MOUNTAIN_SUMMIT,MOUNTAIN_PEAK];
@@ -31,6 +32,8 @@ export class MountainRecovery{
         const a=i*Math.PI/8,spring=new T.Mesh(springGeometry,metal);spring.position.set(Math.cos(a)*1.44,.5,Math.sin(a)*1.44);spring.rotation.set(Math.PI/2,0,a);frame.add(spring);
         if(i%2===0){const leg=new T.Mesh(legGeometry,metal);leg.position.set(Math.cos(a)*1.3,.25,Math.sin(a)*1.3);frame.add(leg);}
       }
+      // Springs and legs never move: one draw per trampoline; the pad stays live.
+      batchRigidMeshes(frame,new Set([fabric]));
     }
     rests.forEach((rest,i)=>{
       const p=mountainWorld(rest.tangent-rest.width*.2,rest.radial-.5),flag=new T.Group();flag.name=i?'Mountain peak checkpoint flag':'Mountain bread checkpoint flag';flag.position.set(p.x,rest.y,p.z);this.group.add(flag);

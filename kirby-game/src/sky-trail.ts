@@ -2,7 +2,7 @@ import {drawLocalizedText,localizedCanvasTexture} from './localized-sign';
 import * as T from 'three';
 import {LeafPile} from './leaf-pile';
 import {awardFirst} from './score';
-import {skyGlass,mergeSkyDetails,mergeSkyMetal,SkyMovingDetails} from './sky-trail-visuals';
+import {skyGlass,mergeSkyDetails,mergeSkyMetal,SkyGlassBodies,SkyMovingDetails} from './sky-trail-visuals';
 import {collideSkyPlatforms} from './sky-trail-collision';
 import {makeCollectibleStar} from './collectible-star';
 import type {CharacterController} from './controller';
@@ -24,12 +24,12 @@ export class SkyTrail{
   this.group.name='Небесная тропа — сияющие ступени';this.group.position.set(SITE.x,0,SITE.z);
   const cube=new T.BoxGeometry(1,1,1),edges=new T.EdgesGeometry(cube),crystal=new T.OctahedronGeometry(.5);
   const glowing=COLORS.map(color=>new T.MeshBasicMaterial({color}));
-  const glass=COLORS.map(skyGlass),details:T.Mesh[]=[],frames:T.LineSegments[]=[];
+  const glass=COLORS.map(skyGlass),details:T.Mesh[]=[],frames:T.LineSegments[]=[],bodies:T.Mesh[]=[];
   const ringGeometry=new T.TorusGeometry(.68,.025,5,28),beadGeometry=new T.SphereGeometry(.07,6,4);
   PLATFORMS.forEach((p,i)=>{
    const thickness=platformThickness(i),lift=thickness/2;
    const g=new T.Group();g.position.set(p.x,p.y-lift,p.z);this.group.add(g);
-   const body=new T.Mesh(cube,glass[i%7]);body.scale.set(p.size,thickness,p.size);g.add(body);
+   const body=new T.Mesh(cube,glass[i%7]);body.scale.set(p.size,thickness,p.size);g.add(body);bodies.push(body);
    const frame=new T.LineSegments(edges,new T.LineBasicMaterial({color:COLORS[i%7],transparent:true,opacity:.9}));frame.scale.copy(body.scale);g.add(frame);frames.push(frame);
    const core=new T.Mesh(crystal,glowing[i%7]);core.scale.set(.7,.9,.7);g.add(core);this.cores.push(core);
    const ring=new T.Mesh(ringGeometry,glowing[(i+2)%7]);ring.rotation.x=Math.PI/2;g.add(ring);details.push(ring);
@@ -58,12 +58,12 @@ export class SkyTrail{
   const entrance=new T.Group();entrance.name='Sky Trail entrance sign';entrance.position.set(PLATFORMS[0].x,0,PLATFORMS[0].z-3.6);entrance.rotation.y=Math.PI;this.group.add(entrance);
   const sign=new T.Mesh(new T.BoxGeometry(7,.9,.2),new T.MeshStandardMaterial({color:'#263d66',roughness:.65}));sign.position.set(0,4,0);entrance.add(sign);this.label(entrance,'НЕБЕСНАЯ ТРОПА',[0,4,.12],6.7,.65);
   for(const x of [-3,3]){const post=new T.Mesh(new T.CylinderGeometry(.07,.07,4,8),glowing[3]);post.position.set(x,2,0);entrance.add(post);}
-  mergeSkyDetails(this.group,details);mergeSkyDetails(this.group,frames,true);
+  mergeSkyDetails(this.group,details);mergeSkyDetails(this.group,frames,true);new SkyGlassBodies(this.group,bodies);
   this.moving=new SkyMovingDetails(this.group,this.cores);
  }
  private label(parent:T.Group,text:string,position:number[],width:number,height:number){
   if(typeof document==='undefined')return;const c=document.createElement('canvas');c.width=768;c.height=96;const ctx=c.getContext('2d');if(!ctx)return;ctx.fillStyle='#fff8dd';ctx.font='bold 42px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';drawLocalizedText(ctx,text,384,48,750);
-  const mesh=new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map:localizedCanvasTexture(c),transparent:true,side:T.DoubleSide,depthWrite:false}));mesh.position.fromArray(position);parent.add(mesh);
+  const mesh=new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map:localizedCanvasTexture(c),transparent:true,side:T.DoubleSide,forceSinglePass:true,depthWrite:false}));mesh.position.fromArray(position);parent.add(mesh);
  }
  private trampoline(parent:T.Group){
   const metal=new T.MeshStandardMaterial({color:'#adbdcf',metalness:.7,roughness:.25});

@@ -17,7 +17,16 @@ export function planetRingGeometry(inner:number,outer:number,seed:number){
 }
 
 /** A matte, granular dust sheet, baked once; angular frequencies wrap without a seam. */
+// Painting two megapixels takes about half a second: keep each result for the
+// session. dispose() only releases the GPU copy; a reused texture uploads again.
+const ringTextures=new Map<number,T.CanvasTexture>();
 export function planetRingTexture(seed:number){
+ const work=planetRingWork(seed);while(!work.next().done);
+ return ringTextures.get(seed)!;
+}
+/** The same painting in resumable steps: a few rows per step. */
+export function* planetRingWork(seed:number):Generator<void,void,void>{
+ if(ringTextures.has(seed))return;
  const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=512;
  const context=canvas.getContext('2d')!,image=context.createImageData(canvas.width,canvas.height);
  let state=177+Math.floor(seed*1000);const random=()=>((state=Math.imul(state,1664525)+1013904223|0)>>>0)/4294967296;
@@ -34,8 +43,11 @@ export function planetRingTexture(seed:number){
    const value=Math.round(T.MathUtils.clamp(strata-groove+clouds+threads+grain+fleck,.40,1)*255),offset=(y*canvas.width+x)*4;
    image.data[offset]=image.data[offset+1]=image.data[offset+2]=value;image.data[offset+3]=255;
   }
+  if(y%4===3)yield;
  }
+ // Another caller may have finished the same texture between two steps.
+ if(ringTextures.has(seed))return;
  context.putImageData(image,0,0);
  const texture=new T.CanvasTexture(canvas);texture.name='Granular concentric planetary dust';texture.colorSpace=T.SRGBColorSpace;
- texture.wrapS=T.RepeatWrapping;texture.anisotropy=4;return texture;
+ texture.wrapS=T.RepeatWrapping;texture.anisotropy=4;ringTextures.set(seed,texture);
 }

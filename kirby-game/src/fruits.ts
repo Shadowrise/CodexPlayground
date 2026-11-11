@@ -196,6 +196,7 @@ export class FruitWorld {
   }
   private beginInhale(index:number,eater:CharacterController,viewOnly=false){
     const object=this.fruits[index].object,center=this.centers[index].clone();
+    object.updateWorldMatrix(true,false);
     const start=object.localToWorld(center.clone()),dx=start.x-eater.actor.position.x,dz=start.z-eater.actor.position.z;
     const side=dx*Math.cos(eater.yaw)-dz*Math.sin(eater.yaw)<0?-1:1;
     const flight:InhalingFruit={index,eater,elapsed:0,position:object.position.clone(),rotation:new Vector3(object.rotation.x,object.rotation.y,object.rotation.z),scale:object.scale.clone(),center,start,side,viewOnly,delivered:false};
@@ -234,7 +235,7 @@ export class FruitWorld {
       const timing=FRUIT_EATING[eater.fruitEating.kind];
       if(!flight.viewOnly&&!flight.delivered&&(riding&&!playerPickupPosition||eater.flight.active||eater.roll.active||['Death','Roll','Jump','Fly','Dash'].includes(eater.state))){this.finishInhale(flight);continue;}
       flight.elapsed+=dt;
-      object.localToWorld(this.visualCenter.copy(flight.center));
+      object.updateWorldMatrix(true,false);object.localToWorld(this.visualCenter.copy(flight.center));
       eater.fruitEating.apply(flight.elapsed,this.visualCenter);
       eater.fruitEating.mouthPosition(this.target);
       const u=Math.max(0,Math.min(1,(flight.elapsed-.10)/(timing.swallow-.10))),travel=u*u*(3-2*u);

@@ -4,7 +4,10 @@ import {COSMIC_REFUGE as R} from './meta-knight-cosmic-refuge';
 import {planetHash as hash,planetRelief} from './meta-knight-planet-detail';
 
 /** Spherical Voronoi crust: unequal cells, shared jagged seams and rough stratified cut faces. */
+// The shattered shell is deterministic per world: build it once per session.
+const fractures=new Map<number,T.BufferGeometry>();
 export function planetFractureGeometry(world=0){
+ const cached=fractures.get(world);if(cached)return cached;
  const radius=R.planetRadius,seeds:T.Vector3[]=[],up=new T.Vector3(0,1,0);
  for(let i=0;i<112;i++){const y=T.MathUtils.clamp(1-2*(i+.5)/112+(hash(i+world*13)-.5)*.045,-.995,.995),a=i*2.399963+(hash(i+71)-.5)*.65,r=Math.sqrt(1-y*y);seeds.push(new T.Vector3(Math.cos(a)*r,y,Math.sin(a)*r));}
  for(let i=0;i<28;i++){const p=seeds[(i*13)%112],t=new T.Vector3().crossVectors(p,Math.abs(p.y)>.9?new T.Vector3(1,0,0):up).normalize();seeds.push(p.clone().addScaledVector(t,.055+.06*hash(i+17)).add(new T.Vector3(.015*hash(i),-.02,.02*hash(i+7))).normalize());}
@@ -28,7 +31,7 @@ export function planetFractureGeometry(world=0){
   const bottom=d.clone().multiplyScalar(radius*(1-depth-.014));for(let i=0;i<count;i++)triangle(bottom,previous[(i+1)%count],previous[i],center,1,seed);
  });
  const geometry=new T.BufferGeometry();geometry.setAttribute('position',new T.Float32BufferAttribute(positions,3));geometry.setAttribute('pieceCenter',new T.Float32BufferAttribute(centers,3));geometry.setAttribute('pieceInterior',new T.Float32BufferAttribute(interiors,1));geometry.setAttribute('pieceSeed',new T.Float32BufferAttribute(pieceSeeds,1));geometry.computeVertexNormals();
- const normal=geometry.getAttribute('normal'),p=geometry.getAttribute('position'),d=new T.Vector3();for(let i=0;i<p.count;i++)if(interiors[i]===0){d.fromBufferAttribute(p,i).normalize();normal.setXYZ(i,d.x,d.y,d.z);}geometry.userData.fragments=seeds.length;return geometry;
+ const normal=geometry.getAttribute('normal'),p=geometry.getAttribute('position'),d=new T.Vector3();for(let i=0;i<p.count;i++)if(interiors[i]===0){d.fromBufferAttribute(p,i).normalize();normal.setXYZ(i,d.x,d.y,d.z);}geometry.userData.fragments=seeds.length;fractures.set(world,geometry);return geometry;
 }
 export function planetFractureMaterial(source:T.ShaderMaterial){
  const material=source.clone();material.transparent=true;material.depthWrite=true;material.uniforms.blastAge={value:0};material.uniforms.blastAway={value:new T.Vector3()};if(material.uniforms.surfaceDetail)material.uniforms.surfaceDetail.value=1;

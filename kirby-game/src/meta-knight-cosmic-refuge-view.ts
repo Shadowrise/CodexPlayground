@@ -43,6 +43,10 @@ export class MetaKnightCosmicRefugeView{
   material.fragmentShader='uniform float fracture;\n'+material.fragmentShader.replace('color+=emission;', 'color+=emission;float split=1.-smoothstep(.006,.025,plateEdge(d*7.3+vec3(seed)));color+=vec3(3.,1.1,.25)*split*fracture;');
  }
  prepareSurfaces(){return this.burst.prepareSurfaces();}
+ /** The detailed captured worlds: their shaders are the slowest of the arena to compile. */
+ lateObjects():T.Object3D[]{return [...this.planets.values(),...this.burst.lateObjects()];}
+ /** The distant worlds of the vista, in COSMIC_WORLDS order. */
+ vistaPlanets(){return this.sources as T.Mesh<T.BufferGeometry,T.ShaderMaterial>[];}
  private bindPlanet(index:number){
   if(this.world===index&&this.planet)return;if(this.planet)this.planet.visible=false;this.world=index;
   this.planet=this.planets.get(index)!;this.burst.bindSurface(this.planet.material as T.ShaderMaterial,index);

@@ -59,10 +59,11 @@ export class FruitEatingPose{
  mouthPosition(target:Vector3){
   if(this.kind==='pigeon'){
    const beak=this.actor.getObjectByName('Beak');
-   if(beak)return beak.localToWorld(target.set(0,-.075,.24));
+   if(beak){beak.updateWorldMatrix(true,false);return beak.localToWorld(target.set(0,-.075,.24));}
   }
-  if(this.mouth)return this.mouth.localToWorld(target.set(0,1.06,.87));
-  return this.actor.localToWorld(target.set(0,1.02,.85));
+  // An eater hidden by distance keeps no current world pose of its own.
+  if(this.mouth){this.mouth.updateWorldMatrix(true,false);return this.mouth.localToWorld(target.set(0,1.06,.87));}
+  this.actor.updateWorldMatrix(true,false);return this.actor.localToWorld(target.set(0,1.02,.85));
  }
  apply(t:number,fruit:Vector3){
   this.clear();
@@ -90,7 +91,7 @@ export class FruitEatingPose{
    // One deliberate reach, an open beak, then a head flick and a travelling
    // throat bulge. Feet and wings retain their independent locomotion.
    const reach=bump(t,.02,.38,swallow+.12),flick=bump(t,swallow-.08,swallow+.06,swallow+.23);
-   this.point.copy(fruit);this.actor.worldToLocal(this.point);
+   this.point.copy(fruit);this.actor.updateWorldMatrix(true,false);this.actor.worldToLocal(this.point);
    const yaw=MathUtils.clamp(Math.atan2(this.point.x,this.point.z),-.55,.55)*open;
    const neck=this.node('Neck');
    if(neck){neck.rotateX(.16*reach-.16*flick);neck.rotateY(yaw*.35);neck.position.z+=.10*reach;neck.scale.multiply(new Vector3(1+.14*gulp,1+.025*flick,1+.17*gulp));}

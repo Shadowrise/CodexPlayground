@@ -12,6 +12,22 @@ export class CharacterShadowPass{
  private links:{source:T.Object3D;view:T.Object3D}[]=[];
  private proxies=new WeakMap<T.Mesh,T.Mesh>();
  private original:T.WebGLShadowMap['render'];
+ private depthMaterials=new Map<string,T.MeshDepthMaterial>();
+ private morphKeys=new WeakMap<T.BufferGeometry,string>();
+ /** Three shares one depth material between rigid, skinned, morphing and
+  * instanced casters and re-resolves its program at every such switch. One
+  * material per caster kind keeps each program bound to its own material.
+  * Alpha-tested and displaced surfaces keep Three's per-material variants. */
+ private depthMaterial(view:T.Mesh){
+  const material=view.material;
+  if(Array.isArray(material)||material.alphaTest>0||material.alphaToCoverage||material.clipShadows||(material as T.MeshStandardMaterial).displacementMap)return undefined;
+  let morph=this.morphKeys.get(view.geometry);
+  if(morph===undefined){const m=view.geometry.morphAttributes;morph=(m.position?.length??0)+(m.normal?'n':'')+(m.color?'c':'');this.morphKeys.set(view.geometry,morph);}
+  const key=(view instanceof T.InstancedMesh?(view.instanceColor?'ic':'i')+(view.morphTexture?'m':''):'')+'|'+(view instanceof T.SkinnedMesh?'s':'')+'|'+morph;
+  let depth=this.depthMaterials.get(key);
+  if(!depth){depth=new T.MeshDepthMaterial({depthPacking:T.RGBADepthPacking});depth.name='Character shadow depth '+key;this.depthMaterials.set(key,depth);}
+  return depth;
+ }
  private silhouetteDetail(source:T.Mesh){
   // These small facial surfaces sit inside the body's projected silhouette.
   for(let p:T.Object3D|null=source;p;p=p.parent)if(p.userData.shadowSilhouette==='kirby')return /eye|cheek|mouth|tongue/i.test(source.name);
@@ -27,6 +43,7 @@ export class CharacterShadowPass{
      view.castShadow=source.castShadow&&(!this.simplify||!this.silhouetteDetail(source));view.material=source.material;
      view.geometry=this.simplify?clusteredGeometry(source.geometry,24):source.geometry;
      view.morphTargetInfluences=source.morphTargetInfluences;
+     view.customDepthMaterial=this.depthMaterial(view);
      if(source instanceof T.SkinnedMesh&&view instanceof T.SkinnedMesh){
       // Attached rigs refresh the inverse bind transform as the actor moves
       // or grows. A one-time clone would apply that motion twice in shadows.

@@ -7,6 +7,9 @@ import {GROUND_SHADOW_OPACITY,groundShadowOpacity} from './ground-shadow-style';
 type Track=Pick<Coaster,'length'|'pose'>;
 type Ribbon={a:T.Vector3;b:T.Vector3;tangentA:T.Vector3;tangentB:T.Vector3;width:number;opacity:number};
 const RAIL_OFFSET=1.2,RAIL_HALF_WIDTH=.16,TIE_HALF_WIDTH=.19,TIE_SPACING=2.4;
+// The fragment fade already ends the silhouettes 230 m from the eye. Wide
+// cells keep frustum culling while the whole circuit needs only a few draws.
+const RAIL_SHADOW_CELL=512;
 export function projectedTrackCenter(track:Track,distance:number,projection:T.Vector2){return projectGroundShadow(track.pose(distance).p,projection);}
 
 /** The two rails follow the real banked/looping frames. Ribbons have a constant
@@ -56,7 +59,7 @@ export class CoasterShadows{
  private hidden=new T.Matrix4().makeScale(0,0,0);
  constructor(track:Track,private sources:readonly T.Object3D[]){
   this.group.name='Prepared continuous railway shadows';this.group.userData.preparedShadow=true;
-  this.rails=new T.MeshBasicMaterial({color:'black',transparent:true,opacity:GROUND_SHADOW_OPACITY,depthWrite:false,side:T.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+  this.rails=new T.MeshBasicMaterial({color:'black',transparent:true,opacity:GROUND_SHADOW_OPACITY,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
   this.rails.name='Continuous rail and sleeper silhouettes';
   this.rails.customProgramCacheKey=()=> 'prepared-rail-ribbons-v1';
   this.rails.onBeforeCompile=shader=>{
@@ -77,7 +80,7 @@ export class CoasterShadows{
     .replace('#include <color_fragment>','#include <color_fragment>\ndiffuseColor.a*=(1.-smoothstep(.7,1.,abs(vShadowSide)))*vShadowOpacity*vShadowFade;if(diffuseColor.a<.003)discard;');
   };
   const cells=new Map<string,Ribbon[]>();
-  for(const ribbon of prepareTrackRibbons(track)){const key=`${Math.floor((ribbon.a.x+ribbon.b.x)/128)},${Math.floor((ribbon.a.z+ribbon.b.z)/128)}`,cell=cells.get(key)??[];cell.push(ribbon);cells.set(key,cell);}
+  for(const ribbon of prepareTrackRibbons(track)){const key=`${Math.floor((ribbon.a.x+ribbon.b.x)/RAIL_SHADOW_CELL)},${Math.floor((ribbon.a.z+ribbon.b.z)/RAIL_SHADOW_CELL)}`,cell=cells.get(key)??[];cell.push(ribbon);cells.set(key,cell);}
   for(const ribbons of cells.values()){const mesh=new T.Mesh(ribbonGeometry(ribbons),this.rails);mesh.name='Continuous railway shadow cell';mesh.renderOrder=1;mesh.matrixAutoUpdate=false;this.group.add(mesh);}
 
   // Bake the real cart from above, anchored on its wheel/rail plane. Its full
@@ -87,7 +90,7 @@ export class CoasterShadows{
   const map=new T.DataTexture(pixels,SHADOW_MASK_SIZE,SHADOW_MASK_SIZE);map.generateMipmaps=true;map.minFilter=T.LinearMipmapLinearFilter;map.magFilter=T.LinearFilter;map.needsUpdate=true;
   const geometry=new T.PlaneGeometry(profile.radius*2,profile.radius*2).rotateX(-Math.PI/2);geometry.translate(profile.center.x,0,profile.center.z);
   const uv=geometry.attributes.uv;for(let i=0;i<uv.count;i++)uv.setY(i,1-uv.getY(i));
-  this.cartMaterial=new T.MeshBasicMaterial({color:'black',map,transparent:true,opacity:GROUND_SHADOW_OPACITY,depthWrite:false,side:T.DoubleSide,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+  this.cartMaterial=new T.MeshBasicMaterial({color:'black',map,transparent:true,opacity:GROUND_SHADOW_OPACITY,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
   this.cartMaterial.name='Cart silhouettes attached to projected rails';this.cartMaterial.customProgramCacheKey=()=> 'prepared-track-cart-v1';
   this.cartMaterial.onBeforeCompile=shader=>{
    shader.uniforms.groundShadowProjection=this.projection;shader.uniforms.shadowEye=this.eye;

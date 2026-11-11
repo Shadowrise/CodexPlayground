@@ -47,7 +47,7 @@ function sign(text:string,width:number,height:number){
  ctx.fillStyle='#345e64';ctx.beginPath();ctx.roundRect(3,3,c.width-6,c.height-6,32);ctx.fill();ctx.strokeStyle='#efd9a2';ctx.lineWidth=7;ctx.stroke();
  ctx.fillStyle='#fff2cd';ctx.font=`700 ${Math.floor(c.height*.48)}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';drawLocalizedText(ctx,text,c.width/2,c.height/2,c.width*.92);
  const map=localizedCanvasTexture(c);map.colorSpace=T.SRGBColorSpace;
- return new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map,transparent:true,side:T.DoubleSide}));
+ return new T.Mesh(new T.PlaneGeometry(width,height),new T.MeshBasicMaterial({map,transparent:true,side:T.DoubleSide,forceSinglePass:true}));
 }
 type NumberKey={root:T.Group;glyph:T.Mesh;material:T.MeshStandardMaterial;ring:T.Mesh;halo:T.MeshBasicMaterial;playedAt:number;box:T.Box3};
 export class NumberGarden {

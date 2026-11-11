@@ -81,3 +81,40 @@ export class SkyMovingDetails{
   }
  }
 }
+
+/** The translucent platform bodies share one cube. Each height band draws them
+ * as instances, re-ordered far-to-near when the view changes, which is the
+ * order Three gives separate transparent meshes. */
+export class SkyGlassBodies{
+ private bands:{mesh:T.InstancedMesh;items:{matrix:T.Matrix4;color:T.Color;center:T.Vector3;depth:number}[];order:number[]}[]=[];
+ private eye=new T.Vector3();
+ constructor(root:T.Group,bodies:readonly T.Mesh[]){
+  root.updateWorldMatrix(true,true);
+  const inverse=root.matrixWorld.clone().invert(),groups=new Map<number,T.Mesh[]>();
+  for(const body of bodies){
+   const band=Math.floor(new T.Vector3().setFromMatrixPosition(new T.Matrix4().multiplyMatrices(inverse,body.matrixWorld)).y/12);
+   groups.set(band,[...(groups.get(band)??[]),body]);
+  }
+  for(const list of groups.values()){
+   const items=list.map(body=>({matrix:new T.Matrix4().multiplyMatrices(inverse,body.matrixWorld),color:(body.material as T.MeshBasicMaterial).color.clone(),center:new T.Vector3(),depth:0}));
+   const mesh=new T.InstancedMesh(list[0].geometry,skyGlass('#ffffff'),items.length);mesh.name='Sky Trail glass platforms';
+   mesh.castShadow=mesh.receiveShadow=false;mesh.raycast=()=>{};
+   const band={mesh,items,order:items.map((_,i)=>i)};this.write(band);mesh.computeBoundingSphere();
+   mesh.onBeforeRender=(_renderer,_scene,camera)=>this.sort(band,camera);
+   root.add(mesh);this.bands.push(band);list.forEach(body=>body.removeFromParent());
+  }
+ }
+ private write(band:SkyGlassBodies['bands'][number]){
+  band.order.forEach((source,slot)=>{band.mesh.setMatrixAt(slot,band.items[source].matrix);band.mesh.setColorAt(slot,band.items[source].color);});
+  band.mesh.instanceMatrix.needsUpdate=true;band.mesh.instanceColor!.needsUpdate=true;
+ }
+ private sort(band:SkyGlassBodies['bands'][number],camera:T.Camera){
+  this.eye.setFromMatrixPosition(camera.matrixWorld);
+  for(const item of band.items)item.depth=item.center.setFromMatrixPosition(item.matrix).applyMatrix4(band.mesh.matrixWorld).distanceToSquared(this.eye);
+  const order=band.order;let sorted=true;
+  for(let i=1;i<order.length;i++)if(band.items[order[i-1]].depth<band.items[order[i]].depth){sorted=false;break;}
+  if(sorted)return;
+  // The new order reaches the GPU with the next frame; one frame is not visible.
+  order.sort((a,b)=>band.items[b].depth-band.items[a].depth);this.write(band);
+ }
+}

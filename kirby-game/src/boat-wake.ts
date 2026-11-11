@@ -18,7 +18,7 @@ geometry.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
 geometry.setAttribute('wakeSeed',new T.Float32BufferAttribute(seeds,3));
 geometry.setIndex(indices);geometry.computeVertexNormals();
 geometry.boundingSphere=new T.Sphere(new T.Vector3(0,0,-3),3.5);
-const material=new T.MeshLambertMaterial({color:'#c5e4df',transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide});
+const material=new T.MeshLambertMaterial({color:'#c5e4df',transparent:true,opacity:.42,depthWrite:false,side:T.DoubleSide,forceSinglePass:true});
 material.onBeforeCompile=shader=>{
  shader.uniforms.wakeTime=time;
  shader.vertexShader='uniform float wakeTime; attribute vec3 wakeSeed; varying vec2 foamUv; varying float foamAlpha;\n'+shader.vertexShader;

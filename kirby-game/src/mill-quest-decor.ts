@@ -103,7 +103,7 @@ export class MillQuestDecor {
     }else if(arm?.geometry){
      if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();
      const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;
-     arm.localToWorld(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
+     arm.updateWorldMatrix(true,false);arm.localToWorld(this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
     }else if(wing){
      pigeonCarryGrip(wing,this.scratch);this.group.worldToLocal(this.scratch);b.position.copy(this.scratch);b.position.y-=1.19*bagSize;
     }else{this.scratch.set(1.3*size,.8*size,.25*size).applyQuaternion(owner.quaternion);b.position.copy(owner.position).add(this.scratch);}

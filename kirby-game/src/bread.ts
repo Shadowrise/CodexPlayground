@@ -65,11 +65,11 @@ export class BreadWorld{
    const arm=owner.getObjectByName('Right_arm') as T.Mesh|undefined;
    if(knightHand){knightHand.getWorldPosition(this.scratch);}
    else if(arm?.geometry){
-    if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;arm.localToWorld(this.scratch);
+    if(!arm.geometry.boundingBox)arm.geometry.computeBoundingBox();const bounds=arm.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.x=bounds.max.x-.06;arm.updateWorldMatrix(true,false);arm.localToWorld(this.scratch);
    }else if(wing){
     const vane=owner.getObjectByName('Right_wing_vane');let feather:T.Mesh|undefined;vane?.traverse(o=>{if(!feather&&o instanceof T.Mesh)feather=o;});
-    if(feather){if(!feather.geometry.boundingBox)feather.geometry.computeBoundingBox();const bounds=feather.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.y=bounds.min.y+.08;feather.localToWorld(this.scratch);}
-    else{this.scratch.set(.2,-.4,.2);wing.localToWorld(this.scratch);}
+    if(feather){if(!feather.geometry.boundingBox)feather.geometry.computeBoundingBox();const bounds=feather.geometry.boundingBox!;bounds.getCenter(this.scratch);this.scratch.y=bounds.min.y+.08;feather.updateWorldMatrix(true,false);feather.localToWorld(this.scratch);}
+    else{this.scratch.set(.2,-.4,.2);wing.updateWorldMatrix(true,false);wing.localToWorld(this.scratch);}
    }
    else this.scratch.set(1.3*owner.scale.x,.9*owner.scale.x,.25*owner.scale.x).applyQuaternion(owner.quaternion).add(owner.position);
    this.loaf.position.copy(this.scratch).add(new T.Vector3(.18*scale,.42*scale,.16*scale).applyQuaternion(owner.quaternion));this.loaf.quaternion.copy(owner.quaternion);

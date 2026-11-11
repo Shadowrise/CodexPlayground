@@ -26,6 +26,8 @@ export class MetaKnightPlanetBurst{
   let material=this.surfaces.get(world);if(!material){material=planetFractureMaterial(source);this.surfaces.set(world,material);}
   if(this.rocks)this.rocks.material=material;else{this.rocks=new T.Mesh(this.rockGeometry,material);this.rocks.frustumCulled=false;this.group.add(this.rocks);}
  }
+ /** The fracture surface is one of the slowest arena programs to compile. */
+ lateObjects():T.Object3D[]{return this.rocks?[this.rocks]:[];}
  /** Every cached world's fracture shader must be exercised behind the loader. */
  prepareSurfaces(){const group=new T.Group();for(const material of this.surfaces.values()){const mesh=new T.Mesh(this.rockGeometry,material);mesh.frustumCulled=false;group.add(mesh);}return group;}
  update(ageMs:number,origin:T.Vector3,contact:T.Vector3,_world:number,camera?:T.Camera,orientation?:T.Quaternion){

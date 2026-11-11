@@ -69,7 +69,7 @@ export function createMetaKnightPortal(){
    gl_FragColor=vec4(c,1.);#include <tonemapping_fragment>
    #include <colorspace_fragment>}`.replace(';#include',';\n#include')});
  const veil=add(new T.CircleGeometry(2.93,64),material,0,3.3,.015);veil.name='Portal swirling surface';
- const dormant=add(new T.CircleGeometry(2.93,64),new T.MeshBasicMaterial({color:'#242238',side:T.DoubleSide,transparent:true,opacity:.48}),0,3.3,0);dormant.name='Dormant portal surface';
+ const dormant=add(new T.CircleGeometry(2.93,64),new T.MeshBasicMaterial({color:'#242238',side:T.DoubleSide,forceSinglePass:true,transparent:true,opacity:.48}),0,3.3,0);dormant.name='Dormant portal surface';
  const feather=new T.Group();feather.name='Meta Pidgie portal feather';feather.position.set(0,3.3+lift,.31);root.add(feather);feather.visible=false;
  const featherShape=new T.Shape();featherShape.moveTo(-.36,-.75);featherShape.bezierCurveTo(-.9,.05,-.12,1.05,.65,1.15);featherShape.bezierCurveTo(.9,.3,.35,-.65,-.36,-.75);
  const featherParts:T.BufferGeometry[]=[];

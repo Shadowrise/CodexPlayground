@@ -3,6 +3,9 @@ import {clusteredGeometry} from './geometry-detail';
 
 /** Seated snapshots in cart-local coordinates. Original rigs, wheels and
  * physics remain on their original cart; the rider always uses full detail. */
+// Every distant cart is one vertex-coloured snapshot: a single material lets
+// consecutive carts reuse its state.
+const farMaterial=new T.MeshLambertMaterial({vertexColors:true});
 export class CoasterDetail{
  readonly far:T.Mesh;
  private parts:{object:T.Object3D;visible:boolean;passenger:boolean}[]=[];
@@ -10,7 +13,7 @@ export class CoasterDetail{
  private position=new T.Vector3();
  constructor(private readonly cart:T.Group){
   for(const object of cart.children)this.parts.push({object,visible:object.visible,passenger:object.name==='Luigi · permanent passenger'});
-  this.far=new T.Mesh(new T.BufferGeometry(),new T.MeshLambertMaterial({vertexColors:true}));
+  this.far=new T.Mesh(new T.BufferGeometry(),farMaterial);
   this.far.name='Distant coaster cart and passengers';this.far.userData.renderOnlyDetail=true;this.far.receiveShadow=true;this.far.visible=false;cart.add(this.far);this.rebuild();
  }
  addPassenger(object:T.Object3D){this.parts.push({object,visible:true,passenger:true});this.rebuild();}

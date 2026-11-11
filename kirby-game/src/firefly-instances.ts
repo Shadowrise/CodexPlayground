@@ -1,7 +1,9 @@
 import * as T from 'three';
 import {clusteredGeometry} from './geometry-detail';
 
-type Source={object:T.Object3D;color:T.Color};
+/** dirty: the rig received a new animation pose since its matrices were last refreshed here. */
+export type FireflySource={object:T.Object3D;color:T.Color;dirty?:boolean};
+type Source=FireflySource;
 type Part={sources:T.Mesh[];levels:T.InstancedMesh[]};
 export const FIREFLY_FULL_DETAIL_DISTANCE=28;
 export const FIREFLY_COARSE_DISTANCE=80;
@@ -18,7 +20,9 @@ export class FireflyInstances{
  private frustum=new T.Frustum();
  private projection=new T.Matrix4();
  private sphere=new T.Sphere();
+ private poses:T.Matrix4[]=[];
  constructor(private sources:Source[]){
+  const instanced=new Map<T.Material,T.Material>();
   this.group.name='Instanced distant fireflies';
   const meshes=sources.map(source=>{const result:T.Mesh[]=[];source.object.traverse(o=>{if(o instanceof T.Mesh)result.push(o);});return result;});
   for(let p=0;p<meshes[0].length;p++){
@@ -34,6 +38,10 @@ export class FireflyInstances{
      shader.fragmentShader=shader.fragmentShader.replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n#ifdef USE_COLOR\n totalEmissiveRadiance *= vColor.rgb;\n#endif');
     };
     material.customProgramCacheKey=()=> 'instanced-firefly-glow-v2';
+   }else{
+    // The rigid near models and the instances would otherwise make Three
+    // re-resolve one shared material's program at every switch.
+    let copy=instanced.get(material);if(!copy){copy=material.clone();instanced.set(material,copy);}material=copy;
    }
    const levels=[source.geometry,clusteredGeometry(source.geometry,14)].map(geometry=>{
     const mesh=new T.InstancedMesh(geometry,material,sources.length);mesh.name=source.name+' · firefly instances';mesh.count=0;
@@ -55,7 +63,15 @@ export class FireflyInstances{
    source.object.visible=visible(i)&&full;
    this.sphere.set(this.position,3*source.object.matrixWorld.getMaxScaleOnAxis());
    const level=visible(i)&&!full&&(!view||this.frustum.intersectsSphere(this.sphere))?(distance<FIREFLY_COARSE_DISTANCE?0:1):-1;levels.push(level);
-   if(level>=0){counts[level]++;source.object.updateWorldMatrix(true,true);}
+   // The scene refreshes a visible native model; a hidden instanced rig is
+   // refreshed here, and only after it moved or received a new pose.
+   if(source.object.visible)source.dirty=true;
+   if(level>=0){
+    counts[level]++;
+    // getWorldPosition() above made the rig's own world pose current.
+    const pose=this.poses[i]??=new T.Matrix4().makeScale(0,0,0);
+    if(source.dirty!==false||!pose.equals(source.object.matrixWorld)){source.object.updateWorldMatrix(true,true);pose.copy(source.object.matrixWorld);source.dirty=false;}
+   }
   }
   for(const part of this.parts){
    const cursors=[0,0];

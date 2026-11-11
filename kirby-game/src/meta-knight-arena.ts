@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {MetaKnightCosmicSky} from './meta-knight-cosmic-sky';
+import {MetaKnightCosmicSky,planetStandIn} from './meta-knight-cosmic-sky';
 import type {KnightBattle} from './meta-knight-battle';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {META_KNIGHT_ARENA as SITE} from './meta-knight-arena-site';
@@ -90,8 +90,25 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
  const light=new T.DirectionalLight('#f1e4ff',3.4);light.position.set(SITE.x-50,90,30);light.target.position.set(SITE.x,0,0);scene.add(light,light.target);
  light.castShadow=true;light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-48,right:48,top:48,bottom:-48,near:1,far:180});light.shadow.normalBias=.05;light.shadow.bias=-.0001;
  const fill=new T.DirectionalLight('#9698ff',1.3);fill.position.set(SITE.x+70,20,-45);fill.target.position.set(SITE.x,0,0);scene.add(fill,fill.target);
- // One small environment map is prepared behind the loading screen.
- const generator=new T.PMREMGenerator(renderer),environment=generator.fromScene(scene,.04,.1,3000,{size:128,position:new T.Vector3(SITE.x,4,0)});scene.environment=environment.texture;generator.dispose();
+ // One small environment map is prepared behind the loading screen. The capture
+ // draws into a linear target without tone mapping, so every material needs a
+ // second program there. Compile those in parallel first: a capture that links
+ // them one by one freezes the page for several seconds.
+ let environment:T.WebGLRenderTarget|undefined;
+ const prepareEnvironment=async()=>{
+  const target=new T.WebGLRenderTarget(16,16,{type:T.HalfFloatType}),probe=new T.PerspectiveCamera(90,1,.1,3000);probe.position.set(SITE.x,4,0);
+  // The capture is blurred: the distant worlds need their colour and light
+  // there, not a second multi-second build of the full surface program.
+  const surfaces=cosmicSky.planets.map(planet=>planet.material),standIns=surfaces.map(planetStandIn);
+  cosmicSky.planets.forEach((planet,i)=>planet.material=standIns[i]);
+  try{
+  const previous=renderer.getRenderTarget(),tone=renderer.toneMapping;let ready:Promise<unknown>;
+  try{renderer.setRenderTarget(target);renderer.toneMapping=T.NoToneMapping;ready=renderer.compileAsync(scene,probe);}
+  finally{renderer.setRenderTarget(previous);renderer.toneMapping=tone;}
+  try{await ready;}finally{target.dispose();}
+  const generator=new T.PMREMGenerator(renderer);environment=generator.fromScene(scene,.04,.1,3000,{size:128,position:new T.Vector3(SITE.x,4,0)});scene.environment=environment.texture;generator.dispose();
+  }finally{cosmicSky.planets.forEach((planet,i)=>planet.material=surfaces[i]);standIns.forEach(material=>material.dispose());}
+ };
  // Keep the shoulder shot readable when a radial recoil ends behind a rim gem.
  const foreground=crystals.map(mesh=>{const material=crystal.clone();material.transparent=true;material.depthWrite=false;mesh.material=material;return {mesh,material};}),direction=new T.Vector3(),centre=new T.Vector3(),nearest=new T.Vector3();
  const updateOcclusion=(camera:T.Camera,target:T.Vector3|undefined,dt:number)=>{
@@ -101,11 +118,11 @@ export function createMetaKnightArena(renderer:T.WebGLRenderer){
    material.opacity=T.MathUtils.lerp(material.opacity,blocked?.08:1,dt>0?1-Math.exp(-dt*16):1);
   }
  };
- return {scene,root,portal,annex,cosmicSky,updateOcclusion,update:(seconds:number,_battle?:KnightBattle,_now=seconds*1000)=>{portal.update(seconds);annex.update(seconds);cosmicSky.update(seconds);},dispose:()=>{
+ return {scene,root,portal,annex,cosmicSky,prepareEnvironment,updateOcclusion,update:(seconds:number,_battle?:KnightBattle,_now=seconds*1000)=>{portal.update(seconds);annex.update(seconds);cosmicSky.update(seconds);},dispose:()=>{
   cosmicSky.dispose();
   portal.dispose();const geometries=new Set<T.BufferGeometry>(),materials=new Set<T.Material>();
   scene.traverse(o=>{if(o instanceof T.Mesh||o instanceof T.Points){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});
-  geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());ownedTextures.forEach(t=>t.dispose());environment.dispose();light.shadow.dispose();scene.clear();
+  geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());ownedTextures.forEach(t=>t.dispose());environment?.dispose();light.shadow.dispose();scene.clear();
  }};
 }
 export type MetaKnightArenaScene=ReturnType<typeof createMetaKnightArena>;

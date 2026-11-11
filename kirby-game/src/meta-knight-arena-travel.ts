@@ -1,4 +1,5 @@
 import {MetapidgieCelebrationView,MetapidgieFeastBread} from './metapidgie-celebration-view';
+import {arenaAssetWork} from './meta-knight-arena-warm';
 import {knightFighterFinale} from './meta-knight-fighters-finale';
 import {MetaKnightFightersFinaleView} from './meta-knight-fighters-finale-view';
 import {constrainKnightPlanetCamera} from './meta-knight-planet-camera';
@@ -126,6 +127,40 @@ export class MetaKnightArenaTravel{
   this.battleOptions?.stopCosmic?.();return setKnightPhase(this.soloBattle,phase,[this.localActor(this.owner),...Object.values(this.soloBattle.opponents??{})],this.soloNow,subphase);
  }
  private retryModuleUrl?:string;private retryAttempt=0;
+ // Prepared on the meadow once the portal works: assets in small steps, then
+ // the arena scene with its environment and programs. enter() takes it over.
+ private preparing?:Promise<MetaKnightArenaScene|undefined>;
+ private prewarmAt=0;private prewarmStarted=false;
+ /** Call every meadow frame while the portal is usable. Cheap after the first call. */
+ prewarm(now=performance.now()){
+  if(this.prewarmStarted||this.loading||this.current)return;
+  // Leave the first seconds of play (or of an opened portal) undisturbed.
+  if(!this.prewarmAt){this.prewarmAt=now+4000;return;}
+  if(now<this.prewarmAt)return;
+  this.prewarmStarted=true;void this.battleOptions?.prepareCosmic?.();
+  const work=arenaAssetWork();
+  const step=()=>{
+   // An entry in progress builds whatever is still missing by itself.
+   if(this.loading||this.current)return;
+   const end=performance.now()+4;let done=false;
+   while(!done&&performance.now()<end)done=!!work.next().done;
+   if(!done){setTimeout(step,24);return;}
+   const preparing=this.preparing=this.prepareStage();preparing.catch(()=>{if(this.preparing===preparing)this.preparing=undefined;});
+  };
+  setTimeout(step,24);
+ }
+ private async prepareStage(){
+  const {createMetaKnightArena}:typeof import('./meta-knight-arena')=await import('./meta-knight-arena');
+  await frame();
+  const stage=createMetaKnightArena(this.renderer);
+  try{
+   await stage.prepareEnvironment();await frame();
+   // Unlit programs (sky, worlds, portal) are final here; lit ones are rebuilt
+   // with the duel's lights on entry.
+   await this.renderer.compileAsync(stage.scene,this.camera);
+   return stage;
+  }catch(error){stage.dispose();throw error;}
+ }
  loading=false;
  get active(){return !!this.current&&!this.loading;}
  get scene(){return this.current?.scene;}
@@ -149,7 +184,10 @@ export class MetaKnightArenaTravel{
    if(generation!==this.generation)return;
    const boss=this.battleOptions?.boss?.()??'meta-knight',clips=boss==='metapidgie'?await loadMetapidgieBossClips():undefined;
    if(generation!==this.generation)return;this.pidgeyClips=clips??[];
-   stage=createMetaKnightArena(this.renderer);stage.portal.setBoss(boss);if(boss==='metapidgie')this.feastBread=new MetapidgieFeastBread(stage.scene,this.battleOptions?.bread?.());this.cosmicFrame.name='Cosmic travelling formation';stage.scene.add(this.cosmicFrame);const audio=this.battleOptions?.prepareCosmic?.();
+   const early=this.preparing;this.preparing=undefined;stage=early?await early.catch(()=>undefined):undefined;
+   if(!stage){stage=createMetaKnightArena(this.renderer);await stage.prepareEnvironment();}
+   if(generation!==this.generation){stage.dispose();return;}
+   stage.portal.setBoss(boss);if(boss==='metapidgie')this.feastBread=new MetapidgieFeastBread(stage.scene,this.battleOptions?.bread?.());this.cosmicFrame.name='Cosmic travelling formation';stage.scene.add(this.cosmicFrame);const audio=this.battleOptions?.prepareCosmic?.();
    this.playerStars=new MetaKnightDazedStars('Player golden dizziness stars');stage.scene.add(this.playerStars.group);this.playerStars.group.visible=false;
    this.arenaBoss=boss;this.knight=this.makeKnight?.(boss);if(this.knight){this.knight.actor.name='Meta Knight duel boss';this.knight.actor.position.set(SITE.x,0,-9);this.knight.actor.scale.setScalar(KNIGHT.modelScale);stage.scene.add(this.knight.actor);this.battleView=clips?new MetapidgieBattleView(this.knight,this.makeKnight?.('meta-knight')!,clips,stage.scene,()=>this.cancelBattle(),(kind,rate)=>this.battleOptions?.cue(kind,rate),()=>this.battleOptions?.stopCosmic?.(),level=>this.battleOptions?.chargeAudio?.(level)):new MetaKnightBattleView(this.knight,stage.scene,()=>this.cancelBattle(),(kind,rate)=>this.battleOptions?.cue(kind,rate),()=>this.battleOptions?.stopCosmic?.(),level=>this.battleOptions?.chargeAudio?.(level));const bug=this.battleOptions?.firefly?.();if(bug)this.battleView.setLifeFirefly(bug);this.duetView=new MetaKnightDuetView(stage.scene,kind=>this.battleOptions?.cue(kind));}
    if(this.battleOptions?.makeOpponent)this.opponentsView=new MetaKnightOpponentsView(this.battleOptions.makeOpponent,()=>this.battleOptions?.pushCue?.());
@@ -405,5 +443,5 @@ export class MetaKnightArenaTravel{
   for(const [actor,restore] of this.remoteRestores)if(!living.has(actor)){restore();this.remoteRestores.delete(actor);}
   for(const [c,stars] of this.remoteStars)if(!living.has(c.actor)||c.actor.userData.location!=='meta-knight-arena'){c.clearDuelDazedPose();stars.dispose();this.remoteStars.delete(c);}
  }
- render(){if(this.active)this.renderer.render(this.current!.scene,this.camera);}
+ render(){if(!this.active)return;this.battleView?.warmLate(this.renderer,this.current!.scene,this.camera);this.renderer.render(this.current!.scene,this.camera);}
 }

@@ -129,6 +129,8 @@ export class ShibaAnimation {
     }
     const original=body.geometry;
     const geometry=openLipSeam(original);body.geometry=geometry;original.dispose();
+    // The morphing body must not share a program state with the rigid parts.
+    if(!Array.isArray(body.material))body.material=body.material.clone();
     const position=geometry.getAttribute('position');
     // Lower the haunches into a resting sit, keeping every paw above the floor.
     for(let i=0;i<position.count;i++){

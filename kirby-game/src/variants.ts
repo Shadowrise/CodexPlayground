@@ -1,6 +1,7 @@
 import { Color, Material, Mesh, MeshLambertMaterial, MeshStandardMaterial, Object3D } from 'three';
 import {rainbowCrown,rainbowSkin} from './rainbow-kirby';
 import {applyBandana} from './bandana-kirby';
+import {prepareCharacterDetail} from './character-detail';
 
 import {KIRBY_VARIANTS,isPigeonVariant,type KirbyVariant} from './variant-palette';
 export {NPC_COLORS,KIRBY_VARIANTS,isPigeonVariant,type KirbyVariant} from './variant-palette';
@@ -45,7 +46,13 @@ function matteSurface(source: MeshStandardMaterial) {
   return material;
 }
 
+// Face details are never recoloured per character. Meadow NPCs and seated
+// passengers share one instance of each, so consecutive characters reuse the
+// same material state. Players keep their own copies.
+const SHARED_FACE=/^(Eyes|Iris|Eye reflections|Cheeks|Smile|Tongue)/;
+const sharedFaces=new WeakMap<MeshStandardMaterial,MeshStandardMaterial|MeshLambertMaterial>();
 export function cloneVariant(template: Object3D, variant: KirbyVariant, npc: boolean) {
+  if(npc)prepareCharacterDetail(template);
   const model = template.clone(true);
   model.userData.characterShadow=true;
   model.userData.shadowSilhouette='kirby';
@@ -54,7 +61,9 @@ export function cloneVariant(template: Object3D, variant: KirbyVariant, npc: boo
     if (!(object instanceof Mesh)) return;
     const recolor = (source: MeshStandardMaterial) => {
       if (!materials.has(source)) {
-        const material = /^(Kirby|Feet|Cheeks|Smile|Tongue)/.test(source.name) ? matteSurface(source) : source.clone();
+        const shared=npc&&variant[0]!=='Радуга'&&variant[0]!=='Бандана'&&SHARED_FACE.test(source.name);
+        const material = (shared?sharedFaces.get(source):undefined) ?? (/^(Kirby|Feet|Cheeks|Smile|Tongue)/.test(source.name) ? matteSurface(source) : source.clone());
+        if(shared)sharedFaces.set(source,material);
         if (material.name.startsWith('Kirby') && variant[0] !== 'Классический') material.color.set(variant[1]);
         if (material.name.startsWith('Feet') && npc) material.color.copy(new Color('#12452a'));
         materials.set(source, material);

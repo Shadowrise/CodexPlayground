@@ -15,7 +15,7 @@ export class CentipedeChallengesView{
    pulse.setAttribute('waveCore',new T.Float32BufferAttribute(new Float32Array(pulse.attributes.position.count).fill(1),1));
    const geo=mergeGeometries([crest,pulse])!;crest.dispose();pulse.dispose();
    geo.setAttribute('waveAge',new T.InstancedBufferAttribute(new Float32Array(count),1).setUsage(T.DynamicDrawUsage));
-   const material=new T.MeshBasicMaterial({transparent:true,opacity:.9,depthWrite:false,side:T.DoubleSide,toneMapped:false});
+   const material=new T.MeshBasicMaterial({transparent:true,opacity:.9,depthWrite:false,side:T.DoubleSide,forceSinglePass:true,toneMapped:false});
    // Fixed 1.3m width: widening a scaled ring otherwise makes distant waves huge.
    // A shallow curved crest gives volume, still one instanced draw and no shadows.
    material.onBeforeCompile=shader=>{

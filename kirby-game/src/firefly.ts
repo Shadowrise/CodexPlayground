@@ -1,4 +1,4 @@
-import { AnimationMixer, Color, Mesh, MeshStandardMaterial, PointLight, type AnimationAction, type ColorRepresentation } from 'three';
+import { AnimationMixer, Color, DoubleSide, Mesh, MeshStandardMaterial, PointLight, type AnimationAction, type ColorRepresentation } from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 export const FIREFLY_MODES = ['Sit','Fly','LookAround','Groom','WingStretch'] as const;
 export type FireflyMode = typeof FIREFLY_MODES[number];
@@ -11,7 +11,7 @@ export class Firefly {
   get currentMode(){return this.mode;}
   constructor(private gltf:GLTF,color:ColorRepresentation='#baff55'){
     this.object=gltf.scene;this.mixer=new AnimationMixer(this.object);
-    this.object.traverse(o=>{if(o instanceof Mesh){o.castShadow=true;const list=Array.isArray(o.material)?o.material:[o.material];const own=list.map(m=>m.name==='Firefly_Glow'?m.clone():m);o.material=Array.isArray(o.material)?own:own[0];}});
+    this.object.traverse(o=>{if(o instanceof Mesh){o.castShadow=true;const list=Array.isArray(o.material)?o.material:[o.material];const own=list.map(m=>m.name==='Firefly_Glow'?m.clone():m);for(const m of own)if(m.transparent&&m.side===DoubleSide)m.forceSinglePass=true;o.material=Array.isArray(o.material)?own:own[0];}});
     this.setGlowColor(color);this.setMode('Sit');
   }
   setGlowColor(value:ColorRepresentation){

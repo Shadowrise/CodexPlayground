@@ -6,6 +6,7 @@ import { MEADOW_HALF_SIZE,MOUNTAIN_WIDTH, constrainToMeadow } from './world-boun
 import { mountainSurfaceHeight } from './mountain-surface';
 import {MountainRecovery,type MountainSound} from './mountain-recovery';
 import {createMountainLedgeShade} from './mountain-ledge-shade';
+import {RestBatch} from './rest-batch';
 import { standingFootprint, footprintOverlapsRect } from './standing-footprint';
 import {
   MOUNTAIN_LEDGE_SITE as SITE, MOUNTAIN_LEDGE_YAW as YAW, MOUNTAIN_STEPS as STEPS, MOUNTAIN_SUMMIT as SUMMIT,
@@ -18,7 +19,7 @@ type Phase = 'ready' | 'retracting' | 'hidden' | 'extending';
 const PHASES: Phase[] = ['ready', 'retracting', 'hidden', 'extending'];
 const durations = { ready: 0, retracting: LEDGE_RETRACT_SECONDS, hidden: LEDGE_HIDDEN_SECONDS, extending: LEDGE_EXTEND_SECONDS };
 const EMBED_DEPTH = 5;
-type Step = { mesh: T.Mesh; shade:ReturnType<typeof createMountainLedgeShade>; phase: Phase; elapsed: number; standing: number; slide: number };
+type Step = { mesh: T.Mesh; shade:ReturnType<typeof createMountainLedgeShade>; shadeMaterial:T.MeshBasicMaterial; phase: Phase; elapsed: number; standing: number; slide: number };
 
 /** Individual ledges attach to the existing mountain slope; no extra cliff mesh. */
 export class MountainLedges {
@@ -37,19 +38,34 @@ export class MountainLedges {
   private fall: number | undefined;
   private time = 0;
   private readonly cameraDelta=new T.Vector3();
+  /** Ledges at rest share two draws; a moving ledge uses its own meshes. */
+  private readonly restSlabs:RestBatch;
+  private readonly restShades:RestBatch;
+  // Three skips a mesh whose material is not visible. The ledge itself stays
+  // visible and ray-testable for game code while the shared geometry draws it.
+  private readonly material:T.MeshStandardMaterial;
+  private readonly undrawnSlab:T.MeshStandardMaterial;
+  private readonly undrawnShade:T.MeshBasicMaterial;
 
   constructor(mountainMaterial?: T.MeshStandardMaterial,sound?:(kind:MountainSound)=>void) {
     this.group.name = 'Mountain corner retracting ledges';
     this.group.position.set(SITE.x, 0, SITE.z); this.group.rotation.y = YAW;
     const material = mountainMaterial?.clone() ?? new T.MeshStandardMaterial({ map: createMountainTexture(), roughness: 1 });
     material.vertexColors = true;
+    this.material=material;this.undrawnSlab=material.clone();this.undrawnSlab.visible=false;
     STEPS.forEach((p, i) => {
       const mesh = new T.Mesh(this.slab(p, .78, i), material);
       mesh.name = 'Retracting mountain step ' + (i + 1); mesh.position.set(p.tangent, p.y, p.radial);
       mesh.receiveShadow = mesh.castShadow = false; this.group.add(mesh);
       const shade=createMountainLedgeShade(p,.78);mesh.add(shade);
-      this.steps.push({ mesh,shade, phase: 'ready', elapsed: 0, standing: 0, slide: 0 });
+      this.steps.push({ mesh,shade,shadeMaterial:shade.material, phase: 'ready', elapsed: 0, standing: 0, slide: 0 });
     });
+    const rest=STEPS.map(p=>new T.Matrix4().makeTranslation(p.tangent,p.y,mountainLedgePose(p,0).radial));
+    this.restSlabs=new RestBatch(this.steps.map((step,i)=>({geometry:step.mesh.geometry,matrix:rest[i]})),material,'Resting mountain steps');
+    this.restShades=new RestBatch(this.steps.map((step,i)=>({geometry:step.shade.geometry,matrix:rest[i]})),this.steps[0].shade.material.clone(),'Resting mountain ledge contact shades');
+    this.undrawnShade=this.steps[0].shadeMaterial.clone();this.undrawnShade.visible=false;
+    for(const batch of [this.restSlabs,this.restShades]){batch.mesh.receiveShadow=batch.mesh.castShadow=false;this.group.add(batch.mesh);}
+    this.steps.forEach((step,i)=>this.pose(step,i));
     this.summit = new T.Mesh(this.slab(SUMMIT, 1.25, 20), material); this.summit.name = 'Mountain corner overlook';
     this.summit.position.set(SUMMIT.tangent, SUMMIT.y, SUMMIT.radial); this.summit.receiveShadow = this.summit.castShadow = false;this.summit.add(createMountainLedgeShade(SUMMIT,1.25)); this.group.add(this.summit);
     // Retain a queryable landing footprint; the visible surface belongs to the
@@ -239,7 +255,7 @@ export class MountainLedges {
     const ease = (t: number) => t * t * (3 - 2 * t);
     step.slide = LEDGE_RETRACT_DISTANCE * (step.phase === 'retracting' ? ease(step.elapsed / LEDGE_RETRACT_SECONDS) : step.phase === 'hidden' ? 1 : step.phase === 'extending' ? 1 - ease(step.elapsed / LEDGE_EXTEND_SECONDS) : 0);
     const pose=mountainLedgePose(STEPS[i],step.slide);
-    step.shade.material.opacity=.18*pose.scale;
+    step.shadeMaterial.opacity=.18*pose.scale;
     step.mesh.position.z = pose.radial;
     const fitted=step.mesh.geometry.userData.retraction;
     if(fitted){
@@ -251,6 +267,10 @@ export class MountainLedges {
     }else step.mesh.scale.z=pose.scale;
     step.mesh.position.x = STEPS[i].tangent + (step.phase === 'ready' && step.standing > 2.4 ? Math.sin(this.time * 35) * .025 : 0);
     step.mesh.visible = step.phase !== 'hidden'&&pose.scale>0;
+    // The shared resting geometry replaces an untouched ledge and its shade.
+    const resting=step.phase==='ready'&&step.slide===0&&pose.scale===1&&step.mesh.position.x===STEPS[i].tangent;
+    this.restSlabs.setShown(i,resting);this.restShades.setShown(i,resting);
+    step.mesh.material=resting?this.undrawnSlab:this.material;step.shade.material=resting?this.undrawnShade:step.shadeMaterial;
   }
   networkState() { return this.steps.map(s => [PHASES.indexOf(s.phase), s.elapsed, s.standing]); }
   networkApply(rows: number[][]) {
