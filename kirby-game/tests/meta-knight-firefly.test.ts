@@ -67,13 +67,7 @@ test('remote interpolation keeps the same native support without changing the pr
  }
 });
 
-test('mounted growth preserves native support while Kirby and Pidgie keep their existing seat interpolation',async()=>{
- const [knight,firefly,kirby,pigeon]=await assets,c=player(knight),world=new NightFireflies(firefly);board(world,c);c.resizeTo(2.5);
+test('mounted growth preserves native support',async()=>{
+ const [knight,firefly]=await assets,c=player(knight),world=new NightFireflies(firefly);board(world,c);c.resizeTo(2.5);
  for(let frame=0;frame<45;frame++){tick(world,c,1/60);seated(world,c,firefly);}assert.equal(c.savedSize,2.5);assert.equal(c.actor.scale.x,2.5);
- for(const legacy of [kirby,pigeon]){
-  const rider=player(legacy),mounts=new NightFireflies(firefly),bug=board(mounts,rider),dt=.05;
-  const previous=rider.actor.position.y;mounts.moveRider(dt,idle);mounts.syncRider(dt);
-  const expected=previous+(bug.carrier.position.y+bug.firefly.object.scale.x*.95-previous)*(1-Math.exp(-12*dt));
-  assert(Math.abs(rider.actor.position.y-expected)<1e-9);const before=rider.actor.position.y;mounts.update(dt,false,rider.actor.position);assert.equal(rider.actor.position.y,before);
- }
 });
