@@ -168,6 +168,17 @@ select:focus-visible,button:focus-visible,input:focus-visible {outline:3px solid
 
 #load-game {width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px solid #659476;background:#294739;color:var(--ui-text);cursor:pointer;font-weight:600;}
 #save-game, #replay-tutorial {padding:9px;border:1px solid #659476;border-radius:10px;background:#294739;color:var(--ui-text);cursor:pointer;}
+.confirmation-dialog { width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);box-sizing:border-box;overflow-y:auto;padding:28px;border:1px solid var(--ui-border);border-radius:24px;background:var(--ui-bg);color:var(--ui-text);box-shadow:0 24px 100px #00000066; }
+.confirmation-dialog::backdrop { background:#090e18b8; }
+.confirmation-dialog h2 { margin:0 0 12px;font-size:23px;line-height:1.35;letter-spacing:-.5px; }
+.confirmation-description { margin:0;color:var(--ui-muted);font-size:14px;line-height:1.7; }
+.confirmation-actions { display:flex;gap:12px;margin-top:24px;padding:4px; }
+.confirmation-actions button { flex:1;min-width:0;min-height:44px;font-size:13px;font-weight:700; }
+.confirmation-actions .confirmation-primary { background:#294739;border-color:#659476; }
+.confirmation-actions .confirmation-primary:hover { background:#35684c; }
+.confirmation-dialog button:focus-visible,.confirmation-dialog.gamepad-navigation button:focus { outline:3px solid var(--ui-focus);outline-offset:3px;box-shadow:0 0 0 6px #ffd78226; }
+.confirmation-hint { margin:16px 0 0;color:var(--ui-muted);font-size:11px;line-height:1.6;text-align:center; }
+@media(max-width:420px) { .confirmation-dialog { padding:22px; }.confirmation-dialog h2 { font-size:21px; }.confirmation-actions { gap:10px; } }
 
 .selection-card[hidden] {display:none;}
 #new-game {width:100%;padding:14px;border-radius:12px;border:0;background:#28563e;color:white;font:inherit;font-weight:700;cursor:pointer;}

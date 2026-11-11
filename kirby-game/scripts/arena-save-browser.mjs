@@ -12,7 +12,7 @@ try{
  for(const mobile of [false,true]){
   const context=await browser.newContext(mobile?{viewport:{width:844,height:390},isMobile:true,hasTouch:true}:{viewport:{width:1280,height:850}});
   const page=await context.newPage(),errors=[],arenaRequests=[];
-  page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
+  page.on('pageerror',error=>errors.push(error.message));
   page.on('request',request=>{if(/\/src\/meta-knight-arena\.ts(?:\?|$)/.test(request.url()))arenaRequests.push(request.url());});
   await page.addInitScript(()=>{localStorage.setItem('kirby-language-v1','ru');localStorage.setItem('kirby-tutorial-completed-v1','1');});
   for(const endpoint of ['room','history/solo'])await page.route('**/'+endpoint,route=>route.fulfill({json:{ok:true,players:0,occupiedVariants:[],capacity:16}}));
@@ -23,11 +23,11 @@ window.arenaSaveQA={chat,travel:cosmicArena,portal:meadowPortal,get c(){return c
   const press=async selector=>{if(mobile)await page.locator(selector).tap();else await page.locator(selector).click();};
   const start=async(load=false)=>{await press(load?'#load-game':'#new-game');if(!load){await page.locator('#player-name-input').fill('Хранитель');await press('#start-game');}await page.waitForFunction(()=>arenaSaveQA.playing&&arenaSaveQA.c);};
   const command=async text=>{await page.evaluate(()=>arenaSaveQA.chat.show());await page.locator('#chat-input').fill(text);if(mobile)await page.locator('#chat-composer button[type=submit]').click();else await page.keyboard.press('Enter');assert(await page.locator('#chat-command-error').isHidden());await page.evaluate(()=>arenaSaveQA.chat.close());};
-  const save=async()=>{await press('#settings-toggle');await press('#save-game');return page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')));};
+  const save=async()=>{const previous=await page.evaluate(()=>localStorage.getItem('kirby-save-v1'));await press('#settings-toggle');await press('#save-game');if(await page.locator('#save-confirmation').isVisible())await press('#save-confirmation .confirmation-primary');await page.waitForFunction(previous=>localStorage.getItem('kirby-save-v1')!==previous,previous);return page.evaluate(()=>JSON.parse(localStorage.getItem('kirby-save-v1')));};
   const exit=async()=>{await press('#exit-to-menu');await page.locator('#startup-menu').waitFor({state:'visible'});};
   await start();
   for(const open of [true,false]){
-   await command('/portal '+Number(open));const saved=await save();assert.deepEqual(saved.portal,{open,override:open});await exit();await start(true);
+   await command('/portal '+Number(open));const saved=await save();assert.deepEqual(saved.portal,{open,override:open,boss:'meta-knight'});await exit();await start(true);
    assert.equal(await page.evaluate(()=>arenaSaveQA.portal.working),open);assert(await page.locator('#character-select').isHidden());
   }
   assert.equal(arenaRequests.length,0,'saving and loading on the meadow must keep the arena lazy');
@@ -40,7 +40,7 @@ window.arenaSaveQA={chat,travel:cosmicArena,portal:meadowPortal,get c(){return c
   });
   await page.waitForFunction(()=>arenaSaveQA.travel.engaged);
   await command('/portal 0');const arenaSave=await save();
-  assert.deepEqual(arenaSave.portal,{open:false,override:false});assert.equal(arenaSave.player.location,'meta-knight-arena');
+  assert.deepEqual(arenaSave.portal,{open:false,override:false,boss:'meta-knight'});assert.equal(arenaSave.player.location,'meta-knight-arena');
   assert.equal(arenaSave.player.x,2008);assert.equal(arenaSave.player.z,-12);assert.equal(arenaSave.player.yaw,.6);assert.equal(arenaSave.player.size,3);
   await exit();
   for(const reload of [false,true]){

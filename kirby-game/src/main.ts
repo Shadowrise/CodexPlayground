@@ -127,6 +127,7 @@ import {touchMotion,wantsTouchControls} from './touch-input';
 import {TURN_RATE} from './movement-input';
 import {createFullscreenControls} from './fullscreen';
 import { captureGame, parseSave, restoreGame, SAVE_KEY, type GameSave } from './save-game';
+import {ConfirmationDialog} from './confirmation-dialog';
 import { createGamepadInput, stickSteering, gamepadCameraZoom } from './gamepad';
 import {MetaKnightPlayerDashHud} from './meta-knight-player-dash-hud';
 const knightDashHud=new MetaKnightPlayerDashHud();
@@ -170,7 +171,7 @@ if(mobile){
  controlsPanel.append(help);
 }
 settingsToggle.addEventListener('click', () => {
-  if(tutorial.active)return;
+  if(tutorial.active||saveConfirmation.open)return;
   if(mobile&&chat.open)return;
   const open = settingsToggle.getAttribute('aria-expanded') !== 'true';
   settingsToggle.setAttribute('aria-expanded', String(open));
@@ -280,6 +281,7 @@ window.addEventListener('pagehide',()=>network?.close());
 document.addEventListener('visibilitychange',()=>network?.event({type:'visible',value:!document.hidden}));
 const onlineRoster=document.createElement('div');onlineRoster.className='online-roster';onlineRoster.hidden=true;document.body.append(onlineRoster);
 const saveButton=document.createElement('button');saveButton.type='button';saveButton.id='save-game';saveButton.textContent=t('Сохранить игру');audioPanel.append(saveButton);
+const saveConfirmation=new ConfirmationDialog('save-confirmation','Перезаписать сохранение?','Сохранение уже существует. Перезаписать его текущей игрой?','Перезаписать');
 const saveMessage=document.createElement('p');saveMessage.setAttribute('role','status');saveMessage.className='gamepad-hint';audioPanel.append(saveMessage);
 let hasSave=false;
 try{hasSave=localStorage.getItem(SAVE_KEY)!==null;}catch{}
@@ -302,10 +304,11 @@ loadButton.addEventListener('click',async()=>{
     await startGame();
   }catch(error){pendingSave=undefined;startupMessage.dataset.error='true';startupMessage.hidden=false;startupMessage.textContent=t(error instanceof Error?error.message:'Не удалось загрузить сохранение.');}
 });
-saveButton.addEventListener('click',()=>{
-  if(!character||network)return;
+saveButton.addEventListener('click',async()=>{
+  if(!character||network||saveConfirmation.open)return;
   try {
-    if(localStorage.getItem(SAVE_KEY)!==null && !window.confirm(t('Сохранение уже существует. Перезаписать его текущей игрой?')))return;
+    if(localStorage.getItem(SAVE_KEY)!==null && !await saveConfirmation.ask(gamepad.input.active!=='keyboard'))return;
+    if(!playing||!character||network)return;
     localStorage.setItem(SAVE_KEY,JSON.stringify(captureGame(character,selected,npcs,fruits,coaster.riding,c=>(c instanceof CharacterController?cosmicArena.savePosition(c)??boats.savePosition(c):undefined)??balloons.savePosition(c)??fireflies?.savePosition(c)??(c instanceof CharacterController?mountainLedges.savePosition(c)??skyTrail.savePosition(c)??trampoline.savePosition(c)??home.savePosition(c):undefined),home.night,currentDayPhase(),bread.state,pidgieNpc?.networkState(),sealProgress,watermill.quest,{open:metaKnightPortalReady(),override:soloPortalOverride,boss:soloPortalBoss},wildBirds.get('snowball')?.npc.networkState(),{ugolyok:wildBirds.get('ugolyok')?.npc.networkState(),ryzhik:wildBirds.get('ryzhik')?.npc.networkState(),kurlyk:wildBirds.get('kurlyk')?.npc.networkState()},pigeonFeeding)));
     saveMessage.textContent=t('Игра сохранена.');hasSave=true;loadButton.disabled=false;loadButton.title=t('Загрузить сохранение');
   }catch {saveMessage.textContent=t('Не удалось сохранить игру: хранилище браузера недоступно или заполнено.');}
@@ -708,7 +711,7 @@ let pendingBoard = false;
 let hitMessageRemaining = 0;
 const controls = new Set(['KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyV', 'Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'ShiftLeft', 'ShiftRight']);
 window.addEventListener('keydown', event => {
-  if(!playing||roundFinished()||tutorial.active)return;
+  if(!playing||roundFinished()||tutorial.active||saveConfirmation.open)return;
   if(event.code==='Enter'&&!event.repeat&&!event.isComposing&&gamepad.input.active==='keyboard'&&!(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,button'))){
     event.preventDefault();keys.clear();pendingTurn=undefined;pendingDash=pendingJump=pendingAttack=pendingBoard=false;pendingEmote=undefined;stopDragging();chat.show();return;
   }
@@ -1119,14 +1122,16 @@ renderer.setAnimationLoop((time: number) => {
   const fps=fpsCounter.sample(time,!document.hidden);if(fps!==undefined)fpsLabel.textContent=String(fps);
   const pad=gamepad.poll();
   const usingPad=!chat.open && !document.body.classList.contains('loading') && gamepad.input.active!=='keyboard';
+  const confirmationWasOpen=saveConfirmation.open;
+  if(confirmationWasOpen)saveConfirmation.setGamepad(usingPad);
   const controlScheme=gamepad.input.active!=='keyboard'?'gamepad':mobile?'touch':'keyboard';
   const tutorialWasOpen=tutorial.active;
   tutorial.setScheme(controlScheme);
   if(usingPad&&tutorialWasOpen)tutorial.gamepad(pad.pressed);
   if(controlScheme!==controlMode){controlMode=controlScheme;for(const element of controlHints)element.hidden=element.dataset.controls!==controlScheme;}
   if(!startupMessage.dataset.error){startupMessage.hidden=!usingPad;setText(startupMessage,usingPad?'Геймпад: ↑ / ↓ — выбрать · ← / → — язык · A — подтвердить':'');}
-  if(usingPad && !tutorialWasOpen && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
-  const settingsOpen=!audioPanel.hidden || chat.open || roundFinished() || tutorial.active || tutorialWasOpen;
+  if(usingPad && !tutorialWasOpen && !confirmationWasOpen && pad.pressed.has(9) && playing && !roundFinished())settingsToggle.click();
+  const settingsOpen=confirmationWasOpen || !audioPanel.hidden || chat.open || roundFinished() || tutorial.active || tutorialWasOpen;
   emoteWheel.setPigeon(!!character?.isPigeon);touch?.setPigeon(!!character?.isPigeon);
   touch?.setEnabled(playing&&!settingsOpen&&!usingPad&&!document.hidden);
   const usingTouch=!!touch&&!usingPad;
@@ -1150,7 +1155,8 @@ renderer.setAnimationLoop((time: number) => {
     const repeat=(horizontal!==0 || vertical!==0) && menuRepeat===0;
     if(repeat)menuRepeat=.22;
     if(!horizontal && !vertical)menuRepeat=0;
-    if(!playing)navigateCharacterMenu(pad,horizontal,vertical,repeat);
+    if(confirmationWasOpen)saveConfirmation.gamepad(pad.pressed,repeat?horizontal||vertical:0);
+    else if(!playing)navigateCharacterMenu(pad,horizontal,vertical,repeat);
     else {
       if(pad.pressed.has(1))settingsToggle.click();
       else if(repeat || pad.pressed.has(0))navigateSettings(repeat?vertical:0,repeat?horizontal:0,pad.pressed.has(0));
